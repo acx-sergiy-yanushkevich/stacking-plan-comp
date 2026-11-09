@@ -200,7 +200,8 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
   const name = isAvail ? bar.label : text.name;
   const sub = isAvail ? `${sf(seg.size)}${text.meta ? ` · ${text.meta}` : ''}` : text.sub;
   // Names with digits ("Vacates Apr '27", "Available · Ste 1250") are shown whole or not at all.
-  const fitName = (room: number) => (/\d/.test(name) ? (measure(name, NAME_FONT) <= room ? name : fitParts(name, room, NAME_FONT)) : ellipsize(name, room, NAME_FONT));
+  // Whole name or nothing: a partial tenant name misleads (the <title> carries the full text).
+  const fitName = (room: number) => (measure(name, NAME_FONT) <= room ? name : fitParts(name, room, NAME_FONT));
   const sfOnly = measure(text.sfShort, NAME_FONT) <= textRoom ? text.sfShort : '';
   let nameText = '';
   let subText = '';
