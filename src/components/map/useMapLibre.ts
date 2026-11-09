@@ -66,6 +66,8 @@ export function useMapLibre(containerRef: RefObject<HTMLDivElement | null>, opts
       return;
     }
     styleRef.current = styleUrl;
+    // Exposed for the verification scripts (read-only inspection of layers and paint).
+    (window as unknown as { __spMap?: MapLibreMap }).__spMap = m;
     let settled = false;
     const fail = () => {
       if (settled) return;

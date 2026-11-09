@@ -62,7 +62,20 @@ const capFilter = (floorId: string | null): FilterSpecification => (floorId ? ['
 function installLayers(map: MapLibreMap, inp: LayerInputs) {
   const style = map.getStyle();
   if (!style) return;
-  const firstSymbol = style.layers.find((l) => l.type === 'symbol')?.id;
+  // Insert above every fill and line layer (roads, building footprints) but under the labels. Styles
+  // such as the dark one place a symbol layer early; anchoring on the first symbol would bury the building.
+  let lastFlat = -1;
+  style.layers.forEach((l, i) => {
+    if (l.type === 'fill' || l.type === 'line' || l.type === 'background' || l.type === 'raster' || l.type === 'hillshade') lastFlat = i;
+  });
+  const firstSymbol = style.layers[lastFlat + 1]?.id;
+  // The dark basemap ships its own 3D buildings; they would bury our floors in black. Hide them
+  // and draw the neighbourhood with our muted extrusion layer instead.
+  for (const l of style.layers) {
+    if (l.type === 'fill-extrusion' && l.id !== LAYER_FLOORS && l.id !== LAYER_CAP && l.id !== LAYER_BUILDINGS) {
+      map.setLayoutProperty(l.id, 'visibility', 'none');
+    }
+  }
   const vectorSource = map.getSource('openmaptiles') ? 'openmaptiles' : Object.entries(style.sources).find(([, s]) => s.type === 'vector')?.[0];
 
   if (vectorSource && !map.getLayer(LAYER_BUILDINGS)) {
