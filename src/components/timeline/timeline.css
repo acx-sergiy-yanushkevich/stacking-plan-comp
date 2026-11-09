@@ -85,3 +85,6 @@
 @media (max-width: 760px) {
   .sp-timeline { padding-left: var(--sp-space-1); padding-right: var(--sp-space-1); }
 }
+
+.sp-tl-bar__text--outside .sp-tl-bar__sub { fill: var(--sp-color-text-weak); }
+.sp-cursor line { stroke-opacity: 0.55; }

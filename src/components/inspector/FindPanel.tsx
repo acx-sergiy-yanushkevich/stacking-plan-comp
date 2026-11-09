@@ -7,6 +7,7 @@ import { prospectLabel } from '../../domain/safe';
 import { Button, Chip, Icon, Segmented, SelectField, TextField } from '../ui';
 import { selectSegment, type Patch } from '../plan/actions';
 import { Section } from './parts';
+import { nearMisses } from '../../domain/finder';
 
 export interface FindPanelProps {
   model: PlanModel;
@@ -28,6 +29,7 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
   const req = model.req;
   const largest = model.fits?.largestNow ?? { size: model.kpis.maxContiguous.size, floorName: model.kpis.maxContiguous.floorName ?? '' };
   const options = model.fits?.options ?? [];
+  const misses = req && options.length < 3 ? nearMisses(model.floors, req.size, asOf) : [];
 
   const numberOrNull = (v: string) => {
     const n = Number(v);
@@ -107,6 +109,7 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
               Try 12 months later
             </Button>
           </div>
+          <NearMisses misses={misses} patch={patch} />
         </Section>
       ) : (
         <Section title={`Options · ${options.length}`}>
@@ -167,6 +170,39 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
           </ul>
         </Section>
       )}
+      {options.length > 0 && misses.length > 0 && (
+        <Section title="Near misses">
+          <NearMisses misses={misses} patch={patch} />
+        </Section>
+      )}
     </>
+  );
+}
+
+function NearMisses({ misses, patch }: { misses: ReturnType<typeof nearMisses>; patch: Patch }) {
+  if (!misses.length) return null;
+  return (
+    <ul className="sp-ins__list" aria-label="Near misses">
+      {misses.map((m) => (
+        <li key={m.keys.join('+')}>
+          <button type="button" className="sp-ins__row" onClick={() => selectSegment(patch, m.keys[0])}>
+            <div className="sp-ins__row-main">
+              <div className="sp-ins__row-title">
+                <span>{m.floorName}</span>
+                {m.kind === 'stack' && <span className="sp-ins__tag">stacked floors</span>}
+              </div>
+              <div className="sp-ins__row-meta">
+                <span>{m.type}</span>
+                <span>· {m.from ? fmtMonthYear(m.from) : 'Now'}</span>
+                {m.shortfall > 0 && <span>· {num(m.shortfall)} SF short</span>}
+              </div>
+            </div>
+            <div className="sp-ins__row-end">
+              <span className="sp-ins__row-value">{sf(m.size)}</span>
+            </div>
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }

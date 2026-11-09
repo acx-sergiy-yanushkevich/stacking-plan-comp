@@ -246,3 +246,61 @@ export function findFits(
   const keys = new Set(options.flatMap((o) => o.keys));
   return { options, keys, largestNow };
 }
+
+export interface NearMiss {
+  kind: 'short' | 'stack';
+  floorName: string;
+  size: number;
+  /** SF short of the requirement (0 for a stack that meets it). */
+  shortfall: number;
+  keys: string[];
+  from: ISODate | null;
+  type: 'Direct' | 'Sublease' | 'Direct + sublease';
+}
+
+/**
+ * When the finder has few exact options: the closest single spaces that fall short of the
+ * requirement, and vertically adjacent floors whose available space (direct and sublease together)
+ * would meet it. Never offers for-sale units. Sorted by smallest shortfall first.
+ */
+export function nearMisses(floors: FloorView[], req: number, asOf: ISODate, limit = 4): NearMiss[] {
+  const out: NearMiss[] = [];
+  const spaces = (f: FloorView) =>
+    f.segments.flatMap((s) => {
+      if (s.kind === 'available' || s.kind === 'sublease')
+        return [{ key: s.key, size: s.size, from: s.availableFrom ?? (s.kind === 'sublease' ? s.availability?.availableFrom ?? null : null), type: s.kind === 'sublease' ? ('Sublease' as const) : ('Direct' as const) }];
+      if (s.marketed && s.marketed.kind === 'Lease') return [{ key: s.key, size: s.marketed.size, from: s.marketed.availableFrom, type: s.marketed.sublease ? ('Sublease' as const) : ('Direct' as const) }];
+      return [];
+    });
+  for (const f of floors) {
+    const sp = spaces(f);
+    // whole-floor available total (direct + sublease) as one candidate when several suites exist
+    const total = sp.reduce((s, x) => s + x.size, 0);
+    if (sp.length > 1 && total < req) {
+      const from = sp.map((x) => x.from).filter(Boolean).sort().at(-1) ?? null;
+      out.push({ kind: 'short', floorName: f.floor.name, size: total, shortfall: req - total, keys: sp.map((x) => x.key), from, type: sp.every((x) => x.type === 'Direct') ? 'Direct' : sp.every((x) => x.type === 'Sublease') ? 'Sublease' : 'Direct + sublease' });
+    }
+    for (const x of sp) if (x.size < req) out.push({ kind: 'short', floorName: f.floor.name, size: x.size, shortfall: req - x.size, keys: [x.key], from: x.from, type: x.type });
+  }
+  for (let i = 0; i < floors.length - 1; i++) {
+    const a = spaces(floors[i]);
+    const b = spaces(floors[i + 1]);
+    if (!a.length || !b.length) continue;
+    const all = [...a, ...b];
+    const size = all.reduce((s, x) => s + x.size, 0);
+    if (size < req) continue;
+    const from = all.map((x) => x.from).filter(Boolean).sort().at(-1) ?? null;
+    out.push({ kind: 'stack', floorName: `Floors ${floors[i + 1].floor.sequence}–${floors[i].floor.sequence}`, size, shortfall: 0, keys: all.map((x) => x.key), from, type: all.every((x) => x.type === 'Direct') ? 'Direct' : 'Direct + sublease' });
+  }
+  const seen = new Set<string>();
+  return out
+    .filter((m) => {
+      const k = m.keys.join('+');
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    })
+    .sort((x, y) => x.shortfall - y.shortfall || (x.from ?? '').localeCompare(y.from ?? '') || y.size - x.size)
+    .slice(0, limit)
+    .map((m) => ({ ...m, from: m.from && m.from > asOf ? m.from : null }));
+}

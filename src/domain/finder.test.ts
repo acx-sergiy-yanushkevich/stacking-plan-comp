@@ -245,3 +245,17 @@ describe('for-sale units', () => {
     expect(options).toEqual([]);
   });
 });
+
+describe('nearMisses', () => {
+  it('lists the closest smaller spaces and adjacent-floor stacks for a requirement nothing fits now', async () => {
+    const { nearMisses } = await import('./finder');
+    const floors = deriveFloors(property, TODAY, TODAY);
+    const misses = nearMisses(floors, 12000, TODAY);
+    expect(misses.length).toBeGreaterThan(0);
+    expect(misses.every((m) => m.keys.every((k) => k !== 'A10'))).toBe(true);
+    const first = misses[0];
+    expect(first.shortfall).toBeLessThanOrEqual(misses[misses.length - 1].shortfall);
+    // Floors 7 and 8 together (7,000 sublease + 7,400 direct) make a 14,400 SF stack.
+    expect(misses.some((m) => m.kind === 'stack' && m.size === 14400)).toBe(true);
+  });
+});

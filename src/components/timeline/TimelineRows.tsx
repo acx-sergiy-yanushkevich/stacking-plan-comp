@@ -115,11 +115,14 @@ export function TimelineRows({ rows, segIndex, start, end, asOf, lens, safe, plo
                   lane.map((bar) => {
                     const seg = segIndex.get(bar.segKey);
                     if (!seg) return null;
+                    const nextStart = lane.filter((b) => b.start > bar.start).map((b) => b.start).sort()[0];
+                    const freeRight = nextStart ? X(nextStart) : plotRight;
                     return (
                       <Bar
                         key={bar.key}
                         bar={bar}
                         seg={seg}
+                        freeRight={freeRight}
                         floorName={row.floor.name}
                         y={y + ROW_PAD + li * LANE_PITCH}
                         X={X}
@@ -159,6 +162,8 @@ interface BarProps {
   asOf: ISODate;
   lens: LensId;
   safe: boolean;
+  /** Pixel x where the next bar in this lane starts (label may spill into the gap). */
+  freeRight: number;
   dim: boolean;
   selected: boolean;
   hovered: boolean;
@@ -166,7 +171,7 @@ interface BarProps {
   onHover: (h: BarHover | null) => void;
 }
 
-function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf, lens, safe, dim, selected, hovered, onSelect, onHover }: BarProps) {
+function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf, lens, safe, freeRight, dim, selected, hovered, onSelect, onHover }: BarProps) {
   const text = segmentText(seg, { safe, asOf, lens, floorName });
   const tone = text.tone;
   const fill = `var(--tone-${tone}-fill)`;
@@ -223,6 +228,17 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
       : 'Available now'
     : `${fmtDate(bar.start)} – ${bar.end ? fmtDate(bar.end) : 'open-ended'}${bar.end && !isHoldover && !isProjected && bar.kind !== 'committed' ? ` · ${fmtMonths(Math.max(0, monthsBetween(asOf, bar.end)))} left` : ''}`;
   const tooltip = `${text.tooltip}\n${dates}`;
+  // A bar too narrow for its name spills the label into the free space to its right.
+  let outside = false;
+  if (!isAvail && (!nameText || nameText === sfOnly) && name) {
+    const room = freeRight - (x1 + extW) - 10;
+    if (room > 0 && measure(name, NAME_FONT) <= room) {
+      nameText = name;
+      outside = true;
+      const rest = room - measure(name, NAME_FONT) - measure(' · ', SUB_FONT);
+      subText = rest > 24 ? fitParts(sub, rest, SUB_FONT) : '';
+    }
+  }
   const visibleText = [tagText, [nameText, subText].filter(Boolean).join(' · ')].filter(Boolean).join(' ');
   const aria = `${visibleText ? `${visibleText}. ` : ''}${text.aria}. ${dates}`;
 
@@ -284,7 +300,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
         </g>
       )}
       {nameText && (
-        <text className="sp-tl-bar__text" x={textX} y={y + BAR_HEIGHT / 2 + 4} fill={ink}>
+        <text className={`sp-tl-bar__text ${outside ? 'sp-tl-bar__text--outside' : ''}`} x={outside ? x1 + extW + 6 : textX} y={y + BAR_HEIGHT / 2 + 4} fill={outside ? 'var(--sp-color-text)' : ink}>
           <tspan className="sp-tl-bar__name">{nameText}</tspan>
           {subText && <tspan className="sp-tl-bar__sub"> · {subText}</tspan>}
         </text>
