@@ -227,7 +227,18 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
   const extW = (isHoldover || isProjected) && cursorX > x1 ? cursorX - x1 : 0;
 
   // Tags sit at the bar's start; the label moves right to make room.
-  const tagText = safe ? null : isMtm ? 'MTM' : isHoldover && extW > 0 ? 'Holdover' : null;
+  let tagText: string | null = safe ? null : isMtm ? 'MTM' : isHoldover && extW > 0 ? 'Holdover' : null;
+  // The tenant name outranks the tag: if both cannot fit, drop the tag (the rose extension and the
+  // tooltip still say holdover / MTM) rather than leave an unnamed at-risk bar.
+  {
+    const labelPad0 = 8;
+    const end0 = (isMtm ? x1 - FADE_PX / 2 : x1 + (isHoldover ? extW : 0)) - labelPad0;
+    const tagW0 = tagText ? Math.ceil(measure(tagText, TAG_FONT)) + 10 : 0;
+    const roomWithTag = end0 - (visibleX0 + labelPad0 + (tagText ? tagW0 + 4 : 0));
+    const roomWithout = end0 - (visibleX0 + labelPad0);
+    const nm = isAvail ? bar.label : text.name;
+    if (tagText && measure(nm, NAME_FONT) > roomWithTag && measure(nm, NAME_FONT) <= roomWithout) tagText = null;
+  }
   const tagW = tagText ? Math.ceil(measure(tagText, TAG_FONT)) + 10 : 0;
   const tagX = tagText ? visibleX0 + 4 : 0;
   const labelPad = 8;
