@@ -35,7 +35,7 @@ export function measure(text: string, font: string): number {
 /** Longest prefix of whole words that fits in `maxPx`; '' when even the first word does not fit. */
 export function fitWords(text: string, maxPx: number, font: string): string {
   if (measure(text, font) <= maxPx) return text;
-  const words = text.split(/\s+/);
+  const words = text.split(' ');
   let out = '';
   for (const w of words) {
     const next = out ? `${out} ${w}` : w;
@@ -47,7 +47,7 @@ export function fitWords(text: string, maxPx: number, font: string): string {
 
 /** Wrap into at most `maxLines` lines of whole words; returns [] when the first word does not fit. */
 export function wrapWords(text: string, maxPx: number, font: string, maxLines: number): string[] {
-  const words = text.split(/\s+/).filter(Boolean);
+  const words = text.split(' ').filter(Boolean);
   const lines: string[] = [];
   let cur = '';
   for (const w of words) {
@@ -67,3 +67,16 @@ export function wrapWords(text: string, maxPx: number, font: string, maxLines: n
 }
 
 export const fits = (text: string, maxPx: number, font: string) => measure(text, font) <= maxPx;
+
+/** Longest prefix of " · "-separated parts that fits; a part is never split. */
+export function fitParts(text: string, maxPx: number, font: string): string {
+  if (measure(text, font) <= maxPx) return text;
+  const parts = text.split(' · ');
+  let out = '';
+  for (const part of parts) {
+    const next = out ? `${out} · ${part}` : part;
+    if (measure(next, font) > maxPx) break;
+    out = next;
+  }
+  return out;
+}

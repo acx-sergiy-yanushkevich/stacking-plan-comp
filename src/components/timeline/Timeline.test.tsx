@@ -47,6 +47,7 @@ function buildModel(asOf: string, safe: boolean): PlanModel {
     fits: null,
     worklist: () => [],
     activeWorklist: null,
+    searchReasons: null,
     searchMatches: null,
     bucketKeys: null,
     highlight: null,

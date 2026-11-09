@@ -51,7 +51,6 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
           <span>{num(kpis.leasable)} RSF leasable</span>
           <span className="sp-dot">·</span>
           <span>{property.floors.length} floors</span>
-          <span className="sp-dot">·</span>
           <span className={`sp-header__verified ${staleDays > 30 || staleRecords ? 'sp-header__verified--stale' : ''}`} title="Most recent change to a lease or availability on this plan; records not re-confirmed in 120 days are listed under Data issues">
             <Icon name={staleRecords ? 'clock' : 'check'} size={12} /> Latest change {fmtDate(verifiedAt)}
             {staleRecords > 0 && (

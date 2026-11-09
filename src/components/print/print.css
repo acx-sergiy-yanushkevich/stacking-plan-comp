@@ -37,3 +37,5 @@
   .sp-print__page { padding: 0; }
   .sp-toasts, .sp-sheet { display: none !important; }
 }
+.sp-print__running { display: flex; justify-content: space-between; font-size: 9px; color: #5c5c5c; border-bottom: 1px solid #e5e5e5; padding-bottom: 4px; margin-bottom: 10px; }
+.sp-print__total td { font-weight: 600; border-top: 1px solid #181818; border-bottom: 0; }

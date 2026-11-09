@@ -2,7 +2,7 @@ import type { ISODate, Property } from './types';
 import { activeDeals, isLeaseKind, type FloorView, type Segment, type SegmentKind } from './derive';
 import { rentVisible, tenantLabel } from './safe';
 import { fmtDate, fmtMonths } from './dates';
-import { num, rate as fmtRate, rateRange, usdCompact } from './format';
+import { num, rate as fmtRate, rateRange, usd0 } from './format';
 
 export const RENT_ROLL_HEADER = [
   'Floor',
@@ -135,7 +135,7 @@ export function rentRollDisplay(_p: Property, floors: FloorView[], _asOf: ISODat
         tenant = s.kind === 'forsale' ? 'For sale' : 'Available';
         start = s.availableFrom ? fmtDate(s.availableFrom) : 'Now';
         end = '—';
-        if (s.kind === 'forsale') rate = rentVisible(a, safe) && a.askingPrice ? `${usdCompact(a.askingPrice)} · ${usdCompact(Math.round(a.askingPrice / s.size))}/SF` : '—';
+        if (s.kind === 'forsale') rate = rentVisible(a, safe) && a.askingPrice ? `${usd0(a.askingPrice)} · ${usd0(Math.round(a.askingPrice / s.size))}/SF` : '—';
         else rate = rentVisible(a, safe) && a.rentHigh > 0 ? `Asking ${rateRange(a.rentLow, a.rentHigh, a.rateUnit, a.leaseType)}` : '—';
       }
       const risk = s.kind === 'holdover' || s.kind === 'mtm';

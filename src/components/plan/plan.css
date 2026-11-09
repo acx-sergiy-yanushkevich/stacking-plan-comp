@@ -8,7 +8,7 @@
 .sp-seg.is-selected .sp-seg__ring { stroke: var(--sp-color-brand); stroke-opacity: 0.25; stroke-width: 6; fill: none; }
 .sp-seg.is-related .sp-seg__rect { stroke: var(--sp-color-brand); stroke-width: 2; stroke-dasharray: 5 3; }
 .sp-seg.is-dim { opacity: 0.35; }
-.sp-seg.is-dim text, .sp-seg.is-dim .sp-badge { display: none; }
+.sp-seg.is-dim text, .sp-seg.is-dim .sp-badge, .sp-seg.is-dim .sp-seg__backing { display: none; }
 .sp-seg:focus-visible { outline: none; }
 .sp-seg:focus-visible .sp-seg__rect { stroke: var(--sp-color-focus); stroke-width: 2; }
 .sp-seg:focus-visible .sp-seg__ring { stroke: var(--sp-color-focus); stroke-opacity: 0.35; stroke-width: 6; fill: none; }

@@ -1,5 +1,5 @@
 import type { Property } from '../../domain/types';
-import { pct, usdCompact } from '../../domain/format';
+import { pct, usd0 } from '../../domain/format';
 import { Chip, Icon } from '../ui';
 
 export function SaleBanner({ property, leasable }: { property: Property; leasable: number }) {
@@ -10,8 +10,8 @@ export function SaleBanner({ property, leasable }: { property: Property; leasabl
       <Icon name="dollar" size={16} />
       <strong>Listed for sale</strong>
       <div className="sp-sale__facts">
-        <span>{usdCompact(s.price)}</span>
-        <span>{usdCompact(Math.round(s.price / leasable))}/RSF</span>
+        <span>{usd0(s.price)}</span>
+        <span>{usd0(Math.round(s.price / leasable))}/RSF</span>
         {s.capRate !== null && <span>{pct(s.capRate)} cap</span>}
         <span>{s.broker}</span>
       </div>

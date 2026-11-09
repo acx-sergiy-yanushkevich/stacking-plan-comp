@@ -17,7 +17,7 @@
 .sp-header__property a { color: inherit; }
 .sp-header__facts { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 2px; font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }
 .sp-header__facts .sp-dot { color: var(--sp-color-border-strong); }
-.sp-header__verified { display: inline-flex; align-items: center; gap: 4px; color: var(--sp-color-success); font-weight: 500; }
+.sp-header__verified { display: inline-flex; align-items: center; gap: 4px; color: var(--sp-color-success); font-weight: 500; flex-basis: 100%; }
 .sp-header__verified--stale { color: var(--sp-color-warn); }
 .sp-header__stale { color: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; margin-left: 2px; }
 .sp-header__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }

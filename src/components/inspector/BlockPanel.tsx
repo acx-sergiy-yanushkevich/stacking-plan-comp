@@ -4,7 +4,7 @@ import type { Availability } from '../../domain/types';
 import { isLeaseKind, leaseFloors, type Segment } from '../../domain/derive';
 import { daysBetween, fmtDate, fmtMonths } from '../../domain/dates';
 import { matchingInquiries } from '../../domain/finder';
-import { num, rate, rateRange, sf, usd0, usdCompact } from '../../domain/format';
+import { num, rate, rateRange, sf, usd0 } from '../../domain/format';
 import { STALE_DAYS } from '../../domain/issues';
 import { contactLabel, prospectLabel, rentVisible, tenantLabel } from '../../domain/safe';
 import { Chip } from '../ui';
@@ -154,7 +154,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
             items={[
               ['Type', 'Condo unit'],
               ['Status', a.status],
-              ['Asking price', rentVisible(a, safe) && a.askingPrice ? usdCompact(a.askingPrice) : 'Hidden'],
+              ['Asking price', rentVisible(a, safe) && a.askingPrice ? usd0(a.askingPrice) : 'Hidden'],
               ['Per SF', rentVisible(a, safe) && a.askingPrice ? `${usd0(Math.round(a.askingPrice / seg.size))}/SF` : 'Hidden'],
               ['Size', sf(seg.size)],
               ['Verified', <Verified key="v" at={a.verifiedAt} today={today} />],
@@ -198,7 +198,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
                 ['Type', availabilityType(seg.marketed)],
                 seg.marketed.kind === 'Lease' && ['Available from', seg.marketed.availableFrom ? fmtDate(seg.marketed.availableFrom) : 'Now'],
                 seg.marketed.kind === 'Lease' && ['Asking', rentVisible(seg.marketed, safe) && seg.marketed.rentHigh > 0 ? rateRange(seg.marketed.rentLow, seg.marketed.rentHigh, seg.marketed.rateUnit, seg.marketed.leaseType) : 'Hidden'],
-                seg.marketed.kind === 'Sale' && ['Asking price', rentVisible(seg.marketed, safe) && seg.marketed.askingPrice ? usdCompact(seg.marketed.askingPrice) : 'Hidden'],
+                seg.marketed.kind === 'Sale' && ['Asking price', rentVisible(seg.marketed, safe) && seg.marketed.askingPrice ? usd0(seg.marketed.askingPrice) : 'Hidden'],
                 ['Size', sf(seg.marketed.size)],
                 seg.marketed.kind === 'Lease' && ['Divisible', seg.marketed.divisible ? (seg.marketed.minDivisible ? `Yes · min ${sf(seg.marketed.minDivisible)}` : 'Yes') : 'No'],
               ]}

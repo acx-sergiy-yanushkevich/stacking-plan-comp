@@ -20,7 +20,7 @@ describe('dates', () => {
   });
   it('formats dates', () => {
     expect(fmtDate('2028-09-30')).toBe('Sep 30, 2028');
-    expect(fmtMonthYearShort('2028-09-30')).toBe("Sep '28");
+    expect(fmtMonthYearShort('2028-09-30')).toBe("Sep\u00a0'28");
     expect(yearOf('2028-09-30')).toBe(2028);
   });
 });

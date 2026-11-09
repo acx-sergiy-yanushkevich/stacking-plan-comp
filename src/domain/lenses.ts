@@ -180,7 +180,7 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
       { tone: 'available-later', label: 'Available later', pattern: 'dashed' },
       { tone: 'projected', label: 'Projected vacancy', pattern: 'dashed' },
       { tone: 'forsale', label: 'For sale' },
-      { tone: 'leased', label: 'Leased' },
+      { tone: 'leased', label: 'Leased, in place' },
       { tone: 'muted', label: 'Not available' },
     ];
   switch (lens) {

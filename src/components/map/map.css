@@ -41,7 +41,7 @@
   flex-direction: column;
   gap: 2px;
   padding: 4px;
-  background: color-mix(in srgb, var(--sp-color-card) 92%, transparent);
+  background: var(--sp-color-card);
   border: 1px solid var(--sp-color-border);
   border-radius: var(--sp-radius-card);
 }

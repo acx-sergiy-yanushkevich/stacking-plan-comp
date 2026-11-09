@@ -86,11 +86,7 @@ export function WorklistPanel({ model, state, patch }: WorklistPanelProps) {
                         {row.renewal && !safe && <StageChip stage={row.renewal.stage} />}
                       </div>
                       <div className="sp-ins__row-meta">
-                        <span>
-                          {row.floorName}
-                          {row.suite ? ` · Ste ${row.suite}` : ''}
-                        </span>
-                        <span>· {rent}</span>
+                        <span>{[row.floorName, row.suite ? `Ste ${row.suite}` : null, rent].filter(Boolean).join(' · ')}</span>
                       </div>
                       {!safe && (
                         <div className="sp-ins__row-meta">

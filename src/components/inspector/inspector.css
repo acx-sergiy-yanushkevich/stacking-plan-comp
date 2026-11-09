@@ -113,3 +113,7 @@
 .sp-ins__placeholder { padding: var(--sp-space-4) 0; color: var(--sp-color-text-weak); font-size: var(--sp-text-13); }
 
 @media (pointer: coarse) { .sp-ins__row { min-height: 44px; } }
+
+.sp-ins .sp-segmented { max-width: 100%; }
+.sp-ins .sp-segmented__opt { padding: 0 8px; }
+.sp-ins__kpi-sub { white-space: normal; }

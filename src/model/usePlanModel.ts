@@ -50,6 +50,8 @@ export interface PlanModel {
   worklist: (window: WindowKey) => WorklistRow[];
   activeWorklist: WorklistRow[] | null;
   searchMatches: Set<string> | null;
+  /** Why each search hit matched, by segment key. */
+  searchReasons: Map<string, string> | null;
   bucketKeys: Set<string> | null;
   /** Union of the active filter; null when nothing is filtered. */
   highlight: Set<string> | null;
@@ -101,22 +103,30 @@ function buildWorklist(floors: FloorView[], window: WindowKey): WorklistRow[] {
   });
 }
 
-function search(floors: FloorView[], q: string, safe: boolean): Set<string> {
+/** Search hits with the reason each block matched ("Prospect: Vantage Robotics (LOI)"). */
+function search(floors: FloorView[], q: string, safe: boolean): Map<string, string> {
   const needle = q.trim().toLowerCase();
-  const out = new Set<string>();
+  const out = new Map<string, string>();
   if (!needle) return out;
+  const hit = (v: string | undefined) => !!v && v.toLowerCase().includes(needle);
   for (const f of floors) {
     for (const s of f.segments) {
-      const hay: string[] = [];
-      if (s.suite) hay.push(`ste ${s.suite}`, `suite ${s.suite}`, s.suite);
-      hay.push(f.floor.name.toLowerCase());
-      if (!safe) {
-        if (s.lease) hay.push(s.lease.tenant, s.lease.tenantContact ?? '', s.lease.owner ?? '', s.lease.industry ?? '');
+      let reason: string | null = null;
+      if (s.suite && (hit(s.suite) || hit(`ste ${s.suite}`) || hit(`suite ${s.suite}`))) reason = `Suite ${s.suite}`;
+      else if (hit(f.floor.name)) reason = f.floor.name;
+      else if (!safe) {
         const deals = [...(s.availability?.deals ?? []), ...(s.marketed?.deals ?? []), ...(s.lease?.deals ?? [])];
-        for (const d of deals) hay.push(d.prospect, d.broker);
-        if (s.suspect) hay.push(s.suspect.tenant);
+        const deal = deals.find((d) => hit(d.prospect));
+        const broker = deals.find((d) => hit(d.broker));
+        if (s.lease && hit(s.lease.tenant)) reason = 'Tenant';
+        else if (s.lease && hit(s.lease.tenantContact)) reason = `Contact: ${s.lease.tenantContact}`;
+        else if (s.lease && hit(s.lease.owner)) reason = `Broker: ${s.lease.owner}`;
+        else if (s.lease && hit(s.lease.industry)) reason = `Industry: ${s.lease.industry}`;
+        else if (deal) reason = `Prospect: ${deal.prospect} (${deal.stage})`;
+        else if (broker) reason = `Deal broker: ${broker.broker}`;
+        else if (s.suspect && hit(s.suspect.tenant)) reason = `Likely ${s.suspect.tenant}`;
       }
-      if (hay.some((h) => h.toLowerCase().includes(needle))) out.add(s.key);
+      if (reason) out.set(s.key, reason);
     }
   }
   return out;
@@ -165,7 +175,8 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
   const effectiveWindow: WindowKey | null = state.window === 'risk' && safe ? '12' : state.window;
   const activeWorklist = effectiveWindow ? worklist(effectiveWindow) : null;
 
-  const searchMatches = useMemo(() => (state.q ? search(floors, state.q, safe) : null), [floors, state.q, safe]);
+  const searchReasons = useMemo(() => (state.q ? search(floors, state.q, safe) : null), [floors, state.q, safe]);
+  const searchMatches = useMemo(() => (searchReasons ? new Set(searchReasons.keys()) : null), [searchReasons]);
 
   const bucketKeys = useMemo(() => {
     if (state.bucket === null) return null;
@@ -183,7 +194,9 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
     filterLabel = `${who ? `Space for ${who}: ` : 'Space that fits '}${num(req.size)}${req.max ? `–${num(req.max)}` : '+'} SF${req.by ? ` by ${fmtDate(req.by)}` : ''} · ${fits.options.length} option${fits.options.length === 1 ? '' : 's'}`;
   } else if (searchMatches) {
     highlight = searchMatches;
-    filterLabel = `Search “${state.q}” · ${searchMatches.size} match${searchMatches.size === 1 ? '' : 'es'}`;
+    const reasons = searchReasons ? [...searchReasons.entries()] : [];
+    const detail = reasons.length === 1 ? `: ${reasons[0][1] === 'Tenant' ? 'tenant name' : reasons[0][1]} on ${floors.find((f) => f.segments.some((s) => s.key === reasons[0][0]))?.floor.name ?? ''}${segIndex.get(reasons[0][0])?.suite ? ` Ste ${segIndex.get(reasons[0][0])!.suite}` : ''}` : '';
+    filterLabel = `Search “${state.q}” · ${searchMatches.size} match${searchMatches.size === 1 ? '' : 'es'}${detail}`;
   } else if (activeWorklist && effectiveWindow) {
     highlight = new Set(activeWorklist.map((r) => r.segKey));
     const total = activeWorklist.reduce((s, r) => s + r.size, 0);
@@ -218,6 +231,7 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
     worklist,
     activeWorklist,
     searchMatches,
+    searchReasons,
     bucketKeys,
     highlight,
     filterLabel,

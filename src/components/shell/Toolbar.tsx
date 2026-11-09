@@ -24,11 +24,11 @@ export function Toolbar({ state, patch }: ToolbarProps) {
       <Segmented aria-label="View" size="lg" options={VIEWS} value={view} onChange={(v) => patch({ view: v, floor: v === 'stack' ? null : state.floor })} />
       <div className="sp-toolbar__group sp-toolbar__lens">
         <span className="sp-toolbar__label">Colour by</span>
-        <Segmented aria-label="Colour lens" options={LENSES.map((l) => ({ id: l.id, label: l.label, title: l.hint }))} value={state.lens} onChange={(lens) => patch({ lens })} />
+        <Segmented aria-label="Colour lens" options={LENSES.filter((l) => !(state.safe && l.id === 'deals')).map((l) => ({ id: l.id, label: l.label, title: l.hint }))} value={state.lens} onChange={(lens) => patch({ lens })} />
       </div>
       <div className="sp-toolbar__lens-select">
         <SelectField label="Colour by" hideLabel value={state.lens} onChange={(e) => patch({ lens: e.target.value as LensId })}>
-          {LENSES.map((l) => (
+          {LENSES.filter((l) => !(state.safe && l.id === 'deals')).map((l) => (
             <option key={l.id} value={l.id}>
               Colour by {l.label}
             </option>

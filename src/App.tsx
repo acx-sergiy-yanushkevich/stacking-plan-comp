@@ -32,7 +32,9 @@ import './components/kpis/kpis.css';
 const PRINT_PREVIEW = typeof location !== 'undefined' && new URLSearchParams(location.search).get('print') === '1';
 
 function Shell() {
-  const [state, patch] = usePlanState(TODAY);
+  const [rawState, patch] = usePlanState(TODAY);
+  // The deals lens is withheld in prospect-safe mode: fall back to status rather than draw an empty lens.
+  const state = rawState.safe && rawState.lens === 'deals' ? { ...rawState, lens: 'status' as const } : rawState;
   const model = usePlanModel(property, state, TODAY);
   const toast = useToast();
   const narrow = useIsNarrow();

@@ -78,7 +78,7 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
             {property.inquiries.map((i) => (
               <option key={i.id} value={i.id}>
                 {prospectLabel(i, safe)}
-                {safe ? ` (${i.id})` : ''} · {num(i.minSize)}–{num(i.maxSize)} SF · by {fmtMonthYear(i.neededBy)}
+                {safe ? ` (${i.id})` : ''} · {num(i.minSize)}–{num(i.maxSize)} SF
               </option>
             ))}
           </SelectField>

@@ -8,6 +8,7 @@ import type { PlanState } from '../../state/planState';
 import { selectSegment, type Patch } from '../plan/actions';
 import { PATTERN_IDS } from '../plan/Patterns';
 import { segmentText, type SegmentText } from '../plan/segmentText';
+import { num, sf } from '../../domain/format';
 import { inquiriesFor } from './floorData';
 
 export interface FloorPlateProps {
@@ -181,12 +182,21 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
   const outline = useMemo(() => pathD(points), [points]);
 
   const slices = useMemo<Slice[]>(() => {
-    const segs = floor.segments;
+    // The non-leasable area (lobby, loading, mechanical) is part of the plate too, so the stack and the plate agree.
+    const lobbyKey = `${floor.floor.id}-lobby`;
+    const lobby: Segment | null =
+      floor.floor.nonLeasable > 0
+        ? ({ key: lobbyKey, floorId: floor.floor.id, kind: 'unmarketed', size: floor.floor.nonLeasable, order: 9999, suite: null, endDate: null, monthsToExpiry: null } as Segment)
+        : null;
+    const segs = lobby ? [...floor.segments, lobby] : floor.segments;
     const polys = segs.length === 1 ? [points] : slicePolygon(points, segs.map((s) => s.size));
     return segs.map((seg, i) => {
       const poly = polys[i] ?? [];
       const matches = model.req ? inquiriesFor(seg, property.inquiries, asOf).length : 0;
-      const text = segmentText(seg, { safe, asOf, lens, floorName: floor.floor.name, matches: matches || undefined });
+      const text: SegmentText =
+        seg.key === lobbyKey
+          ? { tone: 'muted', pattern: 'hatch', name: 'Lobby · building use', sub: sf(seg.size), meta: 'Not leasable', badges: [], tooltip: `${floor.floor.name}: ${sf(seg.size)} non-leasable (lobby, loading, building use). Not counted in occupancy.`, aria: `${floor.floor.name}, lobby and building use, ${sf(seg.size)}, not leasable`, sfShort: num(seg.size) }
+          : segmentText(seg, { safe, asOf, today: model.today, lens, floorName: floor.floor.name, matches: matches || undefined });
       if (poly.length < 3 || polygonArea(poly) < 1) return { seg, text, poly, lines: [], badges: [], tier: 3 as const };
       const b = bbox(poly);
       const [, cy] = centroid(poly);
@@ -265,13 +275,13 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
               refs.current[i] = el;
             }}
             className={['sp-seg', selected ? 'is-selected' : '', dim ? 'is-dim' : '', p === 'dashed' ? 'sp-seg--dashed' : ''].filter(Boolean).join(' ')}
-            role="button"
-            tabIndex={i === tabStop ? 0 : -1}
+            role={s.seg.key.endsWith('-lobby') ? 'img' : 'button'}
+            tabIndex={s.seg.key.endsWith('-lobby') ? -1 : i === tabStop ? 0 : -1}
             aria-label={`${[...s.lines.map((l) => l.t), ...s.badges.map((b) => b.text)].filter(Boolean).join(' ')}${s.lines.length || s.badges.length ? '. ' : ''}${s.text.aria}`}
             aria-pressed={selected}
             data-key={s.seg.key}
             style={{ color: edge }}
-            onClick={() => selectSegment(patch, s.seg.key)}
+            onClick={() => !s.seg.key.endsWith('-lobby') && selectSegment(patch, s.seg.key)}
             onFocus={() => setFocusIdx(i)}
             onKeyDown={(e) => onKey(e, i)}
           >

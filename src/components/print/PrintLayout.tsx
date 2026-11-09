@@ -59,6 +59,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
       </section>
 
       <section className="sp-print__page">
+        <RunningHead p={p} asOf={model.asOf} safe={safe} page={2} />
         <h2>Rent roll</h2>
         <table className="sp-print__table">
           <thead>
@@ -78,11 +79,17 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
                 ))}
               </tr>
             ))}
+            <tr className="sp-print__total">
+              <td colSpan={3}>Total · {num(k.leasable)} RSF leasable</td>
+              <td className="num">{num(k.leased)} leased</td>
+              <td colSpan={rows[0].length - 4}>{pct(k.occupancy)} leased · {num(k.availableDirect + k.availableSublease)} SF available · {num(k.committed)} SF signed, not in</td>
+            </tr>
           </tbody>
         </table>
       </section>
 
       <section className="sp-print__page">
+        <RunningHead p={p} asOf={model.asOf} safe={safe} page={3} />
         <div className="sp-print__two">
           <div>
             <h2>Lease rollover</h2>
@@ -194,6 +201,18 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+function RunningHead({ p, asOf, safe, page }: { p: PlanModel['property']; asOf: string; safe: boolean; page: number }) {
+  return (
+    <div className="sp-print__running">
+      <span>
+        {p.name} · Stacking plan as of {fmtDate(asOf)}
+        {safe ? ' · Prospect-safe' : ''}
+      </span>
+      <span>Page {page} of 3</span>
     </div>
   );
 }

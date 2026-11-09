@@ -1,7 +1,7 @@
 import type { KeyboardEvent } from 'react';
 import type { Segment } from '../../domain/derive';
 import { textTier } from '../../domain/layout';
-import { fitWords, wrapWords, fits, measure } from '../../lib/textFit';
+import { fitParts, wrapWords, fits, measure } from '../../lib/textFit';
 import { PATTERN_IDS } from '../plan/Patterns';
 import type { SegmentText } from '../plan/segmentText';
 
@@ -35,6 +35,7 @@ const LINE = 15;
 const initials = (name: string) => name.split(/\s+/).filter((w) => /^[A-Za-z0-9]/.test(w)).slice(0, 3).map((w) => w[0].toUpperCase()).join('') || null;
 /** One-letter state cue for blocks too narrow for any text. */
 const GLYPH: Partial<Record<Segment['kind'], string>> = { available: 'A', sublease: 'S', committed: 'C', forsale: '$', holdover: '!', mtm: '!', unmarketed: '?', projected: 'V' };
+const GLYPH_WORD: Partial<Record<Segment['kind'], string>> = { available: 'Avail', sublease: 'Sublet', committed: 'Signed', forsale: 'Sale', unmarketed: 'Gap', projected: 'Vacant' };
 
 /** One suite on the plan: tone fill, pattern, accent bar, adaptive text, badges. */
 export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelect, onFocus, onKeyDown, enlarged, compact, related }: BlockProps) {
@@ -72,13 +73,13 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
     else if (lines.length < maxLines && text.meta) {
       // A rate is shown whole or not at all (dropping the lease type would mislead); other facts may lose trailing parts.
       const isRate = text.meta.includes('$');
-      const alt = isRate ? text.meta.replace(/^Asking /, '') : fitWords(text.meta, inner, FONT_SUB);
-      if (alt && (isRate ? fits(alt, inner, FONT_SUB) : alt.length >= 6)) lines.push({ t: alt, cls: 'sp-seg__meta', font: FONT_SUB });
+      const alt = isRate ? text.meta.replace(/^Asking /, '') : fitParts(text.meta, inner, FONT_SUB);
+      if (alt && (isRate ? fits(alt, inner, FONT_SUB) : alt.length >= 4)) lines.push({ t: alt, cls: 'sp-seg__meta', font: FONT_SUB });
     }
   } else if (tier === 2) {
     // Narrow: the whole name (on one or two lines) or nothing; a partial name misleads more than it helps.
     if (fits(text.name, inner, FONT_NAME)) lines.push({ t: text.name, cls: 'sp-seg__name', font: FONT_NAME });
-    else if (!compact && maxLines >= 2) {
+    else if (maxLines >= 2) {
       const two = wrapWords(text.name, inner, FONT_NAME, 2);
       if (two.length === 2 && two.join(' ') === text.name) for (const l of two) lines.push({ t: l, cls: 'sp-seg__name', font: FONT_NAME });
     }
@@ -88,13 +89,16 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   }
   if (lines.length > maxLines) lines.length = maxLines;
   // Narrowest tier: a single state glyph so colour is never the only cue.
-  const glyph = lines.length === 0 && w >= 24 && h >= 40 ? (GLYPH[seg.kind] ?? initials(text.name)) : null;
+  const glyph = lines.length === 0 && w >= 24 && h >= 40 ? ((w >= 48 && GLYPH_WORD[seg.kind] && fits(GLYPH_WORD[seg.kind]!, w - 8, FONT_SUB) ? GLYPH_WORD[seg.kind] : GLYPH[seg.kind]) ?? initials(text.name)) : null;
 
   const pattern = text.pattern;
   const patternFill = pattern === 'hatch' ? `url(#${PATTERN_IDS.hatch})` : pattern === 'dots' ? `url(#${PATTERN_IDS.dots})` : pattern === 'asking' ? `url(#${PATTERN_IDS.asking})` : null;
   // WCAG 2.5.3: the accessible name starts with exactly what is visible, then adds context.
   const visible = [glyph ?? '', ...lines.map((l) => l.t), showSecond && second ? second.text : '', showOther && other ? other.text : '', showDeal && deal ? deal.text : ''].filter(Boolean).join(' ');
-  const ariaLabel = visible ? `${visible}. ${text.aria}` : text.aria;
+  // Accessible name: what is visible first, then only the facts that are not already visible.
+  const floorName = text.aria.split(',')[0];
+  const extras = [text.name, text.sub, text.meta, ...text.badges.map((b) => (b.kind === 'deal' ? `${b.text} live deal${b.text === '1' ? '' : 's'}` : b.title ?? b.text))].filter((t) => t && !visible.includes(t));
+  const ariaLabel = `${floorName}${visible ? `, ${visible}` : ''}${extras.length ? `. ${extras.join(', ')}` : ''}`;
   const accentLeft = tone === 'expiring' || tone === 'risk';
   const accentTop = tone === 'rent-net';
 

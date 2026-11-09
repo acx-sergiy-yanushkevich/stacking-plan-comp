@@ -59,6 +59,7 @@ function buildModel(state: PlanState): PlanModel {
     fits,
     worklist,
     activeWorklist: state.window ? worklist(state.window) : null,
+    searchReasons: null,
     searchMatches: null,
     bucketKeys: null,
     highlight: fits?.keys ?? null,

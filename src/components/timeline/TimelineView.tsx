@@ -87,7 +87,7 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
           bandHeight={BAND_H}
           height={height - BOTTOM_PAD}
           buckets={model.roll.buckets}
-          atRisk={model.roll.atRisk}
+          atRisk={model.safe ? 0 : model.roll.atRisk}
           activeBucket={state.bucket}
           onBucket={onBucket}
         />

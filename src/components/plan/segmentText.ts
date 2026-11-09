@@ -1,7 +1,7 @@
 import type { Segment } from '../../domain/derive';
 import type { ISODate } from '../../domain/types';
 import { fmtDate, fmtMonthYear, fmtMonthYearShort, fmtMonths } from '../../domain/dates';
-import { compactRate, num, rate, sf, usdCompact } from '../../domain/format';
+import { compactRate, num, rate, sf, usd0 } from '../../domain/format';
 import { dealCount, rentType, rentValue, topDeal, toneFor, type LensId, type Tone } from '../../domain/lenses';
 import { prospectLabel, rentVisible, tenantLabel } from '../../domain/safe';
 import type { PatternKind } from './Patterns';
@@ -38,6 +38,10 @@ export interface SegmentTextOptions {
   floorName: string;
   /** Inquiry matches to show as a badge when the finder is active. */
   matches?: number;
+  /** Real today (activity ages are measured from today, never from a projected date). */
+  today?: ISODate;
+  /** Why a search matched this block (shown as a badge). */
+  matchReason?: string;
 }
 
 const KIND_LABEL: Record<Segment['kind'], string> = {
@@ -110,19 +114,19 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
       break;
     }
     case 'projected': {
-      name = seg.endDate ? `Vacated ${fmtMonthYearShort(seg.endDate)}` : 'Projected vacancy';
+      name = seg.endDate ? `Vacated\u00a0${fmtMonthYearShort(seg.endDate)}` : 'Projected vacancy';
       meta = lease && !safe ? `${tenantLabel(lease, safe)} leaves` : 'No availability yet';
       break;
     }
     case 'unmarketed': {
-      name = `${sf(seg.size)} unaccounted`;
-      meta = seg.suspect ? (safe ? 'Likely a lease missing units' : `Likely ${seg.suspect.tenant}`) : 'No lease or availability';
-      badges.push({ kind: 'warn', text: 'Data gap' });
+      name = safe ? `${sf(seg.size)} not available` : `${sf(seg.size)} unaccounted`;
+      meta = safe ? 'Not on the market' : seg.suspect ? `Likely ${seg.suspect.tenant}` : 'No lease or availability';
+      if (!safe) badges.push({ kind: 'warn', text: 'Data gap' });
       break;
     }
     case 'forsale': {
       name = 'For sale';
-      meta = a?.askingPrice && !safe ? `${usdCompact(a.askingPrice)} · ${usdCompact(Math.round(a.askingPrice / seg.size))}/SF` : 'Condo unit';
+      meta = a?.askingPrice ? `${usd0(a.askingPrice)} · ${usd0(Math.round(a.askingPrice / seg.size))}/SF` : 'Condo unit';
       badges.push({ kind: 'sale', text: 'Sale' });
       break;
     }
@@ -151,11 +155,12 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
   if (deals > 0) badges.push({ kind: 'deal', text: String(deals), title: `${deals} live deal${deals === 1 ? '' : 's'}` });
   if (o.matches) badges.push({ kind: 'match', text: o.matches === 1 ? '1 inquiry fits' : `${o.matches} inquiries fit`, title: 'Open inquiries this space could satisfy' });
   // CRM on the canvas: how recently the tenant relationship was touched, for leases inside the renewal window.
-  if (!safe && lease?.lastTouch && (kind === 'leased' || kind === 'holdover' || kind === 'mtm') && (seg.monthsToExpiry === null || seg.monthsToExpiry <= 24)) {
-    const days = Math.max(0, Math.round((Date.parse(o.asOf) - Date.parse(lease.lastTouch.date)) / 86_400_000));
+  const projected = !!o.today && o.today !== o.asOf;
+  if (!safe && !projected && lease?.lastTouch && (kind === 'leased' || kind === 'holdover' || kind === 'mtm') && (seg.monthsToExpiry === null || seg.monthsToExpiry <= 24)) {
+    const days = Math.max(0, Math.round((Date.parse(o.today ?? o.asOf) - Date.parse(lease.lastTouch.date)) / 86_400_000));
     badges.push({ kind: days <= 30 ? 'info' : days <= 90 ? 'warn' : 'risk', text: `${lease.lastTouch.type} ${days} d`, title: `Last touch: ${lease.lastTouch.type} ${days} days ago by ${lease.lastTouch.by}` });
-  } else if (!safe && lease && !lease.lastTouch && (kind === 'leased' || kind === 'holdover' || kind === 'mtm') && seg.monthsToExpiry !== null && seg.monthsToExpiry <= 24) {
-    badges.push({ kind: 'info', text: 'No touch', title: 'No activity logged on this tenant' });
+  } else if (!safe && !projected && lease && !lease.lastTouch && (kind === 'leased' || kind === 'holdover' || kind === 'mtm') && seg.monthsToExpiry !== null && seg.monthsToExpiry <= 24) {
+    badges.push({ kind: 'info', text: 'No activity', title: 'No activity logged on this tenant' });
   }
 
   const lines = [name, sub, meta].filter(Boolean);

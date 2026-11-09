@@ -247,7 +247,8 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                 {/* Blocks */}
                 {r.boxes.map((b, bi) => {
                   const seg = segIndex.get(b.key)!;
-                  const text = segmentText(seg, { safe: state.safe, asOf: model.asOf, lens: state.lens, floorName: f.floor.name, matches: matchCount(b.key) });
+                  const reason = model.searchReasons?.get(b.key);
+                  const text = segmentText(seg, { safe: state.safe, asOf: model.asOf, today: model.today, lens: state.lens, floorName: f.floor.name, matches: matchCount(b.key), matchReason: reason && reason !== 'Tenant' && !reason.startsWith('Suite') && !reason.startsWith('Floor') ? reason : undefined });
                   return (
                     <Block
                       key={b.key}

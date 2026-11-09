@@ -202,7 +202,7 @@ interface BarProps {
 }
 
 function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf, lens, safe, freeRight, focusable, onFocusBar, onNavigate, dim, selected, hovered, onSelect, onHover }: BarProps) {
-  const text = segmentText(seg, { safe, asOf, lens, floorName });
+  const text = segmentText(seg, { safe, asOf, lens, floorName, today: asOf });
   const tone = text.tone;
   const fill = `var(--tone-${tone}-fill)`;
   const edge = `var(--tone-${tone}-edge)`;

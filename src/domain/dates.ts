@@ -58,7 +58,7 @@ export function fmtDate(d: ISODate): string {
 /** "Sep '28": compact form for narrow blocks. */
 export function fmtMonthYearShort(d: ISODate): string {
   const { y, m } = parse(d);
-  return `${MONTHS[m - 1]} '${String(y).slice(2)}`;
+  return `${MONTHS[m - 1]}\u00a0'${String(y).slice(2)}`;
 }
 
 /** 0 → "0 mo", 4 → "4 mo", 14 → "1 yr 2 mo", 24 → "2 yr", negative → "expired". */

@@ -39,12 +39,12 @@ export function FloorPanel({ floor, model, state, patch }: FloorPanelProps) {
             <span className="sp-ins__kpi-value">
               {floor.available > 0 ? sf(floor.available) : '—'}
             </span>
-            <span className="sp-ins__kpi-sub">Direct and sublease, now</span>
+            <span className="sp-ins__kpi-sub">{(() => { const d = floor.segments.some((s) => s.kind === 'available' && !s.availableFrom); const su = floor.segments.some((s) => s.kind === 'sublease'); return d && su ? 'Direct and sublease, now' : su ? 'Sublease, now' : d ? 'Direct, now' : 'Nothing on the market now'; })()}</span>
           </div>
           <div className="sp-ins__kpi">
             <span className="sp-label">Largest contiguous</span>
             <span className="sp-ins__kpi-value">{floor.maxContiguous > 0 ? sf(floor.maxContiguous) : '—'}</span>
-            <span className="sp-ins__kpi-sub">{floor.bestRun.length > 1 ? `${floor.bestRun.length} adjacent suites` : 'Direct space'}</span>
+            <span className="sp-ins__kpi-sub">{floor.bestRun.length > 1 ? `${floor.bestRun.length} adjacent direct suites` : floor.bestRun.length === 1 ? 'One direct suite' : 'No direct space now'}</span>
           </div>
           <div className="sp-ins__kpi">
             <span className="sp-label">Next expiry</span>

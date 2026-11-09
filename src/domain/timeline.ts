@@ -35,7 +35,24 @@ export function timelineModel(p: Property, floors: FloorView[], asOf: ISODate, t
   const rows: TimelineRow[] = p.floors
     .slice()
     .sort((a, b) => b.sequence - a.sequence)
-    .map((floor) => ({ floor, bars: (views.get(floor.id)?.segments ?? []).flatMap((s) => barFor(s, asOf)) }));
+    .map((floor) => {
+      const segs = views.get(floor.id)?.segments ?? [];
+      const bars = segs.flatMap((s) => barFor(s, asOf));
+      // History: leases on this floor that ended before the as-of date are no longer segments,
+      // but their term still happened. Draw them as ended bars on whatever occupies the suite now.
+      const horizon = addMonths(today, -12);
+      for (const l of p.leases) {
+        const end = leaseEnd(l);
+        if (!end || end >= asOf || end < horizon) continue;
+        for (const u of l.units) {
+          if (u.floorId !== floor.id || segs.some((s) => s.key === u.id)) continue;
+          const host = segs.find((s) => s.suite === u.suite) ?? segs[0];
+          if (!host) continue;
+          bars.push({ key: `tl-hist-${u.id}`, segKey: host.key, label: l.tenant, start: l.commencement, end, kind: 'projected', sublease: false, committed: false });
+        }
+      }
+      return { floor, bars };
+    });
 
   let start = startOfMonth(addMonths(today, -12));
   for (const row of rows) for (const bar of row.bars) if (bar.start < start) start = startOfMonth(bar.start);
