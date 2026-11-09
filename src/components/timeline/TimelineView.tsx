@@ -3,7 +3,7 @@ import { useCallback, useId, useMemo, useRef, useState } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import type { ISODate } from '../../domain/types';
-import { selectSegment, toggleBucket, type Patch } from '../plan/actions';
+import { clearSelection, selectSegment, toggleBucket, type Patch } from '../plan/actions';
 import { TimelineAxis } from './TimelineAxis';
 import { TimelineRows, type BarHover } from './TimelineRows';
 import { layoutRows, rowsHeight, viewAxis } from './layout';
@@ -49,7 +49,8 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
 
   const [hover, setHover] = useState<BarHover | null>(null);
   const onHover = useCallback((h: BarHover | null) => setHover(h), []);
-  const onSelect = useCallback((key: string) => selectSegment(patch, key), [patch]);
+  // Selecting the selected bar again (click or Escape) clears the selection.
+  const onSelect = useCallback((key: string) => (key === state.select ? clearSelection(patch) : selectSegment(patch, key)), [patch, state.select]);
   const onBucket = useCallback((key: number) => toggleBucket(patch, state.bucket, key), [patch, state.bucket]);
   const onAsOf = useCallback((d: ISODate) => patch({ asOf: d }), [patch]);
 

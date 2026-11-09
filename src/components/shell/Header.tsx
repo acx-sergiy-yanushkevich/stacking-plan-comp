@@ -20,6 +20,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
   const { property, kpis, counts, today } = model;
   const verifiedAt = [...property.leases.map((l) => l.verifiedAt), ...property.availabilities.map((a) => a.verifiedAt)].sort().at(-1) ?? property.dataUpdated;
   const staleDays = daysBetween(verifiedAt, today);
+  const staleRecords = model.issues.filter((i) => i.id.startsWith('stale-L') || i.id.startsWith('stale-A')).length;
   const issueTotal = model.issues.length;
   return (
     <header className="sp-card sp-header sp-no-print">
@@ -51,8 +52,13 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
           <span className="sp-dot">·</span>
           <span>{property.floors.length} floors</span>
           <span className="sp-dot">·</span>
-          <span className={`sp-header__verified ${staleDays > 30 ? 'sp-header__verified--stale' : ''}`} title="Most recent change to a lease or availability on this plan">
-            <Icon name="check" size={12} /> Verified {fmtDate(verifiedAt)}
+          <span className={`sp-header__verified ${staleDays > 30 || staleRecords ? 'sp-header__verified--stale' : ''}`} title="Most recent change to a lease or availability on this plan; records not re-confirmed in 120 days are listed under Data issues">
+            <Icon name={staleRecords ? 'clock' : 'check'} size={12} /> Latest change {fmtDate(verifiedAt)}
+            {staleRecords > 0 && (
+              <button type="button" className="sp-header__stale" onClick={() => patch({ mode: 'issues', select: null, floor: null })}>
+                · {staleRecords} record{staleRecords === 1 ? '' : 's'} stale
+              </button>
+            )}
           </span>
         </div>
       </div>

@@ -208,8 +208,10 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
   const edge = `var(--tone-${tone}-edge)`;
   const ink = `var(--tone-${tone}-text)`;
   const isAvail = bar.kind === 'available' || bar.kind === 'forsale';
-  const isMtm = bar.kind === 'mtm';
-  const isHoldover = bar.kind === 'holdover';
+  // Prospects never see tenant risk: in safe mode holdover and MTM draw as plain leases ending at the cursor.
+  const isMtm = bar.kind === 'mtm' && !safe;
+  const isHoldover = bar.kind === 'holdover' && !safe;
+  const safeRisk = safe && (bar.kind === 'mtm' || bar.kind === 'holdover');
   const isProjected = bar.kind === 'projected';
 
   // Geometry. A bar that began before the axis overruns the left edge; the clipPath squares it off.
@@ -218,6 +220,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
   let x1: number;
   if (isAvail) x1 = plotRight;
   else if (isMtm) x1 = Math.min(plotRight, Math.max(cursorX, visibleX0 + 24) + FADE_PX);
+  else if (safeRisk) x1 = Math.max(cursorX, visibleX0 + 24);
   else x1 = bar.end ? X(bar.end) : plotRight;
   const w = Math.max(2, x1 - x0);
   const visibleW = x1 - visibleX0;
@@ -277,9 +280,9 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
   // Full facts for the tooltip: exact dates and months remaining.
   const dates = isAvail
     ? bar.start > asOf
-      ? `Available from ${fmtDate(bar.start)}`
-      : 'Available now'
-    : `${fmtDate(bar.start)} – ${bar.end ? fmtDate(bar.end) : 'open-ended'}${bar.end && !isHoldover && !isProjected && bar.kind !== 'committed' ? ` · ${fmtMonths(Math.max(0, monthsBetween(asOf, bar.end)))} left` : ''}`;
+      ? `Available from ${fmtDate(bar.start)} · no end date`
+      : 'Available now · no end date'
+    : `${fmtDate(bar.start)} – ${bar.end ? fmtDate(bar.end) : safeRisk ? '' : 'open-ended (no end date)'}${bar.end && !isHoldover && !isProjected && bar.kind !== 'committed' ? ` · ${fmtMonths(Math.max(0, monthsBetween(asOf, bar.end)))} left` : ''}`;
   const tooltip = `${text.tooltip}\n${dates}`;
   // A bar too narrow for its name spills the label into the free space to its right.
   let outside = false;
@@ -304,6 +307,9 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onSelect(bar.segKey);
+    } else if (e.key === 'Escape' && selected) {
+      e.preventDefault();
+      onSelect(bar.segKey); // toggles the selection off (see TimelineView.onSelect)
     } else if (dirs[e.key]) {
       e.preventDefault();
       onNavigate(dirs[e.key]);
@@ -333,7 +339,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
       onBlur={() => onHover(null)}
     >
       {!hovered && <title>{tooltip}</title>}
-      {isMtm && (
+      {(isMtm || isAvail) && (
         <defs>
           <linearGradient id={gradId} gradientUnits="userSpaceOnUse" x1={x1 - FADE_PX} x2={x1} y1={0} y2={0}>
             <stop offset="0" stopColor="#fff" stopOpacity={1} />
@@ -345,7 +351,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
         </defs>
       )}
       {selected && <rect className="sp-seg__ring" x={x0 - 2} y={y - 2} width={w + extW + 4} height={BAR_HEIGHT + 4} rx={5} />}
-      <g mask={isMtm ? `url(#${gradId}-mask)` : undefined}>
+      <g mask={isMtm || isAvail ? `url(#${gradId}-mask)` : undefined}>
         <rect className="sp-seg__rect" x={x0 + 0.5} y={y + 0.5} width={rectW} height={BAR_HEIGHT - 1} rx={3} fill={fill} stroke={edge} />
         {bar.committed && <rect className="sp-seg__overlay" x={x0 + 0.5} y={y + 0.5} width={rectW} height={BAR_HEIGHT - 1} rx={3} fill={`url(#${PATTERN_IDS.hatch})`} />}
         {bar.sublease && <rect className="sp-seg__overlay" x={x0 + 0.5} y={y + 0.5} width={rectW} height={BAR_HEIGHT - 1} rx={3} fill={`url(#${PATTERN_IDS.dots})`} />}

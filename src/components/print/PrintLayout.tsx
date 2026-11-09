@@ -114,6 +114,47 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
                 )}
               </tbody>
             </table>
+            {!safe && k.rentByType.length > 0 && (
+              <>
+                <h2 style={{ marginTop: 14 }}>In-place rent by lease type</h2>
+                <table className="sp-print__table sp-print__table--tight">
+                  <thead>
+                    <tr>
+                      <th>Type</th>
+                      <th className="num">Leased SF</th>
+                      <th className="num">SF-weighted average</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {k.rentByType.map((r) => (
+                      <tr key={r.type}>
+                        <td>{r.type}</td>
+                        <td className="num">{num(Math.round(r.sf))}</td>
+                        <td className="num">${r.avg.toFixed(2)}/SF/yr</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="sp-print__note">Confidential leases excluded; never blended across lease types.</p>
+              </>
+            )}
+            <h2 style={{ marginTop: 14 }}>Coming supply</h2>
+            <table className="sp-print__table sp-print__table--tight">
+              <tbody>
+                <tr>
+                  <td>Occupied, marketed for later</td>
+                  <td className="num">{k.comingAvailable.sf ? `${num(k.comingAvailable.sf)} SF${k.comingAvailable.from ? ` from ${fmtDate(k.comingAvailable.from)}` : ''}` : '—'}</td>
+                </tr>
+                <tr>
+                  <td>Signed, not yet in</td>
+                  <td className="num">{k.committed ? `${num(k.committed)} SF` : '—'}</td>
+                </tr>
+                <tr>
+                  <td>Largest contiguous block now</td>
+                  <td className="num">{k.maxContiguous.size ? `${num(k.maxContiguous.size)} SF · ${k.maxContiguous.floorName}` : '—'}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
           <div>
             <h2>Renewal worklist · next 12 months</h2>

@@ -53,8 +53,8 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
   const rentText = lease ? (rentVisible(lease, safe) && lease.rate !== null ? rate(lease.rate, lease.rateUnit, lease.leaseType) : safe ? 'Hidden' : lease.confidential ? 'Confidential' : 'Not on record') : undefined;
   const remaining = (() => {
     if (!lease) return undefined;
-    if (seg.kind === 'mtm') return 'Month-to-month';
-    if (seg.kind === 'holdover') return `Holdover · expired ${seg.endDate ? fmtDate(seg.endDate) : ''}`;
+    if (seg.kind === 'mtm') return safe ? '—' : 'Month-to-month';
+    if (seg.kind === 'holdover') return safe ? '—' : `Holdover · expired ${seg.endDate ? fmtDate(seg.endDate) : ''}`;
     if (seg.kind === 'committed') return `Moves in ${fmtDate(lease.commencement)}`;
     if (seg.kind === 'projected') return `Vacated ${seg.endDate ? fmtDate(seg.endDate) : ''}`;
     if (seg.monthsToExpiry !== null) return seg.kind === 'sublease' && seg.headMonths != null ? `${fmtMonths(seg.headMonths)} on the head lease · sublease ${fmtMonths(seg.monthsToExpiry)}` : fmtMonths(seg.monthsToExpiry);
@@ -99,7 +99,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
               ['Tenant', <strong key="t">{tenantLabel(lease, safe)}</strong>],
               ['Contact', contactLabel(lease.tenantContact, safe)],
               !safe && ['Industry', lease.industry],
-              ['Term', `${fmtDate(lease.commencement)} – ${seg.endDate ? fmtDate(seg.endDate) : 'open (MTM)'}`],
+              ['Term', safe && (seg.kind === 'holdover' || seg.kind === 'mtm') ? `Since ${fmtDate(lease.commencement)}` : `${fmtDate(lease.commencement)} – ${seg.endDate ? fmtDate(seg.endDate) : 'open (MTM)'}`],
               ['Remaining', remaining],
               ['Rent', rentText],
               !safe && ['Broker', lease.owner],
@@ -246,15 +246,17 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
         </Section>
       )}
 
-      {(deals.length > 0 || a || (carriesLease && seg.kind !== 'projected')) && (
+      {!safe && (deals.length > 0 || a || (carriesLease && seg.kind !== 'projected')) && (
         <Section title={`Deals${deals.length ? ` · ${deals.length}` : ''}`}>
           <DealList deals={deals} safe={safe} />
         </Section>
       )}
 
-      <Section title={`${kindLabel(seg.kind)} actions`} className="sp-ins__section--actions">
-        {!safe && <Actions items={actions} />}
-      </Section>
+      {!safe && (
+        <Section title={`${kindLabel(seg.kind)} actions`} className="sp-ins__section--actions">
+          <Actions items={actions} />
+        </Section>
+      )}
     </>
   );
 }

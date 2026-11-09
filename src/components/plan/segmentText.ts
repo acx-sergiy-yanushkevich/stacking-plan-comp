@@ -63,6 +63,7 @@ export function patternFor(seg: Segment, tone: Tone, lens: LensId): PatternKind 
 
 export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
   const { safe, lens } = o;
+  void o.asOf;
   const kind: Segment['kind'] = seg.kind;
   const tone = toneFor(seg, lens, safe);
   const pattern = patternFor(seg, tone, lens);
@@ -148,10 +149,17 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
 
   const deals = safe ? 0 : dealCount(seg);
   if (deals > 0) badges.push({ kind: 'deal', text: String(deals), title: `${deals} live deal${deals === 1 ? '' : 's'}` });
-  if (o.matches) badges.push({ kind: 'match', text: `${o.matches} inquiry${o.matches === 1 ? '' : ' fits'}`.replace(' fits', ' inquiries'), title: 'Open inquiries this space could satisfy' });
+  if (o.matches) badges.push({ kind: 'match', text: o.matches === 1 ? '1 inquiry fits' : `${o.matches} inquiries fit`, title: 'Open inquiries this space could satisfy' });
+  // CRM on the canvas: how recently the tenant relationship was touched, for leases inside the renewal window.
+  if (!safe && lease?.lastTouch && (kind === 'leased' || kind === 'holdover' || kind === 'mtm') && (seg.monthsToExpiry === null || seg.monthsToExpiry <= 24)) {
+    const days = Math.max(0, Math.round((Date.parse(o.asOf) - Date.parse(lease.lastTouch.date)) / 86_400_000));
+    badges.push({ kind: days <= 30 ? 'info' : days <= 90 ? 'warn' : 'risk', text: `${lease.lastTouch.type} ${days} d`, title: `Last touch: ${lease.lastTouch.type} ${days} days ago by ${lease.lastTouch.by}` });
+  } else if (!safe && lease && !lease.lastTouch && (kind === 'leased' || kind === 'holdover' || kind === 'mtm') && seg.monthsToExpiry !== null && seg.monthsToExpiry <= 24) {
+    badges.push({ kind: 'info', text: 'No touch', title: 'No activity logged on this tenant' });
+  }
 
   const lines = [name, sub, meta].filter(Boolean);
-  const badgeText = badges.map((b) => b.text).join(', ');
+  const badgeText = badges.map((b) => (b.kind === 'deal' ? `${b.text} live deal${b.text === '1' ? '' : 's'}` : b.text)).join(', ');
   const tooltip = [...lines, badgeText].filter(Boolean).join('\n');
   const aria = `${o.floorName}, ${lines.join(', ')}${badgeText ? `, ${badgeText}` : ''}`;
   return { tone, pattern, name, sub, meta, badges, tooltip, aria, sfShort: num(seg.size) };

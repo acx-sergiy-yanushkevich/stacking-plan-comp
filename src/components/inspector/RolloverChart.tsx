@@ -48,6 +48,9 @@ export function RolloverChart({ buckets, atRisk, atRiskLeases, activeBucket, onB
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       fn();
+    } else if (e.key === 'Escape' && activeBucket !== null) {
+      e.preventDefault();
+      onBucket(null);
     }
   };
 

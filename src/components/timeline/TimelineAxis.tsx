@@ -108,12 +108,12 @@ export function TimelineAxis({ start, end, asOf, today, plotLeft, plotWidth, str
               <rect className="sp-tl-band__fill" x={x0} y={bandTop} width={w} height={bandHeight} />
               {active && <rect className="sp-tl-band__beam" x={x0} y={bandBottom} width={w} height={Math.max(0, height - bandBottom)} />}
               {labelText && (
-                <text className="sp-tl-band__label" x={x0 + w / 2} y={bandTop + 20} textAnchor="middle">
+                <text className="sp-tl-band__label" x={Math.min(x0 + w / 2, plotLeft + plotWidth - measure(labelText, LABEL_FONT) / 2 - 4)} y={bandTop + 20} textAnchor="middle">
                   {`${labelText} `}
                 </text>
               )}
               {valueText && (
-                <text className={`sp-tl-band__value ${small ? 'is-small' : ''}`} x={x0 + w / 2} y={bandTop + 38} textAnchor="middle">
+                <text className={`sp-tl-band__value ${small ? 'is-small' : ''}`} x={Math.min(x0 + w / 2, plotLeft + plotWidth - measure(valueText, small ? VALUE_FONT_SM : VALUE_FONT) / 2 - 4)} y={bandTop + 38} textAnchor="middle">
                   {`${valueText} `}
                 </text>
               )}

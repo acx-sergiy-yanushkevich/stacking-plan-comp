@@ -31,6 +31,8 @@ export interface BlockProps {
 
 const PAD = 8;
 const LINE = 15;
+/** Up to three initials of a name ("Preston Park Café" → "PPC"). */
+const initials = (name: string) => name.split(/\s+/).filter((w) => /^[A-Za-z0-9]/.test(w)).slice(0, 3).map((w) => w[0].toUpperCase()).join('') || null;
 /** One-letter state cue for blocks too narrow for any text. */
 const GLYPH: Partial<Record<Segment['kind'], string>> = { available: 'A', sublease: 'S', committed: 'C', forsale: '$', holdover: '!', mtm: '!', unmarketed: '?', projected: 'V' };
 
@@ -45,12 +47,18 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
 
   // Badges: deal count pill always (if room); first text badge when wide enough.
   const deal = text.badges.find((b) => b.kind === 'deal');
-  const other = text.badges.find((b) => b.kind !== 'deal');
+  const others = text.badges.filter((b) => b.kind !== 'deal');
+  const other = others[0];
+  const second = others[1];
   const showDeal = !!deal && w >= 64 && !compact;
   const showOther = !!other && w >= 150 && h >= 40;
+  const showSecond = !!second && w >= 300 && h >= 40;
   const badgeW = other ? Math.ceil(other.text.length * 6.2) + 12 : 0;
-  // Text on the first line must clear the badges in the top-right corner.
-  const reserved = (showOther ? badgeW + 6 : 0) + (showDeal ? 22 : 0);
+  const badge2W = second ? Math.ceil(second.text.length * 6.2) + 12 : 0;
+  // Text on the first line must clear the badges in the top-right corner. On narrow blocks the deal
+  // pill moves to the bottom-right so the tenant name keeps the full width.
+  const pillBottom = tier >= 2;
+  const reserved = (showOther ? badgeW + 6 : 0) + (showSecond ? badge2W + 6 : 0) + (showDeal && !pillBottom ? 22 : 0);
   const inner = w - PAD * 2 - reserved;
 
   // Decide the lines (never truncate a word; drop lines instead).
@@ -80,12 +88,12 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   }
   if (lines.length > maxLines) lines.length = maxLines;
   // Narrowest tier: a single state glyph so colour is never the only cue.
-  const glyph = lines.length === 0 && w >= 24 && h >= 40 ? GLYPH[seg.kind] ?? null : null;
+  const glyph = lines.length === 0 && w >= 24 && h >= 40 ? (GLYPH[seg.kind] ?? initials(text.name)) : null;
 
   const pattern = text.pattern;
   const patternFill = pattern === 'hatch' ? `url(#${PATTERN_IDS.hatch})` : pattern === 'dots' ? `url(#${PATTERN_IDS.dots})` : pattern === 'asking' ? `url(#${PATTERN_IDS.asking})` : null;
   // WCAG 2.5.3: the accessible name starts with exactly what is visible, then adds context.
-  const visible = [glyph ?? '', ...lines.map((l) => l.t), showOther && other ? other.text : '', showDeal && deal ? deal.text : ''].filter(Boolean).join(' ');
+  const visible = [glyph ?? '', ...lines.map((l) => l.t), showSecond && second ? second.text : '', showOther && other ? other.text : '', showDeal && deal ? deal.text : ''].filter(Boolean).join(' ');
   const ariaLabel = visible ? `${visible}. ${text.aria}` : text.aria;
   const accentLeft = tone === 'expiring' || tone === 'risk';
   const accentTop = tone === 'rent-net';
@@ -133,8 +141,17 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
           {`${l.t} `}
         </text>
       ))}
+      {showSecond && second && (
+        <g className={`sp-badge sp-badge--${second.kind}`} transform={`translate(${w - badgeW - 6 - (showDeal && !pillBottom ? 22 : 0) - badge2W - 6} 6)`}>
+          <title>{second.title ?? second.text}</title>
+          <rect width={badge2W} height={16} rx={8} />
+          <text x={badge2W / 2} y={11.5} textAnchor="middle">
+            {`${second.text} `}
+          </text>
+        </g>
+      )}
       {showOther && other && (
-        <g className={`sp-badge sp-badge--${other.kind}`} transform={`translate(${w - badgeW - 6 - (showDeal ? 22 : 0)} 6)`}>
+        <g className={`sp-badge sp-badge--${other.kind}`} transform={`translate(${w - badgeW - 6 - (showDeal && !pillBottom ? 22 : 0)} 6)`}>
           <title>{other.title ?? other.text}</title>
           <rect width={badgeW} height={16} rx={8} />
           <text x={badgeW / 2} y={11.5} textAnchor="middle">
@@ -143,7 +160,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
         </g>
       )}
       {showDeal && deal && (
-        <g className="sp-badge sp-badge--deal" transform={`translate(${w - 22} 6)`}>
+        <g className="sp-badge sp-badge--deal" transform={`translate(${w - 22} ${pillBottom ? h - 22 : 6})`}>
           <title>{deal.title}</title>
           <rect width={16} height={16} rx={8} />
           <text x={8} y={11.5} textAnchor="middle">

@@ -22,3 +22,21 @@ export function useHoverKeys(): Set<string> | null {
     () => null,
   );
 }
+
+/** Keys pinned by a click on a finder option: drawn with the related ring until the finder clears. */
+let pinned: Set<string> | null = null;
+const pinListeners = new Set<() => void>();
+export function setPinnedKeys(next: Set<string> | null) {
+  pinned = next;
+  for (const l of pinListeners) l();
+}
+export function usePinnedKeys(): Set<string> | null {
+  return useSyncExternalStore(
+    (l) => {
+      pinListeners.add(l);
+      return () => pinListeners.delete(l);
+    },
+    () => pinned,
+    () => null,
+  );
+}

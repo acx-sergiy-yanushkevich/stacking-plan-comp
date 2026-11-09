@@ -6,7 +6,7 @@ import { num, pct } from '../../domain/format';
 import { fmtDate } from '../../domain/dates';
 import { matchingInquiries } from '../../domain/finder';
 import { useIsPhone } from '../../lib/useMedia';
-import { useHoverKeys } from '../../state/hoverStore';
+import { useHoverKeys, usePinnedKeys, setPinnedKeys } from '../../state/hoverStore';
 import { useWidth } from '../../lib/useWidth';
 import { clearSelection, openFloor, selectSegment } from '../plan/actions';
 import { Legend } from '../plan/Legend';
@@ -39,6 +39,10 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
   const gutter = phone ? 44 : 124;
   const planPx = Math.max(240, width - gutter - 8);
   const hoverKeys = useHoverKeys();
+  const pinnedKeys = usePinnedKeys();
+  useEffect(() => {
+    if (!model.fits) setPinnedKeys(null);
+  }, [model.fits]);
   const { floors, segIndex } = model;
   const highlight = hoverKeys ?? model.highlight;
 
@@ -196,6 +200,9 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                     } else if (e.key === 'ArrowRight' && r.boxes[0]) {
                       e.preventDefault();
                       focusBlock(r.boxes[0].key);
+                    } else if (e.key === 'Escape' && state.floor) {
+                      e.preventDefault();
+                      patch({ floor: null, mode: 'building' });
                     } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
                       e.preventDefault();
                       const nr = rows[ri + (e.key === 'ArrowDown' ? 1 : -1)];
@@ -251,7 +258,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                       w={b.w}
                       h={rowH}
                       selected={state.select === b.key}
-                      related={!!selectedLease && state.select !== b.key && seg.lease?.id === selectedLease && (seg.kind !== 'available')}
+                      related={(!!selectedLease && state.select !== b.key && seg.lease?.id === selectedLease && seg.kind !== 'available') || (!!pinnedKeys && pinnedKeys.has(b.key) && state.select !== b.key)}
                       dim={!!highlight && !highlight.has(b.key)}
                       focusable={activeKey === b.key}
                       enlarged={b.enlarged}

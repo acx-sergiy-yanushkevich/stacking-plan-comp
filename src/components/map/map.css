@@ -125,12 +125,15 @@
 @keyframes sp-skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
 @media (max-width: 760px) {
-  .sp-map { height: clamp(360px, 60vh, 600px); border-radius: 0; }
-  .sp-map-legend { display: none; }
+  .sp-map { height: auto; display: flex; flex-direction: column; border-radius: var(--sp-radius-card); }
+  .sp-map__canvas, .sp-map .maplibregl-map { position: relative; height: clamp(320px, 55vh, 520px); order: 0; }
   .sp-map-info { display: none; }
-  .sp-map-floors { left: var(--sp-space-2); padding: 2px; }
-  .sp-map-floor { min-height: 20px; }
+  .sp-map-overlay.sp-map-legend { position: static; order: 1; margin: 8px; }
+  .sp-map-floors { position: static; transform: none; order: 2; display: flex; flex-direction: row; flex-wrap: wrap; gap: 4px; margin: 0 8px 8px; padding: 4px; }
+  .sp-map-floor { min-height: 28px; min-width: 32px; }
+  .sp-map-controls { top: 8px; bottom: auto; right: 8px; }
+  .sp-map .maplibregl-ctrl-bottom-right { right: 8px; bottom: calc(100% - clamp(320px, 55vh, 520px) + 4px); }
 }
 
 .sp-area li, .sp-area__row { white-space: normal; }
-.sp-area .sp-area__name, .sp-area__transit-name { white-space: normal; overflow: visible; text-overflow: clip; }
+.sp-area .sp-area__name, .sp-area-transit__name { white-space: normal; overflow: visible; text-overflow: clip; }

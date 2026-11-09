@@ -8,7 +8,7 @@ import { Button, Chip, Icon, Segmented, SelectField, TextField } from '../ui';
 import { selectSegment, type Patch } from '../plan/actions';
 import { Section } from './parts';
 import { nearMisses } from '../../domain/finder';
-import { setHoverKeys } from '../../state/hoverStore';
+import { setHoverKeys, setPinnedKeys } from '../../state/hoverStore';
 
 export interface FindPanelProps {
   model: PlanModel;
@@ -126,7 +126,10 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
                   <button
                     type="button"
                     className={`sp-ins__row ${hovered === i ? 'is-hover' : ''} ${selected ? 'is-selected' : ''}`}
-                    onClick={() => selectSegment(patch, o.keys[0])}
+                    onClick={() => {
+                      setPinnedKeys(o.keys.length > 1 ? new Set(o.keys) : null);
+                      selectSegment(patch, o.keys[0]);
+                    }}
                     onMouseEnter={() => {
                       setHovered(i);
                       setHoverKeys(new Set(o.keys));
@@ -184,7 +187,10 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
         </Section>
       )}
       {options.length > 0 && misses.length > 0 && (
-        <Section title="Near misses">
+        <Section title="Alternatives">
+          <p className="sp-ins__note" style={{ marginTop: 0, marginBottom: 8 }}>
+            Smaller spaces with their shortfall, and stacked floors that combine direct and sublease space.
+          </p>
           <NearMisses misses={misses} patch={patch} max={req?.max ?? null} />
         </Section>
       )}

@@ -46,7 +46,7 @@
 
   /* Expiration lens: one hue, lightness ordered */
   --tone-exp-0-fill: #9c3b18; --tone-exp-0-text: #ffffff; --tone-exp-0-edge: #7a2c10;
-  --tone-exp-1-fill: #cc5f26; --tone-exp-1-text: #ffffff; --tone-exp-1-edge: #a84a1b;
+  --tone-exp-1-fill: #b9531f; --tone-exp-1-text: #ffffff; --tone-exp-1-edge: #8f3f14;
   --tone-exp-2-fill: #e98c3c; --tone-exp-2-text: #181818; --tone-exp-2-edge: #c96f27;
   --tone-exp-3-fill: #f5b86c; --tone-exp-3-text: #181818; --tone-exp-3-edge: #d99a4e;
   --tone-exp-4-fill: #fbdca6; --tone-exp-4-text: #181818; --tone-exp-4-edge: #e2bf84;
@@ -56,7 +56,7 @@
   --tone-rent-0-fill: #e3f1fa; --tone-rent-0-text: #181818; --tone-rent-0-edge: #bcd9ee;
   --tone-rent-1-fill: #bbddf3; --tone-rent-1-text: #181818; --tone-rent-1-edge: #94c3e6;
   --tone-rent-2-fill: #86c1e8; --tone-rent-2-text: #181818; --tone-rent-2-edge: #5fa6d8;
-  --tone-rent-3-fill: #4f9fd8; --tone-rent-3-text: #ffffff; --tone-rent-3-edge: #3a86bd;
+  --tone-rent-3-fill: #4f9fd8; --tone-rent-3-text: #0b1b45; --tone-rent-3-edge: #3a86bd;
   --tone-rent-4-fill: #1e6fb8; --tone-rent-4-text: #ffffff; --tone-rent-4-edge: #165690;
   --tone-rent-net-fill: #eef1f5; --tone-rent-net-text: #181818; --tone-rent-net-edge: #1e6fb8;
 
