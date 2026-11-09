@@ -15,17 +15,17 @@
   --sp-color-border-strong: #c9c9c9;
   --sp-color-text: #181818;
   --sp-color-text-weak: #5c5c5c;
-  --sp-color-text-faint: #8a8a8a;
+  --sp-color-text-faint: #767676;
   --sp-color-brand: #0176d3;
   --sp-color-brand-strong: #014486;
   --sp-color-brand-soft: #eaf5fe;
   --sp-color-focus: #0176d3;
-  --sp-color-warn: #c25e00;
-  --sp-color-warn-soft: #fef1e4;
+  --sp-color-warn: #8f4700;
+  --sp-color-warn-soft: #fdf0e3;
   --sp-color-error: #ba0517;
   --sp-color-error-soft: #fdeaec;
-  --sp-color-success: #2e844a;
-  --sp-color-success-soft: #eaf5ec;
+  --sp-color-success: #1e6b39;
+  --sp-color-success-soft: #e7f4ea;
   --sp-color-dim: rgba(255, 255, 255, 0.65);
 
   /* Status lens */
@@ -62,7 +62,7 @@
   /* Deals lens */
   --tone-deal-0-fill: #dde8fd; --tone-deal-0-text: #181818; --tone-deal-0-edge: #b5ccf7;
   --tone-deal-1-fill: #afc8fa; --tone-deal-1-text: #181818; --tone-deal-1-edge: #86aaf0;
-  --tone-deal-2-fill: #5f8dee; --tone-deal-2-text: #ffffff; --tone-deal-2-edge: #4472d6;
+  --tone-deal-2-fill: #5f8dee; --tone-deal-2-text: #0b1b45; --tone-deal-2-edge: #4472d6;
   --tone-deal-3-fill: #2b55c7; --tone-deal-3-text: #ffffff; --tone-deal-3-edge: #1f409c;
   --tone-deal-none-fill: transparent; --tone-deal-none-text: #5c5c5c; --tone-deal-none-edge: #9aa5b1;
 }

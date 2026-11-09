@@ -11,31 +11,33 @@ const fails = [];
 const check = (cond, msg) => (cond ? console.log('ok  ', msg) : (fails.push(msg), console.log('FAIL', msg)));
 
 await page.goto(base + '?view=stack', { waitUntil: 'networkidle' });
-check((await page.locator('[role="grid"] [role="row"]').count()) === 12, '12 floor rows');
-const blocks = await page.locator('[role="gridcell"]').count();
+check((await page.locator('.sp-stage [role="grid"] [role="row"]').count()) === 12, '12 floor rows');
+const blocks = await page.locator('.sp-stage [role="gridcell"]').count();
 check(blocks >= 28, `≥ 28 blocks (${blocks})`);
 check((await page.locator('.sp-kpi').count()) === 6, '6 KPI cards');
 const leasedToday = await page.locator('.sp-kpi').first().innerText();
 
 // Keyboard grid: focus first block, ArrowRight moves to the next block in the row
-await page.locator('[role="gridcell"][tabindex="0"]').first().focus();
+await page.locator('.sp-stage [role="gridcell"][tabindex="0"]').first().focus();
 const k1 = await page.evaluate(() => document.activeElement?.getAttribute('data-key'));
 await page.keyboard.press('ArrowRight');
+await page.waitForTimeout(120);
 const k2 = await page.evaluate(() => document.activeElement?.getAttribute('data-key'));
 check(k1 && k2 && k1 !== k2, `ArrowRight moves focus (${k1} → ${k2})`);
 await page.keyboard.press('ArrowDown');
+await page.waitForTimeout(120);
 const k3 = await page.evaluate(() => document.activeElement?.getAttribute('data-key'));
 check(k3 && k3 !== k2, `ArrowDown moves focus (${k2} → ${k3})`);
 await page.keyboard.press('Enter');
 await page.waitForTimeout(100);
 check(page.url().includes('select='), 'Enter selects the block (URL has select=)');
-check((await page.locator('.sp-seg.is-selected').count()) === 1, 'exactly one selected block');
+check((await page.locator('.sp-stage .sp-seg.is-selected').count()) === 1, 'exactly one selected block');
 await page.keyboard.press('Escape');
 await page.waitForTimeout(100);
 check(!page.url().includes('select='), 'Escape clears the selection');
 
 // Floor label opens the floor summary
-await page.locator('[role="rowheader"]').first().click();
+await page.locator('.sp-stage [role="rowheader"]').first().click();
 await page.waitForTimeout(100);
 check(page.url().includes('floor=F12'), 'floor label opens floor summary');
 
@@ -48,7 +50,7 @@ check((await page.locator('.sp-header__asof--projected').count()) === 1, 'header
 
 // Filters dim
 await page.goto(base + '?view=stack&req=12000', { waitUntil: 'networkidle' });
-check((await page.locator('.sp-seg.is-dim').count()) > 10, 'finder dims non-matching blocks');
+check((await page.locator('.sp-stage .sp-seg.is-dim').count()) > 10, 'finder dims non-matching blocks');
 check((await page.locator('.sp-filterbar').count()) === 1, 'filter bar names the filter');
 
 // Views render

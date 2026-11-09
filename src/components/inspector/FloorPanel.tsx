@@ -64,7 +64,7 @@ export function FloorPanel({ floor, model, state, patch }: FloorPanelProps) {
             const selected = state.select === s.key;
             return (
               <li key={s.key}>
-                <button type="button" className={`sp-ins__row ${selected ? 'is-selected' : ''}`} onClick={() => selectSegment(patch, s.key)} aria-label={t.aria} title={t.tooltip}>
+                <button type="button" className={`sp-ins__row ${selected ? 'is-selected' : ''}`} onClick={() => selectSegment(patch, s.key)} title={t.tooltip}>
                   <span className="sp-ins__swatch" aria-hidden="true" style={{ width: 10, height: 10, borderRadius: 2, flex: 'none', background: `var(--tone-${t.tone}-fill)`, border: `1px solid var(--tone-${t.tone}-edge)` }} />
                   <div className="sp-ins__row-main">
                     <div className="sp-ins__row-title">

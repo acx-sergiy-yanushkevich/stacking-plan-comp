@@ -59,7 +59,7 @@ export function DealList({ deals, safe }: { deals: Deal[]; safe: boolean }) {
     <ul className="sp-ins__list" aria-label="Deals">
       {deals.map((d) => (
         <li key={d.id}>
-          <div className="sp-ins__row" role="listitem">
+          <div className="sp-ins__row">
             <StageChip stage={d.stage} />
             <div className="sp-ins__row-main">
               <div className="sp-ins__row-title">

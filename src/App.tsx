@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo } from 'react';
 import { property, TODAY } from './data/mock/property';
 import { usePlanModel } from './model/usePlanModel';
 import { usePlanState, useDocumentTitle } from './state/usePlanState';
@@ -14,6 +14,9 @@ import Inspector from './components/inspector/Inspector';
 import FloorView from './components/floor/FloorView';
 import TimelineView from './components/timeline/TimelineView';
 import { MiniTimeline } from './components/timeline/MiniTimeline';
+import { createDataSource } from './data/sources';
+const MapView = lazy(() => import('./components/map/MapView'));
+const AreaPanel = lazy(() => import('./components/map/AreaPanel').then((m) => ({ default: m.AreaPanel })));
 import { PrintLayout } from './components/print/PrintLayout';
 import { csvBlob, download } from './lib/exportFile';
 import { svgToPng } from './lib/exportPng';
@@ -100,7 +103,17 @@ function Shell() {
     }
   };
 
-  const inspector = useMemo(() => <Inspector model={model} state={state} patch={patch} mode={mode} />, [model, state, patch, mode]);
+  const dataSource = useMemo(() => createDataSource(state.live, state.census), [state.live, state.census]);
+  const areaPanel = (
+    <Suspense fallback={<p className="sp-weak" style={{ padding: 16 }}>Loading area data…</p>}>
+      <AreaPanel model={model} state={state} dataSource={dataSource} />
+    </Suspense>
+  );
+  const inspector = useMemo(
+    () => <Inspector model={model} state={state} patch={patch} mode={mode} areaPanel={areaPanel} />,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [model, state, patch, mode, dataSource],
+  );
   const sheetOpen = narrow && mode !== 'building';
   const sheetTitle = mode === 'block' ? 'Suite' : mode === 'floor' ? 'Floor' : mode === 'find' ? 'Find space' : mode === 'worklist' ? 'Renewal worklist' : mode === 'issues' ? 'Data issues' : 'Area';
 
@@ -110,15 +123,15 @@ function Shell() {
       <SaleBanner property={property} leasable={model.kpis.leasable} />
       <KpiStrip model={model} state={state} onAction={onKpi} />
       <Toolbar state={state} patch={patch} />
-      <div className="sp-main sp-no-print">
+      <main className="sp-main sp-no-print">
         <div className="sp-stage">
           {state.view === 'stack' && <StackView model={model} state={state} patch={patch} />}
           {state.view === 'floor' && <FloorView model={model} state={state} patch={patch} />}
           {state.view === 'timeline' && <TimelineView model={model} state={state} patch={patch} />}
           {state.view === 'map' && (
-            <section className="sp-card" style={{ padding: 16 }}>
-              View “map” arrives shortly.
-            </section>
+            <Suspense fallback={<section className="sp-card sp-map-loading" aria-busy="true">Loading map…</section>}>
+              <MapView model={model} state={state} patch={patch} dataSource={dataSource} />
+            </Suspense>
           )}
         </div>
         {!narrow && (
@@ -126,7 +139,7 @@ function Shell() {
             {inspector}
           </aside>
         )}
-      </div>
+      </main>
       {narrow && (
         <Sheet open={sheetOpen} onClose={() => (mode === 'block' || mode === 'floor' ? clearSelection(patch) : patch({ mode: 'building', req: null, inquiry: null, window: null }))} title={sheetTitle} hideHeader>
           {inspector}

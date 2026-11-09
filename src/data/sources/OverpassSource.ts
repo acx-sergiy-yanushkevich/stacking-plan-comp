@@ -1,0 +1,185 @@
+import type { Area, GeoPolygon, Property } from '../../domain/types';
+import type { AreaOptions, DataSource, FootprintResult } from './DataSource';
+import { CensusSource } from './CensusSource';
+import { MockSource } from './MockSource';
+
+export const OVERPASS_ENDPOINTS = [
+  'https://lz4.overpass-api.de/api/interpreter',
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+];
+const TIMEOUT_MS = 12_000;
+const FOOTPRINT_RADIUS_M = 120;
+const NEARBY_RADIUS_M = 800;
+const METRES_PER_MILE = 1609.34;
+
+export interface OverpassElement {
+  type: 'node' | 'way' | 'relation';
+  id: number;
+  lat?: number;
+  lon?: number;
+  /** Present on ways fetched with `out geom`. */
+  geometry?: Array<{ lat: number; lon: number }>;
+  tags?: Record<string, string>;
+}
+
+interface OverpassResponse {
+  elements?: OverpassElement[];
+}
+
+/** Approximate ground distance in metres (equirectangular; fine under a few km). */
+export function metres(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const R = 6_371_000;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const x = dLng * Math.cos(((a.lat + b.lat) / 2 * Math.PI) / 180);
+  return R * Math.sqrt(x * x + dLat * dLat);
+}
+
+function centroid(points: Array<{ lat: number; lon: number }>): { lat: number; lng: number } {
+  const n = points.length;
+  let lat = 0;
+  let lng = 0;
+  for (const p of points) {
+    lat += p.lat;
+    lng += p.lon;
+  }
+  return { lat: lat / n, lng: lng / n };
+}
+
+/**
+ * The building way whose centroid is nearest the centre, as a closed GeoJSON polygon ring
+ * (`[lng, lat]`). Null when no way with three or more vertices is present.
+ */
+export function toPolygon(elements: OverpassElement[], center: { lat: number; lng: number }): GeoPolygon | null {
+  let best: OverpassElement | null = null;
+  let bestDist = Infinity;
+  for (const el of elements) {
+    if (el.type !== 'way' || !el.geometry) continue;
+    const pts = el.geometry;
+    const open = pts.length > 1 && pts[0].lat === pts[pts.length - 1].lat && pts[0].lon === pts[pts.length - 1].lon ? pts.slice(0, -1) : pts;
+    if (open.length < 3) continue;
+    const d = metres(centroid(open), center);
+    if (d < bestDist) {
+      bestDist = d;
+      best = el;
+    }
+  }
+  if (!best || !best.geometry) return null;
+  const ring = best.geometry.map((p) => [p.lon, p.lat]);
+  const first = ring[0];
+  const last = ring[ring.length - 1];
+  if (first[0] !== last[0] || first[1] !== last[1]) ring.push([first[0], first[1]]);
+  return { type: 'Polygon', coordinates: [ring] };
+}
+
+/** POST an Overpass QL query, trying each endpoint in order with a per-request timeout. */
+export async function queryOverpass(ql: string, endpoints: string[] = OVERPASS_ENDPOINTS): Promise<OverpassElement[]> {
+  let lastError: unknown = null;
+  for (const url of endpoints) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `data=${encodeURIComponent(ql)}`,
+        signal: ctl.signal,
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as OverpassResponse;
+      return data.elements ?? [];
+    } catch (e) {
+      lastError = e;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('Overpass unavailable');
+}
+
+export const footprintQuery = (c: { lat: number; lng: number }) =>
+  `[out:json][timeout:25];(way["building"](around:${FOOTPRINT_RADIUS_M},${c.lat},${c.lng}););out geom tags;`;
+
+export const nearbyQuery = (c: { lat: number; lng: number }) =>
+  `[out:json][timeout:25];(` +
+  `node["public_transport"="station"](around:${NEARBY_RADIUS_M},${c.lat},${c.lng});` +
+  `node["railway"="station"](around:${NEARBY_RADIUS_M},${c.lat},${c.lng});` +
+  `node["highway"="bus_stop"](around:${NEARBY_RADIUS_M},${c.lat},${c.lng});` +
+  `node["amenity"~"^(restaurant|cafe|bank|gym|fitness_centre|parking)$"](around:${NEARBY_RADIUS_M},${c.lat},${c.lng});` +
+  `node["tourism"="hotel"](around:${NEARBY_RADIUS_M},${c.lat},${c.lng});` +
+  `);out tags center;`;
+
+const AMENITY_LABEL: Record<string, string> = {
+  restaurant: 'Restaurants',
+  cafe: 'Cafés',
+  bank: 'Banks',
+  gym: 'Fitness',
+  fitness_centre: 'Fitness',
+  parking: 'Parking',
+  hotel: 'Hotels',
+};
+
+/** Transit stops and amenity counts from the nodes within half a mile. Null when nothing came back. */
+export function toNearby(elements: OverpassElement[], center: { lat: number; lng: number }): Pick<Area, 'transit' | 'amenities'> | null {
+  const transit: Area['transit'] = [];
+  const counts = new Map<string, number>();
+  for (const el of elements) {
+    const tags = el.tags ?? {};
+    const lat = el.lat;
+    const lng = el.lon;
+    const isRail = tags.railway === 'station' || tags.public_transport === 'station';
+    const isBus = tags.highway === 'bus_stop';
+    if ((isRail || isBus) && lat !== undefined && lng !== undefined) {
+      transit.push({ name: tags.name ?? (isRail ? 'Station' : 'Bus stop'), type: isRail ? 'Rail' : 'Bus', distanceMi: Math.round((metres({ lat, lng }, center) / METRES_PER_MILE) * 10) / 10 });
+      continue;
+    }
+    const cat = AMENITY_LABEL[tags.amenity ?? ''] ?? (tags.tourism === 'hotel' ? AMENITY_LABEL.hotel : null);
+    if (cat) counts.set(cat, (counts.get(cat) ?? 0) + 1);
+  }
+  if (transit.length === 0 && counts.size === 0) return null;
+  const seen = new Set<string>();
+  const dedup = transit
+    .sort((a, b) => a.distanceMi - b.distanceMi || (a.type === 'Rail' ? -1 : 1))
+    .filter((t) => (seen.has(t.name) ? false : (seen.add(t.name), true)))
+    .slice(0, 6);
+  return { transit: dedup, amenities: [...counts].map(([category, count]) => ({ category, count })).sort((a, b) => b.count - a.count) };
+}
+
+/**
+ * OpenStreetMap via Overpass: the nearest building way as the footprint, nearby stops and
+ * amenities for the Area panel; demographics are delegated to the Census source. Every
+ * failure falls back to the mock so the view never breaks on a rate-limited endpoint.
+ */
+export class OverpassSource implements DataSource {
+  private readonly census: CensusSource;
+  private readonly fallback: DataSource;
+  private readonly endpoints: string[];
+
+  constructor(census: CensusSource = new CensusSource(), fallback: DataSource = new MockSource(), endpoints: string[] = OVERPASS_ENDPOINTS) {
+    this.census = census;
+    this.fallback = fallback;
+    this.endpoints = endpoints;
+  }
+
+  async getFootprint(p: Property): Promise<FootprintResult> {
+    try {
+      const elements = await queryOverpass(footprintQuery(p.location), this.endpoints);
+      const polygon = toPolygon(elements, p.location);
+      if (polygon) return { polygon, source: 'osm' };
+    } catch {
+      // fall through to the cached footprint
+    }
+    return this.fallback.getFootprint(p);
+  }
+
+  async getArea(p: Property, opts?: AreaOptions): Promise<Area> {
+    const [area, nearby] = await Promise.all([
+      this.census.getArea(p, opts),
+      queryOverpass(nearbyQuery(p.location), this.endpoints)
+        .then((els) => toNearby(els, p.location))
+        .catch(() => null),
+    ]);
+    return nearby ? { ...area, transit: nearby.transit, amenities: nearby.amenities } : area;
+  }
+}

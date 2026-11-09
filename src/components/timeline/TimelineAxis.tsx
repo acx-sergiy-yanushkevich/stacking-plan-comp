@@ -100,7 +100,7 @@ export function TimelineAxis({ start, end, asOf, today, plotLeft, plotWidth, str
               role="button"
               tabIndex={0}
               aria-pressed={active}
-              aria-label={`${b.label}: ${sf(b.sf)}, ${plural(b.leases, 'lease')}`}
+              aria-label={`${[labelText, valueText].filter(Boolean).join(' ')}${labelText || valueText ? '. ' : ''}${b.label}: ${sf(b.sf)}, ${plural(b.leases, 'lease')}`}
               onClick={() => onBucket(b.key)}
               onKeyDown={keyActivate(b.key)}
             >
@@ -109,12 +109,12 @@ export function TimelineAxis({ start, end, asOf, today, plotLeft, plotWidth, str
               {active && <rect className="sp-tl-band__beam" x={x0} y={bandBottom} width={w} height={Math.max(0, height - bandBottom)} />}
               {labelText && (
                 <text className="sp-tl-band__label" x={x0 + w / 2} y={bandTop + 20} textAnchor="middle">
-                  {labelText}
+                  {`${labelText} `}
                 </text>
               )}
               {valueText && (
                 <text className={`sp-tl-band__value ${small ? 'is-small' : ''}`} x={x0 + w / 2} y={bandTop + 38} textAnchor="middle">
-                  {valueText}
+                  {`${valueText} `}
                 </text>
               )}
             </g>

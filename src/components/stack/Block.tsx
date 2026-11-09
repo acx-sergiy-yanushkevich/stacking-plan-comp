@@ -76,6 +76,9 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
 
   const pattern = text.pattern;
   const patternFill = pattern === 'hatch' ? `url(#${PATTERN_IDS.hatch})` : pattern === 'dots' ? `url(#${PATTERN_IDS.dots})` : pattern === 'asking' ? `url(#${PATTERN_IDS.asking})` : null;
+  // WCAG 2.5.3: the accessible name starts with exactly what is visible, then adds context.
+  const visible = [...lines.map((l) => l.t), showOther && other ? other.text : '', showDeal && deal ? deal.text : ''].filter(Boolean).join(' ');
+  const ariaLabel = visible ? `${visible}. ${text.aria}` : text.aria;
   const accentLeft = tone === 'expiring' || tone === 'risk';
   const accentTop = tone === 'rent-net';
 
@@ -84,7 +87,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
       className={`sp-seg ${selected ? 'is-selected' : ''} ${dim ? 'is-dim' : ''} ${pattern === 'dashed' ? 'sp-seg--dashed' : ''}`}
       role="gridcell"
       tabIndex={focusable ? 0 : -1}
-      aria-label={text.aria}
+      aria-label={ariaLabel}
       aria-selected={selected}
       data-key={seg.key}
       transform={`translate(${x} ${y})`}
@@ -101,7 +104,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
       {accentTop && <rect className="sp-seg__accent" x={0} y={0} width={w} height={3} fill={edge} />}
       {lines.map((l, i) => (
         <text key={i} className={l.cls} x={PAD + (accentLeft ? 3 : 0)} y={PAD + 11 + i * LINE} fill={color}>
-          {l.t}
+          {`${l.t} `}
         </text>
       ))}
       {showOther && other && (
@@ -109,7 +112,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
           <title>{other.title ?? other.text}</title>
           <rect width={badgeW} height={16} rx={8} />
           <text x={badgeW / 2} y={11.5} textAnchor="middle">
-            {other.text}
+            {`${other.text} `}
           </text>
         </g>
       )}
@@ -118,7 +121,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
           <title>{deal.title}</title>
           <rect width={16} height={16} rx={8} />
           <text x={8} y={11.5} textAnchor="middle">
-            {deal.text}
+            {`${deal.text} `}
           </text>
         </g>
       )}

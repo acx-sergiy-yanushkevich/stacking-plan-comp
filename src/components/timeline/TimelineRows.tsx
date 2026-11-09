@@ -222,7 +222,8 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
       : 'Available now'
     : `${fmtDate(bar.start)} – ${bar.end ? fmtDate(bar.end) : 'open-ended'}${bar.end && !isHoldover && !isProjected && bar.kind !== 'committed' ? ` · ${fmtMonths(Math.max(0, monthsBetween(asOf, bar.end)))} left` : ''}`;
   const tooltip = `${text.tooltip}\n${dates}`;
-  const aria = `${text.aria}. ${dates}`;
+  const visibleText = [tagText, [nameText, subText].filter(Boolean).join(' · ')].filter(Boolean).join(' ');
+  const aria = `${visibleText ? `${visibleText}. ` : ''}${text.aria}. ${dates}`;
 
   const gradId = `sp-tl-fade-${bar.key}`;
   const classes = ['sp-seg', 'sp-tl-bar', `sp-tl-bar--${bar.kind}`, text.pattern === 'dashed' ? 'sp-seg--dashed' : '', clippedStart ? 'is-clipped' : '', dim ? 'is-dim' : '', selected ? 'is-selected' : ''].filter(Boolean).join(' ');
@@ -277,7 +278,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
         <g className="sp-tl-tag sp-tl-tag--risk" aria-hidden="true">
           <rect x={tagX} y={y + 3} width={tagW} height={16} rx={3} />
           <text x={tagX + tagW / 2} y={y + 15} textAnchor="middle">
-            {tagText}
+            {`${tagText} `}
           </text>
         </g>
       )}

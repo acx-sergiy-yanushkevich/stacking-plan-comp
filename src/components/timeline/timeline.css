@@ -2,7 +2,7 @@
 .sp-timeline { position: relative; width: 100%; min-width: 0; overflow-x: auto; padding: var(--sp-space-2) var(--sp-space-2) var(--sp-space-3); font-family: var(--sp-font); font-variant-numeric: tabular-nums; }
 .sp-timeline__svg { display: block; max-width: none; }
 .sp-timeline text { font-family: var(--sp-font); font-variant-numeric: tabular-nums; pointer-events: none; }
-.sp-timeline__note { margin-top: var(--sp-space-2); font-size: var(--sp-text-12); color: var(--sp-color-text-faint); }
+.sp-timeline__note { margin-top: var(--sp-space-2); font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }
 
 /* Header: year strip and rollover band */
 .sp-tl-axis__year { font-size: var(--sp-text-11); fill: var(--sp-color-text-faint); }

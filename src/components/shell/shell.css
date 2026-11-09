@@ -57,6 +57,8 @@
 @media (max-width: 760px) {
   .sp-toolbar { gap: 8px; }
   .sp-toolbar__lens { display: none; }
-  .sp-toolbar__lens-select { display: block; flex: 1; }
+  .sp-toolbar__lens-select { display: block; flex: 1 1 100%; }
+  .sp-toolbar__group:last-child { width: 100%; }
+  .sp-toolbar__group:last-child .sp-btn { flex: 1; }
   .sp-toolbar__search { max-width: none; margin-left: 0; width: 100%; }
 }

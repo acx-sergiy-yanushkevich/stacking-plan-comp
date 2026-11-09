@@ -268,7 +268,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
             className={['sp-seg', selected ? 'is-selected' : '', dim ? 'is-dim' : '', p === 'dashed' ? 'sp-seg--dashed' : ''].filter(Boolean).join(' ')}
             role="button"
             tabIndex={i === tabStop ? 0 : -1}
-            aria-label={s.text.aria}
+            aria-label={`${[...s.lines.map((l) => l.t), ...s.badges.map((b) => b.text)].filter(Boolean).join(' ')}${s.lines.length || s.badges.length ? '. ' : ''}${s.text.aria}`}
             aria-pressed={selected}
             data-key={s.seg.key}
             style={{ color: edge }}
@@ -282,7 +282,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
             {patternFill && <path d={d} fill={patternFill} pointerEvents="none" />}
             {s.lines.map((l, j) => (
               <text key={j} className={l.cls} x={l.x} y={l.y} fill={color} textAnchor="middle">
-                {l.t}
+                {`${l.t} `}
               </text>
             ))}
             {s.badges.map((b, j) => (
@@ -290,7 +290,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
                 <title>{b.title ?? b.text}</title>
                 <rect width={b.w} height={BADGE_H} rx={BADGE_H / 2} />
                 <text x={b.w / 2} y={11.5} textAnchor="middle">
-                  {b.text}
+                  {`${b.text} `}
                 </text>
               </g>
             ))}

@@ -60,7 +60,7 @@ export function RolloverChart({ buckets, atRisk, atRiskLeases, activeBucket, onB
         const w = scale(b.sf);
         const active = activeBucket === b.key;
         const cls = ['sp-roll__bar', active ? 'is-active' : '', anyActive && !active ? 'is-dim' : ''].filter(Boolean).join(' ');
-        const label = `${b.label}: ${b.sf > 0 ? `${num(b.sf)} SF, ${plural(b.leases, 'lease')}` : 'no leases ending'}`;
+        const label = `${b.label} ${b.sf > 0 ? num(b.sf) : '—'}: ${b.sf > 0 ? `${num(b.sf)} SF, ${plural(b.leases, 'lease')}` : 'no leases ending'}`;
         return (
           <g
             key={b.key}
@@ -76,11 +76,11 @@ export function RolloverChart({ buckets, atRisk, atRiskLeases, activeBucket, onB
             {/* hit target: the whole row, not just the mark */}
             <rect className="sp-roll__hit" x={0} y={y} width={W} height={ROW} />
             <text className="sp-roll__label" x={x0 - 8} y={y + ROW / 2} textAnchor="end" dominantBaseline="middle">
-              {b.label}
+              {`${b.label} `}
             </text>
             {b.sf > 0 && <path className="sp-roll__mark" d={barPath(x0, y + (ROW - BAR) / 2, w, BAR)} />}
             <text className="sp-roll__value" x={x0 + w + 6} y={y + ROW / 2} dominantBaseline="middle">
-              {b.sf > 0 ? num(b.sf) : '—'}
+              {`${b.sf > 0 ? num(b.sf) : '—'} `}
             </text>
           </g>
         );
@@ -88,7 +88,7 @@ export function RolloverChart({ buckets, atRisk, atRiskLeases, activeBucket, onB
       {(() => {
         const y = PAD_TOP + buckets.length * ROW;
         const w = scale(atRisk);
-        const label = `At risk (holdover + MTM): ${atRisk > 0 ? `${num(atRisk)} SF, ${plural(atRiskLeases, 'lease')}` : 'none'}`;
+        const label = `At risk ${atRisk > 0 ? num(atRisk) : '—'}: holdover and month-to-month, ${atRisk > 0 ? `${num(atRisk)} SF, ${plural(atRiskLeases, 'lease')}` : 'none'}`;
         const clickable = atRisk > 0 && onAtRisk;
         return (
           <g
@@ -102,11 +102,11 @@ export function RolloverChart({ buckets, atRisk, atRiskLeases, activeBucket, onB
             <title>{label}</title>
             <rect className="sp-roll__hit" x={0} y={y} width={W} height={ROW} />
             <text className="sp-roll__label" x={x0 - 8} y={y + ROW / 2} textAnchor="end" dominantBaseline="middle">
-              At risk
+              {'At risk '}
             </text>
             {atRisk > 0 && <path className="sp-roll__mark" d={barPath(x0, y + (ROW - BAR) / 2, w, BAR)} />}
             <text className="sp-roll__value" x={x0 + w + 6} y={y + ROW / 2} dominantBaseline="middle">
-              {atRisk > 0 ? num(atRisk) : '—'}
+              {`${atRisk > 0 ? num(atRisk) : '—'} `}
             </text>
           </g>
         );

@@ -1,0 +1,133 @@
+/* Map view and the Area panel (DESIGN.md §2.6). Tokens only. */
+.sp-map {
+  position: relative;
+  height: clamp(480px, 70vh, 820px);
+  border-radius: var(--sp-radius-card);
+  overflow: hidden;
+  background: var(--sp-color-card-2);
+}
+.sp-map__canvas, .sp-map .maplibregl-map { position: absolute; inset: 0; }
+.sp-map .maplibregl-canvas { outline: none; }
+.sp-map .maplibregl-canvas:focus-visible { outline: 2px solid var(--sp-color-focus); outline-offset: -2px; }
+.sp-map .maplibregl-ctrl-attrib { font-size: var(--sp-text-11); background: color-mix(in srgb, var(--sp-color-card) 85%, transparent); color: var(--sp-color-text-weak); }
+.sp-map .maplibregl-ctrl-attrib a { color: var(--sp-color-text-weak); }
+.sp-map .maplibregl-ctrl-bottom-right { right: 48px; }
+
+.sp-map-overlay {
+  position: absolute;
+  padding: var(--sp-space-3);
+  background: color-mix(in srgb, var(--sp-color-card) 92%, transparent);
+  border: 1px solid var(--sp-color-border);
+  border-radius: var(--sp-radius-card);
+  font-size: var(--sp-text-12);
+  pointer-events: auto;
+}
+.sp-map-info { top: var(--sp-space-3); left: var(--sp-space-3); max-width: 300px; }
+.sp-map-info__name { font-size: var(--sp-text-15); font-weight: 600; margin-bottom: 2px; }
+.sp-map-info__meta { display: flex; flex-wrap: wrap; gap: var(--sp-space-1) var(--sp-space-3); margin-top: var(--sp-space-2); color: var(--sp-color-text-weak); align-items: center; }
+.sp-map-info__meta > span { display: inline-flex; align-items: center; gap: 6px; }
+.sp-map-legend { top: var(--sp-space-3); right: var(--sp-space-3); max-width: 300px; }
+.sp-map-legend .sp-legend { gap: 4px 10px; }
+.sp-map-legend .sp-legend__num { display: none; }
+.sp-map-present { bottom: var(--sp-space-3); left: 50%; transform: translateX(-50%); padding: 6px 12px; font-variant-numeric: tabular-nums; }
+
+/* Floors quick list: the keyboard equivalent of the 3D floors. */
+.sp-map-floors {
+  position: absolute;
+  left: var(--sp-space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  background: color-mix(in srgb, var(--sp-color-card) 92%, transparent);
+  border: 1px solid var(--sp-color-border);
+  border-radius: var(--sp-radius-card);
+}
+.sp-map-floor {
+  min-width: 32px; min-height: 24px; padding: 0 6px;
+  border-radius: var(--sp-radius-block);
+  font-size: var(--sp-text-12); font-variant-numeric: tabular-nums;
+  color: var(--sp-color-text-weak);
+  transition: background var(--sp-ease), color var(--sp-ease);
+}
+.sp-map-floor:hover { background: var(--sp-color-card-2); color: var(--sp-color-text); }
+.sp-map-floor[aria-pressed='true'] { background: var(--sp-color-brand-soft); color: var(--sp-color-brand-strong); font-weight: 600; box-shadow: inset 0 0 0 1px var(--sp-color-brand); }
+
+/* Camera and presentation controls. */
+.sp-map-controls { position: absolute; right: var(--sp-space-3); bottom: var(--sp-space-5); display: flex; flex-direction: column; gap: var(--sp-space-2); }
+.sp-map-ctl-group { display: flex; flex-direction: column; background: color-mix(in srgb, var(--sp-color-card) 92%, transparent); border: 1px solid var(--sp-color-border); border-radius: var(--sp-radius-card); overflow: hidden; }
+.sp-map-ctl {
+  width: 32px; height: 32px; min-width: 32px; min-height: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--sp-color-text);
+  transition: background var(--sp-ease), color var(--sp-ease);
+}
+.sp-map-ctl + .sp-map-ctl { border-top: 1px solid var(--sp-color-border); }
+.sp-map-ctl:hover { background: var(--sp-color-card-2); }
+.sp-map-ctl[aria-pressed='true'] { background: var(--sp-color-brand-soft); color: var(--sp-color-brand-strong); }
+.sp-map-ctl:disabled { opacity: 0.45; cursor: not-allowed; }
+.sp-map-ctl:focus-visible { outline-offset: -2px; border-radius: 0; }
+.sp-map-ctl.is-recording { color: var(--sp-color-error); background: var(--sp-color-error-soft); }
+.sp-map-ctl.is-recording .sp-icon { animation: sp-rec-pulse 1.2s ease-in-out infinite; }
+@keyframes sp-rec-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* Floating floor tooltip. */
+.sp-map-tip {
+  position: absolute;
+  pointer-events: none;
+  padding: 4px 8px;
+  background: var(--sp-color-text);
+  color: var(--sp-color-page);
+  font-size: var(--sp-text-12);
+  font-variant-numeric: tabular-nums;
+  border-radius: var(--sp-radius-block);
+  white-space: nowrap;
+  z-index: 2;
+}
+
+/* Fallback when WebGL or tiles are unavailable. */
+.sp-map.is-fallback { background: var(--sp-color-card); }
+.sp-map-fallback { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-space-4); padding: var(--sp-space-5); }
+.sp-map-fallback__notice { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--sp-color-warn-soft); color: var(--sp-color-warn); border-radius: var(--sp-radius-block); font-size: var(--sp-text-12); }
+.sp-map-fallback__row { display: flex; flex-wrap: wrap; gap: var(--sp-space-5); align-items: flex-start; justify-content: center; }
+.sp-map-fallback__caption, .sp-map-fallback__label { font-size: 11px; fill: var(--sp-color-text-weak); font-family: var(--sp-font); font-variant-numeric: tabular-nums; }
+.sp-map-fallback__band:hover rect { stroke: var(--sp-color-brand-strong); }
+
+/* Area panel (inspector). */
+.sp-area { display: flex; flex-direction: column; gap: var(--sp-space-3); padding: var(--sp-space-4); font-size: var(--sp-text-13); }
+.sp-area__head { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.sp-area__title { font-size: var(--sp-text-15); font-weight: 600; }
+.sp-area__sample { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); padding: var(--sp-space-2) var(--sp-space-3); background: var(--sp-color-warn-soft); border-radius: var(--sp-radius-block); }
+.sp-area__sub { margin-top: var(--sp-space-2); }
+.sp-area-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.sp-area-table th, .sp-area-table td { padding: 6px 8px; border-bottom: 1px solid var(--sp-color-border); text-align: right; }
+.sp-area-table th[scope='row'] { text-align: left; font-weight: 400; color: var(--sp-color-text-weak); padding-left: 0; }
+.sp-area-table thead th { font-size: var(--sp-text-11); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sp-color-text-weak); }
+.sp-area-table td:last-child, .sp-area-table th:last-child { padding-right: 0; }
+.sp-area-transit { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.sp-area-transit li { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.sp-area-transit__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-area-amenities { display: flex; flex-wrap: wrap; gap: 6px; }
+.sp-area__foot { display: flex; flex-direction: column; gap: 4px; font-size: var(--sp-text-12); color: var(--sp-color-text-weak); border-top: 1px solid var(--sp-color-border); padding-top: var(--sp-space-3); }
+.sp-area__foot code { font-size: var(--sp-text-11); background: var(--sp-color-card-2); color: var(--sp-color-text); padding: 1px 4px; border-radius: 3px; }
+.sp-area__foot a { text-decoration: underline; }
+
+/* Skeleton bars (DESIGN.md §3.4: never spinners). */
+.sp-area-skeleton { display: flex; flex-direction: column; gap: 10px; padding: var(--sp-space-2) 0; }
+.sp-skel {
+  height: 12px; border-radius: 6px;
+  background: linear-gradient(90deg, var(--sp-color-card-2) 0%, var(--sp-color-border) 50%, var(--sp-color-card-2) 100%);
+  background-size: 200% 100%;
+  animation: sp-skel-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes sp-skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+@media (max-width: 760px) {
+  .sp-map { height: clamp(360px, 60vh, 600px); border-radius: 0; }
+  .sp-map-legend { display: none; }
+  .sp-map-info { display: none; }
+  .sp-map-floors { left: var(--sp-space-2); padding: 2px; }
+  .sp-map-floor { min-height: 20px; }
+}
