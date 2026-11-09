@@ -118,7 +118,7 @@ function Shell() {
         )}
       </div>
       {narrow && (
-        <Sheet open={sheetOpen} onClose={() => (mode === 'block' || mode === 'floor' ? clearSelection(patch) : patch({ mode: 'building', req: null, inquiry: null, window: null }))} title={sheetTitle}>
+        <Sheet open={sheetOpen} onClose={() => (mode === 'block' || mode === 'floor' ? clearSelection(patch) : patch({ mode: 'building', req: null, inquiry: null, window: null }))} title={sheetTitle} hideHeader>
           {inspector}
         </Sheet>
       )}

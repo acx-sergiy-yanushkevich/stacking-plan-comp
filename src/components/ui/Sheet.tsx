@@ -8,10 +8,12 @@ export interface SheetProps {
   children: ReactNode;
   /** Initial snap point. */
   snap?: 'half' | 'full';
+  /** The content brings its own title row and close button. */
+  hideHeader?: boolean;
 }
 
 /** Non-modal bottom sheet for phones. The handle toggles between half and full height. */
-export function Sheet({ open, onClose, title, children, snap = 'half' }: SheetProps) {
+export function Sheet({ open, onClose, title, children, snap = 'half', hideHeader }: SheetProps) {
   const [full, setFull] = useState(snap === 'full');
   const ref = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -31,10 +33,12 @@ export function Sheet({ open, onClose, title, children, snap = 'half' }: SheetPr
       <button type="button" className="sp-sheet__handle" aria-label={full ? 'Collapse panel' : 'Expand panel'} aria-expanded={full} onClick={() => setFull((f) => !f)}>
         <span />
       </button>
-      <div className="sp-sheet__head">
-        <div className="sp-sheet__title">{title}</div>
-        <Button variant="ghost" size="sm" icon="close" iconOnly aria-label="Close panel" onClick={onClose} />
-      </div>
+      {!hideHeader && (
+        <div className="sp-sheet__head">
+          <div className="sp-sheet__title">{title}</div>
+          <Button variant="ghost" size="sm" icon="close" iconOnly aria-label="Close panel" onClick={onClose} />
+        </div>
+      )}
       <div className="sp-sheet__body">{children}</div>
     </div>
   );

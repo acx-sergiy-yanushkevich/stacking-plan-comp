@@ -23,6 +23,11 @@
 .sp-header__asof .sp-btn { font-variant-numeric: tabular-nums; }
 .sp-header__asof--projected .sp-btn { background: var(--sp-color-warn-soft); border-color: var(--sp-color-warn); color: var(--sp-color-warn); }
 @media (max-width: 760px) {
+  .sp-sale { flex-wrap: wrap; row-gap: 4px; }
+  .sp-sale strong { white-space: nowrap; }
+  .sp-sale__facts { width: 100%; gap: 10px; }
+  .sp-sale .sp-chip { margin-left: 0; position: absolute; right: 12px; top: 8px; }
+  .sp-sale { position: relative; }
   .sp-header { flex-wrap: wrap; padding: var(--sp-space-3); }
   .sp-header__icon { width: 32px; height: 32px; }
   .sp-header__actions { width: 100%; justify-content: flex-start; }

@@ -145,7 +145,8 @@ button.sp-chip[aria-pressed='true'] { background: var(--sp-color-brand-strong); 
 .sp-sheet__handle span { width: 40px; height: 4px; border-radius: 2px; background: var(--sp-color-border-strong); display: block; }
 .sp-sheet__head { display: flex; align-items: center; justify-content: space-between; padding: 4px 12px 8px 16px; border-bottom: 1px solid var(--sp-color-border); }
 .sp-sheet__title { font-size: var(--sp-text-15); font-weight: 600; }
-.sp-sheet__body { overflow: auto; flex: 1; padding: 12px 16px calc(16px + env(safe-area-inset-bottom)); }
+.sp-sheet__body { overflow: auto; flex: 1; padding: 0 0 env(safe-area-inset-bottom); display: flex; flex-direction: column; min-height: 0; }
+.sp-sheet__body > * { flex: 1; min-height: 0; }
 
 /* ── Misc ───────────────────────────────────────────────── */
 .sp-kbd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; padding: 1px 5px; border: 1px solid var(--sp-color-border-strong); border-bottom-width: 2px; border-radius: 3px; color: var(--sp-color-text-weak); }
