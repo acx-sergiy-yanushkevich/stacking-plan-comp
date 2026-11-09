@@ -1,0 +1,4 @@
+# Round 3 · Judge: Claude Opus 5.5 (B)
+UI 16/20 (U1 4.5, U2 4, U3 3, U4 2.5, U5 2) · UX 17.5/20 (X1 4.5, X2 3.5, X3 3.5, X4 2.5, X5 3.5) · Engineering 8.5/10
+Top UI: never drop lens fact or SF (merge lines; cut names before SF; print row height); PDF pagination (fixed table layout, nowrap, running head on continuation, footnote with table); phone legend as wrapping grid, no bare numbers; floor-plate selection ring, floor-list contrast, "—" for empty timeline buckets; sale listing into header facts row.
+Top UX: finder Needed-by shows inquiry date; reconcile rent-roll total (211,700 rows vs 211,200 capped) and Leased KPI context (7,000 SF sublease vacant); safe report without "Not placed", renamed expirations table without rent, hide issues in safe header; a11y (lobby no aria-pressed/tabindex, legend focusable, global Escape clears filters); phone Find/Worklist sheet non-modal with "Show on plan".
