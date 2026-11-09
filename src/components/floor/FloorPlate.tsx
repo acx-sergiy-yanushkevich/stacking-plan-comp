@@ -5,7 +5,7 @@ import { textTier } from '../../domain/layout';
 import { fits, fitWords, measure, wrapWords } from '../../lib/textFit';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
-import { selectSegment, type Patch } from '../plan/actions';
+import { type Patch } from '../plan/actions';
 import { PATTERN_IDS } from '../plan/Patterns';
 import { segmentText, type SegmentText } from '../plan/segmentText';
 import { num, sf } from '../../domain/format';
@@ -192,7 +192,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
     const polys = segs.length === 1 ? [points] : slicePolygon(points, segs.map((s) => s.size));
     return segs.map((seg, i) => {
       const poly = polys[i] ?? [];
-      const matches = model.req ? inquiriesFor(seg, property.inquiries, asOf).length : 0;
+      const matches = model.req && !safe ? inquiriesFor(seg, property.inquiries, asOf).length : 0;
       const text: SegmentText =
         seg.key === lobbyKey
           ? { tone: 'muted', pattern: 'hatch', name: 'Lobby · building use', sub: sf(seg.size), meta: 'Not leasable', badges: [], tooltip: `${floor.floor.name}: ${sf(seg.size)} non-leasable (lobby, loading, building use). Not counted in occupancy.`, aria: `${floor.floor.name}, lobby and building use, ${sf(seg.size)}, not leasable`, sfShort: num(seg.size) }
@@ -219,6 +219,11 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
   };
 
   const onKey = (e: KeyboardEvent<SVGGElement>, i: number) => {
+    if (e.key === 'Escape' && state.select) {
+      e.preventDefault();
+      patch({ select: null });
+      return;
+    }
     switch (e.key) {
       case 'ArrowRight':
       case 'ArrowDown':
@@ -241,7 +246,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
       case 'Enter':
       case ' ':
         e.preventDefault();
-        selectSegment(patch, slices[i].seg.key);
+        patch({ select: slices[i].seg.key, mode: 'building' });
         break;
     }
   };
@@ -281,7 +286,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
             aria-pressed={selected}
             data-key={s.seg.key}
             style={{ color: edge }}
-            onClick={() => !s.seg.key.endsWith('-lobby') && selectSegment(patch, s.seg.key)}
+            onClick={() => !s.seg.key.endsWith('-lobby') && patch({ select: s.seg.key, mode: 'building' })}
             onFocus={() => setFocusIdx(i)}
             onKeyDown={(e) => onKey(e, i)}
           >

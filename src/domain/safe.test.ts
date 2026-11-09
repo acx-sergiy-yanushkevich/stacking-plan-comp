@@ -27,3 +27,14 @@ describe('prospect-safe helpers', () => {
     expect(SAFE_TITLE).toBe('Stacking plan (prospect-safe)');
   });
 });
+
+describe('rentVisible for availabilities', () => {
+  it('shows asking rents to prospects but never in-place or confidential rents', async () => {
+    const { rentVisible } = await import('./safe');
+    const { property } = await import('../data/mock/property');
+    const avail = property.availabilities[0];
+    expect(rentVisible(avail, true)).toBe(true);
+    expect(rentVisible({ confidential: false }, true)).toBe(false);
+    expect(rentVisible({ confidential: true }, false)).toBe(false);
+  });
+});

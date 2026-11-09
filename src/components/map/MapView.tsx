@@ -144,7 +144,7 @@ interface Tip {
 const floorTip = (f: FloorView) => `${f.floor.name} · ${pct(f.leasable > 0 ? f.leased / f.leasable : 0)} leased · ${num(f.leasable)} RSF`;
 
 /** Keyboard-reachable equivalent of clicking a 3D floor (DESIGN.md §6). */
-function FloorList({ floors, selected, onSelect }: { floors: FloorView[]; selected: string | null; onSelect: (id: string) => void }) {
+function FloorList({ floors, selected, onSelect, toneOf }: { floors: FloorView[]; selected: string | null; onSelect: (id: string) => void; toneOf: (f: FloorView) => string }) {
   const ordered = useMemo(() => [...floors].sort((a, b) => b.floor.sequence - a.floor.sequence), [floors]);
   const ref = useRef<HTMLDivElement>(null);
   const focusIndex = Math.max(
@@ -174,13 +174,15 @@ function FloorList({ floors, selected, onSelect }: { floors: FloorView[]; select
           data-floor={f.floor.id}
           className="sp-map-floor"
           aria-pressed={f.floor.id === selected}
-          aria-label={floorTip(f)}
+          aria-label={`${f.floor.sequence} ${Math.round((f.leasable > 0 ? f.leased / f.leasable : 0) * 100)}% ${floorTip(f)}${f.available ? `, ${num(f.available)} SF available` : ''}`}
           title={floorTip(f)}
           tabIndex={i === focusIndex ? 0 : -1}
           onClick={() => onSelect(f.floor.id)}
           onDoubleClick={() => undefined}
         >
-          {f.floor.sequence}
+          <span className="sp-map-floor__swatch" style={{ background: `var(--tone-${toneOf(f)}-fill)`, borderColor: `var(--tone-${toneOf(f)}-edge)` }} aria-hidden="true" />
+          <span className="sp-map-floor__num">{`${f.floor.sequence} `}</span>
+          <span className="sp-map-floor__pct">{`${Math.round((f.leasable > 0 ? f.leased / f.leasable : 0) * 100)}% `}</span>
         </button>
       ))}
     </div>
@@ -350,7 +352,7 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
         <Legend items={model.legend} compact />
       </div>
 
-      <FloorList floors={floors} selected={state.floor} onSelect={selectFloor} />
+      <FloorList floors={floors} selected={state.floor} onSelect={selectFloor} toneOf={toneOf} />
 
       {status === 'ready' && (
         <MapControls

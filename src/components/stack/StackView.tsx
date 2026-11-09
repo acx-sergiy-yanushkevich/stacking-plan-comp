@@ -28,6 +28,7 @@ export interface StackViewProps {
 
 const ROW_GAP = 6;
 const MIN_BLOCK = 56;
+const MIN_BLOCK_PHONE = 64;
 
 const segIndexLease = (idx: Map<string, { lease?: { id: string } }>, key: string) => idx.get(key)?.lease?.id ?? null;
 
@@ -53,26 +54,27 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
     return floors.map((f, i) => {
       const share = Math.max(0.6, f.floor.size / maxSize);
       const fw = Math.round(planPx * share);
+      const minBlock = phone ? MIN_BLOCK_PHONE : MIN_BLOCK;
       const nonLeasablePx = f.floor.nonLeasable > 0 ? Math.max(MIN_BLOCK, Math.round((fw * f.floor.nonLeasable) / f.floor.size)) : 0;
       const leasablePx = fw - nonLeasablePx - (nonLeasablePx ? 2 : 0);
-      const boxes = blockLayout(f.segments, leasablePx, MIN_BLOCK, 2);
+      const boxes = blockLayout(f.segments, leasablePx, minBlock, 2);
       return { f, y: i * (rowH + ROW_GAP), w: fw, boxes, nonLeasablePx, leasablePx };
     });
-  }, [floors, planPx, rowH]);
+  }, [floors, planPx, rowH, phone]);
   const anyEnlarged = rows.some((r) => r.boxes.some((b) => b.enlarged));
   const height = rows.length * (rowH + ROW_GAP) - ROW_GAP + 2;
 
   // Inquiry-fit badges while the finder is active
   const matchCount = useCallback(
     (key: string) => {
-      if (!model.req) return undefined;
+      if (!model.req || state.safe) return undefined;
       const s = segIndex.get(key);
       const a = s?.availability ?? s?.marketed;
       if (!s || !a || (s.kind !== 'available' && s.kind !== 'sublease' && !s.marketed)) return undefined;
       const n = matchingInquiries(model.property.inquiries, { size: a.size, divisible: a.divisible, minDivisible: a.minDivisible, from: a.availableFrom }, model.asOf).length;
       return n || undefined;
     },
-    [model.req, model.property.inquiries, model.asOf, segIndex],
+    [model.req, model.property.inquiries, model.asOf, segIndex, state.safe],
   );
 
   // Roving tabindex across the grid
@@ -191,7 +193,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                   className="sp-gutter__btn"
                   tabIndex={-1}
                   data-floor={f.floor.id}
-                  aria-label={`${f.floor.name}: ${pct(leasedPct)} leased, ${num(f.leasable)} RSF leasable${f.overAllocatedBy ? `, over-allocated by ${num(f.overAllocatedBy)} SF` : ''}. Open floor summary.`}
+                  aria-label={`${f.floor.name}: ${pct(leasedPct)} leased, ${num(f.leasable)} RSF leasable${f.overAllocatedBy ? `, records exceed leasable area by ${num(f.overAllocatedBy)} SF` : ''}. Open floor summary.`}
                   onClick={() => openFloor(patch, f.floor.id)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -225,8 +227,8 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                         {num(f.leasable)} RSF
                       </text>
                       {f.overAllocatedBy > 0 && (
-                        <text className="sp-gutter__warn" x={8} y={rowH >= 60 ? 50 : 37} fontSize={11} fontWeight={600}>
-                          +{num(f.overAllocatedBy)}
+                        <text className="sp-gutter__warn" x={8} y={rowH >= 60 ? 62 : 48} fontSize={10} fontWeight={600}>
+                          +{num(f.overAllocatedBy)} SF over
                         </text>
                       )}
                     </>

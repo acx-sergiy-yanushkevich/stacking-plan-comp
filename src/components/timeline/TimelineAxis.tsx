@@ -54,6 +54,16 @@ export function TimelineAxis({ start, end, asOf, today, plotLeft, plotWidth, str
       e.preventDefault();
       onBucket(key);
     }
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const cols = Array.from((e.currentTarget.parentElement as Element).querySelectorAll<SVGGElement>('[role="button"]'));
+      const i = cols.indexOf(e.currentTarget);
+      const next = cols[i + (e.key === 'ArrowRight' ? 1 : -1)];
+      next?.focus();
+    } else if (e.key === 'Escape' && activeBucket !== null) {
+      e.preventDefault();
+      onBucket(activeBucket);
+    }
   };
 
   return (
@@ -98,7 +108,7 @@ export function TimelineAxis({ start, end, asOf, today, plotLeft, plotWidth, str
               key={b.key}
               className={`sp-tl-band__col ${i % 2 ? 'is-alt' : ''} ${active ? 'is-active' : ''} ${b.sf === 0 ? 'is-empty' : ''}`}
               role="button"
-              tabIndex={0}
+              tabIndex={i === (activeBucket !== null ? buckets.findIndex((x) => x.key === activeBucket) : 0) ? 0 : -1}
               aria-pressed={active}
               aria-label={`${[labelText, valueText].filter(Boolean).join(' ')}${labelText || valueText ? '. ' : ''}${b.label}: ${sf(b.sf)}, ${plural(b.leases, 'lease')}`}
               onClick={() => onBucket(b.key)}

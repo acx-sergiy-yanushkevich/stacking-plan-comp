@@ -19,5 +19,8 @@ export const prospectLabel = (deal: Pick<Deal, 'prospect'>, safe: boolean): stri
  * Rents and prices show only outside prospect-safe mode and never for confidential
  * records. Availabilities have no Confidential__c, so only `safe` applies to them.
  */
-export const rentVisible = (x: { confidential?: boolean } | Availability, safe: boolean): boolean =>
-  !safe && !('confidential' in x && x.confidential);
+export const rentVisible = (x: { confidential?: boolean } | Availability, safe: boolean): boolean => {
+  // Asking rents on availabilities are marketing information a prospect is meant to see.
+  if ('rentLow' in x) return true;
+  return !safe && !x.confidential;
+};

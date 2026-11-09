@@ -192,6 +192,9 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
     highlight = fits.keys;
     const who = inquiry ? (safe ? 'an open inquiry' : inquiry.prospect) : null;
     filterLabel = `${who ? `Space for ${who}: ` : 'Space that fits '}${num(req.size)}${req.max ? `–${num(req.max)}` : '+'} SF${req.by ? ` by ${fmtDate(req.by)}` : ''} · ${fits.options.length} option${fits.options.length === 1 ? '' : 's'}`;
+  } else if (searchMatches && searchMatches.size === 0) {
+    highlight = null;
+    filterLabel = `No tenant, suite or prospect matches “${state.q}”. Try a suite number (“350”) or a floor (“Floor 8”).`;
   } else if (searchMatches) {
     highlight = searchMatches;
     const reasons = searchReasons ? [...searchReasons.entries()] : [];

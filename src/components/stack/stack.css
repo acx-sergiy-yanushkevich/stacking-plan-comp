@@ -36,3 +36,11 @@
   .sp-stack__head { padding: 8px 12px; }
   .sp-stack__body { padding: 6px 8px 10px 4px; }
 }
+
+@media (max-width: 760px) {
+  .sp-stack__head { padding: 6px 10px; }
+  .sp-stack__head .sp-legend { flex-wrap: nowrap; overflow-x: auto; gap: 4px 10px; }
+  .sp-stack__head .sp-legend__num { display: none; }
+  .sp-stack__head .sp-legend__note { display: none; }
+  .sp-stack__title .sp-weak { display: none; }
+}

@@ -1,4 +1,5 @@
-import type { KeyboardEvent, ReactNode } from 'react';
+import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { refocusTrigger } from '../../state/focusStore';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { InspectorMode, PlanState } from '../../state/planState';
 import { sf } from '../../domain/format';
@@ -52,13 +53,13 @@ function headFor(mode: InspectorMode, model: PlanModel, state: PlanState, patch:
       return { title: f?.floor.name ?? 'Floor', subtitle: f ? `${sf(f.leasable)} leasable` : undefined, close: () => closeAndRefocus(patch, null, state.floor) };
     }
     case 'find':
-      return { title: 'Find space', subtitle: model.filterLabel ?? 'Rank every space that fits a requirement', close: () => patch({ mode: 'building', req: null, max: null, by: null, inquiry: null }) };
+      return { title: 'Find space', subtitle: model.filterLabel ?? 'Rank every space that fits a requirement', close: () => { patch({ mode: 'building', req: null, max: null, by: null, inquiry: null }); refocusTrigger(); } };
     case 'worklist':
-      return { title: 'Renewal worklist', subtitle: model.filterLabel ?? 'Leases ending in a window', close: () => patch({ mode: 'building', window: null }) };
+      return { title: 'Renewal worklist', subtitle: model.filterLabel ?? 'Leases ending in a window', close: () => { patch({ mode: 'building', window: null }); refocusTrigger(); } };
     case 'issues':
-      return { title: 'Data issues', subtitle: `${model.counts.error} errors · ${model.counts.warning} warnings · ${model.counts.info} info`, close: () => patch({ mode: 'building' }) };
+      return { title: 'Data issues', subtitle: `${model.counts.error} errors · ${model.counts.warning} warnings · ${model.counts.info} info`, close: () => { patch({ mode: 'building' }); refocusTrigger(); } };
     case 'area':
-      return { title: 'Area', subtitle: `${model.property.city}, ${model.property.state}`, close: () => patch({ mode: 'building' }) };
+      return { title: 'Area', subtitle: `${model.property.city}, ${model.property.state}`, close: () => { patch({ mode: 'building' }); refocusTrigger(); } };
     case 'building':
     default:
       return { title: 'Building', subtitle: model.property.name };
@@ -72,6 +73,15 @@ function headFor(mode: InspectorMode, model: PlanModel, state: PlanState, patch:
 export default function Inspector({ model, state, patch, mode, areaPanel }: InspectorProps) {
   const head = headFor(mode, model, state, patch);
   const bodyKey = `${mode}:${mode === 'block' ? state.select : mode === 'floor' ? state.floor : mode === 'worklist' ? state.window : ''}`;
+
+  // Tool panels (find, worklist, issues, area) take focus when they open so Escape works at once.
+  const titleRef = useRef<HTMLHeadingElement | null>(null);
+  const prevMode = useRef(mode);
+  useEffect(() => {
+    const toolModes: InspectorMode[] = ['find', 'worklist', 'issues', 'area'];
+    if (mode !== prevMode.current && toolModes.includes(mode)) requestAnimationFrame(() => titleRef.current?.focus());
+    prevMode.current = mode;
+  }, [mode]);
 
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Escape' && head.close) {
@@ -108,7 +118,9 @@ export default function Inspector({ model, state, patch, mode, areaPanel }: Insp
     <div className="sp-ins" data-mode={mode} onKeyDown={onKey}>
       <div className="sp-ins__head">
         <div className="sp-ins__titles">
-          <h2 className="sp-ins__title">{head.title}</h2>
+          <h2 className="sp-ins__title" ref={titleRef} tabIndex={-1}>
+            {head.title}
+          </h2>
           {head.subtitle && <p className="sp-ins__subtitle">{head.subtitle}</p>}
         </div>
         {head.close && <Button variant="ghost" size="sm" icon="close" iconOnly aria-label="Close" title="Close (Esc)" onClick={head.close} />}

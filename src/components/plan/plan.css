@@ -19,6 +19,7 @@
 .sp-seg__meta { font-size: 12px; opacity: 0.85; }
 .sp-seg__sf { font-size: 12px; font-weight: 600; }
 .sp-seg__glyph { font-size: 12px; font-weight: 700; opacity: 0.85; }
+.sp-seg__tiny { font-size: 11px; font-weight: 600; }
 .sp-seg__edge { pointer-events: none; }
 
 /* Badges drawn as foreignObject-free SVG groups */

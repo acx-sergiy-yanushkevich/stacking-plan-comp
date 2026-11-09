@@ -205,7 +205,8 @@ describe('Inspector', () => {
     for (const q of ['?safe=1', '?safe=1&select=L13-U1', '?safe=1&select=A02', '?safe=1&select=F2-gap', '?safe=1&floor=F6', '?safe=1&req=12000', '?safe=1&window=12', '?safe=1&mode=issues']) {
       const { html } = render(q);
       expectNoTenants(html);
-      expect(html, `${q} leaks a rate`).not.toContain('/SF/yr');
+      // In-place rents never appear; asking rents on vacancies may ("Asking $30–$32/SF/yr FSG").
+      expect(html.replace(/Asking \$[^<]*?\/SF\/(yr|mo) (FSG|MG|NNN)/g, ''), `${q} leaks a rate`).not.toContain('/SF/yr');
       expect(html, `${q} leaks a contact`).not.toContain('Tom Conner');
     }
   });

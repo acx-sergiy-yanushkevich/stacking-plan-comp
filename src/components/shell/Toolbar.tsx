@@ -1,6 +1,7 @@
 import { LENSES, type LensId } from '../../domain/lenses';
 import type { PlanState, View } from '../../state/planState';
 import { Button, Segmented, SelectField, TextField } from '../ui';
+import { rememberTrigger } from '../../state/focusStore';
 
 export interface ToolbarProps {
   state: PlanState;
@@ -17,7 +18,10 @@ export function Toolbar({ state, patch }: ToolbarProps) {
   const view: View = state.view === 'floor' ? 'stack' : state.view;
   const toggleMode = (mode: 'find' | 'worklist') => {
     if (state.mode === mode) patch({ mode: 'building', req: null, max: null, by: null, inquiry: null, window: null });
-    else patch({ mode, select: null, floor: null, window: mode === 'worklist' ? state.window ?? '12' : null });
+    else {
+      rememberTrigger();
+      patch({ mode, select: null, floor: null, window: mode === 'worklist' ? state.window ?? '12' : null });
+    }
   };
   return (
     <div className="sp-card sp-toolbar sp-no-print">

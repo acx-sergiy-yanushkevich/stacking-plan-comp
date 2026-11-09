@@ -4,6 +4,7 @@ import type { Issue, IssueSeverity } from '../../domain/issues';
 import { plural } from '../../domain/format';
 import { Button, Icon } from '../ui';
 import { openFloor, selectSegment, type Patch, type RecordAction } from '../plan/actions';
+import { focusSegment } from '../../state/focusStore';
 import { useRecordAction } from './Actions';
 import { Section } from './parts';
 
@@ -71,8 +72,10 @@ export function IssuesPanel({ model, patch }: IssuesPanelProps) {
   }
 
   const locate = (i: Issue) => {
-    if (i.segKey) selectSegment(patch, i.segKey);
-    else if (i.floorId) openFloor(patch, i.floorId);
+    if (i.segKey) {
+      selectSegment(patch, i.segKey);
+      focusSegment(i.segKey);
+    } else if (i.floorId) openFloor(patch, i.floorId);
   };
 
   return (

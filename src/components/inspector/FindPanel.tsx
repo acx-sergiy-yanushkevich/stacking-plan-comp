@@ -65,7 +65,15 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
             />
           </div>
           <div className="sp-ins__form-row">
-            <TextField label="By date" kind="date" value={state.by ?? inquiry?.neededBy ?? ''} min={asOf} onChange={(e) => patch({ by: e.target.value || null, inquiry: null, req: state.req ?? inquiry?.minSize ?? null })} />
+            <SelectField label="Needed by" value={state.by ?? inquiry?.neededBy ?? ''} onChange={(e) => patch({ by: e.target.value || null, inquiry: null, req: state.req ?? inquiry?.minSize ?? null })}>
+              <option value="">Any time</option>
+              {Array.from({ length: 36 }, (_, i) => addMonths(asOf.slice(0, 7) + '-01', i + 1)).map((d) => (
+                <option key={d} value={d}>
+                  {fmtMonthYear(d)}
+                </option>
+              ))}
+              {state.by && !Array.from({ length: 36 }, (_, i) => addMonths(asOf.slice(0, 7) + '-01', i + 1)).includes(state.by) && <option value={state.by}>{fmtMonthYear(state.by)}</option>}
+            </SelectField>
             <div className="sp-field">
               <span className="sp-field__label" id="sp-find-type">
                 Type
@@ -116,6 +124,7 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
         <Section title={`Options · ${options.length}`}>
           <p className="sp-ins__note" style={{ marginTop: 0, marginBottom: 8 }}>
             Ranked: on time first, then sooner, then closest in size.
+            {options.length > 0 && options.every((o) => o.from) && ` Nothing this size is available now; the earliest is ${fmtMonthYear(options.map((o) => o.from!).sort()[0])}.`}
           </p>
           <ul className="sp-ins__list">
             {options.map((o, i) => {
@@ -163,7 +172,7 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
                             late
                           </Chip>
                         )}
-                        {o.inquiries > 0 && (
+                        {o.inquiries > 0 && !safe && (
                           <Chip tone="success" icon="inquiry">
                             {o.inquiries === 1 ? '1 inquiry fits' : `${o.inquiries} inquiries fit`}
                           </Chip>

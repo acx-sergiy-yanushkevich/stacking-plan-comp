@@ -28,7 +28,7 @@
 .sp-map-info__meta > span { display: inline-flex; align-items: center; gap: 6px; }
 .sp-map-legend { top: var(--sp-space-3); right: var(--sp-space-3); max-width: 300px; }
 .sp-map-legend .sp-legend { gap: 4px 10px; }
-.sp-map-legend .sp-legend__num { display: none; }
+.sp-map-legend .sp-legend__num { font-size: 11px; }
 .sp-map-present { bottom: var(--sp-space-3); left: 50%; transform: translateX(-50%); padding: 6px 12px; font-variant-numeric: tabular-nums; }
 
 /* Floors quick list: the keyboard equivalent of the 3D floors. */
@@ -46,6 +46,7 @@
   border-radius: var(--sp-radius-card);
 }
 .sp-map-floor {
+  display: flex; align-items: center; gap: 5px;
   min-width: 32px; min-height: 24px; padding: 0 6px;
   border-radius: var(--sp-radius-block);
   font-size: var(--sp-text-12); font-variant-numeric: tabular-nums;
@@ -137,3 +138,7 @@
 
 .sp-area li, .sp-area__row { white-space: normal; }
 .sp-area .sp-area__name, .sp-area-transit__name { white-space: normal; overflow: visible; text-overflow: clip; }
+
+.sp-map-floor__swatch { width: 10px; height: 10px; border-radius: 2px; border: 1px solid; flex: none; }
+.sp-map-floor__num { font-weight: 600; min-width: 14px; text-align: right; }
+.sp-map-floor__pct { font-size: 10px; color: var(--sp-color-text-weak); }

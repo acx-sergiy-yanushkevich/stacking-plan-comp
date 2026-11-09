@@ -8,6 +8,7 @@ import type { SegmentText } from '../plan/segmentText';
 export const FONT_NAME = "600 13px Inter, 'Salesforce Sans', system-ui, sans-serif";
 export const FONT_SUB = "400 12px Inter, 'Salesforce Sans', system-ui, sans-serif";
 export const FONT_BADGE = "600 11px Inter, 'Salesforce Sans', system-ui, sans-serif";
+export const FONT_TINY = "600 11px Inter, 'Salesforce Sans', system-ui, sans-serif";
 
 export interface BlockProps {
   seg: Segment;
@@ -88,6 +89,11 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
     if (fits(sfText, inner, FONT_SUB)) lines.push({ t: sfText, cls: 'sp-seg__sf', font: FONT_SUB });
   }
   if (lines.length > maxLines) lines.length = maxLines;
+  // Very narrow blocks: the whole name in up to three short lines before any glyph.
+  if (lines.length === 0 && w >= 40 && h >= 48) {
+    const small = wrapWords(text.name, w - 8, FONT_TINY, 3);
+    if (small.length && small.join(' ') === text.name) for (const l of small) lines.push({ t: l, cls: 'sp-seg__tiny', font: FONT_TINY });
+  }
   // Narrowest tier: a single state glyph so colour is never the only cue.
   const glyph = lines.length === 0 && w >= 24 && h >= 40 ? ((w >= 48 && GLYPH_WORD[seg.kind] && fits(GLYPH_WORD[seg.kind]!, w - 8, FONT_SUB) ? GLYPH_WORD[seg.kind] : GLYPH[seg.kind]) ?? initials(text.name)) : null;
 
@@ -141,7 +147,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
         </text>
       )}
       {lines.map((l, i) => (
-        <text key={i} className={l.cls} x={PAD + (accentLeft ? 3 : 0)} y={PAD + 11 + i * LINE} fill={color}>
+        <text key={i} className={l.cls} x={l.cls === 'sp-seg__tiny' ? 4 : PAD + (accentLeft ? 3 : 0)} y={l.cls === 'sp-seg__tiny' ? 6 + 10 + i * 13 : PAD + 11 + i * LINE} fill={color}>
           {`${l.t} `}
         </text>
       ))}

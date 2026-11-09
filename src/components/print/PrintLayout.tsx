@@ -2,7 +2,7 @@ import type { PlanModel, WorklistRow } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { fmtDate, fmtMonths } from '../../domain/dates';
 import { num, pct, rate, sf } from '../../domain/format';
-import { rentRollDisplay } from '../../domain/exportCsv';
+import { rentRollDisplay, unplacedLeases } from '../../domain/exportCsv';
 import { rentVisible, tenantLabel } from '../../domain/safe';
 import { Legend } from '../plan/Legend';
 import StackView from '../stack/StackView';
@@ -86,6 +86,11 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
             </tr>
           </tbody>
         </table>
+        {unplacedLeases(p, model.asOf).length > 0 && (
+          <p className="sp-print__note" style={{ marginTop: 6 }}>
+            {unplacedLeases(p, model.asOf).length} lease{unplacedLeases(p, model.asOf).length === 1 ? ' is' : 's are'} not placed on the plan (no floor or unit records) and {unplacedLeases(p, model.asOf).length === 1 ? 'is' : 'are'} listed above as “Not placed”; see Data issues.
+          </p>
+        )}
       </section>
 
       <section className="sp-print__page">

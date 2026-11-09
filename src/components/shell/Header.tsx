@@ -5,6 +5,7 @@ import { daysBetween, fmtDate } from '../../domain/dates';
 import { num } from '../../domain/format';
 import { Button, Chip, Icon, Menu, Switch } from '../ui';
 import { AsOfPopover } from './AsOfPopover';
+import { rememberTrigger } from '../../state/focusStore';
 
 export type ExportKind = 'pdf' | 'png' | 'csv' | 'link' | 'video';
 
@@ -68,7 +69,10 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
           icon="warning"
           count={issueTotal}
           active={state.mode === 'issues'}
-          onClick={() => patch({ mode: state.mode === 'issues' ? 'building' : 'issues', select: null, floor: null })}
+          onClick={() => {
+            if (state.mode !== 'issues') rememberTrigger();
+            patch({ mode: state.mode === 'issues' ? 'building' : 'issues', select: null, floor: null });
+          }}
           title={`${counts.error} errors, ${counts.warning} warnings, ${counts.info} notes. Open the list.`}
         >
           Data issues

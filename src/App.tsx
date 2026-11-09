@@ -22,6 +22,7 @@ import { csvBlob, download } from './lib/exportFile';
 import { svgToPng } from './lib/exportPng';
 import { useIsNarrow } from './lib/useMedia';
 import { clearSelection } from './components/plan/actions';
+import { focusSegment, refocusTrigger } from './state/focusStore';
 import { Patterns } from './components/plan/Patterns';
 import { fmtDate } from './domain/dates';
 import { num, pct } from './domain/format';
@@ -149,7 +150,7 @@ function Shell() {
       <SaleBanner property={property} leasable={model.kpis.leasable} />
       <KpiStrip model={model} state={state} onAction={onKpi} />
       <Toolbar state={state} patch={patch} />
-      <main className={`sp-main sp-no-print ${state.view === 'floor' ? 'sp-main--wide' : ''}`} id="sp-plan" tabIndex={-1}>
+      <main className={`sp-main sp-no-print ${state.view === 'floor' && mode !== 'block' ? 'sp-main--wide' : ''}`} id="sp-plan" tabIndex={-1}>
         <div className="sp-stage">
           {state.view === 'stack' && <StackView model={model} state={state} patch={patch} />}
           {state.view === 'floor' && <FloorView model={model} state={state} patch={patch} />}
@@ -160,14 +161,29 @@ function Shell() {
             </Suspense>
           )}
         </div>
-        {!narrow && state.view !== 'floor' && (
+        {!narrow && (state.view !== 'floor' || mode === 'block') && (
           <aside className="sp-inspector sp-card" aria-label="Inspector">
             {inspector}
           </aside>
         )}
       </main>
-      {narrow && state.view !== 'floor' && (
-        <Sheet open={sheetOpen} onClose={() => (mode === 'block' || mode === 'floor' ? clearSelection(patch) : patch({ mode: 'building', req: null, inquiry: null, window: null }))} title={sheetTitle} hideHeader>
+      {narrow && (state.view !== 'floor' || mode === 'block') && (
+        <Sheet
+          open={sheetOpen}
+          onClose={() => {
+            if (mode === 'block' || mode === 'floor') {
+              const key = state.select;
+              clearSelection(patch);
+              if (key) focusSegment(key);
+              else refocusTrigger();
+            } else {
+              patch({ mode: 'building', req: null, inquiry: null, window: null });
+              refocusTrigger();
+            }
+          }}
+          title={sheetTitle}
+          hideHeader
+        >
           {inspector}
         </Sheet>
       )}

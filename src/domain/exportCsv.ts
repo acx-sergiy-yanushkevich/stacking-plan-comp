@@ -1,5 +1,5 @@
 import type { ISODate, Property } from './types';
-import { activeDeals, isLeaseKind, type FloorView, type Segment, type SegmentKind } from './derive';
+import { activeDeals, isLeaseKind, leaseEnd, type FloorView, type Segment, type SegmentKind } from './derive';
 import { rentVisible, tenantLabel } from './safe';
 import { fmtDate, fmtMonths } from './dates';
 import { num, rate as fmtRate, rateRange, usd0 } from './format';
@@ -38,7 +38,7 @@ const STATE_LABEL: Record<SegmentKind, string> = {
  * CSV opens as numbers; the Unit column says `yr`/`mo`. In prospect-safe mode the
  * Live deals column is dropped (deal activity is not for prospects).
  */
-export function rentRollRows(_p: Property, floors: FloorView[], _asOf: ISODate, safe: boolean): string[][] {
+export function rentRollRows(p: Property, floors: FloorView[], asOf: ISODate, safe: boolean): string[][] {
   const header = safe ? RENT_ROLL_HEADER.filter((h) => h !== 'Live deals') : [...RENT_ROLL_HEADER];
   const rows: string[][] = [[...header]];
   for (const f of floors) {
@@ -48,7 +48,17 @@ export function rentRollRows(_p: Property, floors: FloorView[], _asOf: ISODate, 
       rows.push(safe ? r.slice(0, -1) : r);
     }
   }
+  // Leases xRE holds without a floor or unit are still part of the rent roll: list them, flagged.
+  for (const l of unplacedLeases(p, asOf)) {
+    const r = [l.floorId ? (p.floors.find((f) => f.id === l.floorId)?.name ?? '') : '', '', tenantLabel(l, safe), '', 'Not placed (data issue)', l.commencement, leaseEnd(l) ?? '', '', rentVisible(l, safe) && l.rate !== null ? String(l.rate) : '', rentVisible(l, safe) && l.rate !== null ? l.rateUnit : '', l.leaseType, '0'];
+    rows.push(safe ? r.slice(0, -1) : r);
+  }
   return rows;
+}
+
+/** Active leases that cannot be drawn: no Unit records, or no Floor. */
+export function unplacedLeases(p: Property, asOf: ISODate) {
+  return p.leases.filter((l) => (l.units.length === 0 || !l.floorId) && l.commencement <= asOf && (!leaseEnd(l) || leaseEnd(l)! >= asOf));
 }
 
 function segmentRow(f: FloorView, s: Segment, safe: boolean): string[] {
@@ -97,7 +107,7 @@ function segmentRow(f: FloorView, s: Segment, safe: boolean): string[] {
   const months = risk ? (safe ? '' : s.kind === 'holdover' ? 'Holdover' : 'MTM') : s.monthsToExpiry === null ? '' : String(Math.max(0, s.monthsToExpiry));
   const live = activeDeals(s.lease?.deals).length + activeDeals(s.availability?.deals).length + activeDeals(s.marketed?.deals).length;
 
-  const state = safe && risk ? 'Leased' : STATE_LABEL[s.kind];
+  const state = safe && risk ? 'Leased (term withheld)' : STATE_LABEL[s.kind];
   if (safe && risk) expiration = '';
   return [f.floor.name, s.suite ?? '', tenant, String(s.size), state, commencement, expiration, months, rate, unit, leaseType, String(live)];
 }
@@ -109,7 +119,7 @@ export const RENT_ROLL_DISPLAY_HEADER = ['Floor', 'Suite', 'Tenant', 'RSF', 'Sta
  * long dates, "Holdover" / "MTM" instead of month counts, rates with unit and type,
  * asking prices for sale units. Drops the Live deals column in prospect-safe mode.
  */
-export function rentRollDisplay(_p: Property, floors: FloorView[], _asOf: ISODate, safe: boolean): string[][] {
+export function rentRollDisplay(p: Property, floors: FloorView[], asOf: ISODate, safe: boolean): string[][] {
   const header = safe ? RENT_ROLL_DISPLAY_HEADER.filter((h) => h !== 'Live deals') : [...RENT_ROLL_DISPLAY_HEADER];
   const rows: string[][] = [[...header]];
   for (const f of floors) {
@@ -142,9 +152,14 @@ export function rentRollDisplay(_p: Property, floors: FloorView[], _asOf: ISODat
       const remaining = risk ? (safe ? '—' : s.kind === 'holdover' ? 'Holdover' : 'MTM') : s.monthsToExpiry === null ? '—' : fmtMonths(Math.max(0, s.monthsToExpiry));
       if (safe && risk) end = '—';
       const live = activeDeals(s.lease?.deals).length + activeDeals(s.availability?.deals).length + activeDeals(s.marketed?.deals).length;
-      const row = [f.floor.name, s.suite ?? '—', tenant, num(s.size), safe && risk ? 'Leased' : STATE_LABEL[s.kind], start, end, remaining, rate, live ? String(live) : '—'];
+      const row = [f.floor.name, s.suite ?? '—', tenant, num(s.size), safe && risk ? 'Leased (term withheld)' : STATE_LABEL[s.kind], start, end, remaining, rate, live ? String(live) : '—'];
       rows.push(safe ? row.slice(0, -1) : row);
     }
+  }
+  for (const l of unplacedLeases(p, asOf)) {
+    const end = leaseEnd(l);
+    const row = [l.floorId ? (p.floors.find((f) => f.id === l.floorId)?.name ?? '—') : '—', '—', tenantLabel(l, safe), '—', 'Not placed (data issue)', fmtDate(l.commencement), end ? fmtDate(end) : 'Month-to-month', '—', rentVisible(l, safe) && l.rate !== null ? fmtRate(l.rate, l.rateUnit, l.leaseType) : safe ? 'Withheld' : '—', '—'];
+    rows.push(safe ? row.slice(0, -1) : row);
   }
   return rows;
 }

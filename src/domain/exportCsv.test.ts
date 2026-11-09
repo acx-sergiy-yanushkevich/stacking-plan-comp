@@ -13,11 +13,15 @@ describe('rentRollRows', () => {
   it('starts with the header and lists the top floor first', () => {
     expect(open[0]).toEqual([...RENT_ROLL_HEADER]);
     expect(open[1][col('Floor')]).toBe('Floor 12');
-    expect(open.at(-1)![col('Floor')]).toBe('Floor 1');
+    const placed = open.filter((r) => r[col('State')] !== 'Not placed (data issue)');
+    expect(placed.at(-1)![col('Floor')]).toBe('Floor 1');
+    // Leases without a floor or unit are still listed, flagged, at the end.
+    const unplaced = open.filter((r) => r[col('State')] === 'Not placed (data issue)');
+    expect(unplaced.map((r) => r[col('Tenant')]).sort()).toEqual(['Delta Dental Plan', 'Ridgeway Insurance']);
   });
   it('skips unmarketed gaps', () => {
     expect(open.some((r) => r[col('State')] === 'Unmarketed')).toBe(false);
-    expect(open.every((r, i) => i === 0 || r[col('Suite')] !== '')).toBe(true);
+    expect(open.every((r, i) => i === 0 || r[col('Suite')] !== '' || r[col('State')] === 'Not placed (data issue)')).toBe(true);
   });
   it('has a Cirrus Energy row with exact RSF and months remaining', () => {
     const row = open.find((r) => r[col('Tenant')] === 'Cirrus Energy')!;
@@ -66,7 +70,9 @@ describe('rentRollRows', () => {
     ];
     for (const pr of prospects) expect(text).not.toContain(pr);
     expect(text).not.toContain('$');
-    expect(safe.slice(1).every((r) => r[col('Rate')] === '')).toBe(true);
+    // In-place rents are withheld; asking rents on availabilities are marketing data and stay.
+    expect(safe.slice(1).filter((r) => r[col('State')] === 'Leased' || r[col('State')] === 'Leased (term withheld)' || r[col('State')] === 'Committed').every((r) => r[col('Rate')] === '')).toBe(true);
+    expect(safe.find((r) => r[col('Suite')] === '350')![col('Rate')]).toBe('30–32');
     expect(safe.find((r) => r[col('Suite')] === '600')![col('Tenant')]).toBe('Tenant');
     expect(safe.length).toBe(open.length);
   });
