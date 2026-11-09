@@ -20,7 +20,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
   const { property, kpis, counts, today } = model;
   const verifiedAt = [...property.leases.map((l) => l.verifiedAt), ...property.availabilities.map((a) => a.verifiedAt)].sort().at(-1) ?? property.dataUpdated;
   const staleDays = daysBetween(verifiedAt, today);
-  const issueTotal = counts.error + counts.warning;
+  const issueTotal = model.issues.length;
   return (
     <header className="sp-card sp-header sp-no-print">
       <div className="sp-header__icon" aria-hidden="true">
@@ -64,7 +64,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
           count={issueTotal}
           active={state.mode === 'issues'}
           onClick={() => patch({ mode: state.mode === 'issues' ? 'building' : 'issues', select: null, floor: null })}
-          title={`${counts.error} errors, ${counts.warning} warnings, ${counts.info} notes`}
+          title={`${counts.error} errors, ${counts.warning} warnings, ${counts.info} notes. Open the list.`}
         >
           Data issues
         </Button>

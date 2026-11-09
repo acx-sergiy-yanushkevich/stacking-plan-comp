@@ -81,12 +81,13 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
     case 'sublease': {
       name = lease ? tenantLabel(lease, safe) : name;
       if (kind === 'sublease' && a) name = safe ? 'Sublease' : `${tenantLabel(lease!, safe)} · sublease`;
-      if (kind === 'holdover') badges.push({ kind: 'risk', text: 'Holdover', title: `Expired ${seg.endDate ? fmtDate(seg.endDate) : ''}, no termination recorded` });
-      if (kind === 'mtm') badges.push({ kind: 'risk', text: 'MTM', title: 'Month-to-month: no expiration date' });
+      if (kind === 'holdover' && !safe) badges.push({ kind: 'risk', text: 'Holdover', title: `Expired ${seg.endDate ? fmtDate(seg.endDate) : ''}, no termination recorded` });
+      if (kind === 'mtm' && !safe) badges.push({ kind: 'risk', text: 'MTM', title: 'Month-to-month: no expiration date' });
       if (kind === 'mtm') meta = 'Month-to-month';
       else if (kind === 'holdover') meta = `Expired ${seg.endDate ? fmtMonthYear(seg.endDate) : ''}`;
       else if (seg.endDate && seg.monthsToExpiry !== null) meta = `Exp ${fmtMonthYear(seg.endDate)} · ${fmtMonths(seg.monthsToExpiry)}`;
       if (kind === 'sublease' && a?.subleaseExpiration) meta = `Sublease thru ${fmtMonthYear(a.subleaseExpiration)}`;
+      if (safe && (kind === 'holdover' || kind === 'mtm')) meta = 'Leased';
       if (seg.marketed && !seg.marketed.sublease && seg.marketed.kind === 'Lease') {
         badges.push({ kind: 'info', text: seg.marketed.availableFrom ? `Avail ${fmtMonthYearShort(seg.marketed.availableFrom)}` : 'Marketed', title: 'Occupied, already marketed for a later date' });
       }
@@ -108,7 +109,7 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
       break;
     }
     case 'projected': {
-      name = seg.endDate ? `Vacates ${fmtMonthYearShort(seg.endDate)}` : 'Projected vacancy';
+      name = seg.endDate ? `Vacated ${fmtMonthYearShort(seg.endDate)}` : 'Projected vacancy';
       meta = lease && !safe ? `${tenantLabel(lease, safe)} leaves` : 'No availability yet';
       break;
     }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
 import type { ISODate } from '../../domain/types';
-import { addMonths, fmtDate, fmtMonthYear, monthsBetween, startOfMonth } from '../../domain/dates';
+import { addMonths, fmtDate, fmtMonthYear, monthsBetween } from '../../domain/dates';
 import { dateToX, xToDate } from '../../domain/timeline';
 import { measure } from '../../lib/textFit';
 
@@ -110,7 +110,7 @@ export function AsOfCursor({ asOf, today, start, end, svgRef, plotLeft, plotWidt
   };
 
   const onKeyDown = (e: KeyboardEvent<SVGGElement>) => {
-    const base = startOfMonth(asOf);
+    const base = asOf;
     let next: ISODate | null = null;
     switch (e.key) {
       case 'ArrowLeft':

@@ -100,8 +100,9 @@ function equalWidths(n: number, avail: number): number[] {
  * 0 ≥ 200 px full facts · 1 ≥ 120 px tenant + SF · 2 ≥ 64 px SF only · 3 no text.
  */
 export function textTier(w: number): 0 | 1 | 2 | 3 {
+  // ≥200 full, ≥120 name + SF, ≥56 SF (and the name when it fits), else nothing but the tooltip.
   if (w >= 200) return 0;
   if (w >= 120) return 1;
-  if (w >= 64) return 2;
+  if (w >= 56) return 2;
   return 3;
 }

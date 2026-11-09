@@ -49,7 +49,7 @@ export function WorklistPanel({ model, state, patch }: WorklistPanelProps) {
   return (
     <>
       <div className="sp-ins__section">
-        <div className="sp-ins__chips sp-ins__chips--scroll" role="group" aria-label="Window">
+        <div className="sp-ins__chips" role="group" aria-label="Window">
           {WINDOWS.map((w) => (
             <Chip key={w} selected={window === w} count={model.worklist(w).length} onClick={() => patch({ window: w })}>
               {WINDOW_LABEL[w]}

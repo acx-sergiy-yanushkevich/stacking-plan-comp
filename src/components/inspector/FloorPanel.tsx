@@ -86,11 +86,13 @@ export function FloorPanel({ floor, model, state, patch }: FloorPanelProps) {
         </ul>
       </Section>
 
-      <div className="sp-ins__actions">
-        <Button variant="brand" icon="floor" onClick={() => openFloorPlate(patch, floor.floor.id)}>
-          Open floor plate
-        </Button>
-      </div>
+      {state.view !== 'floor' && (
+        <div className="sp-ins__actions">
+          <Button variant="brand" icon="floor" onClick={() => openFloorPlate(patch, floor.floor.id)}>
+            Open floor plate
+          </Button>
+        </div>
+      )}
     </>
   );
 }

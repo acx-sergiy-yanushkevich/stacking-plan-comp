@@ -64,11 +64,8 @@ export function AreaPanel({ model, state, dataSource }: AreaPanelProps) {
   const rings = area ? [...area.rings].sort((a, b) => a.miles - b.miles) : [];
 
   return (
-    <section className="sp-area" aria-labelledby="sp-area-title">
+    <section className="sp-area" aria-label="Area demographics and amenities">
       <header className="sp-area__head">
-        <h2 id="sp-area-title" className="sp-area__title">
-          Area
-        </h2>
         <p className="sp-weak">
           {property.city}, {property.state} · rings around the property
         </p>

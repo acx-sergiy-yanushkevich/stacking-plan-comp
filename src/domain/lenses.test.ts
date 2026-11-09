@@ -165,18 +165,19 @@ describe('legendFor', () => {
       for (const safe of [false, true]) {
         const items = legendFor(lens, safe, today).filter((i) => i.pattern !== 'asking');
         const sum = items.reduce((s, i) => s + i.share, 0);
-        expect(sum).toBeLessThanOrEqual(1.001);
+        expect(sum).toBeLessThanOrEqual(1.01);
         for (const i of items) expect(i.share).toBeCloseTo(i.sf / leasable, 10);
       }
     }
   });
-  it('never counts the over-allocated 500 SF on Floor 7 (lease SF scaled to the capped figure)', () => {
+  it('reports recorded SF, so an over-allocated floor shows its excess rather than pro-rated figures', () => {
     const f7 = today.find((f) => f.floor.id === 'F7')!;
     expect(f7.overAllocatedBy).toBe(500);
     const items = legendFor('status', false, today);
     const total = items.reduce((s, i) => s + i.sf, 0);
-    expect(Math.abs(total - 245400)).toBeLessThanOrEqual(1);
-    // Only Floor 7 is touched: the other floors' segments already sum to their leasable area.
+    expect(total).toBe(245400 + 500);
+    expect(items.find((i) => i.tone === 'sublease')?.sf).toBe(7000);
+    // Every other floor's segments sum exactly to its leasable area.
     expect(legendFor('status', false, today.filter((f) => f.floor.id !== 'F7')).reduce((s, i) => s + i.sf, 0)).toBe(245400 - 21400);
   });
   it('every segment tone appears in its lens legend (no orphan tones)', () => {
@@ -196,8 +197,7 @@ describe('legendFor', () => {
   });
   it('the rent legend asking item measures vacancies carrying an asking rent', () => {
     const asking = legendFor('rent', false, today).find((i) => i.pattern === 'asking');
-    // Direct vacancies + the suite 720 sublease, which sits on over-allocated Floor 7
-    // and is scaled with the other leases there: 7000 × 21400 / 21900 = 6840.
-    expect(asking?.sf).toBe(26200 + 6840);
+    // Direct vacancies + the suite 720 sublease, at their recorded SF.
+    expect(asking?.sf).toBe(26200 + 7000);
   });
 });

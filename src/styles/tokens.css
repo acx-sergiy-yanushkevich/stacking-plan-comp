@@ -71,7 +71,7 @@
   :root:not([data-theme='light']) {
     --sp-color-page: #16171a; --sp-color-card: #1f2124; --sp-color-card-2: #25282c;
     --sp-color-border: #2e3136; --sp-color-border-strong: #454a52;
-    --sp-color-text: #f3f3f3; --sp-color-text-weak: #aeb4bc; --sp-color-text-faint: #7d848d;
+    --sp-color-text: #f3f3f3; --sp-color-text-weak: #b4bac2; --sp-color-text-faint: #9aa2ab;
     --sp-color-brand: #57a3fd; --sp-color-brand-strong: #8ec0ff; --sp-color-brand-soft: #1c2b3d; --sp-color-focus: #8ec0ff;
     --sp-color-warn: #ffb067; --sp-color-warn-soft: #3a2a18; --sp-color-error: #ff8a99; --sp-color-error-soft: #3b1f24;
     --sp-color-success: #6fd08a; --sp-color-success-soft: #1d3324; --sp-color-dim: rgba(31, 33, 36, 0.7);
@@ -89,12 +89,12 @@
     --tone-muted-fill: #24272b; --tone-muted-text: #8f98a3; --tone-muted-edge: #343940;
     --tone-neutral-fill: #2b3139; --tone-neutral-text: #e9edf2; --tone-neutral-edge: #434b56;
     --tone-confidential-fill: #2f3238; --tone-confidential-text: #c8ccd3; --tone-confidential-edge: #555b64;
-    --tone-exp-0-fill: #b9492a; --tone-exp-0-text: #ffffff; --tone-exp-0-edge: #e07a55;
-    --tone-exp-1-fill: #8f4420; --tone-exp-1-text: #ffe8d6; --tone-exp-1-edge: #d27a4d;
-    --tone-exp-2-fill: #6f3f1f; --tone-exp-2-text: #ffdcb8; --tone-exp-2-edge: #c58650;
-    --tone-exp-3-fill: #543a22; --tone-exp-3-text: #f7d7ab; --tone-exp-3-edge: #a98157;
-    --tone-exp-4-fill: #3e3326; --tone-exp-4-text: #e8d2ae; --tone-exp-4-edge: #7d6c50;
-    --tone-exp-5-fill: #2e2c27; --tone-exp-5-text: #d9d0bd; --tone-exp-5-edge: #5c564a;
+    --tone-exp-0-fill: #ff7a45; --tone-exp-0-text: #1a0d05; --tone-exp-0-edge: #ffb08a;
+    --tone-exp-1-fill: #d4582a; --tone-exp-1-text: #ffffff; --tone-exp-1-edge: #f08a5e;
+    --tone-exp-2-fill: #a4461f; --tone-exp-2-text: #ffe6d8; --tone-exp-2-edge: #d27a4d;
+    --tone-exp-3-fill: #74401f; --tone-exp-3-text: #f7d7ab; --tone-exp-3-edge: #b57d4e;
+    --tone-exp-4-fill: #4e3a26; --tone-exp-4-text: #e8d2ae; --tone-exp-4-edge: #8c6f4e;
+    --tone-exp-5-fill: #35312b; --tone-exp-5-text: #d9d0bd; --tone-exp-5-edge: #655c4f;
     --tone-rent-0-fill: #1d2a35; --tone-rent-0-text: #d6e8f5; --tone-rent-0-edge: #2f4659;
     --tone-rent-1-fill: #1f3a52; --tone-rent-1-text: #d6e8f5; --tone-rent-1-edge: #35597c;
     --tone-rent-2-fill: #214d73; --tone-rent-2-text: #e2f0fa; --tone-rent-2-edge: #3d74a6;

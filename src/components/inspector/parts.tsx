@@ -67,13 +67,15 @@ export function DealList({ deals, safe }: { deals: Deal[]; safe: boolean }) {
                 {d.kind === 'Renewal' && <span className="sp-ins__tag">renewal</span>}
               </div>
               <div className="sp-ins__row-meta">
-                <span>{d.broker}</span>
-                <span>· Updated {fmtDate(d.updated)}</span>
+                {!safe && <span>{d.broker} · </span>}
+                <span>Updated {fmtDate(d.updated)}</span>
               </div>
             </div>
-            <div className="sp-ins__row-end">
-              <span className="sp-ins__row-value">{sf(d.size)}</span>
-            </div>
+            {!safe && (
+              <div className="sp-ins__row-end">
+                <span className="sp-ins__row-value">{sf(d.size)}</span>
+              </div>
+            )}
           </div>
         </li>
       ))}

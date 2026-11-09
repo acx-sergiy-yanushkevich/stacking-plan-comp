@@ -98,12 +98,13 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
             items={[
               ['Tenant', <strong key="t">{tenantLabel(lease, safe)}</strong>],
               ['Contact', contactLabel(lease.tenantContact, safe)],
-              ['Industry', lease.industry],
+              !safe && ['Industry', lease.industry],
               ['Term', `${fmtDate(lease.commencement)} – ${seg.endDate ? fmtDate(seg.endDate) : 'open (MTM)'}`],
               ['Remaining', remaining],
               ['Rent', rentText],
-              ['Broker', lease.owner],
-              ['Last touch', touchText(lease.lastTouch)],
+              !safe && ['Broker', lease.owner],
+              !safe && ['Last touch', touchText(lease.lastTouch)],
+              otherFloors.length > 0 && ['Total', `${sf(lease.units.reduce((s, u) => s + u.size, 0))} across ${otherFloors.length + 1} floors`],
               otherFloors.length > 0 && [
                 'Also on',
                 <span key="f" className="sp-ins__chips">
@@ -252,7 +253,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
       )}
 
       <Section title={`${kindLabel(seg.kind)} actions`} className="sp-ins__section--actions">
-        <Actions items={actions} />
+        {!safe && <Actions items={actions} />}
       </Section>
     </>
   );

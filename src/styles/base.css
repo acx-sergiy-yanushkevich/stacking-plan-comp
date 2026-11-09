@@ -23,3 +23,5 @@ svg { display: block; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
+.sp-skip { position: absolute; left: 8px; top: -40px; z-index: 200; padding: 6px 10px; background: var(--sp-color-brand); color: #fff; border-radius: 4px; font-weight: 600; }
+.sp-skip:focus { top: 8px; }

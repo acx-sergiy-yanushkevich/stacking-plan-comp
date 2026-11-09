@@ -52,7 +52,7 @@ describe('textTier', () => {
     expect(textTier(120)).toBe(1);
     expect(textTier(119)).toBe(2);
     expect(textTier(64)).toBe(2);
-    expect(textTier(63)).toBe(3);
+    expect(textTier(55)).toBe(3);
   });
 });
 

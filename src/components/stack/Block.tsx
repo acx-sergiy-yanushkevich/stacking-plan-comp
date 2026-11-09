@@ -1,7 +1,7 @@
 import type { KeyboardEvent } from 'react';
 import type { Segment } from '../../domain/derive';
 import { textTier } from '../../domain/layout';
-import { fitWords, wrapWords, fits } from '../../lib/textFit';
+import { fitWords, wrapWords, fits, measure } from '../../lib/textFit';
 import { PATTERN_IDS } from '../plan/Patterns';
 import type { SegmentText } from '../plan/segmentText';
 
@@ -25,13 +25,15 @@ export interface BlockProps {
   /** Enlarged to the minimum width: widths on this floor are not strictly proportional. */
   enlarged: boolean;
   compact?: boolean;
+  /** Another unit of the selected lease (multi-floor tenant). */
+  related?: boolean;
 }
 
 const PAD = 8;
 const LINE = 15;
 
 /** One suite on the plan: tone fill, pattern, accent bar, adaptive text, badges. */
-export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelect, onFocus, onKeyDown, enlarged, compact }: BlockProps) {
+export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelect, onFocus, onKeyDown, enlarged, compact, related }: BlockProps) {
   const tone = text.tone;
   const fill = `var(--tone-${tone}-fill)`;
   const edge = `var(--tone-${tone}-edge)`;
@@ -62,11 +64,11 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
       if (short && short.length >= 6) lines.push({ t: short, cls: 'sp-seg__meta', font: FONT_SUB });
     }
   } else if (tier === 2) {
-    // Narrow: the whole name or nothing (a partial name misleads more than it helps).
+    // Narrow: the whole name (on one or two lines) or nothing; a partial name misleads more than it helps.
     if (fits(text.name, inner, FONT_NAME)) lines.push({ t: text.name, cls: 'sp-seg__name', font: FONT_NAME });
-    else if (!compact) {
+    else if (!compact && maxLines >= 2) {
       const two = wrapWords(text.name, inner, FONT_NAME, 2);
-      if (two.length === 2 && two.join(' ') === text.name && maxLines >= 3) for (const l of two) lines.push({ t: l, cls: 'sp-seg__name', font: FONT_NAME });
+      if (two.length === 2 && two.join(' ') === text.name) for (const l of two) lines.push({ t: l, cls: 'sp-seg__name', font: FONT_NAME });
     }
     const withUnit = `${text.sfShort} SF`;
     const sfText = fits(withUnit, inner, FONT_SUB) ? withUnit : text.sfShort;
@@ -84,7 +86,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
 
   return (
     <g
-      className={`sp-seg ${selected ? 'is-selected' : ''} ${dim ? 'is-dim' : ''} ${pattern === 'dashed' ? 'sp-seg--dashed' : ''}`}
+      className={`sp-seg ${selected ? 'is-selected' : ''} ${related ? 'is-related' : ''} ${dim ? 'is-dim' : ''} ${pattern === 'dashed' ? 'sp-seg--dashed' : ''}`}
       role="gridcell"
       tabIndex={focusable ? 0 : -1}
       aria-label={ariaLabel}
@@ -100,6 +102,19 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
       <rect className="sp-seg__ring" x={-3} y={-3} width={w + 6} height={h + 6} rx={7} />
       <rect className="sp-seg__rect" width={w} height={h} rx={4} fill={fill} stroke={edge} />
       {patternFill && <rect width={w} height={h} rx={4} fill={patternFill} pointerEvents="none" />}
+      {patternFill && lines.length > 0 && (
+        <rect
+          className="sp-seg__backing"
+          x={PAD - 4 + (accentLeft ? 3 : 0)}
+          y={PAD - 3}
+          width={Math.min(w - PAD * 2 + 8, Math.ceil(Math.max(...lines.map((l) => measure(l.t, l.font)))) + 8)}
+          height={lines.length * LINE + 4}
+          rx={3}
+          fill={fill}
+          fillOpacity={0.9}
+          pointerEvents="none"
+        />
+      )}
       {accentLeft && <rect className="sp-seg__accent" x={0} y={0} width={3} height={h} rx={1} fill={edge} />}
       {accentTop && <rect className="sp-seg__accent" x={0} y={0} width={w} height={3} fill={edge} />}
       {lines.map((l, i) => (

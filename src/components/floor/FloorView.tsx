@@ -81,9 +81,6 @@ export default function FloorView({ model, state, patch }: FloorViewProps) {
   return (
     <section className="sp-floor sp-card" aria-label={`${floor.floor.name} plate`} onKeyDown={onKey}>
       <div className="sp-floor__bar">
-        <Button variant="ghost" icon="arrow-left" onClick={() => backToStack(patch)}>
-          Stack
-        </Button>
         <nav className="sp-floor__crumb" aria-label="Breadcrumb">
           <ol>
             <li>

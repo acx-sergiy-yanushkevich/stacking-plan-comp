@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { property, TODAY } from './data/mock/property';
 import { usePlanModel } from './model/usePlanModel';
 import { usePlanState, useDocumentTitle } from './state/usePlanState';
@@ -22,6 +22,8 @@ import { csvBlob, download } from './lib/exportFile';
 import { svgToPng } from './lib/exportPng';
 import { useIsNarrow } from './lib/useMedia';
 import { clearSelection } from './components/plan/actions';
+import { fmtDate } from './domain/dates';
+import { num, pct } from './domain/format';
 import './components/ui/ui.css';
 import './components/shell/shell.css';
 import './components/kpis/kpis.css';
@@ -35,6 +37,18 @@ function Shell() {
   const narrow = useIsNarrow();
   useDocumentTitle(state.safe);
   const mode = deriveMode(state);
+  const [announce, setAnnounce] = useState('');
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      const k = model.kpis;
+      const d = model.deltas;
+      setAnnounce(
+        `As of ${fmtDate(state.asOf)}${model.isProjected ? ' (projected)' : ''}: leased ${pct(k.occupancy)}${d ? `, ${d.occupancy >= 0 ? 'up' : 'down'} ${Math.abs(d.occupancy * 100).toFixed(1)} points` : ''}; available ${num(k.availableDirect + k.availableSublease)} SF; expiring in 12 months ${num(k.expiring12)} SF.`,
+      );
+    }, 400);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.asOf]);
 
   useEffect(() => {
     if (state.theme) document.documentElement.dataset.theme = state.theme;
@@ -119,11 +133,17 @@ function Shell() {
 
   return (
     <div className="sp-app" data-view={state.view} data-mode={mode}>
+      <a className="sp-skip" href="#sp-plan">
+        Skip to plan
+      </a>
+      <div className="sp-sr-only" role="status" aria-live="polite">
+        {announce}
+      </div>
       <Header model={model} state={state} patch={patch} onExport={onExport} miniTimeline={<MiniTimeline model={model} asOf={state.asOf} onChange={(asOf) => patch({ asOf })} width={312} height={64} />} />
       <SaleBanner property={property} leasable={model.kpis.leasable} />
       <KpiStrip model={model} state={state} onAction={onKpi} />
       <Toolbar state={state} patch={patch} />
-      <main className="sp-main sp-no-print">
+      <main className="sp-main sp-no-print" id="sp-plan" tabIndex={-1}>
         <div className="sp-stage">
           {state.view === 'stack' && <StackView model={model} state={state} patch={patch} />}
           {state.view === 'floor' && <FloorView model={model} state={state} patch={patch} />}

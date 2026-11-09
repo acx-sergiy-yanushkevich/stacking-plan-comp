@@ -1,5 +1,5 @@
 import type { DealStage } from './types';
-import { isLeaseKind, type FloorView, type Segment } from './derive';
+import { type FloorView, type Segment } from './derive';
 import { annualRate } from './format';
 
 export type LensId = 'status' | 'expiry' | 'deals' | 'rent';
@@ -240,7 +240,6 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
   }
 }
 
-const countsAsLeased = (seg: Segment) => isLeaseKind(seg.kind) || seg.kind === 'committed';
 
 /**
  * Legend for a lens with the SF and share (of total leasable) each tone covers
@@ -257,10 +256,9 @@ export function legendFor(lens: LensId, prospectSafe: boolean, floors: FloorView
   const byTone = new Map<Tone, number>();
   let asking = 0;
   for (const f of floors) {
-    const rawLeased = f.segments.filter(countsAsLeased).reduce((s, x) => s + x.size, 0);
-    const factor = rawLeased > f.leased && rawLeased > 0 ? f.leased / rawLeased : 1;
     for (const seg of f.segments) {
-      const sf = Math.round(countsAsLeased(seg) ? seg.size * factor : seg.size);
+      // Recorded SF, exactly as the records say; an over-allocated floor is footnoted, never pro-rated.
+      const sf = seg.size;
       const t = toneFor(seg, lens, prospectSafe);
       byTone.set(t, (byTone.get(t) ?? 0) + sf);
       if (seg.availability && (seg.kind === 'available' || seg.kind === 'sublease')) asking += sf;

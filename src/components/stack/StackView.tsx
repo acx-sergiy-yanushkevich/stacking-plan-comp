@@ -22,15 +22,20 @@ export interface StackViewProps {
   patch: (p: Partial<PlanState>) => void;
   /** Hide the card chrome (legend, header) when embedded in the print layout. */
   bare?: boolean;
+  /** Row height override (print uses a shorter row). */
+  rowHeight?: number;
 }
 
 const ROW_GAP = 6;
 const MIN_BLOCK = 56;
 
-export default function StackView({ model, state, patch, bare }: StackViewProps) {
+const segIndexLease = (idx: Map<string, { lease?: { id: string } }>, key: string) => idx.get(key)?.lease?.id ?? null;
+
+export default function StackView({ model, state, patch, bare, rowHeight }: StackViewProps) {
   const phone = useIsPhone();
   const [ref, width] = useWidth<HTMLDivElement>(1040);
-  const rowH = phone ? 56 : 72;
+  const rowH = rowHeight ?? (phone ? 56 : 72);
+  const selectedLease = state.select ? segIndexLease(model.segIndex, state.select) : null;
   const gutter = phone ? 44 : 124;
   const planPx = Math.max(240, width - gutter - 8);
   const { floors, segIndex, highlight } = model;
@@ -126,7 +131,13 @@ export default function StackView({ model, state, patch, bare }: StackViewProps)
     if (state.select && segIndex.has(state.select)) setFocusKey(state.select);
   }, [state.select, segIndex]);
 
-  const legendNote = anyEnlarged ? `Suites under ${MIN_BLOCK} px are enlarged for legibility; other suites on that floor shrink to compensate.` : null;
+  const over = floors.filter((f) => f.overAllocatedBy > 0);
+  const legendNote = [
+    anyEnlarged ? `Suites under ${MIN_BLOCK} px are enlarged for legibility; other suites on that floor shrink to compensate.` : '',
+    over.length ? `${over.map((f) => `${f.floor.name} records exceed its leasable area by ${num(f.overAllocatedBy)} SF`).join('; ')}; legend shares use recorded SF.` : '',
+  ]
+    .filter(Boolean)
+    .join(' ') || null;
   const totalLeasable = model.kpis.leasable;
 
   return (
@@ -139,7 +150,7 @@ export default function StackView({ model, state, patch, bare }: StackViewProps)
               as of {fmtDate(model.asOf)} · {num(totalLeasable)} RSF leasable
             </span>
           </div>
-          <Legend items={model.legend} compact id="sp-legend" />
+          <Legend items={model.legend} compact id="sp-legend" note={legendNote} />
         </div>
       )}
       {!bare && model.filterLabel && <FilterBar label={model.filterLabel} patch={patch} />}
@@ -226,6 +237,7 @@ export default function StackView({ model, state, patch, bare }: StackViewProps)
                       w={b.w}
                       h={rowH}
                       selected={state.select === b.key}
+                      related={!!selectedLease && state.select !== b.key && seg.lease?.id === selectedLease && (seg.kind !== 'available')}
                       dim={!!highlight && !highlight.has(b.key)}
                       focusable={activeKey === b.key}
                       enlarged={b.enlarged}
@@ -243,7 +255,7 @@ export default function StackView({ model, state, patch, bare }: StackViewProps)
       </div>
       {!bare && (
         <div className="sp-stack__foot">
-          <span>Floor width is proportional to gross floor area; suite width to its RSF. {legendNote ?? ''}</span>
+          <span>Floor width is proportional to gross floor area; suite width to its RSF.</span>
           <span>
             Keys: ← → suites · ↑ ↓ floors · Enter opens · Esc closes
           </span>

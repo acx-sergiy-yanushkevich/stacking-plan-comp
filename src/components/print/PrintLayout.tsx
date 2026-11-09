@@ -2,7 +2,7 @@ import type { PlanModel, WorklistRow } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { fmtDate, fmtMonths } from '../../domain/dates';
 import { num, pct, rate, sf } from '../../domain/format';
-import { rentRollRows } from '../../domain/exportCsv';
+import { rentRollDisplay } from '../../domain/exportCsv';
 import { rentVisible, tenantLabel } from '../../domain/safe';
 import { Legend } from '../plan/Legend';
 import StackView from '../stack/StackView';
@@ -21,7 +21,7 @@ export interface PrintLayoutProps {
  */
 export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
   const { property: p, kpis: k, safe } = model;
-  const rows = rentRollRows(p, model.floors, model.asOf, safe);
+  const rows = rentRollDisplay(p, model.floors, model.asOf, safe);
   const worklist: WorklistRow[] = model.worklist('12');
   const noop = () => {};
   return (
@@ -51,7 +51,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
         </div>
         <Legend items={model.legend} compact />
         <div className="sp-print__plan">
-          <StackView model={model} state={state} patch={noop} bare />
+          <StackView model={model} state={state} patch={noop} bare rowHeight={44} />
         </div>
         <footer className="sp-print__foot">
           Floor width is proportional to gross floor area; suite width to RSF. Figures are exact RSF from AscendixRE records. {safe ? 'Tenant names, contacts and in-place rents are withheld.' : ''}
@@ -72,7 +72,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
             {rows.slice(1).map((r, i) => (
               <tr key={i}>
                 {r.map((c, j) => (
-                  <td key={j} className={j === 3 || j === 7 || j === 8 ? 'num' : ''}>
+                  <td key={j} className={j === 3 || j === 7 || j === 9 ? 'num' : ''}>
                     {c}
                   </td>
                 ))}
@@ -124,7 +124,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
                   <th>Ends</th>
                   <th className="num">Left</th>
                   <th>Rent</th>
-                  <th>Renewal</th>
+                  {!safe && <th>Renewal</th>}
                 </tr>
               </thead>
               <tbody>
@@ -138,7 +138,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
                     <td>{r.endDate ? fmtDate(r.endDate) : 'MTM'}</td>
                     <td className="num">{r.months === null ? '—' : fmtMonths(r.months)}</td>
                     <td>{r.seg.lease && rentVisible(r.seg.lease, safe) && r.seg.lease.rate !== null ? rate(r.seg.lease.rate, r.seg.lease.rateUnit, r.seg.lease.leaseType) : '—'}</td>
-                    <td>{r.renewal ? r.renewal.stage : '—'}</td>
+                    {!safe && <td>{r.renewal ? r.renewal.stage : '—'}</td>}
                   </tr>
                 ))}
                 {worklist.length === 0 && (

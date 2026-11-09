@@ -7,6 +7,7 @@ import { dateToX } from '../../domain/timeline';
 import { num, sf } from '../../domain/format';
 import { fmtDate, fmtMonths, monthsBetween } from '../../domain/dates';
 import { segmentText } from '../plan/segmentText';
+import { tenantLabel } from '../../domain/safe';
 import { PATTERN_IDS } from '../plan/Patterns';
 import { measure } from '../../lib/textFit';
 import { BAR_HEIGHT, LANE_PITCH, ROW_PAD, type LaidOutRow } from './layout';
@@ -197,7 +198,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
   const textRoom = textEnd - textX;
 
   // Label tiers by visible width: the <title> and aria-label always carry the full text.
-  const name = isAvail ? bar.label : text.name;
+  const name = isAvail ? bar.label : isProjected && seg.lease ? `${tenantLabel(seg.lease, safe)} · vacated` : text.name;
   const sub = isAvail ? `${sf(seg.size)}${text.meta ? ` · ${text.meta}` : ''}` : text.sub;
   // Names with digits ("Vacates Apr '27", "Available · Ste 1250") are shown whole or not at all.
   // Whole name or nothing: a partial tenant name misleads (the <title> carries the full text).

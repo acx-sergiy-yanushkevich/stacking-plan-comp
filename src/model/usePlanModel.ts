@@ -9,6 +9,7 @@ import { findIssues, issueCounts, recentChanges, type Issue } from '../domain/is
 import { timelineModel } from '../domain/timeline';
 import type { PlanState, WindowKey } from '../state/planState';
 import { num, sf } from '../domain/format';
+import { fmtDate } from '../domain/dates';
 
 export interface WorklistRow {
   segKey: string;
@@ -178,7 +179,7 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
   if (fits && req) {
     highlight = fits.keys;
     const who = inquiry ? (safe ? 'an open inquiry' : inquiry.prospect) : null;
-    filterLabel = `${who ? `Space for ${who}: ` : 'Space that fits '}${num(req.size)}${req.max ? `–${num(req.max)}` : '+'} SF${req.by ? ` by ${req.by}` : ''} · ${fits.options.length} option${fits.options.length === 1 ? '' : 's'}`;
+    filterLabel = `${who ? `Space for ${who}: ` : 'Space that fits '}${num(req.size)}${req.max ? `–${num(req.max)}` : '+'} SF${req.by ? ` by ${fmtDate(req.by)}` : ''} · ${fits.options.length} option${fits.options.length === 1 ? '' : 's'}`;
   } else if (searchMatches) {
     highlight = searchMatches;
     filterLabel = `Search “${state.q}” · ${searchMatches.size} match${searchMatches.size === 1 ? '' : 'es'}`;
