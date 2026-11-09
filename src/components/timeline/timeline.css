@@ -88,3 +88,4 @@
 
 .sp-tl-bar__text--outside .sp-tl-bar__sub { fill: var(--sp-color-text-weak); }
 .sp-cursor line { stroke-opacity: 0.55; }
+.sp-cursor__line--under { stroke: var(--sp-color-brand); stroke-width: 2; stroke-opacity: 0.6; pointer-events: none; }

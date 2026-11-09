@@ -83,7 +83,7 @@ export function WorklistPanel({ model, state, patch }: WorklistPanelProps) {
                     <div className="sp-ins__row-main">
                       <div className="sp-ins__row-title">
                         <span>{tenantLabel(lease, safe)}</span>
-                        {row.renewal && <StageChip stage={row.renewal.stage} />}
+                        {row.renewal && !safe && <StageChip stage={row.renewal.stage} />}
                       </div>
                       <div className="sp-ins__row-meta">
                         <span>
@@ -104,7 +104,7 @@ export function WorklistPanel({ model, state, patch }: WorklistPanelProps) {
                       {monthsLeft(row, safe)}
                     </div>
                   </button>
-                  {!row.renewal && (
+                  {!row.renewal && !safe && (
                     <div className="sp-ins__row-side">
                       <Button size="sm" variant="ghost" icon="plus" iconOnly aria-label={`Start renewal for ${tenantLabel(lease, safe)}`} title="Start renewal" onClick={() => run('start-renewal', `Lease ${lease.id}`)} />
                     </div>

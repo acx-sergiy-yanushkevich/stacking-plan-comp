@@ -54,7 +54,7 @@
 .sp-ins__row .sp-icon { flex: none; color: var(--sp-color-text-weak); }
 
 /* Stage chips (deals lens tones) */
-.sp-ins__stage { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: var(--sp-radius-pill); font-size: var(--sp-text-11); font-weight: 600; white-space: nowrap; border: 1px solid transparent; }
+.sp-ins__stage { display: inline-flex; align-items: center; justify-content: center; min-width: 66px; height: 20px; padding: 0 7px; border-radius: var(--sp-radius-pill); font-size: var(--sp-text-11); font-weight: 600; white-space: nowrap; border: 1px solid transparent; }
 
 /* Chip rows */
 .sp-ins__chips { display: flex; flex-wrap: wrap; gap: 6px; }

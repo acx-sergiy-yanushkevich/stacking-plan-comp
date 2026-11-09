@@ -1,8 +1,8 @@
+import { dateToX } from '../../domain/timeline';
 import { useCallback, useId, useMemo, useRef, useState } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import type { ISODate } from '../../domain/types';
-import { Patterns } from '../plan/Patterns';
 import { selectSegment, toggleBucket, type Patch } from '../plan/actions';
 import { TimelineAxis } from './TimelineAxis';
 import { TimelineRows, type BarHover } from './TimelineRows';
@@ -70,7 +70,6 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
   return (
     <div className="sp-timeline" ref={hostRef}>
       <svg ref={svgRef} className="sp-timeline__svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="group" aria-label={`Lease timeline, ${rows.length} floors`}>
-        <Patterns />
         <defs>
           <clipPath id={clipId}>
             <rect x={GUTTER} y={0} width={plotWidth} height={height} />
@@ -91,6 +90,7 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
           activeBucket={state.bucket}
           onBucket={onBucket}
         />
+        <line className="sp-cursor__line sp-cursor__line--under" x1={GUTTER + dateToX(model.asOf, start, end, plotWidth)} x2={GUTTER + dateToX(model.asOf, start, end, plotWidth)} y1={0} y2={height - BOTTOM_PAD} />
         <TimelineRows
           rows={laid}
           segIndex={model.segIndex}
@@ -118,6 +118,7 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
           plotWidth={plotWidth}
           top={0}
           height={height - BOTTOM_PAD}
+          hideLine
           handleHeight={STRIP_H}
           onChange={onAsOf}
           onDragStart={() => setFrozen(axis)}

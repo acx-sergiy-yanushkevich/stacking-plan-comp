@@ -50,7 +50,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
   const leaseRecord = lease ? `Lease ${lease.id}` : '';
 
   // Lease facts
-  const rentText = lease ? (rentVisible(lease, safe) && lease.rate !== null ? rate(lease.rate, lease.rateUnit, lease.leaseType) : lease.confidential ? 'Confidential' : 'Hidden') : undefined;
+  const rentText = lease ? (rentVisible(lease, safe) && lease.rate !== null ? rate(lease.rate, lease.rateUnit, lease.leaseType) : safe ? 'Hidden' : lease.confidential ? 'Confidential' : 'Not on record') : undefined;
   const remaining = (() => {
     if (!lease) return undefined;
     if (seg.kind === 'mtm') return 'Month-to-month';

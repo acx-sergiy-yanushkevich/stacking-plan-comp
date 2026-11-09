@@ -10,7 +10,6 @@ import { useHoverKeys } from '../../state/hoverStore';
 import { useWidth } from '../../lib/useWidth';
 import { clearSelection, openFloor, selectSegment } from '../plan/actions';
 import { Legend } from '../plan/Legend';
-import { Patterns } from '../plan/Patterns';
 import { segmentText } from '../plan/segmentText';
 import { Block } from './Block';
 import { FilterBar } from './FilterBar';
@@ -173,7 +172,6 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
           aria-describedby={bare ? undefined : 'sp-legend'}
           aria-rowcount={rows.length}
         >
-          <Patterns />
           {rows.map((r, ri) => {
             const f = r.f;
             const leasedPct = f.leasable ? f.leased / f.leasable : 0;
@@ -206,21 +204,21 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                   }}
                 >
                   <rect x={0} y={0} width={gutter - 8} height={rowH} rx={4} fill="transparent" />
-                  <text className="sp-gutter__name" x={8} y={phone ? rowH / 2 + 5 : 22}>
+                  <text className="sp-gutter__name" x={8} y={phone ? rowH / 2 + 5 : rowH >= 60 ? 22 : 15}>
                     {floorNum}
                   </text>
                   {!phone && (
                     <>
-                      <text className="sp-gutter__pct" x={44} y={22}>
+                      <text className="sp-gutter__pct" x={44} y={rowH >= 60 ? 22 : 15}>
                         {pct(leasedPct)}
                       </text>
-                      <rect className="sp-gutter__bar-bg" x={44} y={30} width={64} height={4} rx={2} />
-                      <rect className={`sp-gutter__bar ${leasedPct < 0.7 ? 'sp-gutter__bar--low' : ''}`} x={44} y={30} width={Math.max(2, 64 * Math.min(1, leasedPct))} height={4} rx={2} />
-                      <text className="sp-gutter__rsf" x={44} y={50}>
+                      <rect className="sp-gutter__bar-bg" x={44} y={rowH >= 60 ? 30 : 20} width={64} height={4} rx={2} />
+                      <rect className={`sp-gutter__bar ${leasedPct < 0.7 ? 'sp-gutter__bar--low' : ''}`} x={44} y={rowH >= 60 ? 30 : 20} width={Math.max(2, 64 * Math.min(1, leasedPct))} height={4} rx={2} />
+                      <text className="sp-gutter__rsf" x={44} y={rowH >= 60 ? 50 : 37}>
                         {num(f.leasable)} RSF
                       </text>
                       {f.overAllocatedBy > 0 && (
-                        <text className="sp-gutter__warn" x={8} y={50} fontSize={11} fontWeight={600}>
+                        <text className="sp-gutter__warn" x={8} y={rowH >= 60 ? 50 : 37} fontSize={11} fontWeight={600}>
                           +{num(f.overAllocatedBy)}
                         </text>
                       )}

@@ -105,11 +105,13 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
                     <td className="num">{k.leased && b.sf ? pct(b.sf / k.leased) : '—'}</td>
                   </tr>
                 ))}
+                {!safe && (
                 <tr>
                   <td>At risk (holdover, month-to-month)</td>
                   <td className="num">{num(model.roll.atRisk)}</td>
                   <td className="num" colSpan={2}></td>
                 </tr>
+                )}
               </tbody>
             </table>
           </div>

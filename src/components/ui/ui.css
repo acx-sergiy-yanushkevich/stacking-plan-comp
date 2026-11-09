@@ -9,8 +9,8 @@
 .sp-btn--sm { height: 28px; padding: 0 10px; font-size: var(--sp-text-12); }
 .sp-btn--icon { width: 32px; padding: 0; }
 .sp-btn--icon.sp-btn--sm { width: 28px; }
-.sp-btn--brand { background: var(--sp-color-brand); color: #fff; border-color: var(--sp-color-brand); }
-.sp-btn--brand:hover { background: var(--sp-color-brand-strong); border-color: var(--sp-color-brand-strong); }
+.sp-btn--brand { background: var(--sp-color-brand); color: var(--sp-color-on-brand); border-color: var(--sp-color-brand); }
+.sp-btn--brand:hover { background: var(--sp-color-brand-strong); border-color: var(--sp-color-brand-strong); color: var(--sp-color-on-brand); }
 .sp-btn--neutral { background: var(--sp-color-card); color: var(--sp-color-brand-strong); border-color: var(--sp-color-border-strong); }
 .sp-btn--neutral:hover { background: var(--sp-color-brand-soft); }
 .sp-btn--ghost { background: transparent; color: var(--sp-color-text); }
@@ -38,8 +38,7 @@
 .sp-chip--neutral { }
 button.sp-chip { cursor: pointer; height: 28px; padding: 0 10px; transition: background var(--sp-ease), border-color var(--sp-ease); }
 button.sp-chip:hover { border-color: var(--sp-color-border-strong); }
-button.sp-chip[aria-pressed='true'] { background: var(--sp-color-brand-strong); color: #fff; border-color: var(--sp-color-brand-strong); }
-:root[data-theme='dark'] button.sp-chip[aria-pressed='true'], .sp-chip__dark button.sp-chip[aria-pressed='true'] { color: #0b1220; }
+button.sp-chip[aria-pressed='true'] { background: var(--sp-color-brand-strong); color: var(--sp-color-on-brand); border-color: var(--sp-color-brand-strong); }
 .sp-chip__count { font-weight: 600; opacity: 0.8; }
 @media (pointer: coarse) { button.sp-chip { min-height: 40px; } }
 

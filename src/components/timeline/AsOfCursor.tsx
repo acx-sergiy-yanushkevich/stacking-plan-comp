@@ -19,6 +19,8 @@ export interface AsOfCursorProps {
   height: number;
   /** Handle height (28 in the full view, 8 in the mini scrubber). */
   handleHeight?: number;
+  /** The parent already drew the vertical line beneath the bars. */
+  hideLine?: boolean;
   /** Mini mode: a small grip instead of the labelled handle. */
   compact?: boolean;
   onChange: (d: ISODate) => void;
@@ -41,7 +43,7 @@ function clamp(d: ISODate, start: ISODate, end: ISODate): ISODate {
  * the parent patches global state so the whole plan recomputes. No transitions: the
  * numbers it drives must never read as interpolated.
  */
-export function AsOfCursor({ asOf, today, start, end, svgRef, plotLeft, plotWidth, top, height, handleHeight = 28, compact = false, onChange, onDragStart, onDragEnd }: AsOfCursorProps) {
+export function AsOfCursor({ asOf, today, start, end, svgRef, plotLeft, plotWidth, top, height, handleHeight = 28, compact = false, onChange, onDragStart, onDragEnd, hideLine }: AsOfCursorProps) {
   const x = plotLeft + Math.min(plotWidth, Math.max(0, dateToX(asOf, start, end, plotWidth)));
   const frame = useRef<number | null>(null);
   const pendingX = useRef<number | null>(null);
@@ -166,7 +168,7 @@ export function AsOfCursor({ asOf, today, start, end, svgRef, plotLeft, plotWidt
       <title>{`As of ${fmtDate(asOf)}. Drag, or use the arrow keys, to move the as-of date.`}</title>
       {/* Wide invisible hit area so the 2 px line is easy to grab. */}
       <rect className="sp-cursor__hit" x={x - 8} y={top} width={16} height={height} fill="transparent" />
-      <line className="sp-cursor__line" x1={x} x2={x} y1={top} y2={top + height} />
+      {!hideLine && <line className="sp-cursor__line" x1={x} x2={x} y1={top} y2={top + height} />}
       <rect className="sp-cursor__handle" x={handleX} y={top} width={handleW} height={handleHeight} rx={compact ? 2 : 4} />
       {!compact && (
         <text className="sp-cursor__label" x={handleX + handleW / 2} y={top + handleHeight / 2 + 4} textAnchor="middle">

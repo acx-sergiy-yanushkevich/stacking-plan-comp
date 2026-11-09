@@ -162,7 +162,8 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
       return rows;
     };
   }, [floors]);
-  const activeWorklist = state.window ? worklist(state.window) : null;
+  const effectiveWindow: WindowKey | null = state.window === 'risk' && safe ? '12' : state.window;
+  const activeWorklist = effectiveWindow ? worklist(effectiveWindow) : null;
 
   const searchMatches = useMemo(() => (state.q ? search(floors, state.q, safe) : null), [floors, state.q, safe]);
 
@@ -183,10 +184,10 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
   } else if (searchMatches) {
     highlight = searchMatches;
     filterLabel = `Search “${state.q}” · ${searchMatches.size} match${searchMatches.size === 1 ? '' : 'es'}`;
-  } else if (activeWorklist && state.window) {
+  } else if (activeWorklist && effectiveWindow) {
     highlight = new Set(activeWorklist.map((r) => r.segKey));
     const total = activeWorklist.reduce((s, r) => s + r.size, 0);
-    filterLabel = `${WINDOW_LABEL[state.window]} renewal worklist · ${activeWorklist.length} lease${activeWorklist.length === 1 ? '' : 's'} · ${sf(total)}`;
+    filterLabel = `${WINDOW_LABEL[effectiveWindow]} renewal worklist · ${activeWorklist.length} lease${activeWorklist.length === 1 ? '' : 's'} · ${sf(total)}`;
   } else if (bucketKeys && state.bucket !== null) {
     highlight = bucketKeys;
     const b: RolloverBucket | undefined = roll.buckets.find((x) => x.key === state.bucket);

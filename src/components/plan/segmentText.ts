@@ -93,7 +93,7 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
       }
       if (seg.marketed?.kind === 'Sale') badges.push({ kind: 'sale', text: 'For sale' });
       if (seg.next && !safe) badges.push({ kind: 'info', text: `Next: ${tenantLabel(seg.next.lease, safe)}`, title: `Signed lease commences ${fmtDate(seg.next.lease.commencement)}` });
-      if (lease?.confidential) badges.push({ kind: 'lock', text: 'Confidential', title: 'Rent is confidential' });
+      if (lease?.confidential && !safe) badges.push({ kind: 'lock', text: 'Confidential', title: 'Rent is confidential' });
       break;
     }
     case 'committed': {

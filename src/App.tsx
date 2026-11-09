@@ -22,6 +22,7 @@ import { csvBlob, download } from './lib/exportFile';
 import { svgToPng } from './lib/exportPng';
 import { useIsNarrow } from './lib/useMedia';
 import { clearSelection } from './components/plan/actions';
+import { Patterns } from './components/plan/Patterns';
 import { fmtDate } from './domain/dates';
 import { num, pct } from './domain/format';
 import './components/ui/ui.css';
@@ -133,6 +134,9 @@ function Shell() {
 
   return (
     <div className="sp-app" data-view={state.view} data-mode={mode}>
+      <svg className="sp-defs" width="0" height="0" aria-hidden="true" focusable="false">
+        <Patterns />
+      </svg>
       <a className="sp-skip" href="#sp-plan">
         Skip to plan
       </a>

@@ -47,7 +47,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   const deal = text.badges.find((b) => b.kind === 'deal');
   const other = text.badges.find((b) => b.kind !== 'deal');
   const showDeal = !!deal && w >= 64 && !compact;
-  const showOther = !!other && w >= 150 && h >= 56;
+  const showOther = !!other && w >= 150 && h >= 40;
   const badgeW = other ? Math.ceil(other.text.length * 6.2) + 12 : 0;
   // Text on the first line must clear the badges in the top-right corner.
   const reserved = (showOther ? badgeW + 6 : 0) + (showDeal ? 22 : 0);

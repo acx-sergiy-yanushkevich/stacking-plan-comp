@@ -6,7 +6,7 @@ import { fits, fitWords, measure, wrapWords } from '../../lib/textFit';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { selectSegment, type Patch } from '../plan/actions';
-import { Patterns, PATTERN_IDS } from '../plan/Patterns';
+import { PATTERN_IDS } from '../plan/Patterns';
 import { segmentText, type SegmentText } from '../plan/segmentText';
 import { inquiriesFor } from './floorData';
 
@@ -248,7 +248,6 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
       role="group"
       aria-label={`${floor.floor.name} plate, schematic`}
     >
-      <Patterns />
       {slices.map((s, i) => {
         const tone = s.text.tone;
         const fill = `var(--tone-${tone}-fill)`;

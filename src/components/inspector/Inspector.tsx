@@ -44,7 +44,8 @@ function headFor(mode: InspectorMode, model: PlanModel, state: PlanState, patch:
       if (!seg) return { title: 'Block', subtitle: 'This block is not on the plan for the as-of date', close: () => closeAndRefocus(patch, state.select, null) };
       const floor = model.floors.find((f) => f.floor.id === seg.floorId);
       const t = segmentText(seg, { safe: model.safe, asOf: model.asOf, lens: state.lens, floorName: floor?.floor.name ?? seg.floorId });
-      return { title: t.name, subtitle: `${floor?.floor.name ?? ''} · ${t.sub}`, close: () => closeAndRefocus(patch, state.select, null) };
+      const fname = floor?.floor.name ?? '';
+      return { title: t.name, subtitle: fname && !t.sub.startsWith(fname) ? `${fname} · ${t.sub}` : t.sub, close: () => closeAndRefocus(patch, state.select, null) };
     }
     case 'floor': {
       const f = model.selectedFloor;

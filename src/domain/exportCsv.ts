@@ -130,7 +130,7 @@ export function rentRollDisplay(_p: Property, floors: FloorView[], _asOf: ISODat
         tenant = tenantLabel(lease, safe);
         start = fmtDate(lease.commencement);
         end = s.endDate ? fmtDate(s.endDate) : 'Month-to-month';
-        rate = rentVisible(lease, safe) && lease.rate !== null ? fmtRate(lease.rate, lease.rateUnit, lease.leaseType) : lease.confidential ? 'Confidential' : 'Withheld';
+        rate = rentVisible(lease, safe) && lease.rate !== null ? fmtRate(lease.rate, lease.rateUnit, lease.leaseType) : safe ? 'Withheld' : lease.confidential ? 'Confidential' : '—';
       } else if (a) {
         tenant = s.kind === 'forsale' ? 'For sale' : 'Available';
         start = s.availableFrom ? fmtDate(s.availableFrom) : 'Now';

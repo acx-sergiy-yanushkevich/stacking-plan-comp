@@ -31,7 +31,7 @@
 @media print {
   html { font-size: 11px; }
   body { background: #fff; }
-  .sp-app > *:not(.sp-print) { display: none !important; }
+  .sp-app > *:not(.sp-print):not(.sp-defs) { display: none !important; }
   .sp-app { padding: 0; gap: 0; max-width: none; }
   .sp-print { display: block; }
   .sp-print__page { padding: 0; }

@@ -25,3 +25,4 @@ svg { display: block; }
 }
 .sp-skip { position: absolute; left: 8px; top: -40px; z-index: 200; padding: 6px 10px; background: var(--sp-color-brand); color: #fff; border-radius: 4px; font-weight: 600; }
 .sp-skip:focus { top: 8px; }
+.sp-defs { position: absolute; width: 0; height: 0; overflow: hidden; }

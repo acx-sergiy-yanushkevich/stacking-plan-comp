@@ -155,7 +155,7 @@ export function toneFor(seg: Segment, lens: LensId, prospectSafe: boolean): Tone
       return 'empty';
     case 'deals': {
       if (seg.kind === 'forsale') return 'muted';
-      if (prospectSafe) return isVacantKind(seg) ? 'empty' : 'muted';
+      if (prospectSafe) return seg.kind === 'available' || seg.kind === 'sublease' ? 'empty' : 'muted';
       const d = topDeal(seg);
       if (d) return `deal-${stageRank(d.stage)}` as Tone;
       return isVacantKind(seg) && seg.kind !== 'committed' ? 'deal-none' : 'muted';
@@ -191,7 +191,7 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
         { tone: 'sublease', label: 'Sublease', pattern: 'dots' },
         { tone: 'committed', label: 'Committed, not yet in', pattern: 'hatch' },
         { tone: 'forsale', label: 'For sale' },
-        { tone: 'leased', label: 'Leased' },
+        { tone: 'leased', label: 'Leased, > 12 mo' },
         { tone: 'expiring', label: 'Expires < 12 mo' },
         { tone: 'risk', label: 'Holdover / MTM' },
         { tone: 'projected', label: 'Projected vacancy', pattern: 'dashed' },
@@ -266,6 +266,7 @@ export function legendFor(lens: LensId, prospectSafe: boolean, floors: FloorView
   }
   return legendSpecs(lens, prospectSafe).map((item) => {
     const sf = item.pattern === 'asking' ? asking : (byTone.get(item.tone) ?? 0);
-    return { ...item, sf, share: leasable > 0 ? sf / leasable : 0 };
+    // The asking-rent item is an overlay on the rent bands: it carries SF but no share of its own.
+    return { ...item, sf, share: item.pattern === 'asking' || leasable <= 0 ? 0 : sf / leasable };
   });
 }

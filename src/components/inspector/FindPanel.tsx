@@ -110,7 +110,7 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
               Try 12 months later
             </Button>
           </div>
-          <NearMisses misses={misses} patch={patch} />
+          <NearMisses misses={misses} patch={patch} max={req.max} />
         </Section>
       ) : (
         <Section title={`Options · ${options.length}`}>
@@ -185,14 +185,14 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
       )}
       {options.length > 0 && misses.length > 0 && (
         <Section title="Near misses">
-          <NearMisses misses={misses} patch={patch} />
+          <NearMisses misses={misses} patch={patch} max={req?.max ?? null} />
         </Section>
       )}
     </>
   );
 }
 
-function NearMisses({ misses, patch }: { misses: ReturnType<typeof nearMisses>; patch: Patch }) {
+function NearMisses({ misses, patch, max }: { misses: ReturnType<typeof nearMisses>; patch: Patch; max: number | null }) {
   if (!misses.length) return null;
   return (
     <ul className="sp-ins__list" aria-label="Near misses">
@@ -208,6 +208,8 @@ function NearMisses({ misses, patch }: { misses: ReturnType<typeof nearMisses>; 
                 <span>{m.type}</span>
                 <span>· {m.from ? fmtMonthYear(m.from) : 'Now'}</span>
                 {m.shortfall > 0 && <span>· {num(m.shortfall)} SF short</span>}
+                {max !== null && m.size > max && <span>· {num(m.size - max)} SF over max</span>}
+                {m.kind === 'stack' && <span>· two floors</span>}
               </div>
             </div>
             <div className="sp-ins__row-end">

@@ -27,6 +27,7 @@ import {
   resolveToneHex,
   resolveVarHex,
   toFloorFeatures,
+  mixHex,
   type FloorFeatureCollection,
 } from './mapStyle';
 import { useMapLibre } from './useMapLibre';
@@ -212,7 +213,9 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
   useEffect(() => {
     const id = requestAnimationFrame(() => {
       const out: Record<string, string> = {};
-      for (const t of toneKey.split(',').filter(Boolean)) out[t] = resolveToneHex(t);
+      // Dark tokens are built for text on dark cards; on an extruded building they read as black.
+      // Lift them toward white so the lens stays legible against the dark basemap.
+      for (const t of toneKey.split(',').filter(Boolean)) out[t] = dark ? mixHex(resolveToneHex(t), '#ffffff', 0.38) : resolveToneHex(t);
       setHexByTone(out);
       setBrandHex(resolveVarHex('--sp-color-brand', '#0176d3'));
     });

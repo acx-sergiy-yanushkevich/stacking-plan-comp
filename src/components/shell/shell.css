@@ -25,11 +25,11 @@
 @media (max-width: 760px) {
   .sp-header__facts .sp-dot { display: none; }
   .sp-header__facts { gap: 2px 12px; }
-  .sp-sale { flex-wrap: wrap; row-gap: 4px; }
+  .sp-sale { padding: 6px 12px; font-size: var(--sp-text-12); gap: 8px; }
   .sp-sale strong { white-space: nowrap; }
-  .sp-sale__facts { width: 100%; gap: 10px; }
-  .sp-sale .sp-chip { margin-left: 0; position: absolute; right: 12px; top: 8px; }
-  .sp-sale { position: relative; }
+  .sp-sale__facts { gap: 8px; }
+  .sp-sale__facts span:last-child { display: none; }
+  .sp-sale .sp-chip { height: 20px; }
   .sp-header { flex-wrap: wrap; padding: var(--sp-space-3); }
   .sp-header__icon { width: 32px; height: 32px; }
   .sp-header__actions { width: 100%; justify-content: flex-start; }
@@ -59,7 +59,8 @@
 @media (max-width: 760px) {
   .sp-toolbar { gap: 8px; }
   .sp-toolbar__lens { display: none; }
-  .sp-toolbar__lens-select { display: block; flex: 1 1 100%; }
+  .sp-toolbar__lens-select { display: block; flex: 1 1 auto; }
+  .sp-toolbar .sp-segmented--lg .sp-segmented__opt { padding: 0 8px; }
   .sp-toolbar__group:last-child { width: 100%; }
   .sp-toolbar__group:last-child .sp-btn { flex: 1; }
   .sp-toolbar__search { max-width: none; margin-left: 0; width: 100%; }
