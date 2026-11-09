@@ -1,0 +1,5 @@
+@page { size: letter landscape; margin: 12mm; }
+@media print {
+  body { background: #fff; color: #000; }
+  .sp-no-print { display: none !important; }
+}

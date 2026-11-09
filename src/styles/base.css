@@ -1,0 +1,25 @@
+*, *::before, *::after { box-sizing: border-box; }
+html { font-size: 13px; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; font-family: var(--sp-font); font-size: var(--sp-text-13); line-height: 1.45;
+  color: var(--sp-color-text); background: var(--sp-color-page);
+  font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1, 'cv11' 1;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+}
+h1, h2, h3, h4, p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: 0; padding: 0; }
+a { color: var(--sp-color-brand); text-decoration: none; }
+a:hover { text-decoration: underline; }
+svg { display: block; }
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--sp-color-focus); outline-offset: 2px; border-radius: 3px; }
+.sp-sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.sp-num { font-variant-numeric: tabular-nums; }
+.sp-label { font-size: var(--sp-text-11); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sp-color-text-weak); }
+.sp-weak { color: var(--sp-color-text-weak); }
+.sp-faint { color: var(--sp-color-text-faint); }
+.sp-card { background: var(--sp-color-card); border: 1px solid var(--sp-color-border); border-radius: var(--sp-radius-card); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}

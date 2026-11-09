@@ -1,0 +1,150 @@
+/* Design tokens. Names mirror SLDS 2 styling hooks so the LWC port maps 1:1
+   (e.g. --sp-color-brand → --slds-g-color-brand-base-50). */
+:root {
+  --sp-font: 'Inter', 'Salesforce Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --sp-text-11: 11px; --sp-text-12: 12px; --sp-text-13: 13px; --sp-text-15: 15px; --sp-text-18: 18px; --sp-text-22: 22px;
+  --sp-space-1: 4px; --sp-space-2: 8px; --sp-space-3: 12px; --sp-space-4: 16px; --sp-space-5: 24px; --sp-space-6: 32px;
+  --sp-radius-card: 8px; --sp-radius-block: 4px; --sp-radius-pill: 999px;
+  --sp-shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.14), 0 1px 3px rgba(0, 0, 0, 0.1);
+  --sp-ease: 120ms ease; --sp-ease-slow: 180ms ease;
+
+  --sp-color-page: #f3f3f3;
+  --sp-color-card: #ffffff;
+  --sp-color-card-2: #f8f9fa;
+  --sp-color-border: #e5e5e5;
+  --sp-color-border-strong: #c9c9c9;
+  --sp-color-text: #181818;
+  --sp-color-text-weak: #5c5c5c;
+  --sp-color-text-faint: #8a8a8a;
+  --sp-color-brand: #0176d3;
+  --sp-color-brand-strong: #014486;
+  --sp-color-brand-soft: #eaf5fe;
+  --sp-color-focus: #0176d3;
+  --sp-color-warn: #c25e00;
+  --sp-color-warn-soft: #fef1e4;
+  --sp-color-error: #ba0517;
+  --sp-color-error-soft: #fdeaec;
+  --sp-color-success: #2e844a;
+  --sp-color-success-soft: #eaf5ec;
+  --sp-color-dim: rgba(255, 255, 255, 0.65);
+
+  /* Status lens */
+  --tone-leased-fill: #e7edf3; --tone-leased-text: #181818; --tone-leased-edge: #cbd5df;
+  --tone-expiring-fill: #fce4c4; --tone-expiring-text: #181818; --tone-expiring-edge: #c25e00;
+  --tone-risk-fill: #f8d9e0; --tone-risk-text: #181818; --tone-risk-edge: #b3113e;
+  --tone-available-fill: #0b7a66; --tone-available-text: #ffffff; --tone-available-edge: #085c4d;
+  --tone-available-later-fill: #d7efe9; --tone-available-later-text: #0b5c4e; --tone-available-later-edge: #0b7a66;
+  --tone-sublease-fill: #cde8e1; --tone-sublease-text: #0b5c4e; --tone-sublease-edge: #0b7a66;
+  --tone-committed-fill: #dce6f9; --tone-committed-text: #1b3b7a; --tone-committed-edge: #3a63c2;
+  --tone-forsale-fill: #e9def7; --tone-forsale-text: #4b2c87; --tone-forsale-edge: #7a52c7;
+  --tone-empty-fill: transparent; --tone-empty-text: #5c5c5c; --tone-empty-edge: #9aa5b1;
+  --tone-projected-fill: #eaf6f2; --tone-projected-text: #0b5c4e; --tone-projected-edge: #0b7a66;
+  --tone-muted-fill: #f1f3f5; --tone-muted-text: #6b7280; --tone-muted-edge: #dfe3e8;
+  --tone-neutral-fill: #e7edf3; --tone-neutral-text: #181818; --tone-neutral-edge: #cbd5df;
+  --tone-confidential-fill: #e4e6ea; --tone-confidential-text: #3b3f46; --tone-confidential-edge: #b7bcc5;
+
+  /* Expiration lens: one hue, lightness ordered */
+  --tone-exp-0-fill: #9c3b18; --tone-exp-0-text: #ffffff; --tone-exp-0-edge: #7a2c10;
+  --tone-exp-1-fill: #cc5f26; --tone-exp-1-text: #ffffff; --tone-exp-1-edge: #a84a1b;
+  --tone-exp-2-fill: #e98c3c; --tone-exp-2-text: #181818; --tone-exp-2-edge: #c96f27;
+  --tone-exp-3-fill: #f5b86c; --tone-exp-3-text: #181818; --tone-exp-3-edge: #d99a4e;
+  --tone-exp-4-fill: #fbdca6; --tone-exp-4-text: #181818; --tone-exp-4-edge: #e2bf84;
+  --tone-exp-5-fill: #fff4db; --tone-exp-5-text: #181818; --tone-exp-5-edge: #ead9b6;
+
+  /* Rent lens: blue ramp (gross scale) */
+  --tone-rent-0-fill: #e3f1fa; --tone-rent-0-text: #181818; --tone-rent-0-edge: #bcd9ee;
+  --tone-rent-1-fill: #bbddf3; --tone-rent-1-text: #181818; --tone-rent-1-edge: #94c3e6;
+  --tone-rent-2-fill: #86c1e8; --tone-rent-2-text: #181818; --tone-rent-2-edge: #5fa6d8;
+  --tone-rent-3-fill: #4f9fd8; --tone-rent-3-text: #ffffff; --tone-rent-3-edge: #3a86bd;
+  --tone-rent-4-fill: #1e6fb8; --tone-rent-4-text: #ffffff; --tone-rent-4-edge: #165690;
+  --tone-rent-net-fill: #eef1f5; --tone-rent-net-text: #181818; --tone-rent-net-edge: #1e6fb8;
+
+  /* Deals lens */
+  --tone-deal-0-fill: #dde8fd; --tone-deal-0-text: #181818; --tone-deal-0-edge: #b5ccf7;
+  --tone-deal-1-fill: #afc8fa; --tone-deal-1-text: #181818; --tone-deal-1-edge: #86aaf0;
+  --tone-deal-2-fill: #5f8dee; --tone-deal-2-text: #ffffff; --tone-deal-2-edge: #4472d6;
+  --tone-deal-3-fill: #2b55c7; --tone-deal-3-text: #ffffff; --tone-deal-3-edge: #1f409c;
+  --tone-deal-none-fill: transparent; --tone-deal-none-text: #5c5c5c; --tone-deal-none-edge: #9aa5b1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --sp-color-page: #16171a; --sp-color-card: #1f2124; --sp-color-card-2: #25282c;
+    --sp-color-border: #2e3136; --sp-color-border-strong: #454a52;
+    --sp-color-text: #f3f3f3; --sp-color-text-weak: #aeb4bc; --sp-color-text-faint: #7d848d;
+    --sp-color-brand: #57a3fd; --sp-color-brand-strong: #8ec0ff; --sp-color-brand-soft: #1c2b3d; --sp-color-focus: #8ec0ff;
+    --sp-color-warn: #ffb067; --sp-color-warn-soft: #3a2a18; --sp-color-error: #ff8a99; --sp-color-error-soft: #3b1f24;
+    --sp-color-success: #6fd08a; --sp-color-success-soft: #1d3324; --sp-color-dim: rgba(31, 33, 36, 0.7);
+    --sp-shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+    --tone-leased-fill: #2b3139; --tone-leased-text: #e9edf2; --tone-leased-edge: #434b56;
+    --tone-expiring-fill: #4a3317; --tone-expiring-text: #ffe2bf; --tone-expiring-edge: #f0a04b;
+    --tone-risk-fill: #4a1f2b; --tone-risk-text: #ffd4de; --tone-risk-edge: #ff7a9a;
+    --tone-available-fill: #11a085; --tone-available-text: #06211c; --tone-available-edge: #5fd6bd;
+    --tone-available-later-fill: #163f36; --tone-available-later-text: #a9e6d6; --tone-available-later-edge: #35b899;
+    --tone-sublease-fill: #1a4a40; --tone-sublease-text: #b3eadb; --tone-sublease-edge: #35b899;
+    --tone-committed-fill: #1f2f52; --tone-committed-text: #c9d9ff; --tone-committed-edge: #6a8fe0;
+    --tone-forsale-fill: #35264f; --tone-forsale-text: #dccdfa; --tone-forsale-edge: #a383ea;
+    --tone-empty-fill: transparent; --tone-empty-text: #aeb4bc; --tone-empty-edge: #5f6873;
+    --tone-projected-fill: #17322c; --tone-projected-text: #a9e6d6; --tone-projected-edge: #35b899;
+    --tone-muted-fill: #24272b; --tone-muted-text: #8f98a3; --tone-muted-edge: #343940;
+    --tone-neutral-fill: #2b3139; --tone-neutral-text: #e9edf2; --tone-neutral-edge: #434b56;
+    --tone-confidential-fill: #2f3238; --tone-confidential-text: #c8ccd3; --tone-confidential-edge: #555b64;
+    --tone-exp-0-fill: #b9492a; --tone-exp-0-text: #ffffff; --tone-exp-0-edge: #e07a55;
+    --tone-exp-1-fill: #8f4420; --tone-exp-1-text: #ffe8d6; --tone-exp-1-edge: #d27a4d;
+    --tone-exp-2-fill: #6f3f1f; --tone-exp-2-text: #ffdcb8; --tone-exp-2-edge: #c58650;
+    --tone-exp-3-fill: #543a22; --tone-exp-3-text: #f7d7ab; --tone-exp-3-edge: #a98157;
+    --tone-exp-4-fill: #3e3326; --tone-exp-4-text: #e8d2ae; --tone-exp-4-edge: #7d6c50;
+    --tone-exp-5-fill: #2e2c27; --tone-exp-5-text: #d9d0bd; --tone-exp-5-edge: #5c564a;
+    --tone-rent-0-fill: #1d2a35; --tone-rent-0-text: #d6e8f5; --tone-rent-0-edge: #2f4659;
+    --tone-rent-1-fill: #1f3a52; --tone-rent-1-text: #d6e8f5; --tone-rent-1-edge: #35597c;
+    --tone-rent-2-fill: #214d73; --tone-rent-2-text: #e2f0fa; --tone-rent-2-edge: #3d74a6;
+    --tone-rent-3-fill: #2a6399; --tone-rent-3-text: #ffffff; --tone-rent-3-edge: #4f8ec7;
+    --tone-rent-4-fill: #3b82c9; --tone-rent-4-text: #ffffff; --tone-rent-4-edge: #7fb2e6;
+    --tone-rent-net-fill: #262a30; --tone-rent-net-text: #e9edf2; --tone-rent-net-edge: #3b82c9;
+    --tone-deal-0-fill: #22304a; --tone-deal-0-text: #d9e5ff; --tone-deal-0-edge: #3d5584;
+    --tone-deal-1-fill: #2a4376; --tone-deal-1-text: #e2eaff; --tone-deal-1-edge: #4e6fb8;
+    --tone-deal-2-fill: #3d66c8; --tone-deal-2-text: #ffffff; --tone-deal-2-edge: #7a9ae6;
+    --tone-deal-3-fill: #5f88ee; --tone-deal-3-text: #061233; --tone-deal-3-edge: #a7bdf7;
+    --tone-deal-none-fill: transparent; --tone-deal-none-text: #aeb4bc; --tone-deal-none-edge: #5f6873;
+  }
+}
+
+:root[data-theme='dark'] {
+  --sp-color-page: #16171a; --sp-color-card: #1f2124; --sp-color-card-2: #25282c;
+  --sp-color-border: #2e3136; --sp-color-border-strong: #454a52;
+  --sp-color-text: #f3f3f3; --sp-color-text-weak: #aeb4bc; --sp-color-text-faint: #7d848d;
+  --sp-color-brand: #57a3fd; --sp-color-brand-strong: #8ec0ff; --sp-color-brand-soft: #1c2b3d; --sp-color-focus: #8ec0ff;
+  --sp-color-warn: #ffb067; --sp-color-warn-soft: #3a2a18; --sp-color-error: #ff8a99; --sp-color-error-soft: #3b1f24;
+  --sp-color-success: #6fd08a; --sp-color-success-soft: #1d3324; --sp-color-dim: rgba(31, 33, 36, 0.7);
+  --sp-shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --tone-leased-fill: #2b3139; --tone-leased-text: #e9edf2; --tone-leased-edge: #434b56;
+  --tone-expiring-fill: #4a3317; --tone-expiring-text: #ffe2bf; --tone-expiring-edge: #f0a04b;
+  --tone-risk-fill: #4a1f2b; --tone-risk-text: #ffd4de; --tone-risk-edge: #ff7a9a;
+  --tone-available-fill: #11a085; --tone-available-text: #06211c; --tone-available-edge: #5fd6bd;
+  --tone-available-later-fill: #163f36; --tone-available-later-text: #a9e6d6; --tone-available-later-edge: #35b899;
+  --tone-sublease-fill: #1a4a40; --tone-sublease-text: #b3eadb; --tone-sublease-edge: #35b899;
+  --tone-committed-fill: #1f2f52; --tone-committed-text: #c9d9ff; --tone-committed-edge: #6a8fe0;
+  --tone-forsale-fill: #35264f; --tone-forsale-text: #dccdfa; --tone-forsale-edge: #a383ea;
+  --tone-empty-fill: transparent; --tone-empty-text: #aeb4bc; --tone-empty-edge: #5f6873;
+  --tone-projected-fill: #17322c; --tone-projected-text: #a9e6d6; --tone-projected-edge: #35b899;
+  --tone-muted-fill: #24272b; --tone-muted-text: #8f98a3; --tone-muted-edge: #343940;
+  --tone-neutral-fill: #2b3139; --tone-neutral-text: #e9edf2; --tone-neutral-edge: #434b56;
+  --tone-confidential-fill: #2f3238; --tone-confidential-text: #c8ccd3; --tone-confidential-edge: #555b64;
+  --tone-exp-0-fill: #b9492a; --tone-exp-0-text: #ffffff; --tone-exp-0-edge: #e07a55;
+  --tone-exp-1-fill: #8f4420; --tone-exp-1-text: #ffe8d6; --tone-exp-1-edge: #d27a4d;
+  --tone-exp-2-fill: #6f3f1f; --tone-exp-2-text: #ffdcb8; --tone-exp-2-edge: #c58650;
+  --tone-exp-3-fill: #543a22; --tone-exp-3-text: #f7d7ab; --tone-exp-3-edge: #a98157;
+  --tone-exp-4-fill: #3e3326; --tone-exp-4-text: #e8d2ae; --tone-exp-4-edge: #7d6c50;
+  --tone-exp-5-fill: #2e2c27; --tone-exp-5-text: #d9d0bd; --tone-exp-5-edge: #5c564a;
+  --tone-rent-0-fill: #1d2a35; --tone-rent-0-text: #d6e8f5; --tone-rent-0-edge: #2f4659;
+  --tone-rent-1-fill: #1f3a52; --tone-rent-1-text: #d6e8f5; --tone-rent-1-edge: #35597c;
+  --tone-rent-2-fill: #214d73; --tone-rent-2-text: #e2f0fa; --tone-rent-2-edge: #3d74a6;
+  --tone-rent-3-fill: #2a6399; --tone-rent-3-text: #ffffff; --tone-rent-3-edge: #4f8ec7;
+  --tone-rent-4-fill: #3b82c9; --tone-rent-4-text: #ffffff; --tone-rent-4-edge: #7fb2e6;
+  --tone-rent-net-fill: #262a30; --tone-rent-net-text: #e9edf2; --tone-rent-net-edge: #3b82c9;
+  --tone-deal-0-fill: #22304a; --tone-deal-0-text: #d9e5ff; --tone-deal-0-edge: #3d5584;
+  --tone-deal-1-fill: #2a4376; --tone-deal-1-text: #e2eaff; --tone-deal-1-edge: #4e6fb8;
+  --tone-deal-2-fill: #3d66c8; --tone-deal-2-text: #ffffff; --tone-deal-2-edge: #7a9ae6;
+  --tone-deal-3-fill: #5f88ee; --tone-deal-3-text: #061233; --tone-deal-3-edge: #a7bdf7;
+  --tone-deal-none-fill: transparent; --tone-deal-none-text: #aeb4bc; --tone-deal-none-edge: #5f6873;
+}
