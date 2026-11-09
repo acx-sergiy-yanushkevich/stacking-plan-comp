@@ -2,7 +2,7 @@ import { useMemo, type KeyboardEvent } from 'react';
 import type { FloorView as FloorViewModel } from '../../domain/derive';
 import { fmtDate, fmtMonths } from '../../domain/dates';
 import { num, pct, sf } from '../../domain/format';
-import { projectPolygon } from '../../domain/geometry';
+import { levelPolygon, projectPolygon } from '../../domain/geometry';
 import { tenantLabel } from '../../domain/safe';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
@@ -29,7 +29,7 @@ export default function FloorView({ model, state, patch }: FloorViewProps) {
   const floor = model.selectedFloor ?? floors[0] ?? null;
 
   const aspect = useMemo(() => {
-    const pts = projectPolygon(property.footprint, { w: 1000, h: 1000 }, 0);
+    const pts = levelPolygon(projectPolygon(property.footprint, { w: 1000, h: 1000 }, 0), { w: 1000, h: 1000 }, 0);
     if (pts.length < 3) return 4 / 3;
     const xs = pts.map((p) => p[0]);
     const ys = pts.map((p) => p[1]);

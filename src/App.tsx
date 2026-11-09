@@ -12,6 +12,8 @@ import { ToastProvider, useToast, Sheet } from './components/ui';
 import StackView from './components/stack/StackView';
 import Inspector from './components/inspector/Inspector';
 import FloorView from './components/floor/FloorView';
+import TimelineView from './components/timeline/TimelineView';
+import { MiniTimeline } from './components/timeline/MiniTimeline';
 import { PrintLayout } from './components/print/PrintLayout';
 import { csvBlob, download } from './lib/exportFile';
 import { svgToPng } from './lib/exportPng';
@@ -104,7 +106,7 @@ function Shell() {
 
   return (
     <div className="sp-app" data-view={state.view} data-mode={mode}>
-      <Header model={model} state={state} patch={patch} onExport={onExport} />
+      <Header model={model} state={state} patch={patch} onExport={onExport} miniTimeline={<MiniTimeline model={model} asOf={state.asOf} onChange={(asOf) => patch({ asOf })} width={312} height={64} />} />
       <SaleBanner property={property} leasable={model.kpis.leasable} />
       <KpiStrip model={model} state={state} onAction={onKpi} />
       <Toolbar state={state} patch={patch} />
@@ -112,9 +114,10 @@ function Shell() {
         <div className="sp-stage">
           {state.view === 'stack' && <StackView model={model} state={state} patch={patch} />}
           {state.view === 'floor' && <FloorView model={model} state={state} patch={patch} />}
-          {(state.view === 'timeline' || state.view === 'map') && (
+          {state.view === 'timeline' && <TimelineView model={model} state={state} patch={patch} />}
+          {state.view === 'map' && (
             <section className="sp-card" style={{ padding: 16 }}>
-              View “{state.view}” arrives shortly.
+              View “map” arrives shortly.
             </section>
           )}
         </div>

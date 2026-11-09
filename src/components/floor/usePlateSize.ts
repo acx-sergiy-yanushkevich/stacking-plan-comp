@@ -6,14 +6,14 @@ export interface PlateSize {
 }
 
 const MIN_W = 480;
-const MIN_H = 360;
+const MIN_H = 300;
 const MAX_H = 520;
 const MIN_ASPECT = 4 / 3;
-const MAX_ASPECT = 2;
+const MAX_ASPECT = 3;
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-/** Plate size from a container width: aspect follows the footprint, clamped between 4:3 and 2:1. */
+/** Plate size from a container width: aspect follows the footprint, clamped between 4:3 and 3:1. */
 export function plateSize(containerWidth: number, aspect: number): PlateSize {
   const width = Math.max(MIN_W, Math.floor(containerWidth));
   const a = clamp(Number.isFinite(aspect) && aspect > 0 ? aspect : MIN_ASPECT, MIN_ASPECT, MAX_ASPECT);

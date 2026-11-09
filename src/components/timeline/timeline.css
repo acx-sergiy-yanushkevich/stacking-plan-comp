@@ -1,0 +1,87 @@
+/* Timeline view (DESIGN.md §2.5). Everything scoped under .sp-timeline; tokens only. */
+.sp-timeline { position: relative; width: 100%; min-width: 0; overflow-x: auto; padding: var(--sp-space-2) var(--sp-space-2) var(--sp-space-3); font-family: var(--sp-font); font-variant-numeric: tabular-nums; }
+.sp-timeline__svg { display: block; max-width: none; }
+.sp-timeline text { font-family: var(--sp-font); font-variant-numeric: tabular-nums; pointer-events: none; }
+.sp-timeline__note { margin-top: var(--sp-space-2); font-size: var(--sp-text-12); color: var(--sp-color-text-faint); }
+
+/* Header: year strip and rollover band */
+.sp-tl-axis__year { font-size: var(--sp-text-11); fill: var(--sp-color-text-faint); }
+.sp-tl-axis__grid { stroke: var(--sp-color-border); stroke-width: 1; shape-rendering: crispEdges; }
+.sp-tl-axis__rule { stroke: var(--sp-color-border-strong); stroke-width: 1; shape-rendering: crispEdges; }
+.sp-tl-band__bg { fill: var(--sp-color-card); }
+.sp-tl-band__caption { font-size: var(--sp-text-11); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; fill: var(--sp-color-text-weak); }
+.sp-tl-band__hint { font-size: var(--sp-text-11); fill: var(--sp-color-text-faint); }
+.sp-tl-band__risk { font-size: var(--sp-text-12); font-weight: 600; fill: var(--tone-risk-edge); }
+.sp-tl-band__col { cursor: pointer; }
+.sp-tl-band__fill { fill: transparent; transition: fill var(--sp-ease); }
+.sp-tl-band__col.is-alt .sp-tl-band__fill { fill: var(--sp-color-card-2); }
+.sp-tl-band__col:hover .sp-tl-band__fill { fill: var(--sp-color-brand-soft); }
+.sp-tl-band__col.is-active .sp-tl-band__fill { fill: var(--sp-color-brand-soft); stroke: var(--sp-color-brand); stroke-width: 1; }
+.sp-tl-band__beam { fill: var(--sp-color-brand-soft); fill-opacity: 0.45; pointer-events: none; }
+.sp-tl-band__col:focus-visible { outline: none; }
+.sp-tl-band__col:focus-visible .sp-tl-band__fill { stroke: var(--sp-color-focus); stroke-width: 2; }
+.sp-tl-band__label { font-size: var(--sp-text-11); fill: var(--sp-color-text-weak); }
+.sp-tl-band__value { font-size: var(--sp-text-12); font-weight: 600; fill: var(--sp-color-text); }
+.sp-tl-band__value.is-small { font-size: var(--sp-text-11); }
+.sp-tl-band__col.is-empty .sp-tl-band__value { fill: var(--sp-color-text-faint); font-weight: 400; }
+.sp-tl-band__col.is-active .sp-tl-band__value, .sp-tl-band__col.is-active .sp-tl-band__label { fill: var(--sp-color-brand-strong); }
+
+/* Today marker */
+.sp-tl-today line { stroke: var(--sp-color-text-faint); stroke-width: 1; stroke-dasharray: 3 3; shape-rendering: crispEdges; }
+.sp-tl-today text { font-size: var(--sp-text-11); fill: var(--sp-color-text-faint); }
+
+/* Rows */
+.sp-tl-row__rule { stroke: var(--sp-color-border); stroke-width: 1; shape-rendering: crispEdges; }
+.sp-tl-row__name { fill: var(--sp-color-text); }
+.sp-tl-row__word { font-size: var(--sp-text-11); fill: var(--sp-color-text-faint); }
+.sp-tl-row__num { font-size: var(--sp-text-15); font-weight: 600; }
+.sp-tl-row__rsf { font-size: var(--sp-text-11); fill: var(--sp-color-text-weak); }
+.sp-tl-row__empty { font-size: var(--sp-text-12); fill: var(--sp-color-text-faint); }
+
+/* Bars (extend .sp-seg from plan.css) */
+.sp-tl-bar__text { font-size: var(--sp-text-12); }
+.sp-tl-bar__name { font-weight: 600; }
+.sp-tl-bar__sub { font-size: var(--sp-text-11); font-weight: 400; opacity: 0.85; }
+.sp-seg__overlay { pointer-events: none; }
+.sp-tl-bar__ext { pointer-events: none; }
+.sp-tl-bar__ext--risk { fill: var(--tone-risk-fill); stroke: var(--tone-risk-edge); stroke-width: 1; stroke-dasharray: 3 2; }
+.sp-tl-bar__ext--projected { fill: transparent; stroke-width: 1; stroke-dasharray: 4 3; }
+.sp-seg.is-dim .sp-tl-bar__ext, .sp-seg.is-dim .sp-tl-tag { opacity: 0.5; }
+
+/* Tags */
+.sp-tl-tag text { font-size: var(--sp-text-11); font-weight: 600; fill: #fff; }
+.sp-tl-tag--risk rect { fill: var(--tone-risk-edge); }
+
+/* Cursor: no transitions, ever (numbers must never look interpolated) */
+.sp-cursor { cursor: col-resize; outline: none; }
+.sp-cursor * { transition: none !important; }
+.sp-cursor__line { stroke: var(--sp-color-brand); stroke-width: 2; }
+.sp-cursor__handle { fill: var(--sp-color-brand); }
+.sp-cursor__label { font-size: var(--sp-text-12); font-weight: 600; fill: #fff; }
+.sp-cursor:hover .sp-cursor__handle, .sp-cursor:hover .sp-cursor__line { fill: var(--sp-color-brand-strong); stroke: var(--sp-color-brand-strong); }
+.sp-cursor:hover .sp-cursor__line { fill: none; }
+.sp-cursor:focus-visible .sp-cursor__handle { stroke: var(--sp-color-focus); stroke-width: 2; stroke-opacity: 0.5; paint-order: stroke; }
+.sp-cursor:focus-visible .sp-cursor__line { stroke-width: 3; }
+:root[data-theme='dark'] .sp-cursor__label, :root[data-theme='dark'] .sp-tl-tag text { fill: #16171a; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .sp-cursor__label { fill: #16171a; }
+}
+
+/* Floating tooltip for pointer users (the <title> and aria-label carry the same text) */
+.sp-tl-tip {
+  position: absolute; z-index: 40; pointer-events: none; white-space: pre-line; max-width: 320px; width: max-content;
+  background: var(--sp-color-text); color: var(--sp-color-page); padding: 6px 8px; border-radius: 4px;
+  font-size: var(--sp-text-12); line-height: 1.35; box-shadow: var(--sp-shadow-pop);
+}
+
+/* Mini scrubber inside the as-of popover */
+.sp-timeline--mini { display: block; overflow: visible; }
+.sp-mini__bg { fill: var(--sp-color-card-2); }
+.sp-mini__grid { stroke: var(--sp-color-border); stroke-width: 1; shape-rendering: crispEdges; }
+.sp-mini__year { font-size: 9px; fill: var(--sp-color-text-faint); }
+.sp-cursor--compact .sp-cursor__handle { rx: 2; }
+
+/* Phones: the timeline scrolls horizontally with the cursor pinned by the browser scroll. */
+@media (max-width: 760px) {
+  .sp-timeline { padding-left: var(--sp-space-1); padding-right: var(--sp-space-1); }
+}
