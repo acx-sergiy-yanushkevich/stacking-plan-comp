@@ -1,0 +1,36 @@
+.sp-print { display: none; color: #181818; background: #fff; font-size: 11px; }
+.sp-print--visible { display: block; }
+.sp-print__page { padding: 10mm 12mm; page-break-after: always; break-after: page; background: #fff; }
+.sp-print__page:last-child { page-break-after: auto; }
+.sp-print__head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #181818; padding-bottom: 8px; margin-bottom: 10px; }
+.sp-print__eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #5c5c5c; font-weight: 600; }
+.sp-print h1 { font-size: 20px; font-weight: 700; margin: 2px 0; }
+.sp-print h2 { font-size: 15px; font-weight: 700; margin: 0 0 6px; }
+.sp-print__sub { color: #5c5c5c; font-size: 11px; }
+.sp-print__meta { text-align: right; color: #5c5c5c; font-size: 11px; line-height: 1.5; }
+.sp-print__kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin: 8px 0 10px; }
+.sp-print__kpi { border: 1px solid #e5e5e5; border-radius: 6px; padding: 6px 10px; }
+.sp-print__kpi-label { font-size: 9px; text-transform: uppercase; letter-spacing: .05em; color: #5c5c5c; font-weight: 600; }
+.sp-print__kpi-value { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sp-print__kpi-note { font-size: 10px; color: #5c5c5c; }
+.sp-print .sp-legend { font-size: 10px; margin-bottom: 6px; }
+.sp-print__plan .sp-card { border: 0; }
+.sp-print__plan .sp-stack__body { padding: 0; overflow: visible; }
+.sp-print__foot { margin-top: 8px; font-size: 9.5px; color: #5c5c5c; border-top: 1px solid #e5e5e5; padding-top: 6px; }
+.sp-print__table { width: 100%; border-collapse: collapse; font-size: 10px; font-variant-numeric: tabular-nums; }
+.sp-print__table th { text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: .04em; color: #5c5c5c; border-bottom: 1px solid #181818; padding: 4px 6px; }
+.sp-print__table td { padding: 3px 6px; border-bottom: 1px solid #e5e5e5; vertical-align: top; }
+.sp-print__table .num, .sp-print__table th.num { text-align: right; }
+.sp-print__table--tight td, .sp-print__table--tight th { padding: 3px 5px; }
+.sp-print__two { display: grid; grid-template-columns: 1fr 1.4fr; gap: 24px; }
+.sp-print__note { color: #5c5c5c; margin: 0 0 6px; }
+
+@media print {
+  html { font-size: 11px; }
+  body { background: #fff; }
+  .sp-app > *:not(.sp-print) { display: none !important; }
+  .sp-app { padding: 0; gap: 0; max-width: none; }
+  .sp-print { display: block; }
+  .sp-print__page { padding: 0; }
+  .sp-toasts, .sp-sheet { display: none !important; }
+}

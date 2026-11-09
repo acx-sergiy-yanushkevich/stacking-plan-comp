@@ -1,6 +1,7 @@
 /* Shared visual language for anything that draws a segment: a block in the stack,
    a bar in the timeline, a slice in the floor plate. Tone colours come from tokens. */
 .sp-seg { cursor: pointer; }
+.sp-seg__ring { fill: none; stroke: none; }
 .sp-seg__rect { stroke-width: 1; transition: filter var(--sp-ease), opacity var(--sp-ease); }
 .sp-seg:hover .sp-seg__rect { filter: brightness(0.96); }
 .sp-seg.is-selected .sp-seg__rect { stroke: var(--sp-color-brand); stroke-width: 2; }
@@ -41,3 +42,7 @@
 .sp-legend__label { color: var(--sp-color-text); }
 .sp-legend__num { color: var(--sp-color-text-faint); }
 .sp-legend__note { width: 100%; font-size: var(--sp-text-11); color: var(--sp-color-text-faint); }
+
+/* Non-leasable area (lobby, loading, mechanical): drawn, never counted */
+.sp-nonleasable rect { fill: var(--sp-color-card-2); stroke: var(--sp-color-border); }
+.sp-nonleasable text { fill: var(--sp-color-text-faint); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; pointer-events: none; }

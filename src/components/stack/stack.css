@@ -1,0 +1,38 @@
+.sp-stack { display: flex; flex-direction: column; }
+.sp-stack__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--sp-color-border); flex-wrap: wrap; }
+.sp-stack__title { display: flex; align-items: baseline; gap: 10px; }
+.sp-stack__title h2 { font-size: var(--sp-text-15); font-weight: 600; }
+.sp-stack__title .sp-weak { font-size: var(--sp-text-12); }
+.sp-stack__body { padding: 8px 16px 14px 8px; overflow-x: auto; }
+.sp-stack__body > svg { width: 100%; height: auto; display: block; }
+
+/* Filter bar */
+.sp-filterbar { display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: var(--sp-color-brand-soft); border-bottom: 1px solid var(--sp-color-border); font-size: var(--sp-text-13); color: var(--sp-color-brand-strong); }
+.sp-filterbar strong { font-weight: 600; }
+.sp-filterbar .sp-btn { margin-left: auto; }
+
+/* Gutter */
+.sp-gutter__name { font-size: 15px; font-weight: 600; fill: var(--sp-color-text); }
+.sp-gutter__btn { cursor: pointer; }
+.sp-gutter__btn:hover .sp-gutter__name { fill: var(--sp-color-brand); }
+.sp-gutter__btn:focus-visible rect { stroke: var(--sp-color-focus); stroke-width: 2; }
+.sp-gutter__pct { font-size: 12px; font-weight: 600; fill: var(--sp-color-text); }
+.sp-gutter__rsf { font-size: 11px; fill: var(--sp-color-text-faint); }
+.sp-gutter__bar-bg { fill: var(--sp-color-border); }
+.sp-gutter__bar { fill: var(--sp-color-text-weak); }
+.sp-gutter__bar--low { fill: var(--sp-color-warn); }
+.sp-gutter__warn { fill: var(--sp-color-warn); }
+.sp-stack__floorline { stroke: var(--sp-color-border); stroke-width: 1; }
+.sp-stack__rowbg { fill: transparent; }
+.sp-stack__rowbg.is-floor-selected { fill: var(--sp-color-brand-soft); }
+
+/* Left / top accent bars */
+.sp-seg__accent { pointer-events: none; }
+
+/* Footer */
+.sp-stack__foot { display: flex; justify-content: space-between; gap: 12px; padding: 0 16px 12px; font-size: var(--sp-text-11); color: var(--sp-color-text-faint); flex-wrap: wrap; }
+
+@media (max-width: 760px) {
+  .sp-stack__head { padding: 8px 12px; }
+  .sp-stack__body { padding: 6px 8px 10px 4px; }
+}

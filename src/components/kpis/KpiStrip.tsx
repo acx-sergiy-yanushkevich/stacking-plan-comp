@@ -1,7 +1,7 @@
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { fmtMonthYearShort } from '../../domain/dates';
-import { num, pct, plural, sf, sfDelta } from '../../domain/format';
+import { num, pct, plural, sfDelta } from '../../domain/format';
 
 export type KpiAction = 'status' | 'find' | 'find-largest' | 'expiry-worklist' | 'timeline' | 'deals';
 
@@ -24,13 +24,12 @@ interface Card {
 
 export function KpiStrip({ model, state, onAction }: KpiStripProps) {
   const { kpis: k, deltas: d, safe } = model;
-  const rent = k.rentByType[0];
   const cards: Card[] = [
     {
       id: 'status',
       label: 'Leased',
       value: pct(k.occupancy),
-      context: `${pct(k.physical)} physically occupied${k.committed ? ` · ${sf(k.committed)} signed, not in` : ''}`,
+      context: `${pct(k.physical)} occupied${k.committed ? ` · ${num(k.committed)} SF signed, not in` : ''}`,
       delta: d ? { text: `${d.occupancy >= 0 ? '+' : '−'}${Math.abs(d.occupancy * 100).toFixed(1)} pts`, good: d.occupancy >= 0 } : null,
       active: state.lens === 'status' && state.mode === 'building' && !state.q,
       title: 'Leased share of leasable RSF, including signed leases that have not commenced. Click for the status lens.',
@@ -69,7 +68,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
       label: 'WALT',
       value: k.walt.toFixed(1),
       unit: 'yr',
-      context: 'In-place, SF-weighted · MTM and holdover count as 0',
+      context: 'In-place, SF-weighted',
       delta: d ? { text: `${d.walt >= 0 ? '+' : '−'}${Math.abs(d.walt).toFixed(1)} yr`, good: d.walt >= 0 } : null,
       active: state.view === 'timeline',
       title: 'Weighted average lease term remaining. Click for the lease timeline.',
@@ -80,7 +79,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
           label: 'Pipeline',
           value: String(k.pipeline.deals),
           unit: k.pipeline.deals === 1 ? 'deal' : 'deals',
-          context: `${k.pipeline.onVacancy} on vacancies · ${sf(k.pipeline.sf)} in play`,
+          context: `${k.pipeline.onVacancy} on vacancies · ${num(k.pipeline.sf)} SF`,
           active: state.lens === 'deals',
           title: 'Live deals on this building. Click for the deals lens.',
         }
@@ -89,15 +88,12 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
           label: 'Pipeline',
           value: String(k.pipeline.deals),
           unit: k.pipeline.deals === 1 ? 'deal' : 'deals',
-          context: `${k.pipeline.onVacancy} on vacancies · ${k.pipeline.deals - k.pipeline.onVacancy} renewals · ${sf(k.pipeline.sf)} in play`,
+          context: `${k.pipeline.onVacancy} on vacancies · ${k.pipeline.deals - k.pipeline.onVacancy} renewals · ${num(k.pipeline.sf)} SF`,
           delta: d ? { text: `${d.pipelineDeals >= 0 ? '+' : '−'}${Math.abs(d.pipelineDeals)}`, good: null } : null,
           active: state.lens === 'deals',
           title: 'Live deals on this building. Click for the deals lens.',
         },
   ];
-  if (rent && !safe) {
-    // Replace WALT context with the rent headline when a gross rent exists? No: keep six cards; rent lives in the lens.
-  }
   return (
     <div className="sp-card sp-kpis sp-no-print" role="group" aria-label="Key figures">
       {cards.map((c) => (

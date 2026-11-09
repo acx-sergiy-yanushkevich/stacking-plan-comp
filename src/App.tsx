@@ -1,62 +1,105 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { property, TODAY } from './data/mock/property';
 import { usePlanModel } from './model/usePlanModel';
 import { usePlanState, useDocumentTitle } from './state/usePlanState';
 import { deriveMode } from './state/planState';
+import { rentRollRows, toCsv } from './domain/exportCsv';
 import { Header, type ExportKind } from './components/shell/Header';
 import { SaleBanner } from './components/shell/SaleBanner';
 import { Toolbar } from './components/shell/Toolbar';
 import { KpiStrip, type KpiAction } from './components/kpis/KpiStrip';
-import { ToastProvider, useToast } from './components/ui';
+import { ToastProvider, useToast, Sheet } from './components/ui';
+import StackView from './components/stack/StackView';
+import Inspector from './components/inspector/Inspector';
+import { PrintLayout } from './components/print/PrintLayout';
+import { csvBlob, download } from './lib/exportFile';
+import { svgToPng } from './lib/exportPng';
+import { useIsNarrow } from './lib/useMedia';
+import { clearSelection } from './components/plan/actions';
 import './components/ui/ui.css';
 import './components/shell/shell.css';
 import './components/kpis/kpis.css';
+
+const PRINT_PREVIEW = typeof location !== 'undefined' && new URLSearchParams(location.search).get('print') === '1';
 
 function Shell() {
   const [state, patch] = usePlanState(TODAY);
   const model = usePlanModel(property, state, TODAY);
   const toast = useToast();
+  const narrow = useIsNarrow();
   useDocumentTitle(state.safe);
   const mode = deriveMode(state);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = state.theme ?? '';
+    if (state.theme) document.documentElement.dataset.theme = state.theme;
+    else delete document.documentElement.dataset.theme;
   }, [state.theme]);
 
   const onExport = useCallback(
-    (kind: ExportKind) => {
-      if (kind === 'link') {
-        navigator.clipboard?.writeText(location.href);
-        toast.push('Link copied', { icon: 'link' });
-        return;
+    async (kind: ExportKind) => {
+      const stamp = `${property.name.replace(/\s+/g, '-')}-${state.asOf}${state.safe ? '-prospect-safe' : ''}`;
+      switch (kind) {
+        case 'link':
+          await navigator.clipboard?.writeText(location.href);
+          toast.push('Link to this view copied', { icon: 'link' });
+          return;
+        case 'csv': {
+          download(csvBlob(toCsv(rentRollRows(property, model.floors, model.asOf, state.safe))), `rent-roll-${stamp}.csv`);
+          toast.push(`Rent roll exported${state.safe ? ' (prospect-safe)' : ''}`, { icon: 'table' });
+          return;
+        }
+        case 'png': {
+          const svg = document.querySelector<SVGSVGElement>('.sp-stack__body > svg');
+          if (!svg) {
+            toast.push('Switch to the Stack view to export the plan as an image', { icon: 'info' });
+            return;
+          }
+          try {
+            download(await svgToPng(svg, 2), `stacking-plan-${stamp}.png`);
+            toast.push('Plan exported at 2× for slides', { icon: 'image' });
+          } catch {
+            toast.push('Image export failed in this browser', { icon: 'warning' });
+          }
+          return;
+        }
+        case 'pdf':
+          toast.push('Opening the print dialog: choose "Save as PDF", landscape', { icon: 'file' });
+          setTimeout(() => window.print(), 250);
+          return;
+        case 'video':
+          window.dispatchEvent(new CustomEvent('sp:record'));
+          return;
       }
-      toast.push(`Export (${kind}) arrives in Task 19`, { icon: 'download' });
     },
-    [toast],
+    [model.floors, model.asOf, state.asOf, state.safe, toast],
   );
 
   const onKpi = (a: KpiAction) => {
     switch (a) {
       case 'status':
-        patch({ lens: 'status', mode: 'building', select: null, q: '', window: null, req: null, inquiry: null });
+        patch({ lens: 'status', mode: 'building', select: null, q: '', window: null, req: null, inquiry: null, bucket: null });
         break;
       case 'find':
-        patch({ mode: 'find', select: null, floor: null, window: null });
+        patch({ mode: 'find', select: null, floor: null, window: null, bucket: null });
         break;
       case 'find-largest':
-        patch({ mode: 'find', req: model.kpis.maxContiguous.size, max: null, by: null, select: null, floor: null, window: null });
+        patch({ mode: 'find', req: model.kpis.maxContiguous.size, max: null, by: null, inquiry: null, select: null, floor: null, window: null, bucket: null });
         break;
       case 'expiry-worklist':
-        patch({ lens: 'expiry', mode: 'worklist', window: '12', select: null, floor: null, req: null, inquiry: null });
+        patch({ lens: 'expiry', mode: 'worklist', window: '12', select: null, floor: null, req: null, inquiry: null, bucket: null });
         break;
       case 'timeline':
         patch({ view: 'timeline' });
         break;
       case 'deals':
-        patch({ lens: 'deals', mode: 'building', select: null, window: null, req: null, inquiry: null });
+        patch({ lens: 'deals', mode: 'building', select: null, window: null, req: null, inquiry: null, bucket: null });
         break;
     }
   };
+
+  const inspector = useMemo(() => <Inspector model={model} state={state} patch={patch} mode={mode} />, [model, state, patch, mode]);
+  const sheetOpen = narrow && mode !== 'building';
+  const sheetTitle = mode === 'block' ? 'Suite' : mode === 'floor' ? 'Floor' : mode === 'find' ? 'Find space' : mode === 'worklist' ? 'Renewal worklist' : mode === 'issues' ? 'Data issues' : 'Area';
 
   return (
     <div className="sp-app" data-view={state.view} data-mode={mode}>
@@ -64,14 +107,22 @@ function Shell() {
       <SaleBanner property={property} leasable={model.kpis.leasable} />
       <KpiStrip model={model} state={state} onAction={onKpi} />
       <Toolbar state={state} patch={patch} />
-      <div className="sp-main">
-        <section className="sp-stage sp-card" aria-label="Plan">
-          <p style={{ padding: 16 }}>View “{state.view}” arrives in Tasks 13–18.</p>
-        </section>
-        <aside className="sp-inspector sp-card" aria-label="Inspector">
-          <p style={{ padding: 16 }}>Inspector ({mode}) arrives in Task 14.</p>
-        </aside>
+      <div className="sp-main sp-no-print">
+        <div className="sp-stage">
+          {state.view === 'stack' ? <StackView model={model} state={state} patch={patch} /> : <section className="sp-card" style={{ padding: 16 }}>View “{state.view}” arrives shortly.</section>}
+        </div>
+        {!narrow && (
+          <aside className="sp-inspector sp-card" aria-label="Inspector">
+            {inspector}
+          </aside>
+        )}
       </div>
+      {narrow && (
+        <Sheet open={sheetOpen} onClose={() => (mode === 'block' || mode === 'floor' ? clearSelection(patch) : patch({ mode: 'building', req: null, inquiry: null, window: null }))} title={sheetTitle}>
+          {inspector}
+        </Sheet>
+      )}
+      <PrintLayout model={model} state={state} visible={PRINT_PREVIEW} />
     </div>
   );
 }
