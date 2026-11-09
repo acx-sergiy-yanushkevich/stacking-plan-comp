@@ -276,6 +276,8 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
   } else if (visibleW >= 48 && textRoom > 0) {
     nameText = sfOnly;
   }
+  // A tagged bar (Holdover / MTM) must always say who: prefer the tenant name over the SF figure.
+  if (tagText && nameText === sfOnly && name && measure(name, NAME_FONT) <= textRoom) nameText = name;
 
   // Full facts for the tooltip: exact dates and months remaining.
   const dates = isAvail
