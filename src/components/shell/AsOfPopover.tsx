@@ -1,0 +1,69 @@
+import { useState, type ReactNode } from 'react';
+import type { ISODate } from '../../domain/types';
+import { addMonths, fmtDate, monthsBetween, fmtMonths } from '../../domain/dates';
+import { Button, Chip, Popover, TextField } from '../ui';
+
+export interface AsOfPopoverProps {
+  asOf: ISODate;
+  today: ISODate;
+  onChange: (d: ISODate) => void;
+  /** Miniature lease timeline used as a scrubber (Task 16). */
+  miniTimeline?: ReactNode;
+}
+
+const PRESETS: Array<{ label: string; months: number }> = [
+  { label: 'Today', months: 0 },
+  { label: '+6 mo', months: 6 },
+  { label: '+12 mo', months: 12 },
+  { label: '+24 mo', months: 24 },
+  { label: '+5 yr', months: 60 },
+];
+
+export function AsOfPopover({ asOf, today, onChange, miniTimeline }: AsOfPopoverProps) {
+  const [open, setOpen] = useState(false);
+  const projected = asOf !== today;
+  const ahead = monthsBetween(today, asOf);
+  return (
+    <div className={`sp-header__asof ${projected ? 'sp-header__asof--projected' : ''}`}>
+      <Popover
+        open={open}
+        onOpenChange={setOpen}
+        align="end"
+        label="As-of date"
+        trigger={(p) => (
+          <Button {...p} icon="calendar" iconRight="chevron-down" title={projected ? `Projected ${fmtMonths(ahead)} ahead` : 'Plan as of today'}>
+            {projected ? 'Projected · ' : 'As of '}
+            {fmtDate(asOf)}
+          </Button>
+        )}
+      >
+        <div className="sp-asof">
+          <div className="sp-asof__presets" role="group" aria-label="Quick dates">
+            {PRESETS.map((p) => {
+              const d = addMonths(today, p.months);
+              return (
+                <Chip key={p.label} selected={asOf === d} onClick={() => onChange(d)}>
+                  {p.label}
+                </Chip>
+              );
+            })}
+          </div>
+          <div className="sp-asof__row">
+            <TextField label="As-of date" kind="date" value={asOf} min={addMonths(today, -24)} max={addMonths(today, 180)} onChange={(e) => e.target.value && onChange(e.target.value)} />
+            {projected && (
+              <Button variant="ghost" size="sm" onClick={() => onChange(today)}>
+                Reset
+              </Button>
+            )}
+          </div>
+          {miniTimeline && <div className="sp-asof__mini">{miniTimeline}</div>}
+          <p className="sp-asof__note">
+            {projected
+              ? `Showing the building ${fmtMonths(ahead)} ahead. Leases ending before this date are drawn as projected vacancies; KPI cards show the change against today.`
+              : 'Move the date forward to see which leases roll, how occupancy changes and where space opens up.'}
+          </p>
+        </div>
+      </Popover>
+    </div>
+  );
+}

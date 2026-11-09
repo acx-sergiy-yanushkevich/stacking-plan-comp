@@ -1,0 +1,57 @@
+/* ── App frame ──────────────────────────────────────────── */
+.sp-app { min-height: 100vh; display: flex; flex-direction: column; gap: var(--sp-space-3); padding: var(--sp-space-3) var(--sp-space-4) var(--sp-space-5); max-width: 1680px; margin: 0 auto; }
+.sp-main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: var(--sp-space-3); align-items: start; }
+.sp-main--wide { grid-template-columns: minmax(0, 1fr); }
+.sp-stage { min-width: 0; }
+.sp-inspector { position: sticky; top: var(--sp-space-3); max-height: calc(100vh - 2 * var(--sp-space-3)); display: flex; flex-direction: column; overflow: hidden; }
+@media (max-width: 1099px) { .sp-main { grid-template-columns: minmax(0, 1fr); } .sp-inspector { display: none; } }
+@media (max-width: 760px) { .sp-app { padding: var(--sp-space-2) var(--sp-space-2) 56vh; gap: var(--sp-space-2); } }
+
+/* ── Header ─────────────────────────────────────────────── */
+.sp-header { display: flex; align-items: flex-start; gap: var(--sp-space-3); padding: var(--sp-space-3) var(--sp-space-4); }
+.sp-header__icon { width: 40px; height: 40px; border-radius: 8px; background: var(--sp-color-brand); color: #fff; display: grid; place-items: center; flex: none; }
+.sp-header__text { flex: 1; min-width: 0; }
+.sp-header__title { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.sp-header__title h1 { font-size: var(--sp-text-18); font-weight: 700; letter-spacing: -0.01em; }
+.sp-header__property { font-size: var(--sp-text-15); color: var(--sp-color-text-weak); font-weight: 500; }
+.sp-header__property a { color: inherit; }
+.sp-header__facts { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 2px; font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }
+.sp-header__facts .sp-dot { color: var(--sp-color-border-strong); }
+.sp-header__verified { display: inline-flex; align-items: center; gap: 4px; color: var(--sp-color-success); font-weight: 500; }
+.sp-header__verified--stale { color: var(--sp-color-warn); }
+.sp-header__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.sp-header__asof .sp-btn { font-variant-numeric: tabular-nums; }
+.sp-header__asof--projected .sp-btn { background: var(--sp-color-warn-soft); border-color: var(--sp-color-warn); color: var(--sp-color-warn); }
+@media (max-width: 760px) {
+  .sp-header { flex-wrap: wrap; padding: var(--sp-space-3); }
+  .sp-header__icon { width: 32px; height: 32px; }
+  .sp-header__actions { width: 100%; justify-content: flex-start; }
+}
+
+/* As-of popover */
+.sp-asof { width: 340px; display: flex; flex-direction: column; gap: 10px; }
+.sp-asof__presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.sp-asof__mini { border: 1px solid var(--sp-color-border); border-radius: 6px; padding: 6px; background: var(--sp-color-card-2); }
+.sp-asof__note { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }
+.sp-asof__row { display: flex; gap: 8px; align-items: flex-end; }
+.sp-asof__row .sp-field { flex: 1; }
+
+/* Sale banner */
+.sp-sale { display: flex; align-items: center; gap: 12px; padding: 8px 16px; border-left: 4px solid var(--tone-forsale-edge); background: var(--sp-color-card); border: 1px solid var(--sp-color-border); border-left-width: 4px; border-radius: var(--sp-radius-card); font-size: var(--sp-text-13); }
+.sp-sale strong { font-weight: 600; }
+.sp-sale__facts { display: flex; gap: 14px; color: var(--sp-color-text-weak); flex-wrap: wrap; }
+.sp-sale .sp-chip { margin-left: auto; }
+
+/* ── Toolbar ────────────────────────────────────────────── */
+.sp-toolbar { display: flex; align-items: center; gap: var(--sp-space-3); padding: 8px var(--sp-space-3); flex-wrap: wrap; }
+.sp-toolbar__group { display: flex; align-items: center; gap: 8px; }
+.sp-toolbar__label { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); font-weight: 500; white-space: nowrap; }
+.sp-toolbar__search { flex: 1; min-width: 200px; max-width: 340px; margin-left: auto; }
+.sp-toolbar__search .sp-field { width: 100%; }
+.sp-toolbar__lens-select { display: none; }
+@media (max-width: 760px) {
+  .sp-toolbar { gap: 8px; }
+  .sp-toolbar__lens { display: none; }
+  .sp-toolbar__lens-select { display: block; flex: 1; }
+  .sp-toolbar__search { max-width: none; margin-left: 0; width: 100%; }
+}

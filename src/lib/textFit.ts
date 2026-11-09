@@ -1,0 +1,69 @@
+/**
+ * Text measurement for SVG labels. Uses one shared canvas; results are memoised per font+text.
+ * Falls back to an average-glyph estimate when canvas is unavailable (tests, SSR).
+ */
+const cache = new Map<string, number>();
+let ctx: CanvasRenderingContext2D | null | undefined;
+
+function context(): CanvasRenderingContext2D | null {
+  if (ctx !== undefined) return ctx;
+  try {
+    ctx = typeof document !== 'undefined' ? document.createElement('canvas').getContext('2d') : null;
+  } catch {
+    ctx = null;
+  }
+  return ctx;
+}
+
+export function measure(text: string, font: string): number {
+  const key = font + '\u0000' + text;
+  const hit = cache.get(key);
+  if (hit !== undefined) return hit;
+  const c = context();
+  let w: number;
+  if (c) {
+    c.font = font;
+    w = c.measureText(text).width;
+  } else {
+    const size = Number(/(\d+(?:\.\d+)?)px/.exec(font)?.[1] ?? 13);
+    w = text.length * size * 0.55;
+  }
+  cache.set(key, w);
+  return w;
+}
+
+/** Longest prefix of whole words that fits in `maxPx`; '' when even the first word does not fit. */
+export function fitWords(text: string, maxPx: number, font: string): string {
+  if (measure(text, font) <= maxPx) return text;
+  const words = text.split(/\s+/);
+  let out = '';
+  for (const w of words) {
+    const next = out ? `${out} ${w}` : w;
+    if (measure(next, font) > maxPx) break;
+    out = next;
+  }
+  return out;
+}
+
+/** Wrap into at most `maxLines` lines of whole words; returns [] when the first word does not fit. */
+export function wrapWords(text: string, maxPx: number, font: string, maxLines: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let cur = '';
+  for (const w of words) {
+    const next = cur ? `${cur} ${w}` : w;
+    if (measure(next, font) <= maxPx) {
+      cur = next;
+    } else {
+      if (!cur) return lines; // a single word is too wide: give up rather than truncate it
+      lines.push(cur);
+      cur = w;
+      if (lines.length === maxLines) return lines;
+      if (measure(cur, font) > maxPx) return lines;
+    }
+  }
+  if (cur && lines.length < maxLines) lines.push(cur);
+  return lines;
+}
+
+export const fits = (text: string, maxPx: number, font: string) => measure(text, font) <= maxPx;
