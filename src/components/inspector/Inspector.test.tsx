@@ -206,7 +206,9 @@ describe('Inspector', () => {
       const { html } = render(q);
       expectNoTenants(html);
       // In-place rents never appear; asking rents on vacancies may ("Asking $30–$32/SF/yr FSG").
-      expect(html.replace(/Asking \$[^<]*?\/SF\/(yr|mo) (FSG|MG|NNN)/g, ''), `${q} leaks a rate`).not.toContain('/SF/yr');
+      // Asking rents are ranges ("$32–$34/SF/yr FSG"); an in-place rent is a single figure. Only the latter may never appear.
+      const stripped = html.replace(/(Asking )?\$[\d.,]+–\$[\d.,]+\/SF\/(yr|mo) (FSG|MG|NNN)/g, '');
+      expect(stripped, `${q} leaks a rate`).not.toContain('/SF/yr');
       expect(html, `${q} leaks a contact`).not.toContain('Tom Conner');
     }
   });
