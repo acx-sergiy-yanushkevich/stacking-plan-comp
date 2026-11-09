@@ -115,3 +115,19 @@ describe('extrusionFeatures', () => {
     expect(f6.properties.name).toBe('Floor 6');
   });
 });
+
+describe('levelPolygon', () => {
+  it('rotates the long axis to horizontal and fits the box', async () => {
+    const { levelPolygon, projectPolygon } = await import('./geometry');
+    const { footprint } = await import('../data/mock/footprint');
+    const pts = levelPolygon(projectPolygon(footprint, { w: 560, h: 420 }, 16), { w: 560, h: 420 }, 16);
+    const xs = pts.map((p) => p[0]);
+    const ys = pts.map((p) => p[1]);
+    const w = Math.max(...xs) - Math.min(...xs);
+    const h = Math.max(...ys) - Math.min(...ys);
+    expect(w).toBeGreaterThan(h);
+    expect(Math.min(...xs)).toBeGreaterThanOrEqual(15.9);
+    expect(Math.max(...xs)).toBeLessThanOrEqual(544.1);
+    expect(Math.max(...ys)).toBeLessThanOrEqual(404.1);
+  });
+});

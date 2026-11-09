@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { FloorView as FloorViewModel, Segment } from '../../domain/derive';
-import { polygonArea, projectPolygon, slicePolygon, type Pt } from '../../domain/geometry';
+import { levelPolygon, polygonArea, projectPolygon, slicePolygon, type Pt } from '../../domain/geometry';
 import { textTier } from '../../domain/layout';
 import { fits, fitWords, measure, wrapWords } from '../../lib/textFit';
 import type { PlanModel } from '../../model/usePlanModel';
@@ -177,7 +177,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
   const refs = useRef<Array<SVGGElement | null>>([]);
   const [focusIdx, setFocusIdx] = useState(0);
 
-  const points = useMemo(() => projectPolygon(property.footprint, { w: width, h: height }, PAD), [property.footprint, width, height]);
+  const points = useMemo(() => levelPolygon(projectPolygon(property.footprint, { w: width, h: height }, PAD), { w: width, h: height }, PAD), [property.footprint, width, height]);
   const outline = useMemo(() => pathD(points), [points]);
 
   const slices = useMemo<Slice[]>(() => {

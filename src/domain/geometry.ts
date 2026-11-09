@@ -180,3 +180,28 @@ export function extrusionFeatures(
     })),
   };
 }
+
+/**
+ * Rotate a projected polygon so its long axis is horizontal, then re-fit it into `size`.
+ * Used by the schematic floor plate: orientation is not surveyed, legibility is.
+ */
+export function levelPolygon(points: Pt[], size: { w: number; h: number }, pad = 8): Pt[] {
+  if (points.length < 3) return points;
+  const angle = longAxisAngle(points);
+  const cos = Math.cos(-angle);
+  const sin = Math.sin(-angle);
+  const rotated: Pt[] = points.map(([x, y]) => [x * cos - y * sin, x * sin + y * cos]);
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const [x, y] of rotated) {
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
+  }
+  const w = maxX - minX || 1;
+  const h = maxY - minY || 1;
+  const scale = Math.min((size.w - pad * 2) / w, (size.h - pad * 2) / h);
+  const ox = (size.w - w * scale) / 2;
+  const oy = (size.h - h * scale) / 2;
+  return rotated.map(([x, y]) => [ox + (x - minX) * scale, oy + (y - minY) * scale]);
+}
