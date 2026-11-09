@@ -148,7 +148,7 @@ export function toneFor(seg: Segment, lens: LensId, prospectSafe: boolean): Tone
       return statusTone(seg, prospectSafe);
     case 'expiry':
       if (seg.kind === 'forsale') return 'muted';
-      if (seg.kind === 'holdover' || seg.kind === 'mtm') return 'risk';
+      if (seg.kind === 'holdover' || seg.kind === 'mtm') return prospectSafe ? 'neutral' : 'risk';
       if (seg.kind === 'leased' || seg.kind === 'sublease') return expiryTone(seg.monthsToExpiry);
       if (seg.kind === 'committed') return 'committed';
       if (seg.kind === 'projected') return 'projected';
