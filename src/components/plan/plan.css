@@ -1,0 +1,43 @@
+/* Shared visual language for anything that draws a segment: a block in the stack,
+   a bar in the timeline, a slice in the floor plate. Tone colours come from tokens. */
+.sp-seg { cursor: pointer; }
+.sp-seg__rect { stroke-width: 1; transition: filter var(--sp-ease), opacity var(--sp-ease); }
+.sp-seg:hover .sp-seg__rect { filter: brightness(0.96); }
+.sp-seg.is-selected .sp-seg__rect { stroke: var(--sp-color-brand); stroke-width: 2; }
+.sp-seg.is-selected .sp-seg__ring { stroke: var(--sp-color-brand); stroke-opacity: 0.25; stroke-width: 6; fill: none; }
+.sp-seg.is-dim { opacity: 0.35; }
+.sp-seg.is-dim text, .sp-seg.is-dim .sp-badge { display: none; }
+.sp-seg:focus-visible { outline: none; }
+.sp-seg:focus-visible .sp-seg__rect { stroke: var(--sp-color-focus); stroke-width: 2; }
+.sp-seg:focus-visible .sp-seg__ring { stroke: var(--sp-color-focus); stroke-opacity: 0.35; stroke-width: 6; fill: none; }
+.sp-seg--dashed .sp-seg__rect { stroke-dasharray: 4 3; }
+.sp-seg text { pointer-events: none; font-family: var(--sp-font); font-variant-numeric: tabular-nums; }
+.sp-seg__name { font-size: 13px; font-weight: 600; }
+.sp-seg__sub { font-size: 12px; }
+.sp-seg__meta { font-size: 12px; opacity: 0.85; }
+.sp-seg__sf { font-size: 12px; font-weight: 600; }
+.sp-seg__edge { pointer-events: none; }
+
+/* Badges drawn as foreignObject-free SVG groups */
+.sp-badge text { font-size: 11px; font-weight: 600; }
+.sp-badge--risk rect { fill: #b3113e; } .sp-badge--risk text { fill: #fff; }
+.sp-badge--warn rect { fill: #c25e00; } .sp-badge--warn text { fill: #fff; }
+.sp-badge--info rect { fill: var(--sp-color-card); stroke: var(--sp-color-border-strong); } .sp-badge--info text { fill: var(--sp-color-text); }
+.sp-badge--deal rect { fill: var(--sp-color-brand-strong); } .sp-badge--deal text { fill: #fff; }
+.sp-badge--sale rect { fill: #4b2c87; } .sp-badge--sale text { fill: #fff; }
+.sp-badge--lock rect { fill: #3b3f46; } .sp-badge--lock text { fill: #fff; }
+.sp-badge--match rect { fill: #0b7a66; } .sp-badge--match text { fill: #fff; }
+:root[data-theme='dark'] .sp-badge--info rect { fill: var(--sp-color-card-2); }
+
+/* Legend */
+.sp-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }
+.sp-legend__item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.sp-legend__swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid; flex: none; }
+.sp-legend__swatch--dashed { border-style: dashed; }
+.sp-legend__swatch--hatch { background-image: repeating-linear-gradient(45deg, transparent 0 3px, currentColor 3px 4px); }
+.sp-legend__swatch--dots { background-image: radial-gradient(currentColor 1px, transparent 1.3px); background-size: 5px 5px; }
+.sp-legend__swatch--asking { background-image: repeating-linear-gradient(-45deg, transparent 0 4px, currentColor 4px 5px); }
+.sp-legend__swatch--topbar { box-shadow: inset 0 3px 0 currentColor; }
+.sp-legend__label { color: var(--sp-color-text); }
+.sp-legend__num { color: var(--sp-color-text-faint); }
+.sp-legend__note { width: 100%; font-size: var(--sp-text-11); color: var(--sp-color-text-faint); }
