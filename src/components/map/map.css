@@ -131,3 +131,6 @@
   .sp-map-floors { left: var(--sp-space-2); padding: 2px; }
   .sp-map-floor { min-height: 20px; }
 }
+
+.sp-area li, .sp-area__row { white-space: normal; }
+.sp-area .sp-area__name, .sp-area__transit-name { white-space: normal; overflow: visible; text-overflow: clip; }

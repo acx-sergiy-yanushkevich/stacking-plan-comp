@@ -4,6 +4,14 @@ import type { InspectorMode, PlanState } from '../../state/planState';
 import { sf } from '../../domain/format';
 import { Button } from '../ui';
 import { clearSelection, type Patch } from '../plan/actions';
+
+/** Close a block/floor panel and put keyboard focus back on the block (or floor label) it came from. */
+function closeAndRefocus(patch: Patch, key: string | null, floorId: string | null) {
+  clearSelection(patch);
+  const sel = key ? `.sp-stage [data-key="${CSS.escape(key)}"], .sp-stage [data-bar^="tl-${CSS.escape(key)}"]` : floorId ? `.sp-stage [data-floor="${CSS.escape(floorId)}"]` : null;
+  if (!sel) return;
+  requestAnimationFrame(() => document.querySelector<HTMLElement>(sel)?.focus());
+}
 import { segmentText } from '../plan/segmentText';
 import { BuildingPanel } from './BuildingPanel';
 import { BlockPanel } from './BlockPanel';
@@ -33,14 +41,14 @@ function headFor(mode: InspectorMode, model: PlanModel, state: PlanState, patch:
   switch (mode) {
     case 'block': {
       const seg = model.selected;
-      if (!seg) return { title: 'Block', subtitle: 'This block is not on the plan for the as-of date', close: () => clearSelection(patch) };
+      if (!seg) return { title: 'Block', subtitle: 'This block is not on the plan for the as-of date', close: () => closeAndRefocus(patch, state.select, null) };
       const floor = model.floors.find((f) => f.floor.id === seg.floorId);
       const t = segmentText(seg, { safe: model.safe, asOf: model.asOf, lens: state.lens, floorName: floor?.floor.name ?? seg.floorId });
-      return { title: t.name, subtitle: `${floor?.floor.name ?? ''} · ${t.sub}`, close: () => clearSelection(patch) };
+      return { title: t.name, subtitle: `${floor?.floor.name ?? ''} · ${t.sub}`, close: () => closeAndRefocus(patch, state.select, null) };
     }
     case 'floor': {
       const f = model.selectedFloor;
-      return { title: f?.floor.name ?? 'Floor', subtitle: f ? `${sf(f.leasable)} leasable` : undefined, close: () => clearSelection(patch) };
+      return { title: f?.floor.name ?? 'Floor', subtitle: f ? `${sf(f.leasable)} leasable` : undefined, close: () => closeAndRefocus(patch, null, state.floor) };
     }
     case 'find':
       return { title: 'Find space', subtitle: model.filterLabel ?? 'Rank every space that fits a requirement', close: () => patch({ mode: 'building', req: null, max: null, by: null, inquiry: null }) };

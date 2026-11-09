@@ -131,3 +131,19 @@ describe('levelPolygon', () => {
     expect(Math.max(...ys)).toBeLessThanOrEqual(404.1);
   });
 });
+
+describe('suiteExtrusionFeatures', () => {
+  it('slices every floor into one feature per suite plus the lobby, with the floor heights', async () => {
+    const { suiteExtrusionFeatures } = await import('./geometry');
+    const { deriveFloors } = await import('./derive');
+    const { property, TODAY } = await import('../data/mock/property');
+    const floors = deriveFloors(property, TODAY, TODAY);
+    const fc = suiteExtrusionFeatures(property, floors, (s) => s.kind, 13.5);
+    const segs = floors.reduce((n, f) => n + f.segments.length, 0);
+    expect(fc.features.length).toBe(segs + 1); // + Floor 1 lobby
+    const f12 = fc.features.filter((f) => f.properties.floorId === 'F12');
+    expect(f12.length).toBe(2);
+    expect(f12[0].properties.base).toBeCloseTo(11 * 13.5 * 0.3048, 2);
+    for (const f of fc.features) expect(f.geometry.coordinates[0].length).toBeGreaterThanOrEqual(4);
+  });
+});

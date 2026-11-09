@@ -46,18 +46,59 @@ export function timelineModel(p: Property, floors: FloorView[], asOf: ISODate, t
 function barFor(s: FloorView['segments'][number], asOf: ISODate): TimelineBar[] {
   const isLeaseBar = isLeaseKind(s.kind) || s.kind === 'committed' || s.kind === 'projected';
   if (isLeaseBar && s.lease) {
-    return [
+    const bars: TimelineBar[] = [
       {
         key: `tl-${s.key}`,
         segKey: s.key,
         label: s.lease.tenant,
         start: s.lease.commencement,
         end: leaseEnd(s.lease),
-        kind: s.kind,
-        sublease: s.kind === 'sublease',
+        // the head lease stays a lease bar; the sublease itself is drawn as its own bar below
+        kind: s.kind === 'sublease' ? 'leased' : s.kind,
+        sublease: false,
         committed: s.kind === 'committed',
       },
     ];
+    // Sublease: its own bar from the availability date to the sublease expiration.
+    if (s.kind === 'sublease' && s.availability) {
+      bars.push({
+        key: `tl-${s.key}-sub`,
+        segKey: s.key,
+        label: `Sublease · Ste ${s.suite ?? '—'}`,
+        start: s.availability.availableFrom ?? asOf,
+        end: s.availability.subleaseExpiration ?? leaseEnd(s.lease),
+        kind: 'sublease',
+        sublease: true,
+        committed: false,
+      });
+    }
+    // Occupied but already marketed: the coming supply starts on its available-from date.
+    if (s.marketed && s.marketed.kind === 'Lease' && !s.marketed.sublease) {
+      bars.push({
+        key: `tl-${s.key}-mkt`,
+        segKey: s.key,
+        label: `Available · Ste ${s.marketed.suite}`,
+        start: s.marketed.availableFrom ?? asOf,
+        end: null,
+        kind: 'available',
+        sublease: false,
+        committed: false,
+      });
+    }
+    // A signed replacement lease that has not started yet.
+    if (s.next) {
+      bars.push({
+        key: `tl-${s.key}-next`,
+        segKey: s.key,
+        label: s.next.lease.tenant,
+        start: s.next.lease.commencement,
+        end: leaseEnd(s.next.lease),
+        kind: 'committed',
+        sublease: false,
+        committed: true,
+      });
+    }
+    return bars;
   }
   if (s.kind === 'available' || s.kind === 'forsale') {
     return [
@@ -65,7 +106,7 @@ function barFor(s: FloorView['segments'][number], asOf: ISODate): TimelineBar[] 
         key: `tl-${s.key}`,
         segKey: s.key,
         label: s.kind === 'forsale' ? 'For sale' : `Available · Ste ${s.suite ?? '—'}`,
-        start: s.availableFrom ?? asOf,
+        start: s.availableFrom ?? s.availability?.availableFrom ?? asOf,
         end: null,
         kind: s.kind,
         sublease: false,

@@ -6,6 +6,7 @@ import { num, pct } from '../../domain/format';
 import { fmtDate } from '../../domain/dates';
 import { matchingInquiries } from '../../domain/finder';
 import { useIsPhone } from '../../lib/useMedia';
+import { useHoverKeys } from '../../state/hoverStore';
 import { useWidth } from '../../lib/useWidth';
 import { clearSelection, openFloor, selectSegment } from '../plan/actions';
 import { Legend } from '../plan/Legend';
@@ -38,7 +39,9 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
   const selectedLease = state.select ? segIndexLease(model.segIndex, state.select) : null;
   const gutter = phone ? 44 : 124;
   const planPx = Math.max(240, width - gutter - 8);
-  const { floors, segIndex, highlight } = model;
+  const hoverKeys = useHoverKeys();
+  const { floors, segIndex } = model;
+  const highlight = hoverKeys ?? model.highlight;
 
   // Row width follows gross floor area (so the podium reads as the widest plate); the
   // non-leasable part is drawn as a muted block on the right and never counted.
@@ -94,7 +97,12 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
         next = row.boxes[Math.min(boxIdx + 1, row.boxes.length - 1)].key;
         break;
       case 'ArrowLeft':
-        next = row.boxes[Math.max(boxIdx - 1, 0)].key;
+        if (boxIdx === 0) {
+          e.preventDefault();
+          svgRef.current?.querySelector<SVGGElement>(`[data-floor="${row.f.floor.id}"]`)?.focus();
+          return;
+        }
+        next = row.boxes[boxIdx - 1].key;
         break;
       case 'ArrowDown':
         if (rowIdx < rows.length - 1) next = nearest(rows[rowIdx + 1]).key;
@@ -179,13 +187,21 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                 <g
                   role="rowheader"
                   className="sp-gutter__btn"
-                  tabIndex={0}
+                  tabIndex={-1}
+                  data-floor={f.floor.id}
                   aria-label={`${f.floor.name}: ${pct(leasedPct)} leased, ${num(f.leasable)} RSF leasable${f.overAllocatedBy ? `, over-allocated by ${num(f.overAllocatedBy)} SF` : ''}. Open floor summary.`}
                   onClick={() => openFloor(patch, f.floor.id)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
                       openFloor(patch, f.floor.id);
+                    } else if (e.key === 'ArrowRight' && r.boxes[0]) {
+                      e.preventDefault();
+                      focusBlock(r.boxes[0].key);
+                    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      const nr = rows[ri + (e.key === 'ArrowDown' ? 1 : -1)];
+                      if (nr) svgRef.current?.querySelector<SVGGElement>(`[data-floor="${nr.f.floor.id}"]`)?.focus();
                     }
                   }}
                 >
@@ -257,7 +273,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
         <div className="sp-stack__foot">
           <span>Floor width is proportional to gross floor area; suite width to its RSF.</span>
           <span>
-            Keys: ← → suites · ↑ ↓ floors · Enter opens · Esc closes
+            Keys: ← → suites · ↑ ↓ floors · ← from the first suite reaches the floor label · Enter opens · Esc closes
           </span>
         </div>
       )}

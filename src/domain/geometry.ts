@@ -139,6 +139,9 @@ export interface ExtrusionProperties {
   tone: string;
   leasedPct: number;
   sequence: number;
+  /** Present on per-suite slices. */
+  segKey?: string;
+  suite?: string | null;
 }
 
 export interface ExtrusionFeature {
@@ -204,4 +207,57 @@ export function levelPolygon(points: Pt[], size: { w: number; h: number }, pad =
   const ox = (size.w - w * scale) / 2;
   const oy = (size.h - h * scale) / 2;
   return rotated.map(([x, y]) => [ox + (x - minX) * scale, oy + (y - minY) * scale]);
+}
+
+/**
+ * One fill-extrusion feature per suite: each floor's footprint is sliced along its long axis in
+ * proportion to the segments' RSF (plus the non-leasable area as a muted slice), so the 3D building
+ * on the map shows the same blocks as the plan. Slicing happens in local metres around the centroid.
+ */
+export function suiteExtrusionFeatures(
+  p: Property,
+  floors: FloorView[],
+  toneOfSegment: (s: FloorView['segments'][number]) => string,
+  floorHeightFt: number,
+  nonLeasableTone = 'muted',
+): ExtrusionCollection {
+  const h = floorHeightFt * FT_TO_M;
+  const ring = p.footprint.coordinates[0].slice();
+  if (ring.length > 1 && ring[0][0] === ring[ring.length - 1][0] && ring[0][1] === ring[ring.length - 1][1]) ring.pop();
+  const lat0 = ring.reduce((s, c) => s + c[1], 0) / ring.length;
+  const lng0 = ring.reduce((s, c) => s + c[0], 0) / ring.length;
+  const kx = 111_320 * Math.cos((lat0 * Math.PI) / 180);
+  const ky = 110_540;
+  const local: Pt[] = ring.map(([lng, lat]) => [(lng - lng0) * kx, (lat - lat0) * ky]);
+  const unproject = (pts: Pt[]): GeoPolygon => {
+    const coords = pts.map(([x, y]) => [lng0 + x / kx, lat0 + y / ky]);
+    coords.push(coords[0]);
+    return { type: 'Polygon', coordinates: [coords] };
+  };
+  const features: ExtrusionFeature[] = [];
+  for (const f of floors) {
+    const parts: Array<{ size: number; tone: string; segKey?: string; suite?: string | null }> = f.segments.map((s) => ({ size: s.size, tone: toneOfSegment(s), segKey: s.key, suite: s.suite }));
+    if (f.floor.nonLeasable > 0) parts.push({ size: f.floor.nonLeasable, tone: nonLeasableTone, suite: null });
+    const polys = parts.length <= 1 ? [local] : slicePolygon(local, parts.map((x) => x.size));
+    parts.forEach((part, i) => {
+      const poly = polys[i];
+      if (!poly || poly.length < 3) return;
+      features.push({
+        type: 'Feature',
+        properties: {
+          floorId: f.floor.id,
+          name: f.floor.name,
+          base: (f.floor.sequence - 1) * h,
+          height: f.floor.sequence * h,
+          tone: part.tone,
+          leasedPct: f.leasable > 0 ? f.leased / f.leasable : 0,
+          sequence: f.floor.sequence,
+          segKey: part.segKey,
+          suite: part.suite,
+        },
+        geometry: unproject(poly),
+      });
+    });
+  }
+  return { type: 'FeatureCollection', features };
 }

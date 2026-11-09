@@ -128,7 +128,9 @@ export function TimelineAxis({ start, end, asOf, today, plotLeft, plotWidth, str
         {allTicks.map((t) => {
           const x = X(t.date);
           const labelW = measure(t.label, LABEL_FONT) + 8;
-          const collides = showToday && x < todayLabelX0 + todayLabelW && x + labelW > todayLabelX0;
+          const cursorX = X(asOf);
+          const nearCursor = x + labelW > cursorX - 44 && x < cursorX + 44;
+          const collides = nearCursor || (showToday && x < todayLabelX0 + todayLabelW && x + labelW > todayLabelX0);
           const labelled = Number(t.label) % every === 0 && !collides && x + labelW <= plotLeft + plotWidth;
           return (
             <g key={t.date}>

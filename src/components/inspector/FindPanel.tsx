@@ -8,6 +8,7 @@ import { Button, Chip, Icon, Segmented, SelectField, TextField } from '../ui';
 import { selectSegment, type Patch } from '../plan/actions';
 import { Section } from './parts';
 import { nearMisses } from '../../domain/finder';
+import { setHoverKeys } from '../../state/hoverStore';
 
 export interface FindPanelProps {
   model: PlanModel;
@@ -126,10 +127,22 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
                     type="button"
                     className={`sp-ins__row ${hovered === i ? 'is-hover' : ''} ${selected ? 'is-selected' : ''}`}
                     onClick={() => selectSegment(patch, o.keys[0])}
-                    onMouseEnter={() => setHovered(i)}
-                    onMouseLeave={() => setHovered(null)}
-                    onFocus={() => setHovered(i)}
-                    onBlur={() => setHovered(null)}
+                    onMouseEnter={() => {
+                      setHovered(i);
+                      setHoverKeys(new Set(o.keys));
+                    }}
+                    onMouseLeave={() => {
+                      setHovered(null);
+                      setHoverKeys(null);
+                    }}
+                    onFocus={() => {
+                      setHovered(i);
+                      setHoverKeys(new Set(o.keys));
+                    }}
+                    onBlur={() => {
+                      setHovered(null);
+                      setHoverKeys(null);
+                    }}
                     aria-pressed={selected}
                   >
                     <div className="sp-ins__row-main">

@@ -77,6 +77,9 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
       </Section>
 
       <Section title="At risk">
+        {safe ? (
+          <p className="sp-ins__explain">Tenant risk is withheld in prospect-safe mode.</p>
+        ) : (
         <ul className="sp-ins__list">
           {(
             [
@@ -102,6 +105,7 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
             </li>
           ))}
         </ul>
+        )}
       </Section>
 
       <Section title="Coming supply">
@@ -139,7 +143,39 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
         </ul>
       </Section>
 
+      {!safe && (
+      <Section title="In-place rent">
+        {model.kpis.rentByType.length === 0 ? (
+          <p className="sp-ins__explain">No rents on record.</p>
+        ) : (
+          <ul className="sp-ins__list">
+            {model.kpis.rentByType.map((r) => (
+              <li key={r.type}>
+                <div className="sp-ins__row" title="SF-weighted average of in-place rents, excluding confidential leases">
+                  <div className="sp-ins__row-main">
+                    <div className="sp-ins__row-title">
+                      <span>{r.type}</span>
+                    </div>
+                    <div className="sp-ins__row-meta">
+                      <span>{sf(Math.round(r.sf))} leased</span>
+                    </div>
+                  </div>
+                  <div className="sp-ins__row-end">
+                    <span className="sp-ins__row-value">${r.avg.toFixed(2)}/SF/yr</span>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="sp-ins__note">SF-weighted, annualised; confidential leases excluded. Never blended across lease types.</p>
+      </Section>
+      )}
+
       <Section title="Pipeline by stage">
+        {safe ? (
+          <p className="sp-ins__explain">Deal activity is withheld in prospect-safe mode.</p>
+        ) : (
         <ul className="sp-ins__list">
           {byStage.map((row) => (
             <li key={row.stage}>
@@ -159,7 +195,7 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
             </li>
           ))}
         </ul>
-        {safe && <p className="sp-ins__note">Deal sizes and prospects are hidden in prospect-safe mode.</p>}
+        )}
       </Section>
 
       <Section title="Data issues" aside={<Button size="sm" variant="ghost" iconRight="chevron-right" onClick={() => patch({ mode: 'issues' })}>Review issues</Button>}>
@@ -193,7 +229,7 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
                     </div>
                     <div className="sp-ins__row-meta">
                       <span>
-                        {fmtDate(c.at).replace(/, \d{4}$/, '')} · {c.by}
+                        {fmtDate(c.at).replace(/, \d{4}$/, '')}{!safe && ` · ${c.by}`}
                       </span>
                     </div>
                     <div className="sp-ins__row-meta">

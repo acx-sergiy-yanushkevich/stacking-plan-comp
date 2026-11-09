@@ -31,6 +31,8 @@ export interface BlockProps {
 
 const PAD = 8;
 const LINE = 15;
+/** One-letter state cue for blocks too narrow for any text. */
+const GLYPH: Partial<Record<Segment['kind'], string>> = { available: 'A', sublease: 'S', committed: 'C', forsale: '$', holdover: '!', mtm: '!', unmarketed: '?', projected: 'V' };
 
 /** One suite on the plan: tone fill, pattern, accent bar, adaptive text, badges. */
 export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelect, onFocus, onKeyDown, enlarged, compact, related }: BlockProps) {
@@ -60,8 +62,10 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
     if (lines.length < maxLines) lines.push({ t: fits(sub, inner, FONT_SUB) ? sub : `${text.sfShort} SF`, cls: 'sp-seg__sub', font: FONT_SUB });
     if (lines.length < maxLines && text.meta && fits(text.meta, inner, FONT_SUB)) lines.push({ t: text.meta, cls: 'sp-seg__meta', font: FONT_SUB });
     else if (lines.length < maxLines && text.meta) {
-      const short = fitWords(text.meta, inner, FONT_SUB);
-      if (short && short.length >= 6) lines.push({ t: short, cls: 'sp-seg__meta', font: FONT_SUB });
+      // A rate is shown whole or not at all (dropping the lease type would mislead); other facts may lose trailing parts.
+      const isRate = text.meta.includes('$');
+      const alt = isRate ? text.meta.replace(/^Asking /, '') : fitWords(text.meta, inner, FONT_SUB);
+      if (alt && (isRate ? fits(alt, inner, FONT_SUB) : alt.length >= 6)) lines.push({ t: alt, cls: 'sp-seg__meta', font: FONT_SUB });
     }
   } else if (tier === 2) {
     // Narrow: the whole name (on one or two lines) or nothing; a partial name misleads more than it helps.
@@ -75,11 +79,13 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
     if (fits(sfText, inner, FONT_SUB)) lines.push({ t: sfText, cls: 'sp-seg__sf', font: FONT_SUB });
   }
   if (lines.length > maxLines) lines.length = maxLines;
+  // Narrowest tier: a single state glyph so colour is never the only cue.
+  const glyph = lines.length === 0 && w >= 24 && h >= 40 ? GLYPH[seg.kind] ?? null : null;
 
   const pattern = text.pattern;
   const patternFill = pattern === 'hatch' ? `url(#${PATTERN_IDS.hatch})` : pattern === 'dots' ? `url(#${PATTERN_IDS.dots})` : pattern === 'asking' ? `url(#${PATTERN_IDS.asking})` : null;
   // WCAG 2.5.3: the accessible name starts with exactly what is visible, then adds context.
-  const visible = [...lines.map((l) => l.t), showOther && other ? other.text : '', showDeal && deal ? deal.text : ''].filter(Boolean).join(' ');
+  const visible = [glyph ?? '', ...lines.map((l) => l.t), showOther && other ? other.text : '', showDeal && deal ? deal.text : ''].filter(Boolean).join(' ');
   const ariaLabel = visible ? `${visible}. ${text.aria}` : text.aria;
   const accentLeft = tone === 'expiring' || tone === 'risk';
   const accentTop = tone === 'rent-net';
@@ -117,6 +123,11 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
       )}
       {accentLeft && <rect className="sp-seg__accent" x={0} y={0} width={3} height={h} rx={1} fill={edge} />}
       {accentTop && <rect className="sp-seg__accent" x={0} y={0} width={w} height={3} fill={edge} />}
+      {glyph && (
+        <text className="sp-seg__glyph" x={w / 2} y={h / 2 + 4} textAnchor="middle" fill={color}>
+          {`${glyph} `}
+        </text>
+      )}
       {lines.map((l, i) => (
         <text key={i} className={l.cls} x={PAD + (accentLeft ? 3 : 0)} y={PAD + 11 + i * LINE} fill={color}>
           {`${l.t} `}

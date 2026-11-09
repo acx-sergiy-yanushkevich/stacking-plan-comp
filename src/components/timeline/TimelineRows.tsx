@@ -1,4 +1,4 @@
-import type { KeyboardEvent, PointerEvent } from 'react';
+import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import type { ISODate } from '../../domain/types';
 import type { Segment } from '../../domain/derive';
 import type { TimelineBar } from '../../domain/timeline';
@@ -77,12 +77,36 @@ function ellipsize(text: string, maxPx: number, font: string): string {
 }
 
 export function TimelineRows({ rows, segIndex, start, end, asOf, lens, safe, plotLeft, plotWidth, clipId, highlight, selected, hovered, onSelect, onHover }: TimelineRowsProps) {
+  // One tab stop for the whole chart: arrows move between bars (← → within a floor, ↑ ↓ across floors).
+  const rootRef = useRef<SVGGElement | null>(null);
+  const [focusKey, setFocusKey] = useState<string | null>(null);
+  const order = rows.map((r) => [...r.lanes.flat()].sort((a, b) => a.start.localeCompare(b.start)));
+  const allKeys = order.flat().map((b) => b.key);
+  const selectedBar = order.flat().find((b) => b.segKey === selected)?.key ?? null;
+  const activeKey = focusKey && allKeys.includes(focusKey) ? focusKey : (selectedBar ?? allKeys[0] ?? null);
+  const focusBar = (key: string) => {
+    setFocusKey(key);
+    requestAnimationFrame(() => rootRef.current?.querySelector<SVGGElement>(`[data-bar="${CSS.escape(key)}"]`)?.focus());
+  };
+  const navigate = (key: string, dir: 'left' | 'right' | 'up' | 'down' | 'home' | 'end') => {
+    const ri = order.findIndex((r) => r.some((b) => b.key === key));
+    if (ri < 0) return;
+    const bi = order[ri].findIndex((b) => b.key === key);
+    let next: string | undefined;
+    if (dir === 'right') next = order[ri][bi + 1]?.key;
+    else if (dir === 'left') next = order[ri][bi - 1]?.key;
+    else if (dir === 'down') next = order.slice(ri + 1).find((r) => r.length)?.[0]?.key;
+    else if (dir === 'up') next = [...order.slice(0, ri)].reverse().find((r) => r.length)?.[0]?.key;
+    else if (dir === 'home') next = order[ri][0]?.key;
+    else if (dir === 'end') next = order[ri].at(-1)?.key;
+    if (next) focusBar(next);
+  };
   const X = (d: ISODate) => plotLeft + Math.min(plotWidth, Math.max(0, dateToX(d, start, end, plotWidth)));
   const cursorX = X(asOf);
   const plotRight = plotLeft + plotWidth;
 
   return (
-    <g className="sp-tl-rows">
+    <g className="sp-tl-rows" ref={rootRef}>
       {rows.map(({ row, lanes, top: y, height }) => {
         const parts = splitFloorName(row.floor.name);
         const leasable = row.floor.size - row.floor.nonLeasable;
@@ -123,6 +147,9 @@ export function TimelineRows({ rows, segIndex, start, end, asOf, lens, safe, plo
                         bar={bar}
                         seg={seg}
                         freeRight={freeRight}
+                        focusable={activeKey === bar.key}
+                        onFocusBar={() => setFocusKey(bar.key)}
+                        onNavigate={(dir) => navigate(bar.key, dir)}
                         floorName={row.floor.name}
                         y={y + ROW_PAD + li * LANE_PITCH}
                         X={X}
@@ -164,6 +191,9 @@ interface BarProps {
   safe: boolean;
   /** Pixel x where the next bar in this lane starts (label may spill into the gap). */
   freeRight: number;
+  focusable: boolean;
+  onFocusBar: () => void;
+  onNavigate: (dir: 'left' | 'right' | 'up' | 'down' | 'home' | 'end') => void;
   dim: boolean;
   selected: boolean;
   hovered: boolean;
@@ -171,7 +201,7 @@ interface BarProps {
   onHover: (h: BarHover | null) => void;
 }
 
-function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf, lens, safe, freeRight, dim, selected, hovered, onSelect, onHover }: BarProps) {
+function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf, lens, safe, freeRight, focusable, onFocusBar, onNavigate, dim, selected, hovered, onSelect, onHover }: BarProps) {
   const text = segmentText(seg, { safe, asOf, lens, floorName });
   const tone = text.tone;
   const fill = `var(--tone-${tone}-fill)`;
@@ -194,7 +224,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
   const extW = (isHoldover || isProjected) && cursorX > x1 ? cursorX - x1 : 0;
 
   // Tags sit at the bar's start; the label moves right to make room.
-  const tagText = isMtm ? 'MTM' : isHoldover && extW > 0 ? 'Holdover' : null;
+  const tagText = safe ? null : isMtm ? 'MTM' : isHoldover && extW > 0 ? 'Holdover' : null;
   const tagW = tagText ? Math.ceil(measure(tagText, TAG_FONT)) + 10 : 0;
   const tagX = tagText ? visibleX0 + 4 : 0;
   const labelPad = 8;
@@ -203,12 +233,35 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
   const textRoom = textEnd - textX;
 
   // Label tiers by visible width: the <title> and aria-label always carry the full text.
-  const name = isAvail ? bar.label : isProjected && seg.lease ? `${tenantLabel(seg.lease, safe)} · vacated` : text.name;
-  const sub = isAvail ? `${sf(seg.size)}${text.meta ? ` · ${text.meta}` : ''}` : text.sub;
+  const isMkt = bar.key.endsWith('-mkt');
+  const isNext = bar.key.endsWith('-next');
+  const isSubBar = bar.key.endsWith('-sub');
+  const name = isNext && seg.next
+    ? tenantLabel(seg.next.lease, safe)
+    : isMkt
+      ? bar.label
+      : isSubBar
+        ? bar.label
+        : isAvail
+          ? bar.label
+          : isProjected && seg.lease
+            ? `${tenantLabel(seg.lease, safe)} · vacated`
+            : seg.kind === 'sublease' && seg.lease
+              ? tenantLabel(seg.lease, safe)
+              : text.name;
+  const sub = isNext && seg.next
+    ? `Ste ${seg.next.unit.suite} · ${sf(seg.next.unit.size)} · moves in ${fmtDate(seg.next.lease.commencement)}`
+    : isMkt && seg.marketed
+      ? `${sf(seg.marketed.size)} · from ${fmtDate(bar.start)}`
+      : isSubBar && seg.availability
+        ? `${sf(seg.availability.size)}${bar.end ? ` · thru ${fmtDate(bar.end)}` : ''}`
+        : isAvail
+          ? `${sf(seg.size)}${text.meta ? ` · ${text.meta}` : ''}`
+          : text.sub;
   // Names with digits ("Vacates Apr '27", "Available · Ste 1250") are shown whole or not at all.
   // Whole name or nothing: a partial tenant name misleads (the <title> carries the full text).
   const fitName = (room: number) => (measure(name, NAME_FONT) <= room ? name : fitParts(name, room, NAME_FONT));
-  const sfOnly = measure(text.sfShort, NAME_FONT) <= textRoom ? text.sfShort : '';
+  const sfOnly = measure(`${text.sfShort} SF`, NAME_FONT) <= textRoom ? `${text.sfShort} SF` : measure(text.sfShort, NAME_FONT) <= textRoom ? text.sfShort : '';
   let nameText = '';
   let subText = '';
   if (visibleW >= 180 && textRoom > 0) {
@@ -247,9 +300,13 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
 
   const hover = (e: PointerEvent<SVGGElement>) => onHover({ key: bar.key, text: tooltip, clientX: e.clientX, clientY: e.clientY });
   const onKeyDown = (e: KeyboardEvent<SVGGElement>) => {
+    const dirs: Record<string, 'left' | 'right' | 'up' | 'down' | 'home' | 'end'> = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', Home: 'home', End: 'end' };
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onSelect(bar.segKey);
+    } else if (dirs[e.key]) {
+      e.preventDefault();
+      onNavigate(dirs[e.key]);
     }
   };
 
@@ -258,17 +315,21 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
     <g
       className={classes}
       role="button"
-      tabIndex={0}
+      tabIndex={focusable ? 0 : -1}
       aria-label={aria}
       aria-pressed={selected}
       data-seg={bar.segKey}
+      data-bar={bar.key}
       style={{ color: edge }}
       onClick={() => onSelect(bar.segKey)}
       onKeyDown={onKeyDown}
       onPointerEnter={hover}
       onPointerMove={hover}
       onPointerLeave={() => onHover(null)}
-      onFocus={() => onHover({ key: bar.key, text: tooltip, clientX: Number.NaN, clientY: Number.NaN })}
+      onFocus={() => {
+        onFocusBar();
+        onHover({ key: bar.key, text: tooltip, clientX: Number.NaN, clientY: Number.NaN });
+      }}
       onBlur={() => onHover(null)}
     >
       {!hovered && <title>{tooltip}</title>}

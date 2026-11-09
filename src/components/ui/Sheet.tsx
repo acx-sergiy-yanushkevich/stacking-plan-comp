@@ -21,6 +21,11 @@ export function Sheet({ open, onClose, title, children, snap = 'half', hideHeade
   }, [open, snap]);
   useEffect(() => {
     if (!open) return;
+    const first = ref.current?.querySelector<HTMLElement>('.sp-sheet__body button, .sp-sheet__body [tabindex="0"], .sp-sheet__handle');
+    first?.focus({ preventScroll: true });
+  }, [open]);
+  useEffect(() => {
+    if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };

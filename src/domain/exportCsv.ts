@@ -93,13 +93,16 @@ function segmentRow(f: FloorView, s: Segment, safe: boolean): string[] {
     }
   }
 
-  const months = s.kind === 'holdover' ? 'Holdover' : s.kind === 'mtm' ? 'MTM' : s.monthsToExpiry === null ? '' : String(Math.max(0, s.monthsToExpiry));
+  const risk = s.kind === 'holdover' || s.kind === 'mtm';
+  const months = risk ? (safe ? '' : s.kind === 'holdover' ? 'Holdover' : 'MTM') : s.monthsToExpiry === null ? '' : String(Math.max(0, s.monthsToExpiry));
   const live = activeDeals(s.lease?.deals).length + activeDeals(s.availability?.deals).length + activeDeals(s.marketed?.deals).length;
 
-  return [f.floor.name, s.suite ?? '', tenant, String(s.size), STATE_LABEL[s.kind], commencement, expiration, months, rate, unit, leaseType, String(live)];
+  const state = safe && risk ? 'Leased' : STATE_LABEL[s.kind];
+  if (safe && risk) expiration = '';
+  return [f.floor.name, s.suite ?? '', tenant, String(s.size), state, commencement, expiration, months, rate, unit, leaseType, String(live)];
 }
 
-export const RENT_ROLL_DISPLAY_HEADER = ['Floor', 'Suite', 'Tenant', 'RSF', 'State', 'Commencement', 'Expiration', 'Remaining', 'Rate', 'Live deals'] as const;
+export const RENT_ROLL_DISPLAY_HEADER = ['Floor', 'Suite', 'Tenant', 'RSF', 'State', 'Commencement', 'Expiration', 'Remaining', 'Rate / price', 'Live deals'] as const;
 
 /**
  * The same rent roll, formatted for reading (print layout): thousands separators,
@@ -135,9 +138,11 @@ export function rentRollDisplay(_p: Property, floors: FloorView[], _asOf: ISODat
         if (s.kind === 'forsale') rate = rentVisible(a, safe) && a.askingPrice ? `${usdCompact(a.askingPrice)} · ${usdCompact(Math.round(a.askingPrice / s.size))}/SF` : '—';
         else rate = rentVisible(a, safe) && a.rentHigh > 0 ? `Asking ${rateRange(a.rentLow, a.rentHigh, a.rateUnit, a.leaseType)}` : '—';
       }
-      const remaining = s.kind === 'holdover' ? 'Holdover' : s.kind === 'mtm' ? 'MTM' : s.monthsToExpiry === null ? '—' : fmtMonths(Math.max(0, s.monthsToExpiry));
+      const risk = s.kind === 'holdover' || s.kind === 'mtm';
+      const remaining = risk ? (safe ? '—' : s.kind === 'holdover' ? 'Holdover' : 'MTM') : s.monthsToExpiry === null ? '—' : fmtMonths(Math.max(0, s.monthsToExpiry));
+      if (safe && risk) end = '—';
       const live = activeDeals(s.lease?.deals).length + activeDeals(s.availability?.deals).length + activeDeals(s.marketed?.deals).length;
-      const row = [f.floor.name, s.suite ?? '—', tenant, num(s.size), STATE_LABEL[s.kind], start, end, remaining, rate, live ? String(live) : '—'];
+      const row = [f.floor.name, s.suite ?? '—', tenant, num(s.size), safe && risk ? 'Leased' : STATE_LABEL[s.kind], start, end, remaining, rate, live ? String(live) : '—'];
       rows.push(safe ? row.slice(0, -1) : row);
     }
   }

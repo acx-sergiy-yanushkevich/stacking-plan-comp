@@ -23,6 +23,8 @@
 .sp-header__asof .sp-btn { font-variant-numeric: tabular-nums; }
 .sp-header__asof--projected .sp-btn { background: var(--sp-color-warn-soft); border-color: var(--sp-color-warn); color: var(--sp-color-warn); }
 @media (max-width: 760px) {
+  .sp-header__facts .sp-dot { display: none; }
+  .sp-header__facts { gap: 2px 12px; }
   .sp-sale { flex-wrap: wrap; row-gap: 4px; }
   .sp-sale strong { white-space: nowrap; }
   .sp-sale__facts { width: 100%; gap: 10px; }

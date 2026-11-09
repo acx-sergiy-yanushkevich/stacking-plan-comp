@@ -143,7 +143,7 @@ function Shell() {
       <SaleBanner property={property} leasable={model.kpis.leasable} />
       <KpiStrip model={model} state={state} onAction={onKpi} />
       <Toolbar state={state} patch={patch} />
-      <main className="sp-main sp-no-print" id="sp-plan" tabIndex={-1}>
+      <main className={`sp-main sp-no-print ${state.view === 'floor' ? 'sp-main--wide' : ''}`} id="sp-plan" tabIndex={-1}>
         <div className="sp-stage">
           {state.view === 'stack' && <StackView model={model} state={state} patch={patch} />}
           {state.view === 'floor' && <FloorView model={model} state={state} patch={patch} />}
@@ -154,13 +154,13 @@ function Shell() {
             </Suspense>
           )}
         </div>
-        {!narrow && (
+        {!narrow && state.view !== 'floor' && (
           <aside className="sp-inspector sp-card" aria-label="Inspector">
             {inspector}
           </aside>
         )}
       </main>
-      {narrow && (
+      {narrow && state.view !== 'floor' && (
         <Sheet open={sheetOpen} onClose={() => (mode === 'block' || mode === 'floor' ? clearSelection(patch) : patch({ mode: 'building', req: null, inquiry: null, window: null }))} title={sheetTitle} hideHeader>
           {inspector}
         </Sheet>

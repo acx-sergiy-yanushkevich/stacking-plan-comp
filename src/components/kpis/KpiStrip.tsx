@@ -79,7 +79,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
           label: 'Pipeline',
           value: String(k.pipeline.deals),
           unit: k.pipeline.deals === 1 ? 'deal' : 'deals',
-          context: `${k.pipeline.onVacancy} on vacancies · ${num(k.pipeline.sf)} SF`,
+          context: `${k.pipeline.onVacancy} on vacancies`,
           active: state.lens === 'deals',
           title: 'Live deals on this building. Click for the deals lens.',
         }

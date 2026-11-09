@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 const base = process.env.BASE ?? 'http://localhost:4180/';
 const src = readFileSync(new URL('../src/data/mock/property.ts', import.meta.url), 'utf8');
 const names = new Set();
-for (const re of [/tenant: '([^']+)'/g, /tenantContact: '([^']+)'/g, /deal\('([^']+)'/g, /prospect: '([^']+)'/g]) {
+for (const re of [/tenant: '([^']+)'/g, /tenantContact: '([^']+)'/g, /deal\('([^']+)'/g, /prospect: '([^']+)'/g, /owner: '([^']+)'/g, /by: '([^']+)'/g, /broker: '([^']+)'/g]) {
   for (const m of src.matchAll(re)) names.add(m[1]);
 }
 // Property-level names that legitimately stay visible.
@@ -52,6 +52,7 @@ for (const qs of states) {
     return parts.join('\n');
   });
   const found = [...names].filter((n) => text.includes(n));
+  for (const w of ['Holdover', 'MTM', 'Month-to-month']) if (new RegExp(`\\b${w}\\b`).test(text)) found.push(`risk word "${w}"`);
   const rent = inPlaceRent.exec(text);
   if (found.length || rent) {
     leaks += found.length + (rent ? 1 : 0);

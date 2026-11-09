@@ -19,7 +19,8 @@ export interface WorklistPanelProps {
 
 const WINDOWS: WindowKey[] = ['risk', '90', '180', '12', '24'];
 
-function monthsLeft(row: WorklistRow) {
+function monthsLeft(row: WorklistRow, safe = false) {
+  if (safe && (row.kind === 'holdover' || row.kind === 'mtm' || row.months === null)) return <span className="sp-ins__row-value">—</span>;
   if (row.kind === 'holdover') return <Chip tone="error">Holdover</Chip>;
   if (row.kind === 'mtm' || row.months === null) return <Chip tone="error">MTM</Chip>;
   return <span className="sp-ins__row-value">{fmtMonths(row.months)}</span>;
@@ -27,7 +28,8 @@ function monthsLeft(row: WorklistRow) {
 
 export function WorklistPanel({ model, state, patch }: WorklistPanelProps) {
   const { safe, today } = model;
-  const window: WindowKey = state.window ?? '12';
+  const window: WindowKey = state.window === 'risk' && safe ? '12' : (state.window ?? '12');
+  const windows = safe ? WINDOWS.filter((w) => w !== 'risk') : WINDOWS;
   const run = useRecordAction();
 
   useEffect(() => {
@@ -50,14 +52,14 @@ export function WorklistPanel({ model, state, patch }: WorklistPanelProps) {
     <>
       <div className="sp-ins__section">
         <div className="sp-ins__chips" role="group" aria-label="Window">
-          {WINDOWS.map((w) => (
+          {windows.map((w) => (
             <Chip key={w} selected={window === w} count={model.worklist(w).length} onClick={() => patch({ window: w })}>
               {WINDOW_LABEL[w]}
             </Chip>
           ))}
         </div>
         <p className="sp-ins__note">
-          {window === 'risk' ? 'Holdover and month-to-month leases: no term protects this income.' : `Leases ending within ${WINDOW_LABEL[window]} of the as-of date, soonest first.`}
+          {window === 'risk' ? 'Holdover and month-to-month leases: no term protects this income.' : `Leases ending within ${WINDOW_LABEL[window]} of the as-of date, soonest first.${safe ? ' Prospect-safe: names, brokers and tenant risk withheld.' : ''}`}
         </p>
       </div>
 
@@ -90,14 +92,16 @@ export function WorklistPanel({ model, state, patch }: WorklistPanelProps) {
                         </span>
                         <span>· {rent}</span>
                       </div>
-                      <div className="sp-ins__row-meta">
-                        {row.broker && <span>{row.broker}</span>}
-                        <span>{row.broker ? '· ' : ''}{touch}</span>
-                      </div>
+                      {!safe && (
+                        <div className="sp-ins__row-meta">
+                          {row.broker && <span>{row.broker}</span>}
+                          <span>{row.broker ? '· ' : ''}{touch}</span>
+                        </div>
+                      )}
                     </div>
                     <div className="sp-ins__row-end">
                       <span className="sp-ins__row-value">{sf(row.size)}</span>
-                      {monthsLeft(row)}
+                      {monthsLeft(row, safe)}
                     </div>
                   </button>
                   {!row.renewal && (

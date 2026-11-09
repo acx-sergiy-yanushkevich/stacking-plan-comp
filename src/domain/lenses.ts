@@ -205,7 +205,7 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
         { tone: 'exp-3', label: '2–3 yr' },
         { tone: 'exp-4', label: '3–5 yr' },
         { tone: 'exp-5', label: '5+ yr' },
-        { tone: 'risk', label: 'Holdover / MTM' },
+        ...(prospectSafe ? [{ tone: 'neutral' as Tone, label: 'Leased (term withheld)' }] : [{ tone: 'risk' as Tone, label: 'Holdover / MTM' }]),
         { tone: 'committed', label: 'Committed', pattern: 'hatch' },
         { tone: 'projected', label: 'Projected vacancy', pattern: 'dashed' },
         { tone: 'empty', label: 'Vacant', pattern: 'dashed' },

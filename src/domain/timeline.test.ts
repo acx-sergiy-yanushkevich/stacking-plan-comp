@@ -39,9 +39,17 @@ describe('timelineModel', () => {
     expect(sale.label).toBe('For sale');
   });
   it('flags sublease bars', () => {
-    const s = row('F7').bars.find((b) => b.segKey === 'L14-U2')!;
-    expect(s.sublease).toBe(true);
-    expect(s.label).toBe('Infinity Info Systems');
+    const bars = row('F7').bars.filter((b) => b.segKey === 'L14-U2');
+    const head = bars.find((b) => !b.sublease)!;
+    const sub = bars.find((b) => b.sublease)!;
+    expect(head.label).toBe('Infinity Info Systems');
+    expect(head.kind).toBe('leased');
+    expect(sub.label).toBe('Sublease · Ste 720');
+    expect(sub.end).toBe('2030-09-30');
+    // Cirrus (occupied, marketed for Apr 2027) gets a coming-supply bar from its available-from date.
+    const mkt = row('F6').bars.find((b) => b.key.endsWith('-mkt'))!;
+    expect(mkt.start).toBe('2027-04-01');
+    expect(mkt.kind).toBe('available');
   });
   it('uses today − 12 months when every lease is newer', () => {
     const later = timelineModel(property, floors, '2030-01-15', '2030-01-15');

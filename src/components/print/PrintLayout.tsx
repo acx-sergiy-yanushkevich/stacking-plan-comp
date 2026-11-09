@@ -25,7 +25,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
   const worklist: WorklistRow[] = model.worklist('12');
   const noop = () => {};
   return (
-    <div className={`sp-print ${visible ? 'sp-print--visible' : ''}`} aria-hidden={!visible}>
+    <div className={`sp-print ${visible ? 'sp-print--visible' : ''}`} aria-hidden={!visible} inert={!visible}>
       <section className="sp-print__page">
         <header className="sp-print__head">
           <div>
@@ -47,7 +47,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
           <Kpi label="Largest block" value={sf(k.maxContiguous.size)} note={k.maxContiguous.floorName ?? ''} />
           <Kpi label="Expiring 12 mo" value={sf(k.expiring12)} note={`${k.expiring12Leases} leases`} />
           <Kpi label="WALT" value={`${k.walt.toFixed(1)} yr`} note="SF-weighted" />
-          <Kpi label="Pipeline" value={`${k.pipeline.deals} deals`} note={`${sf(k.pipeline.sf)} in play`} />
+          <Kpi label="Pipeline" value={safe ? 'Withheld' : `${k.pipeline.deals} deals`} note={safe ? 'Prospect-safe' : `${sf(k.pipeline.sf)} in play`} />
         </div>
         <Legend items={model.legend} compact />
         <div className="sp-print__plan">

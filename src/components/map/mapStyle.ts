@@ -110,7 +110,7 @@ export interface FloorFeatureCollection {
 export function toFloorFeatures(fc: ExtrusionCollection, inflate = 1): FloorFeatureCollection {
   return {
     type: 'FeatureCollection',
-    features: fc.features.map((f) => ({ type: 'Feature', id: f.properties.sequence, properties: f.properties, geometry: inflatePolygon(f.geometry, inflate) })),
+    features: fc.features.map((f, i) => ({ type: 'Feature', id: i + 1, properties: f.properties, geometry: inflatePolygon(f.geometry, inflate) })),
   };
 }
 

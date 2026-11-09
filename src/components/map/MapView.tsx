@@ -4,7 +4,8 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import type { DataSource, FootprintResult } from '../../data/sources/DataSource';
 import type { FloorView } from '../../domain/derive';
 import { num, pct } from '../../domain/format';
-import { extrusionFeatures } from '../../domain/geometry';
+import { suiteExtrusionFeatures } from '../../domain/geometry';
+import { toneFor } from '../../domain/lenses';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { usePrefersDark, usePrefersReducedMotion } from '../../lib/useMedia';
@@ -201,7 +202,8 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
   const mapProperty = useMemo(() => (live ? { ...property, footprint: live.polygon, footprintSource: live.source } : property), [property, live]);
 
   const toneOf = useCallback((f: FloorView) => dominantTone(f, state.lens, state.safe), [state.lens, state.safe]);
-  const features = useMemo(() => toFloorFeatures(extrusionFeatures(mapProperty, floors, toneOf, property.floorHeightFt), INFLATE), [mapProperty, floors, toneOf, property.floorHeightFt]);
+  const toneOfSeg = useCallback((s: FloorView['segments'][number]) => toneFor(s, state.lens, state.safe), [state.lens, state.safe]);
+  const features = useMemo(() => toFloorFeatures(suiteExtrusionFeatures(mapProperty, floors, toneOfSeg, property.floorHeightFt), INFLATE), [mapProperty, floors, toneOfSeg, property.floorHeightFt]);
   const toneKey = useMemo(() => [...new Set(features.features.map((f) => f.properties.tone))].sort().join(','), [features]);
 
   // Tone → hex from the CSS tokens, re-read after a theme change has reached the DOM.
@@ -310,7 +312,7 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
 
   return (
     <div className={`sp-map ${status === 'failed' ? 'is-fallback' : ''}`.trim()} data-status={status}>
-      <div ref={containerRef} className="sp-map__canvas" aria-label="3D map of the property" role="img" />
+      <div ref={containerRef} className="sp-map__canvas" aria-label="3D map of the property" role="application" />
       {status === 'failed' && <FootprintFallback footprint={mapProperty.footprint} floors={floors} toneOf={toneOf} selectedFloorId={state.floor} onSelect={selectFloor} />}
 
       <div className="sp-map-overlay sp-map-info">
