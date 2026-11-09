@@ -220,7 +220,8 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
   let x1: number;
   if (isAvail) x1 = plotRight;
   else if (isMtm) x1 = Math.min(plotRight, Math.max(cursorX, visibleX0 + 24) + FADE_PX);
-  else if (safeRisk) x1 = Math.max(cursorX, visibleX0 + 24);
+  else if (safeRisk && bar.kind === 'mtm') x1 = Math.min(plotRight, Math.max(cursorX, visibleX0 + 24) + FADE_PX);
+  else if (safeRisk) x1 = bar.end ? Math.max(X(bar.end), visibleX0 + 24) : plotRight;
   else x1 = bar.end ? X(bar.end) : plotRight;
   const w = Math.max(2, x1 - x0);
   const visibleW = x1 - visibleX0;
@@ -352,7 +353,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
       onBlur={() => onHover(null)}
     >
       {!hovered && <title>{tooltip}</title>}
-      {(isMtm || isAvail) && (
+      {(isMtm || isAvail || (safeRisk && bar.kind === 'mtm')) && (
         <defs>
           <linearGradient id={gradId} gradientUnits="userSpaceOnUse" x1={x1 - FADE_PX} x2={x1} y1={0} y2={0}>
             <stop offset="0" stopColor="#fff" stopOpacity={1} />
@@ -364,7 +365,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
         </defs>
       )}
       {selected && <rect className="sp-seg__ring" x={x0 - 2} y={y - 2} width={w + extW + 4} height={BAR_HEIGHT + 4} rx={5} />}
-      <g mask={isMtm || isAvail ? `url(#${gradId}-mask)` : undefined}>
+      <g mask={isMtm || isAvail || (safeRisk && bar.kind === 'mtm') ? `url(#${gradId}-mask)` : undefined}>
         <rect className="sp-seg__rect" x={x0 + 0.5} y={y + 0.5} width={rectW} height={BAR_HEIGHT - 1} rx={3} fill={fill} stroke={edge} />
         {bar.committed && <rect className="sp-seg__overlay" x={x0 + 0.5} y={y + 0.5} width={rectW} height={BAR_HEIGHT - 1} rx={3} fill={`url(#${PATTERN_IDS.hatch})`} />}
         {bar.sublease && <rect className="sp-seg__overlay" x={x0 + 0.5} y={y + 0.5} width={rectW} height={BAR_HEIGHT - 1} rx={3} fill={`url(#${PATTERN_IDS.dots})`} />}

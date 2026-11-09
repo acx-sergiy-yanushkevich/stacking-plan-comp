@@ -29,6 +29,8 @@ export interface SegmentText {
   aria: string;
   /** Short SF only, for the narrowest tier. */
   sfShort: string;
+  /** Short lens value for cramped blocks ("Oct '27", "$30 FSG", "LOI"); '' when none. */
+  lensShort: string;
 }
 
 export interface SegmentTextOptions {
@@ -163,11 +165,24 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
     badges.push({ kind: 'info', text: 'No activity', title: 'No activity logged on this tenant' });
   }
 
+  // Short lens value: the one fact the active lens colours by, in a few characters.
+  let lensShort = '';
+  if ((lens === 'expiry' || lens === 'status') && seg.endDate && (kind === 'leased' || kind === 'sublease' || kind === 'committed')) lensShort = fmtMonthYearShort(seg.endDate);
+  if (lens === 'rent') {
+    const v = rentValue(seg);
+    const t = rentType(seg);
+    if (v !== null && t && !(seg.lease?.confidential && kind !== 'available') && !(safe && kind !== 'available' && kind !== 'sublease')) lensShort = `$${Number.isInteger(v) ? v : v.toFixed(0)} ${t}`;
+  }
+  if (lens === 'deals' && !safe) {
+    const d = topDeal(seg);
+    if (d) lensShort = d.stage === 'Lease Out' ? 'Lease out' : d.stage;
+  }
+  if (safe && (kind === 'holdover' || kind === 'mtm')) lensShort = '';
   const lines = [name, sub, meta].filter(Boolean);
   const badgeText = badges.map((b) => (b.kind === 'deal' ? `${b.text} live deal${b.text === '1' ? '' : 's'}` : b.text)).join(', ');
   const tooltip = [...lines, badgeText].filter(Boolean).join('\n');
   const aria = `${o.floorName}, ${lines.join(', ')}${badgeText ? `, ${badgeText}` : ''}`;
-  return { tone, pattern, name, sub, meta, badges, tooltip, aria, sfShort: num(seg.size) };
+  return { tone, pattern, name, sub, meta, badges, tooltip, aria, sfShort: num(seg.size), lensShort };
 }
 
 export function kindLabel(kind: Segment['kind']): string {

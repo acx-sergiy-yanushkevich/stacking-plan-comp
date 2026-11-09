@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { FitKind, PlanState } from '../../state/planState';
-import { addMonths, fmtMonthYear } from '../../domain/dates';
+import { addMonths, fmtDate, fmtMonthYear } from '../../domain/dates';
 import { num, plural, sf } from '../../domain/format';
 import { prospectLabel } from '../../domain/safe';
 import { Button, Chip, Icon, Segmented, SelectField, TextField } from '../ui';
@@ -51,7 +51,7 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
               step={500}
               placeholder="e.g. 12,000"
               value={state.req ?? (inquiry ? inquiry.minSize : '')}
-              onChange={(e) => patch({ req: numberOrNull(e.target.value), inquiry: null })}
+              onChange={(e) => patch({ req: numberOrNull(e.target.value), inquiry: null, max: state.max ?? inquiry?.maxSize ?? null, by: state.by ?? inquiry?.neededBy ?? null })}
             />
             <TextField
               label="Max SF"
@@ -61,18 +61,27 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
               step={500}
               placeholder="Optional"
               value={state.max ?? (inquiry ? inquiry.maxSize : '')}
-              onChange={(e) => patch({ max: numberOrNull(e.target.value), inquiry: null, req: state.req ?? inquiry?.minSize ?? null })}
+              onChange={(e) => patch({ max: numberOrNull(e.target.value), inquiry: null, req: state.req ?? inquiry?.minSize ?? null, by: state.by ?? inquiry?.neededBy ?? null })}
             />
           </div>
+          {inquiry && (
+            <p className="sp-ins__note" style={{ margin: '4px 0 8px' }}>
+              Based on the inquiry from <strong>{prospectLabel(inquiry, safe)}</strong>: {num(inquiry.minSize)}–{num(inquiry.maxSize)} SF by {fmtDate(inquiry.neededBy)}. Editing a field keeps these values and drops the link.
+            </p>
+          )}
           <div className="sp-ins__form-row">
-            <SelectField label="Needed by" value={state.by ?? inquiry?.neededBy ?? ''} onChange={(e) => patch({ by: e.target.value || null, inquiry: null, req: state.req ?? inquiry?.minSize ?? null })}>
+            <SelectField label="Needed by" value={state.by ?? inquiry?.neededBy ?? ''} onChange={(e) => patch({ by: e.target.value || null, inquiry: null, req: state.req ?? inquiry?.minSize ?? null, max: state.max ?? inquiry?.maxSize ?? null })}>
               <option value="">Any time</option>
               {Array.from({ length: 36 }, (_, i) => addMonths(asOf.slice(0, 7) + '-01', i + 1)).map((d) => (
                 <option key={d} value={d}>
                   {fmtMonthYear(d)}
                 </option>
               ))}
-              {state.by && !Array.from({ length: 36 }, (_, i) => addMonths(asOf.slice(0, 7) + '-01', i + 1)).includes(state.by) && <option value={state.by}>{fmtMonthYear(state.by)}</option>}
+              {(() => {
+                const applied = state.by ?? inquiry?.neededBy ?? '';
+                const months = Array.from({ length: 36 }, (_, i) => addMonths(asOf.slice(0, 7) + '-01', i + 1));
+                return applied && !months.includes(applied) ? <option value={applied}>{fmtDate(applied)}</option> : null;
+              })()}
             </SelectField>
             <div className="sp-field">
               <span className="sp-field__label" id="sp-find-type">

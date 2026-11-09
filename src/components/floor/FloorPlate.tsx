@@ -195,7 +195,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
       const matches = model.req && !safe ? inquiriesFor(seg, property.inquiries, asOf).length : 0;
       const text: SegmentText =
         seg.key === lobbyKey
-          ? { tone: 'muted', pattern: 'hatch', name: 'Lobby · building use', sub: sf(seg.size), meta: 'Not leasable', badges: [], tooltip: `${floor.floor.name}: ${sf(seg.size)} non-leasable (lobby, loading, building use). Not counted in occupancy.`, aria: `${floor.floor.name}, lobby and building use, ${sf(seg.size)}, not leasable`, sfShort: num(seg.size) }
+          ? { tone: 'muted', pattern: 'hatch', name: 'Lobby · building use', sub: sf(seg.size), meta: 'Not leasable', badges: [], tooltip: `${floor.floor.name}: ${sf(seg.size)} non-leasable (lobby, loading, building use). Not counted in occupancy.`, aria: `${floor.floor.name}, lobby and building use, ${sf(seg.size)}, not leasable`, sfShort: num(seg.size), lensShort: '' }
           : segmentText(seg, { safe, asOf, today: model.today, lens, floorName: floor.floor.name, matches: matches || undefined });
       if (poly.length < 3 || polygonArea(poly) < 1) return { seg, text, poly, lines: [], badges: [], tier: 3 as const };
       const b = bbox(poly);
@@ -283,7 +283,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
             role={s.seg.key.endsWith('-lobby') ? 'img' : 'button'}
             tabIndex={s.seg.key.endsWith('-lobby') ? -1 : i === tabStop ? 0 : -1}
             aria-label={`${[...s.lines.map((l) => l.t), ...s.badges.map((b) => b.text)].filter(Boolean).join(' ')}${s.lines.length || s.badges.length ? '. ' : ''}${s.text.aria}`}
-            aria-pressed={selected}
+            aria-pressed={s.seg.key.endsWith('-lobby') ? undefined : selected}
             data-key={s.seg.key}
             style={{ color: edge }}
             onClick={() => !s.seg.key.endsWith('-lobby') && patch({ select: s.seg.key, mode: 'building' })}

@@ -69,7 +69,13 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
     const nameLines = wrapWords(text.name, inner, FONT_NAME, 2);
     for (const l of nameLines) lines.push({ t: l, cls: 'sp-seg__name', font: FONT_NAME });
     const sub = tier === 0 ? text.sub : `${text.sfShort} SF`;
-    if (lines.length < maxLines) lines.push({ t: fits(sub, inner, FONT_SUB) ? sub : `${text.sfShort} SF`, cls: 'sp-seg__sub', font: FONT_SUB });
+    // When the name took two lines there is room for one more: keep the lens value, not the suite number.
+    const nameTookTwo = nameLines.length === 2;
+    const squeezed = text.lensShort ? `${text.sfShort} SF · ${text.lensShort}` : null;
+    if (lines.length < maxLines) {
+      const t = nameTookTwo && squeezed && fits(squeezed, inner, FONT_SUB) ? squeezed : fits(sub, inner, FONT_SUB) ? sub : `${text.sfShort} SF`;
+      lines.push({ t, cls: 'sp-seg__sub', font: FONT_SUB });
+    }
     if (lines.length < maxLines && text.meta && fits(text.meta, inner, FONT_SUB)) lines.push({ t: text.meta, cls: 'sp-seg__meta', font: FONT_SUB });
     else if (lines.length < maxLines && text.meta) {
       // A rate is shown whole or not at all (dropping the lease type would mislead); other facts may lose trailing parts.
@@ -85,8 +91,10 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
       if (two.length === 2 && two.join(' ') === text.name) for (const l of two) lines.push({ t: l, cls: 'sp-seg__name', font: FONT_NAME });
     }
     const withUnit = `${text.sfShort} SF`;
-    const sfText = fits(withUnit, inner, FONT_SUB) ? withUnit : text.sfShort;
+    const withLens = text.lensShort ? `${text.sfShort} SF · ${text.lensShort}` : null;
+    const sfText = withLens && fits(withLens, inner, FONT_SUB) ? withLens : fits(withUnit, inner, FONT_SUB) ? withUnit : text.sfShort;
     if (fits(sfText, inner, FONT_SUB)) lines.push({ t: sfText, cls: 'sp-seg__sf', font: FONT_SUB });
+    if (text.lensShort && lines.length < maxLines && !lines.some((l) => l.t.includes(text.lensShort)) && fits(text.lensShort, inner, FONT_SUB)) lines.push({ t: text.lensShort, cls: 'sp-seg__meta', font: FONT_SUB });
   }
   if (lines.length > maxLines) lines.length = maxLines;
   // Very narrow blocks: the whole name in up to three short lines before any glyph.

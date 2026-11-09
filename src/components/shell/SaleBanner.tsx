@@ -6,7 +6,7 @@ export function SaleBanner({ property, leasable }: { property: Property; leasabl
   const s = property.saleListing;
   if (!s) return null;
   return (
-    <div className="sp-sale sp-no-print" role="note">
+    <section className="sp-sale sp-no-print" aria-label="Sale listing">
       <Icon name="dollar" size={16} />
       <strong>Listed for sale</strong>
       <div className="sp-sale__facts">
@@ -16,6 +16,6 @@ export function SaleBanner({ property, leasable }: { property: Property; leasabl
         <span>{s.broker}</span>
       </div>
       <Chip tone={s.status === 'Active' ? 'success' : 'warn'}>{s.status}</Chip>
-    </div>
+    </section>
   );
 }

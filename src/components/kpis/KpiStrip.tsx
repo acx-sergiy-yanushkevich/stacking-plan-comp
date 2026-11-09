@@ -41,7 +41,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
       unit: 'SF',
       context: `${num(k.availableDirect)} direct · ${num(k.availableSublease)} sublease${k.comingAvailable.sf ? ` · +${num(k.comingAvailable.sf)} ${k.comingAvailable.from ? fmtMonthYearShort(k.comingAvailable.from) : 'later'}` : ''}`,
       delta: d ? { text: sfDelta(d.availableDirect + d.availableSublease), good: d.availableDirect + d.availableSublease <= 0 } : null,
-      active: state.mode === 'find' && !state.req,
+      active: state.mode === 'find',
       title: 'Space a tenant could take on the as-of date. Click to find space by size.',
     },
     {
@@ -50,7 +50,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
       value: num(k.maxContiguous.size),
       unit: 'SF',
       context: k.maxContiguous.floorName ? `${k.maxContiguous.floorName} · direct · contiguous` : 'No direct space available',
-      active: state.mode === 'find' && state.req === k.maxContiguous.size,
+      active: false,
       title: 'Largest run of adjacent direct availabilities. Click to see every option at this size.',
     },
     {
@@ -60,7 +60,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
       unit: 'SF',
       context: `${k.leased ? pct(k.expiring12 / k.leased) : '0%'} of leased · ${plural(k.expiring12Leases, 'lease')}`,
       delta: d ? { text: sfDelta(d.expiring12), good: d.expiring12 <= 0 } : null,
-      active: state.window === '12',
+      active: state.window === '12' || (state.lens === 'expiry' && state.mode === 'building'),
       title: 'Lease SF ending within 12 months of the as-of date. Click for the expiration lens and the 12-month worklist.',
     },
     {

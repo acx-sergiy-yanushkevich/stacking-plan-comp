@@ -39,3 +39,9 @@
 }
 .sp-print__running { display: flex; justify-content: space-between; font-size: 9px; color: #5c5c5c; border-bottom: 1px solid #e5e5e5; padding-bottom: 4px; margin-bottom: 10px; }
 .sp-print__total td { font-weight: 600; border-top: 1px solid #181818; border-bottom: 0; }
+
+.sp-print__table td:first-child, .sp-print__table th:first-child { white-space: nowrap; }
+.sp-print__note, .sp-print__total { break-inside: avoid; }
+@media print {
+  .sp-print__pageno::after { content: ' · page ' counter(page) ' of ' counter(pages); }
+}

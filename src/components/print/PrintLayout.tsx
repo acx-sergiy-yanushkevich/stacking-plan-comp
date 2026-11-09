@@ -217,7 +217,7 @@ function RunningHead({ p, asOf, safe, page }: { p: PlanModel['property']; asOf: 
         {p.name} · Stacking plan as of {fmtDate(asOf)}
         {safe ? ' · Prospect-safe' : ''}
       </span>
-      <span>Page {page} of 3</span>
+      <span className="sp-print__pageno">Section {page} of 3</span>
     </div>
   );
 }
