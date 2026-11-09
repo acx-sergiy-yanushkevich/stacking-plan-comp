@@ -11,6 +11,7 @@ import { KpiStrip, type KpiAction } from './components/kpis/KpiStrip';
 import { ToastProvider, useToast, Sheet } from './components/ui';
 import StackView from './components/stack/StackView';
 import Inspector from './components/inspector/Inspector';
+import FloorView from './components/floor/FloorView';
 import { PrintLayout } from './components/print/PrintLayout';
 import { csvBlob, download } from './lib/exportFile';
 import { svgToPng } from './lib/exportPng';
@@ -109,7 +110,13 @@ function Shell() {
       <Toolbar state={state} patch={patch} />
       <div className="sp-main sp-no-print">
         <div className="sp-stage">
-          {state.view === 'stack' ? <StackView model={model} state={state} patch={patch} /> : <section className="sp-card" style={{ padding: 16 }}>View “{state.view}” arrives shortly.</section>}
+          {state.view === 'stack' && <StackView model={model} state={state} patch={patch} />}
+          {state.view === 'floor' && <FloorView model={model} state={state} patch={patch} />}
+          {(state.view === 'timeline' || state.view === 'map') && (
+            <section className="sp-card" style={{ padding: 16 }}>
+              View “{state.view}” arrives shortly.
+            </section>
+          )}
         </div>
         {!narrow && (
           <aside className="sp-inspector sp-card" aria-label="Inspector">

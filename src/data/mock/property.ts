@@ -197,13 +197,13 @@ const inquiries: Inquiry[] = [
 
 /** Field History rows from the last 30 days, newest first. */
 const history: Change[] = [
-  { id: 'H1', at: '2026-11-06', by: 'Priya Raman', recordType: 'Lease', recordLabel: 'Cirrus Energy', field: 'Term Expiration Date', from: 'Jun 30, 2027', to: 'Mar 31, 2027', floorId: 'F6', segKey: 'L13-U1' },
+  { id: 'H1', at: '2026-11-06', by: 'Elena Ruiz', recordType: 'Lease', recordLabel: 'Cirrus Energy', field: 'Term Expiration Date', from: 'Jun 30, 2027', to: 'Mar 31, 2027', floorId: 'F6', segKey: 'L13-U1' },
   { id: 'H2', at: '2026-11-05', by: 'Dana Whitfield', recordType: 'Deal', recordLabel: 'Vantage Robotics – New Lease', field: 'Stage', from: 'Proposal', to: 'LOI', floorId: 'F6', segKey: 'L13-U1' },
   { id: 'H3', at: '2026-11-04', by: 'Dana Whitfield', recordType: 'Lease', recordLabel: 'Lumen Analytics', field: 'Term Commencement Date', from: 'Jan 1, 2027', to: 'Feb 1, 2027', floorId: 'F4', segKey: 'L09-U1' },
   { id: 'H4', at: '2026-11-01', by: 'Marcus Webb', recordType: 'Availability', recordLabel: 'Suite 1250', field: 'Rent High', from: '$39.00', to: '$40.00', floorId: 'F12', segKey: 'A08' },
-  { id: 'H5', at: '2026-10-28', by: 'Priya Raman', recordType: 'Availability', recordLabel: 'Suite 450', field: 'Status', from: 'Open', to: 'Closed', floorId: 'F4', segKey: 'L09-U1' },
-  { id: 'H6', at: '2026-10-26', by: 'Priya Raman', recordType: 'Availability', recordLabel: 'Suite 130', field: 'Record created', from: null, to: 'Sale · $1,027,000', floorId: 'F1', segKey: 'A10' },
-  { id: 'H7', at: '2026-10-21', by: 'Priya Raman', recordType: 'Floor', recordLabel: 'Floor 7 · Suite 740', field: 'Size (RSF)', from: '1,900', to: '2,400', floorId: 'F7', segKey: 'L15-U1' },
+  { id: 'H5', at: '2026-10-28', by: 'Elena Ruiz', recordType: 'Availability', recordLabel: 'Suite 450', field: 'Status', from: 'Open', to: 'Closed', floorId: 'F4', segKey: 'L09-U1' },
+  { id: 'H6', at: '2026-10-26', by: 'Elena Ruiz', recordType: 'Availability', recordLabel: 'Suite 130', field: 'Record created', from: null, to: 'Sale · $1,027,000', floorId: 'F1', segKey: 'A10' },
+  { id: 'H7', at: '2026-10-21', by: 'Elena Ruiz', recordType: 'Floor', recordLabel: 'Floor 7 · Suite 740', field: 'Size (RSF)', from: '1,900', to: '2,400', floorId: 'F7', segKey: 'L15-U1' },
   { id: 'H8', at: '2026-10-15', by: 'Marcus Webb', recordType: 'Deal', recordLabel: 'BeachBody Workouts – Renewal', field: 'Record created', from: null, to: 'Tour', floorId: 'F5', segKey: 'L12-U1' },
   { id: 'H9', at: '2026-10-12', by: 'Marcus Webb', recordType: 'Inquiry', recordLabel: 'Harbor Freight Regional HQ', field: 'Linked availability', from: null, to: 'Suite 600', floorId: 'F6', segKey: 'L13-U1' },
 ];

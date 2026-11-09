@@ -15,7 +15,8 @@ const states = [
   '?view=map&mode=area',
 ];
 const browser = await chromium.launch({ channel: 'chrome' });
-const page = await browser.newPage({ viewport: { width: 1440, height: 1100 }, reducedMotion: 'reduce' });
+const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, reducedMotion: 'reduce' });
+const page = await context.newPage();
 let failed = 0;
 for (const qs of states) {
   await page.goto(base + qs, { waitUntil: 'networkidle' });

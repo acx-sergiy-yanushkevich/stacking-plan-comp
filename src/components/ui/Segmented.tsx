@@ -36,7 +36,7 @@ export function Segmented<T extends string>({ options, value, onChange, size = '
     }
   };
   return (
-    <div role="radiogroup" aria-label={rest['aria-label']} className={`sp-seg ${size === 'lg' ? 'sp-seg--lg' : ''} ${className}`}>
+    <div role="radiogroup" aria-label={rest['aria-label']} className={`sp-segmented ${size === 'lg' ? 'sp-segmented--lg' : ''} ${className}`}>
       {options.map((o, i) => {
         const checked = o.id === value;
         return (
@@ -51,7 +51,7 @@ export function Segmented<T extends string>({ options, value, onChange, size = '
             aria-label={iconsOnly ? o.label : undefined}
             title={o.title ?? (iconsOnly ? o.label : undefined)}
             tabIndex={checked ? 0 : -1}
-            className="sp-seg__opt"
+            className="sp-segmented__opt"
             onClick={() => onChange(o.id)}
             onKeyDown={(e) => onKey(e, i)}
           >

@@ -59,10 +59,10 @@ for (const qs of states) {
   } else console.log(`ok   ${qs}`);
   // Search must not confirm a tenant by highlighting
   if (qs.includes('q=anadarko')) {
-    const dimmed = await page.evaluate(() => document.querySelectorAll('.sp-seg.is-dim').length);
-    if (dimmed > 0) {
+    const [dimmed, total] = await page.evaluate(() => [document.querySelectorAll('.sp-seg.is-dim').length, document.querySelectorAll('.sp-seg').length]);
+    if (dimmed > 0 && dimmed < total) {
       leaks++;
-      console.log(`LEAK ${qs}: search dimmed ${dimmed} blocks for a tenant name in prospect-safe mode`);
+      console.log(`LEAK ${qs}: search highlighted ${total - dimmed} block(s) for a tenant name in prospect-safe mode`);
     }
   }
 }
