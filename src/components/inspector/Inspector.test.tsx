@@ -2,103 +2,9 @@
 import { describe, expect, it } from 'vitest';
 import { renderToString } from 'react-dom/server';
 import { property, TODAY } from '../../data/mock/property';
-import { activeDeals, deriveFloors, isLeaseKind, segmentIndex, type FloorView } from '../../domain/derive';
-import { computeKpis, kpiDeltas } from '../../domain/kpis';
-import { rollover } from '../../domain/rollover';
-import { legendFor } from '../../domain/lenses';
-import { findFits, filterFits } from '../../domain/finder';
-import { findIssues, issueCounts, recentChanges } from '../../domain/issues';
-import { timelineModel } from '../../domain/timeline';
-import { WINDOW_MONTHS, type PlanModel, type WorklistRow } from '../../model/usePlanModel';
-import { deriveMode, parseState, type PlanState, type WindowKey } from '../../state/planState';
+import { deriveMode, parseState } from '../../state/planState';
 import Inspector from './Inspector';
-
-/** Same derivation as `usePlanModel`, without the hook, so the panels can be rendered to a string. */
-function buildModel(state: PlanState): PlanModel {
-  const asOf = state.asOf;
-  const floors = deriveFloors(property, asOf, TODAY);
-  const floorsToday = asOf === TODAY ? floors : deriveFloors(property, TODAY, TODAY);
-  const kpis = computeKpis(property, floors, asOf);
-  const kpisToday = asOf === TODAY ? kpis : computeKpis(property, floorsToday, TODAY);
-  const roll = rollover(floors, asOf, 'rolling', 8);
-  const issues = findIssues(property, floors, TODAY);
-  const inquiry = state.inquiry ? property.inquiries.find((i) => i.id === state.inquiry) ?? null : null;
-  const req = inquiry
-    ? { size: inquiry.minSize, max: inquiry.maxSize, by: inquiry.neededBy, type: 'any' as const }
-    : state.req
-      ? { size: state.req, max: state.max, by: state.by, type: state.fit }
-      : null;
-  const fits = req
-    ? (() => {
-        const r = findFits(floors, req.size, req.by, req.max, property.inquiries, asOf);
-        const options = filterFits(r.options, req.type);
-        return { options, keys: new Set(options.flatMap((o) => o.keys)), largestNow: r.largestNow };
-      })()
-    : null;
-  const worklist = (w: WindowKey): WorklistRow[] => rowsFor(floors, w);
-  const segIndex = segmentIndex(floors);
-  const selected = state.select ? segIndex.get(state.select) ?? null : null;
-  const selectedFloor = state.floor ? floors.find((f) => f.floor.id === state.floor) ?? null : selected ? floors.find((f) => f.floor.id === selected.floorId) ?? null : null;
-  return {
-    property,
-    today: TODAY,
-    asOf,
-    safe: state.safe,
-    isProjected: asOf !== TODAY,
-    floors,
-    segIndex,
-    kpis,
-    kpisToday,
-    deltas: asOf === TODAY ? null : kpiDeltas(kpis, kpisToday),
-    roll,
-    issues,
-    counts: issueCounts(issues),
-    changes: recentChanges(property, TODAY, 30),
-    legend: legendFor(state.lens, state.safe, floors),
-    req,
-    fits,
-    worklist,
-    activeWorklist: state.window ? worklist(state.window) : null,
-    searchReasons: null,
-    searchMatches: null,
-    bucketKeys: null,
-    highlight: fits?.keys ?? null,
-    filterLabel: null,
-    timeline: timelineModel(property, floors, asOf, TODAY),
-    selected,
-    selectedFloor,
-    anyEnlarged: false,
-  };
-}
-
-function rowsFor(floors: FloorView[], window: WindowKey): WorklistRow[] {
-  const rows: WorklistRow[] = [];
-  for (const f of floors) {
-    for (const s of f.segments) {
-      if (!s.lease || !isLeaseKind(s.kind)) continue;
-      const risk = s.kind === 'holdover' || s.kind === 'mtm';
-      const months = s.kind === 'sublease' ? (s.headMonths ?? s.monthsToExpiry) : s.monthsToExpiry;
-      const inWindow = window === 'risk' ? risk : !risk && months !== null && months <= (WINDOW_MONTHS[window] ?? 0);
-      if (!inWindow) continue;
-      rows.push({
-        segKey: s.key,
-        floorId: f.floor.id,
-        floorName: f.floor.name,
-        suite: s.suite ?? '',
-        tenant: s.lease.tenant,
-        size: s.size,
-        months: s.kind === 'mtm' ? null : months,
-        endDate: s.endDate,
-        kind: s.kind,
-        broker: s.lease.owner,
-        lastTouch: s.lease.lastTouch,
-        renewal: activeDeals(s.lease.deals).find((d) => d.kind === 'Renewal') ?? null,
-        seg: s,
-      });
-    }
-  }
-  return rows.sort((a, b) => (a.months ?? -1) - (b.months ?? -1) || b.size - a.size);
-}
+import { buildModel } from './testModel';
 
 function render(search: string) {
   const state = parseState(search, TODAY);
@@ -211,6 +117,63 @@ describe('Inspector', () => {
       expect(stripped, `${q} leaks a rate`).not.toContain('/SF/yr');
       expect(html, `${q} leaks a contact`).not.toContain('Tom Conner');
     }
+  });
+
+  it('Prospect-safe says nothing about deals, brokers, activity, tenant risk, inquiries or data issues', () => {
+    const deals = [...property.leases.flatMap((l) => l.deals), ...property.availabilities.flatMap((a) => a.deals)];
+    const brokers = new Set(
+      [...property.leases.flatMap((l) => [l.owner, l.lastTouch?.by]), ...deals.map((d) => d.broker), ...property.inquiries.map((i) => i.broker), ...property.history.map((c) => c.by)].filter(
+        (b): b is string => !!b,
+      ),
+    );
+    const sources = new Set(property.inquiries.map((i) => i.source));
+    const selections = [...buildModel(parseState('', TODAY)).segIndex.keys()].map((k) => `?safe=1&select=${k}`);
+    const floors = property.floors.map((f) => `?safe=1&floor=${f.id}`);
+    for (const q of ['?safe=1', '?safe=1&req=12000', '?safe=1&inquiry=I02', '?safe=1&window=12', '?safe=1&window=risk', '?safe=1&mode=issues', ...selections, ...floors]) {
+      const html = render(q).html.replace(/<!-- -->/g, '');
+      for (const b of brokers) expect(html, `${q} names ${b}`).not.toContain(b);
+      for (const w of ['Tour', 'Proposal', 'LOI', 'Lease Out', ...sources]) expect(html, `${q} says "${w}"`).not.toMatch(new RegExp(`\\b${w}\\b`));
+      expect(html, `${q} mentions tenant risk`).not.toMatch(/holdover|month-to-month|\bMTM\b/i);
+      expect(html, `${q} mentions a data issue`).not.toMatch(/over-allocated|unaccounted|no Unit records|\bstale\b|\d+ (errors?|warnings?)\b/i);
+      expect(html, `${q} shows CRM activity`).not.toMatch(/Last touch|No touch logged|\bd ago\b/);
+      expect(html, `${q} offers a record action`).not.toMatch(/Open lease|Open availability|New deal|Log a call|Start renewal|Create listing|Add unit/);
+      expect(html, `${q} lists inquiries`).not.toMatch(/Inquiries that fit|Match an open inquiry/);
+    }
+  });
+
+  it('Coming supply and the block panel leave a quiet listing out in prospect-safe mode', () => {
+    const open = render('').html.replace(/<!-- -->/g, '');
+    expect(open).toMatch(/Occupied, marketed for later.*From Apr 2027.*21,400 SF/);
+    const safe = render('?safe=1').html.replace(/<!-- -->/g, '');
+    expect(safe).toContain('Nothing marketed ahead');
+    expect(safe).not.toContain('From Apr 2027');
+    // Ste 600 is leased and marketed quietly from Apr 2027: the broker sees the listing, a prospect a leased suite.
+    const block = render('?select=L13-U1').html;
+    expect(block).toContain('Marketed for later');
+    expect(block).toContain('Quiet · not published');
+    const safeBlock = render('?safe=1&select=L13-U1').html;
+    expect(safeBlock).not.toMatch(/Marketed for later|Available from|Quiet|not published|Published/);
+    expect(render('?safe=1&window=12').html).not.toMatch(/Marketed from/);
+    expect(render('?window=12').html).toMatch(/Marketed from Apr/);
+  });
+
+  it('Floor panel: a fully leased floor with space marketed for later says so', () => {
+    const html = render('?floor=F6').html.replace(/<!-- -->/g, '').replace(/&#x27;/g, "'");
+    expect(html).toMatch(/21,400 SF marketed from Apr\s'27/);
+    expect(html).toMatch(/No direct space until Apr\s'27/);
+    expect(html).not.toContain('Nothing on the market now');
+    const safe = render('?safe=1&floor=F6').html;
+    expect(safe).toContain('Nothing on the market now');
+    expect(safe).toContain('No direct space now');
+  });
+
+  it('In-place rent is weighted by recorded SF and says so', () => {
+    const { html, model } = render('');
+    const fsg = model.kpis.rentByType.find((r) => r.type === 'FSG')!;
+    expect(html.replace(/<!-- -->/g, '')).toContain(`${fsg.sf.toLocaleString('en-US')} SF on record`);
+    expect(html).toContain('recorded SF');
+    expect(html).toContain('the over-allocation cap on leased SF is not applied');
+    expect(render('?safe=1').html).not.toContain('In-place rent');
   });
 
   it('Area mode renders the supplied panel or a placeholder', () => {

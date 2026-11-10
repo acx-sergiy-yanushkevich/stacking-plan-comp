@@ -1,9 +1,10 @@
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
-import { isLeaseKind, type FloorView } from '../../domain/derive';
-import { fmtMonthYear } from '../../domain/dates';
+import type { FloorView } from '../../domain/derive';
+import { fmtMonthYear, fmtMonthYearShort } from '../../domain/dates';
 import { pct, plural, sf } from '../../domain/format';
-import { tenantLabel } from '../../domain/safe';
+import { canShowIssues, tenantLabel } from '../../domain/safe';
+import { comingText, floorComing, nextExpiry } from '../floor/floorData';
 import { Button, Icon } from '../ui';
 import { openFloorPlate, selectSegment, type Patch } from '../plan/actions';
 import { segmentText } from '../plan/segmentText';
@@ -19,9 +20,13 @@ export interface FloorPanelProps {
 export function FloorPanel({ floor, model, state, patch }: FloorPanelProps) {
   const { safe, asOf } = model;
   const leasedPct = floor.leasable ? floor.leased / floor.leasable : 0;
-  const next = floor.segments
-    .filter((s) => s.lease && isLeaseKind(s.kind) && s.endDate && s.monthsToExpiry !== null && s.monthsToExpiry >= 0)
-    .sort((a, b) => (a.endDate! < b.endDate! ? -1 : a.endDate! > b.endDate! ? 1 : 0))[0];
+  const next = nextExpiry(floor);
+  // Space a tenant could take today, and occupied space already marketed for a later date.
+  const direct = floor.segments.some((s) => s.kind === 'available' && !s.availableFrom);
+  const sublease = floor.segments.some((s) => s.kind === 'sublease');
+  const coming = floorComing(floor, asOf, safe);
+  const nowText = direct && sublease ? 'Direct and sublease, now' : sublease ? 'Sublease, now' : direct ? 'Direct, now' : null;
+  const availableText = [nowText, coming ? comingText(coming) : null].filter(Boolean).join(' · ') || 'Nothing on the market now';
 
   return (
     <>
@@ -39,12 +44,12 @@ export function FloorPanel({ floor, model, state, patch }: FloorPanelProps) {
             <span className="sp-ins__kpi-value">
               {floor.available > 0 ? sf(floor.available) : '—'}
             </span>
-            <span className="sp-ins__kpi-sub">{(() => { const d = floor.segments.some((s) => s.kind === 'available' && !s.availableFrom); const su = floor.segments.some((s) => s.kind === 'sublease'); return d && su ? 'Direct and sublease, now' : su ? 'Sublease, now' : d ? 'Direct, now' : 'Nothing on the market now'; })()}</span>
+            <span className="sp-ins__kpi-sub">{availableText}</span>
           </div>
           <div className="sp-ins__kpi">
             <span className="sp-label">Largest contiguous</span>
             <span className="sp-ins__kpi-value">{floor.maxContiguous > 0 ? sf(floor.maxContiguous) : '—'}</span>
-            <span className="sp-ins__kpi-sub">{floor.bestRun.length > 1 ? `${floor.bestRun.length} adjacent direct suites` : floor.bestRun.length === 1 ? 'One direct suite' : 'No direct space now'}</span>
+            <span className="sp-ins__kpi-sub">{floor.bestRun.length > 1 ? `${floor.bestRun.length} adjacent direct suites` : floor.bestRun.length === 1 ? 'One direct suite' : coming?.from ? `No direct space until ${fmtMonthYearShort(coming.from)}` : 'No direct space now'}</span>
           </div>
           <div className="sp-ins__kpi">
             <span className="sp-label">Next expiry</span>
@@ -52,7 +57,7 @@ export function FloorPanel({ floor, model, state, patch }: FloorPanelProps) {
             <span className="sp-ins__kpi-sub">{next?.lease ? tenantLabel(next.lease, safe) : 'No lease ending'}</span>
           </div>
         </div>
-        {floor.overAllocatedBy > 0 && (
+        {floor.overAllocatedBy > 0 && canShowIssues(safe) && (
           <p className="sp-ins__note sp-ins__warn">Over-allocated by {sf(floor.overAllocatedBy)}: leases and availabilities exceed the leasable area.</p>
         )}
       </Section>

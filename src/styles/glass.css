@@ -162,6 +162,7 @@
 
   /* ── The plan: tenants are clear panes, states are tinted glass ── */
   :root[data-skin='glass'] .sp-stack .sp-seg__rect { rx: 7px; filter: var(--sp-glass-pane-shadow); }
+  :root[data-skin='glass'] .sp-stack .sp-seg__pattern { rx: 6px; }
   :root[data-skin='glass'] .sp-seg:hover .sp-seg__rect { stroke: var(--sp-color-brand); stroke-opacity: 0.7; }
   :root[data-skin='glass'] .sp-stack .sp-seg:hover .sp-seg__rect { filter: drop-shadow(0 3px 6px rgba(30, 41, 90, 0.26)); }
   :root[data-skin='glass'] .sp-stack .sp-seg__ring { rx: 10px; }

@@ -77,6 +77,9 @@ function installLayers(map: MapLibreMap, inp: LayerInputs) {
       map.setLayoutProperty(l.id, 'visibility', 'none');
     }
   }
+  // Flat, front-on light: the default sun washes the walls toward white and darkens the far side, so the
+  // floors stopped matching the legend swatches above the map.
+  map.setLight({ anchor: 'viewport', position: [1.2, 210, 30], intensity: 0.18, color: '#ffffff' });
   const vectorSource = map.getSource('openmaptiles') ? 'openmaptiles' : Object.entries(style.sources).find(([, s]) => s.type === 'vector')?.[0];
 
   if (vectorSource && !map.getLayer(LAYER_BUILDINGS)) {
@@ -92,7 +95,8 @@ function installLayers(map: MapLibreMap, inp: LayerInputs) {
           'fill-extrusion-color': inp.dark ? BUILDINGS_DARK : BUILDINGS_LIGHT,
           'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 8],
           'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
-          'fill-extrusion-opacity': 0.55,
+          // Quieter than the property, so the building with the lens on it is the subject.
+          'fill-extrusion-opacity': inp.dark ? 0.55 : 0.4,
         },
       },
       firstSymbol,
@@ -110,8 +114,8 @@ function installLayers(map: MapLibreMap, inp: LayerInputs) {
           'fill-extrusion-base': ['get', 'base'],
           'fill-extrusion-height': ['get', 'height'],
           'fill-extrusion-color': floorColorExpression(inp.hexByTone),
-          'fill-extrusion-opacity': 0.92,
-          'fill-extrusion-vertical-gradient': true,
+          'fill-extrusion-opacity': 1,
+          'fill-extrusion-vertical-gradient': false,
         },
       },
       firstSymbol,
@@ -239,9 +243,13 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
   useEffect(() => {
     const id = requestAnimationFrame(() => {
       const out: Record<string, string> = {};
-      // Dark tokens are built for text on dark cards; on an extruded building they read as black.
-      // Lift them toward white so the lens stays legible against the dark basemap.
-      for (const t of toneKey.split(',').filter(Boolean)) out[t] = dark ? mixHex(resolveToneHex(t), '#ffffff', 0.38) : resolveToneHex(t);
+      // Night tokens sit a little dark for a wall against the dark basemap: lift them slightly.
+      // Daytime fills are pastels made to carry text; as a wall on a pale basemap they vanish, so each is
+      // deepened toward its own edge colour (the same hue the legend swatch is outlined in).
+      for (const t of toneKey.split(',').filter(Boolean)) {
+        const fill = resolveToneHex(t);
+        out[t] = dark ? mixHex(fill, '#ffffff', 0.12) : mixHex(fill, resolveVarHex(`--tone-${t}-edge`, fill), 0.45);
+      }
       setHexByTone(out);
       setBrandHex(resolveVarHex('--sp-color-brand', '#0176d3'));
     });

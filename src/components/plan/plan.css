@@ -21,13 +21,14 @@
 .sp-seg text { pointer-events: none; font-family: var(--sp-font); font-variant-numeric: tabular-nums; }
 .sp-seg__name { font-size: 13px; font-weight: 600; }
 .sp-seg__sub { font-size: 12px; }
-.sp-seg__meta { font-size: 12px; opacity: 0.85; }
+/* Secondary lines are full strength: on a mid-tone fill a dimmed line falls under 4.5:1. */
+.sp-seg__meta { font-size: 12px; }
 .sp-seg__sf { font-size: 12px; font-weight: 600; }
-.sp-seg__glyph { font-size: 12px; font-weight: 700; opacity: 0.85; }
+.sp-seg__glyph { font-size: 12px; font-weight: 700; }
 .sp-seg__tiny { font-size: 11px; font-weight: 600; }
 .sp-seg__small { font-size: 11px; }
 .sp-seg__micro { font-size: 10px; font-weight: 600; letter-spacing: -0.02em; }
-.sp-seg__tiny-meta { font-size: 11px; opacity: 0.9; }
+.sp-seg__tiny-meta { font-size: 11px; }
 .sp-seg__edge { pointer-events: none; }
 
 /* Badges drawn as foreignObject-free SVG groups */

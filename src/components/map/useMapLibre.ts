@@ -25,7 +25,7 @@ export function hasWebGL(): boolean {
 
 /**
  * Owns the MapLibre instance for a container. `status` is `failed` when WebGL is missing,
- * the constructor throws, the style errors, or nothing loads within the timeout (Review
+ * the constructor throws, the style errors, or the style does not load within the timeout (Review
  * Focus 5). The `error` listener keeps MapLibre from logging to the console in that path.
  */
 export function useMapLibre(containerRef: RefObject<HTMLDivElement | null>, opts: UseMapLibreOptions) {
@@ -86,10 +86,12 @@ export function useMapLibre(containerRef: RefObject<HTMLDivElement | null>, opts
     m.on('error', (e) => {
       if (settled) return; // tile hiccups after load are not fatal
       const err = e.error as { status?: number; message?: string } | undefined;
+      // Before the style is in, anything is fatal (a missing style, no WebGL). Tile errors are not.
       if (!err || typeof err.status === 'number' || /style|WebGL|context/i.test(err.message ?? '')) fail();
     });
-    m.on('style.load', () => onStyleLoadRef.current(m));
-    m.on('load', () => {
+    // Ready as soon as the style is in: the building is our own GeoJSON and needs no tile. Waiting for
+    // `load` (every visible tile) made a slow or flaky tile server look like a broken map.
+    const ready = () => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
@@ -100,7 +102,12 @@ export function useMapLibre(containerRef: RefObject<HTMLDivElement | null>, opts
         ro.observe(el);
         m.once('remove', () => ro.disconnect());
       }
+    };
+    m.on('style.load', () => {
+      onStyleLoadRef.current(m);
+      ready();
     });
+    m.on('load', ready);
     return () => {
       settled = true;
       clearTimeout(timer);

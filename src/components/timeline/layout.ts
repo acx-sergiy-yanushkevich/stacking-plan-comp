@@ -8,6 +8,17 @@ export const BAR_HEIGHT = 22;
 export const ROW_PAD = 5;
 export const MIN_ROW_HEIGHT = 32;
 
+/** Stacked layout (narrow hosts): each bar is a thin bar under its own full label. */
+export const STACK_LINE_H = 15;
+export const STACK_BAR_H = 12;
+/** Space between the last label line and the bar. */
+export const STACK_LABEL_GAP = 3;
+/** Space between one bar and the next label. */
+export const STACK_LANE_GAP = 10;
+export const STACK_ROW_PAD = 7;
+/** A floor row is never shorter than its two-line gutter label. */
+export const STACK_MIN_ROW_HEIGHT = 38;
+
 export interface Axis {
   start: ISODate;
   end: ISODate;
@@ -28,6 +39,8 @@ export interface LaidOutRow {
   row: TimelineRow;
   /** Bars packed into lanes: bars in one lane never overlap in time. */
   lanes: TimelineBar[][];
+  /** Top of each lane, measured from the top of the row. */
+  laneTop: number[];
   top: number;
   height: number;
 }
@@ -68,7 +81,32 @@ export function layoutRows(rows: TimelineRow[], asOf: ISODate, top: number, safe
   return rows.map((row) => {
     const lanes = packLanes(row.bars, asOf, safe);
     const height = Math.max(MIN_ROW_HEIGHT, Math.max(1, lanes.length) * LANE_PITCH + ROW_PAD * 2 - (LANE_PITCH - BAR_HEIGHT));
-    const out = { row, lanes, top: y, height };
+    const out = { row, lanes, laneTop: lanes.map((_, li) => ROW_PAD + li * LANE_PITCH), top: y, height };
+    y += height;
+    return out;
+  });
+}
+
+/** Height of one stacked lane: its label lines, then the bar. */
+export const stackedLaneHeight = (lines: number) => Math.max(1, lines) * STACK_LINE_H + STACK_LABEL_GAP + STACK_BAR_H;
+
+/**
+ * Rows for a host too narrow to label a bar inside it. Every bar takes a lane of its own, in
+ * start order, and each lane is as tall as its label needs (`linesOf`), so a long tenant name
+ * wraps onto a second line instead of being cut at the edge.
+ */
+export function layoutStackedRows(rows: TimelineRow[], top: number, linesOf: (bar: TimelineBar) => number): LaidOutRow[] {
+  let y = top;
+  return rows.map((row) => {
+    const bars = row.bars.slice().sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.key < b.key ? -1 : 1));
+    const laneTop: number[] = [];
+    let at = STACK_ROW_PAD;
+    for (const bar of bars) {
+      laneTop.push(at);
+      at += stackedLaneHeight(linesOf(bar)) + STACK_LANE_GAP;
+    }
+    const height = Math.max(STACK_MIN_ROW_HEIGHT, bars.length ? at - STACK_LANE_GAP + STACK_ROW_PAD : 0);
+    const out = { row, lanes: bars.map((b) => [b]), laneTop, top: y, height };
     y += height;
     return out;
   });

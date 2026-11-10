@@ -12,6 +12,12 @@ import { parseState } from '../../state/planState';
 import type { PlanModel } from '../../model/usePlanModel';
 import TimelineView from './TimelineView';
 import { MiniTimeline } from './MiniTimeline';
+import { TimelineRows } from './TimelineRows';
+import { TimelineAxis } from './TimelineAxis';
+import { RolloverChips } from './RolloverChips';
+import { barLabel, labelText, NAME_FONT, SUB_FONT, tagWidth, wrapLabel, type LabelLine } from './barLabel';
+import { layoutStackedRows, stackedLaneHeight, STACK_LANE_GAP, viewAxis } from './layout';
+import { measure } from '../../lib/textFit';
 
 // jsdom-free: the view guards ResizeObserver, but keep the global so the hook path is exercised.
 (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = class {
@@ -112,5 +118,123 @@ describe('MiniTimeline', () => {
     expect(html).not.toContain('Cirrus Energy');
     expect(html).toContain('width="300"');
     expect(html).toContain('height="56"');
+  });
+});
+
+/** The stacked chart's labels for a plot `plotWidth` wide, built the way TimelineView builds them. */
+function stackedLabels(model: PlanModel, plotWidth: number) {
+  const labels = new Map<string, LabelLine[]>();
+  const whole = new Map<string, { name: string; sub: string; risk: string | null }>();
+  for (const row of model.timeline.rows) {
+    for (const bar of row.bars) {
+      const seg = model.segIndex.get(bar.segKey);
+      if (!seg) continue;
+      const l = barLabel(bar, seg, { safe: model.safe, asOf: model.asOf, today: model.today, lens: 'status', floorName: row.floor.name });
+      whole.set(bar.key, l);
+      labels.set(bar.key, wrapLabel(l.name, l.sub, plotWidth, l.risk ? tagWidth(l.risk) + 5 : 0));
+    }
+  }
+  return { labels, whole };
+}
+
+function renderStacked(model: PlanModel, plotWidth: number) {
+  const { labels } = stackedLabels(model, plotWidth);
+  const laid = layoutStackedRows(model.timeline.rows, 30, (bar) => labels.get(bar.key)?.length ?? 1);
+  const axis = viewAxis(model.timeline, model.asOf, model.today);
+  return renderToString(
+    <svg>
+      <TimelineRows rows={laid} segIndex={model.segIndex} start={axis.start} end={axis.end} asOf={model.asOf} today={model.today} lens="status" safe={model.safe} plotLeft={60} plotWidth={plotWidth} clipId="clip" highlight={null} selected={null} hovered={null} stacked={labels} onSelect={() => {}} onHover={() => {}} />
+    </svg>,
+  );
+}
+
+/** Text as React's server renderer writes it. */
+const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+
+describe('stacked timeline (narrow hosts)', () => {
+  const PLOT = 296; // a 390 px phone
+
+  it('writes every bar\'s whole label: no part dropped, no ellipsis, no line wider than the plot', () => {
+    const model = buildModel(TODAY, false);
+    const { labels, whole } = stackedLabels(model, PLOT);
+    expect(labels.size).toBe(model.timeline.rows.flatMap((r) => r.bars).length);
+    for (const [key, lines] of labels) {
+      const { name, sub, risk } = whole.get(key)!;
+      // Reassembled, the lines are the label: only the separator at a line break is gone.
+      const flat = (t: string) => t.replace(/ · /g, ' ').replace(/\s+/g, ' ').trim();
+      expect(flat(labelText(lines)), key).toBe(flat(`${name} ${sub}`));
+      lines.forEach((line, i) => {
+        const w = line.reduce((t, r) => t + measure(r.text, r.kind === 'name' ? NAME_FONT : SUB_FONT), 0);
+        expect(w, `${key} line ${i}`).toBeLessThanOrEqual(PLOT - (i === 0 && risk ? tagWidth(risk) + 5 : 0));
+      });
+    }
+    const html = renderStacked(model, PLOT);
+    expect(html).not.toContain('…');
+    // Every run of every line is in the markup as written.
+    for (const lines of labels.values()) for (const run of lines.flat()) expect(html, run.text).toContain(esc(run.text));
+    expect(html).toContain('North American Asset Holdings');
+    // Holdover and MTM keep their word, not just their colour.
+    expect(html).toContain('>Holdover <');
+    expect(html).toContain('>MTM <');
+  });
+
+  it('wraps between facts, so a figure stays with its unit', () => {
+    const narrow = measure('North American Asset Holdings', NAME_FONT) + measure(' · Ste 500 · 6,500', SUB_FONT) + 2;
+    const lines = wrapLabel('North American Asset Holdings', 'Ste 500 · 6,500 SF', narrow);
+    expect(lines.map((l) => l.map((r) => r.text).join(''))).toEqual(['North American Asset Holdings · Ste 500', '6,500 SF']);
+    // A part wider than a whole line breaks between words, never inside one.
+    const tight = wrapLabel('North American Asset Holdings', '', measure('North American', NAME_FONT) + 2);
+    expect(tight.map((l) => l[0].text)).toEqual(['North American', 'Asset Holdings']);
+  });
+
+  it('gives each bar its own lane, tall enough for its label, without overlap', () => {
+    const model = buildModel(TODAY, false);
+    const { labels } = stackedLabels(model, 200); // narrow enough that some labels take two lines
+    const laid = layoutStackedRows(model.timeline.rows, 30, (bar) => labels.get(bar.key)!.length);
+    expect([...labels.values()].some((l) => l.length > 1)).toBe(true);
+    let y = 30;
+    for (const r of laid) {
+      expect(r.top).toBe(y);
+      expect(r.lanes.every((lane) => lane.length === 1)).toBe(true);
+      expect(r.lanes.length).toBe(r.row.bars.length);
+      r.lanes.forEach(([bar], i) => {
+        const bottom = r.laneTop[i] + stackedLaneHeight(labels.get(bar.key)!.length);
+        if (i + 1 < r.lanes.length) expect(r.laneTop[i + 1]).toBe(bottom + STACK_LANE_GAP);
+        else expect(bottom).toBeLessThanOrEqual(r.height);
+      });
+      y += r.height;
+    }
+  });
+
+  it('leaks no tenant name and no holdover or MTM tag in prospect-safe mode', () => {
+    const html = renderStacked(buildModel(TODAY, true), PLOT);
+    for (const name of tenantNames) expect(html, name).not.toContain(esc(name));
+    expect(html).not.toContain('Holdover');
+    expect(html).not.toContain('MTM');
+    expect(html).toContain('term not disclosed');
+  });
+
+  it('shows the rollover buckets as buttons with every figure whole', () => {
+    const model = buildModel(TODAY, false);
+    const html = renderToString(<RolloverChips buckets={model.roll.buckets} atRisk={model.roll.atRisk} asOf={TODAY} activeBucket={0} onBucket={() => {}} />).replace(/<!-- -->/g, '');
+    expect(html.match(/<button/g)?.length).toBe(9);
+    expect(html.match(/aria-pressed="true"/g)?.length).toBe(1);
+    for (const b of model.roll.buckets) if (b.sf > 0) expect(html).toContain(`${b.sf.toLocaleString('en-US')} SF`);
+    expect(html).toContain(`At risk ${model.roll.atRisk.toLocaleString('en-US')} SF`);
+    // Prospect-safe passes 0: the at-risk line is gone.
+    expect(renderToString(<RolloverChips buckets={model.roll.buckets} atRisk={0} asOf={TODAY} activeBucket={null} onBucket={() => {}} />)).not.toContain('At risk');
+  });
+
+  it('leaves the band out of the axis when the buckets are drawn as buttons', () => {
+    const model = buildModel(TODAY, false);
+    const axis = viewAxis(model.timeline, TODAY, TODAY);
+    const html = renderToString(
+      <svg>
+        <TimelineAxis start={axis.start} end={axis.end} asOf={TODAY} today={TODAY} plotLeft={60} plotWidth={296} stripHeight={28} bandHeight={0} height={400} buckets={model.roll.buckets} atRisk={model.roll.atRisk} activeBucket={null} onBucket={() => {}} />
+      </svg>,
+    );
+    expect(html).not.toContain('sp-tl-band__col');
+    expect(html).not.toContain('At risk');
+    expect(html).toContain('sp-tl-axis__year');
   });
 });

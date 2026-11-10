@@ -57,6 +57,9 @@
 .sp-fkpi__bar { display: block; height: 6px; border-radius: 3px; background: var(--sp-color-card-2); border: 1px solid var(--sp-color-border); overflow: hidden; }
 .sp-fkpi__bar-fill { display: block; height: 100%; background: var(--sp-color-brand); }
 .sp-floor__warn { align-self: flex-start; }
+/* Record actions for the floor: one compact line under the KPIs (wraps only when the column is very narrow). */
+.sp-factions { display: flex; flex-wrap: wrap; gap: var(--sp-space-1); }
+.sp-factions .sp-btn { height: 26px; padding: 0 8px; font-size: var(--sp-text-12); }
 
 /* Lists */
 .sp-flists { display: flex; flex-direction: column; gap: var(--sp-space-2); min-width: 0; }
@@ -82,7 +85,11 @@
 .sp-flist__primary { font-size: var(--sp-text-13); font-weight: 600; color: var(--sp-color-text); }
 .sp-flist__secondary { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }
 .sp-flist__tertiary { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }
-.sp-flist__empty { padding: var(--sp-space-2) 0; font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }
+/* A deal or inquiry row with its record link: the row selects the suite, the link opens the record. */
+.sp-flist__item { display: flex; align-items: center; gap: var(--sp-space-1); }
+.sp-flist__item > .sp-flist__row { flex: 1; min-width: 0; width: auto; }
+.sp-flist__open { flex: none; height: 26px; padding: 0 8px; font-size: var(--sp-text-12); color: var(--sp-color-brand-strong); }
+.sp-flist__empty {padding: var(--sp-space-2) 0; font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }
 
 /* Responsive */
 @media (max-width: 1099px) {
@@ -104,6 +111,9 @@
 .sp-plate .sp-seg.is-selected .sp-seg__ring { stroke: var(--sp-color-brand); stroke-opacity: 0.25; stroke-width: 8; fill: none; }
 .sp-plate:has(.sp-seg.is-selected) .sp-seg:not(.is-selected):not(.is-dim) { opacity: 0.72; }
 
+/* Dots and hatch never cross the letters: the text gets a halo in the suite's own fill (the stroke colour is set inline).
+   The stack does the same with a backing rect behind its lines. */
+.sp-plate .sp-seg--patterned > text { stroke-width: 5px; stroke-linejoin: round; paint-order: stroke fill; }
 /* Lobby / building-use slice: weak text on a card-coloured halo so the hatch never crosses the letters. */
 .sp-plate .sp-seg--lobby text { fill: var(--sp-color-text-weak); stroke: var(--sp-color-card); stroke-width: 3px; stroke-linejoin: round; paint-order: stroke fill; }
 

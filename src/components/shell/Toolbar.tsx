@@ -1,8 +1,8 @@
 import { LENSES, type LensId } from '../../domain/lenses';
-import type { PlanState, View } from '../../state/planState';
+import { shownView, type PlanState, type View } from '../../state/planState';
 import { Button, Segmented, SelectField, TextField } from '../ui';
 import { rememberTrigger } from '../../state/focusStore';
-import { useIsNarrow } from '../../lib/useMedia';
+import { useIsPhone } from '../../lib/useMedia';
 
 export interface ToolbarProps {
   state: PlanState;
@@ -17,10 +17,9 @@ const VIEWS: Array<{ id: View; label: string; icon: 'building' | 'stack' | 'time
 ];
 
 export function Toolbar({ state, patch }: ToolbarProps) {
-  // The building model needs width: below the desktop layout the stack stands in for it.
-  const narrow = useIsNarrow();
-  const view: View = state.view === 'floor' || (narrow && state.view === 'building') ? 'stack' : state.view;
-  const views = narrow ? VIEWS.filter((v) => v.id !== 'building') : VIEWS;
+  const phone = useIsPhone();
+  const view: View = state.view === 'floor' ? 'stack' : shownView(state.view, phone);
+  const views = phone ? VIEWS.filter((v) => v.id !== 'building') : VIEWS;
   const toggleMode = (mode: 'find' | 'worklist') => {
     if (state.mode === mode) patch({ mode: 'building', req: null, max: null, by: null, inquiry: null, window: null });
     else {

@@ -4,7 +4,7 @@ An interactive stacking plan that lets a broker see a building's availability, e
 
 Built for the Ascendix Tech Challenge, November 2026. It is a prototype on mock data, not a production application.
 
-![Building view: the model, the floor plan and the floor's details](docs/shots/vice/33-building.png)
+![Building view: the model, the floor plan and the floor's details](docs/shots/vice/34-building-pinned.png)
 
 ## The problem
 
@@ -28,7 +28,7 @@ One model of the building, shown four ways, with the answers to the questions ab
 
 **For the broker**
 
-- **Building view.** The landing screen: a model of the building cut into suites and coloured by the lens. Point at a floor and its floor plan appears beside the model, with that floor's numbers, suites, deals, inquiries and issues below it. A click pins the floor and lifts the floors above it.
+- **Building view.** The landing screen: a large model of the building cut into suites and coloured by the lens, with each floor's key fact beside it. Click a floor and the model turns, shrinks and docks to the left while that floor's plan comes in beside it, with the floor's numbers, suites, deals, inquiries and issues below. Pointing at another floor previews it; "Whole building" brings the model back.
 - **Stack view.** The classic plan with six KPIs above it (leased %, available SF, largest block, expiring in 12 months, WALT, pipeline) and an inspector beside it. Clicking a floor or suite expands it with the detail from every lens.
 - **Four colour lenses.** Status, expiration, deal stage and rent. Every state also has a pattern or label, so colour is never the only cue.
 - **Time travel.** Move the as-of date and the plan, KPIs and rollover chart recompute. Future vacancies and signed-but-not-commenced leases are drawn as what they are.
@@ -52,8 +52,8 @@ It works with a keyboard and a screen reader, and on a phone. The colours follow
 
 **AI**
 
-- **Claude Code** with Claude Fable 5.1 and 5.2 wrote the design specification, the code and the tests, working from a written brief.
-- **An AI review council.** After each build, three independent AI reviewers (two Claude Opus 5.5 sessions and Grok 4.7) scored screenshots and the running app against a fixed UI and UX rubric, and the fixes at least two of them agreed on went into the next round. There were eleven rounds; the reports are in `docs/judging/`. The last round averaged 37 out of 40 against a self-set bar of 38. The Vice City colours and the Building view were added after that round and have not been scored.
+- **Claude Code** with Claude Fable 5.1 and 5.2 and Claude Opus 5.5 wrote the design specification, the code and the tests, working from a written brief.
+- **An AI review council.** After each build, independent AI reviewers scored screenshots and the running app against a fixed UI and UX rubric, and the fixes at least two of them agreed on went into the next round. Rounds 0 to 10 used three reviewers (two Claude Opus 5.5 sessions and Grok 4.7); round 10 averaged 37 out of 40. From round 11 a fourth reviewer, GPT-6.1 Sol, joined. Round 11 was the first to score the Vice City colours and the Building view, and averaged 35 out of 40 for UI and UX and 8.1 out of 10 for engineering. Its fixes are in this build, and round 12 is scoring them. The reports are in `docs/judging/`.
 - **AI-assisted research** for the competitor analysis in `docs/COMPETITORS.md`, from public vendor pages, help centres and review sites.
 
 **Application**
@@ -147,7 +147,7 @@ All state lives in the URL, so every view can be linked to.
 
 | Parameter | Values | Meaning |
 |---|---|---|
-| `view` | `building`, `stack`, `timeline`, `map`, `floor` | Which view is shown (default `building`; on a narrow screen the stack stands in for it) |
+| `view` | `building`, `stack`, `timeline`, `map`, `floor` | Which view is shown (default `building`; on a phone the stack stands in for it) |
 | `lens` | `status`, `expiry`, `deals`, `rent` | What the colours encode |
 | `asOf` | `YYYY-MM-DD` | As-of date |
 | `select` | block id, e.g. `L13-U1`, `A02` | Selected suite or availability |

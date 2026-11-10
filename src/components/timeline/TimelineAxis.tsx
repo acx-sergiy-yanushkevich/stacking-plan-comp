@@ -1,7 +1,7 @@
 import type { KeyboardEvent } from 'react';
 import type { ISODate } from '../../domain/types';
 import type { RolloverBucket } from '../../domain/rollover';
-import { addMonths, fmtDate } from '../../domain/dates';
+import { addMonths, fmtDate, fmtMonthYear } from '../../domain/dates';
 import { dateToX, yearTicks } from '../../domain/timeline';
 import { num, plural, sf } from '../../domain/format';
 import { measure } from '../../lib/textFit';
@@ -15,7 +15,7 @@ export interface TimelineAxisProps {
   plotWidth: number;
   /** Top strip (year labels, cursor handle, Today) height. */
   stripHeight: number;
-  /** Rollover band height, drawn directly under the strip. */
+  /** Rollover band height, drawn directly under the strip. 0 leaves the band out (the stacked chart shows it as buttons above the SVG). */
   bandHeight: number;
   /** Total SVG height, for the gridlines. */
   height: number;
@@ -28,6 +28,9 @@ export interface TimelineAxisProps {
 const LABEL_FONT = '11px Inter, system-ui, sans-serif';
 const VALUE_FONT = '600 12px Inter, system-ui, sans-serif';
 const VALUE_FONT_SM = '600 11px Inter, system-ui, sans-serif';
+/** The cursor handle's label type and padding (AsOfCursor draws it over this strip). */
+const HANDLE_FONT = '600 12px Inter, system-ui, sans-serif';
+const HANDLE_PAD = 16;
 
 /**
  * Header of the timeline: year gridlines and labels, the Today marker, and the rollover
@@ -46,8 +49,14 @@ export function TimelineAxis({ start, end, asOf, today, plotLeft, plotWidth, str
   const showToday = today !== asOf;
   const todayAfter = today > asOf;
   const todayLabelW = measure('Today', LABEL_FONT) + 10;
-  const todayLabelX0 = todayAfter ? todayX : todayX - todayLabelW;
+  // The cursor handle sits on this strip. When the as-of date is close to today the handle would
+  // cover the word "Today", so the word moves to the handle's outer edge; its dashed line stays put.
+  const handleW = Math.ceil(measure(fmtMonthYear(asOf), HANDLE_FONT)) + HANDLE_PAD;
+  const handleX0 = Math.min(Math.max(X(asOf) - handleW / 2, plotLeft - 8), plotLeft + plotWidth - handleW + 8);
+  const todayTextX = todayAfter ? Math.max(todayX + 5, handleX0 + handleW + 5) : Math.min(todayX - 5, handleX0 - 5);
+  const todayLabelX0 = todayAfter ? todayTextX - 5 : todayTextX + 5 - todayLabelW;
   const periods = buckets.length - 1;
+  const band = bandHeight > 0;
 
   const keyActivate = (key: number) => (e: KeyboardEvent<SVGGElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -69,7 +78,8 @@ export function TimelineAxis({ start, end, asOf, today, plotLeft, plotWidth, str
   return (
     <g className="sp-tl-axis">
       {/* Rollover band background and gutter cell */}
-      <rect className="sp-tl-band__bg" x={0} y={bandTop} width={plotLeft + plotWidth} height={bandHeight} />
+      {band && <rect className="sp-tl-band__bg" x={0} y={bandTop} width={plotLeft + plotWidth} height={bandHeight} />}
+      {band && (
       <g className="sp-tl-band__gutter">
         <text className="sp-tl-band__caption" x={10} y={bandTop + 20}>
           {atRisk > 0 ? 'At risk' : 'Rollover'}
@@ -85,10 +95,11 @@ export function TimelineAxis({ start, end, asOf, today, plotLeft, plotWidth, str
           </text>
         )}
       </g>
+      )}
 
       {/* Bucket columns */}
       <g className="sp-tl-band">
-        {buckets.map((b, i) => {
+        {band && buckets.map((b, i) => {
           const from = addMonths(asOf, 12 * i);
           const to = i === periods ? end : addMonths(asOf, 12 * (i + 1));
           const x0 = X(from);
@@ -159,7 +170,7 @@ export function TimelineAxis({ start, end, asOf, today, plotLeft, plotWidth, str
       {showToday && (
         <g className="sp-tl-today" aria-hidden="true">
           <line x1={todayX + 0.5} x2={todayX + 0.5} y1={stripHeight} y2={height} />
-          <text x={todayAfter ? todayX + 5 : todayX - 5} y={18} textAnchor={todayAfter ? 'start' : 'end'}>
+          <text x={todayTextX} y={18} textAnchor={todayAfter ? 'start' : 'end'}>
             Today
           </text>
         </g>

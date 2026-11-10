@@ -182,3 +182,6 @@ export function deriveMode(s: PlanState): InspectorMode {
   if (s.window) return 'worklist';
   return 'building';
 }
+
+/** The building model needs width: on a phone the stack stands in for the Building view. */
+export const shownView = (view: PlanState['view'], phone: boolean): PlanState['view'] => (phone && view === 'building' ? 'stack' : view);

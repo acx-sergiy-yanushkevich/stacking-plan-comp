@@ -5,6 +5,9 @@ import { activeDeals, isLeaseKind } from '../../domain/derive';
 import { stageRank } from '../../domain/lenses';
 import { fmtDate, fmtMonthYear } from '../../domain/dates';
 import { num, plural, sf } from '../../domain/format';
+import type { Change } from '../../domain/types';
+import { comingSupply } from '../../domain/kpis';
+import { canShowActivity, canShowDeals, canShowInPlaceRent, canShowIssues, canShowTenantRisk, listingVisible } from '../../domain/safe';
 import { Button, Chip, Icon } from '../ui';
 import { selectSegment, toggleBucket, type Patch } from '../plan/actions';
 import { RolloverChart } from './RolloverChart';
@@ -38,6 +41,18 @@ function safeChangeText(field: string): string {
 export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
   const { floors, roll, kpis, counts, changes, safe, asOf } = model;
   const segments = floors.flatMap((f) => f.segments);
+  // Quiet listings are left out of what a prospect is told is coming.
+  const coming = comingSupply(segments, asOf, safe);
+
+  // Field history is CRM activity. A prospect sees listing news only (new space, a rent or date change
+  // on a published listing), worded without values, record names or authors.
+  const fullHistory = canShowActivity(safe);
+  const onQuietListing = (c: Change) => {
+    const seg = c.segKey ? model.segIndex.get(c.segKey) : undefined;
+    const listing = [seg?.availability, seg?.marketed].find((a) => a && c.recordLabel.includes(a.suite));
+    return !!listing && !listingVisible(listing, safe);
+  };
+  const history = fullHistory ? changes : changes.filter((c) => c.recordType === 'Availability' && !onQuietListing(c));
 
   // At risk: holdover and month-to-month leases, counted once per lease.
   const risk = (kind: 'holdover' | 'mtm') => {
@@ -92,12 +107,12 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
           activeBucket={activeBucket}
           onBucket={(key) => key !== null && toggleBucket(patch, state.bucket, key)}
           onAtRisk={openRisk}
-          safe={safe}
+          showRisk={canShowTenantRisk(safe)}
         />
         <p className="sp-ins__note">
           Lease SF ending in rolling 12-month periods from {fmtDate(asOf)}; “{tail.label}” collects everything later. Click a bar to highlight those leases in the plan.
         </p>
-        {roll.overAllocated.length > 0 && !safe && (
+        {roll.overAllocated.length > 0 && canShowIssues(safe) && (
           <p className="sp-ins__note sp-ins__warn">
             {roll.overAllocated.map((o) => `${o.floor} is over-allocated by ${sf(o.sf)}`).join('; ')}: periods use recorded SF, so they can exceed the leasable area; leased is capped at {num(model.kpis.leased)} SF.
           </p>
@@ -105,7 +120,7 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
       </Section>
 
       <Section title="At risk">
-        {safe ? (
+        {!canShowTenantRisk(safe) ? (
           <p className="sp-ins__explain">Tenant risk is withheld in prospect-safe mode.</p>
         ) : (
         <ul className="sp-ins__list">
@@ -145,11 +160,11 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
                   <span>Occupied, marketed for later</span>
                 </div>
                 <div className="sp-ins__row-meta">
-                  <span>{kpis.comingAvailable.sf > 0 && kpis.comingAvailable.from ? `From ${fmtMonthYear(kpis.comingAvailable.from)}` : 'Nothing marketed ahead'}</span>
+                  <span>{coming.sf > 0 && coming.from ? `From ${fmtMonthYear(coming.from)}` : 'Nothing marketed ahead'}</span>
                 </div>
               </div>
               <div className="sp-ins__row-end">
-                <span className="sp-ins__row-value">{kpis.comingAvailable.sf > 0 ? sf(kpis.comingAvailable.sf) : '—'}</span>
+                <span className="sp-ins__row-value">{coming.sf > 0 ? sf(coming.sf) : '—'}</span>
               </div>
             </div>
           </li>
@@ -171,21 +186,21 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
         </ul>
       </Section>
 
-      {!safe && (
+      {canShowInPlaceRent(safe) && (
       <Section title="In-place rent">
-        {model.kpis.rentByType.length === 0 ? (
+        {kpis.rentByType.length === 0 ? (
           <p className="sp-ins__explain">No rents on record.</p>
         ) : (
           <ul className="sp-ins__list">
-            {model.kpis.rentByType.map((r) => (
+            {kpis.rentByType.map((r) => (
               <li key={r.type}>
-                <div className="sp-ins__row" title="SF-weighted average of in-place rents, excluding confidential leases">
+                <div className="sp-ins__row" title="Average in-place rent, each lease weighted by its recorded SF; confidential leases excluded">
                   <div className="sp-ins__row-main">
                     <div className="sp-ins__row-title">
                       <span>{r.type}</span>
                     </div>
                     <div className="sp-ins__row-meta">
-                      <span>{sf(Math.round(r.sf))} leased</span>
+                      <span>{sf(r.sf)} on record</span>
                     </div>
                   </div>
                   <div className="sp-ins__row-end">
@@ -196,17 +211,19 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
             ))}
           </ul>
         )}
-        <p className="sp-ins__note">SF-weighted, annualised; confidential leases excluded. Never blended across lease types.</p>
+        <p className="sp-ins__note">
+          Annualised and weighted by each lease’s recorded SF, so the SF beside a type is the sum of its rent-roll rows{roll.overAllocated.length > 0 ? ' (the over-allocation cap on leased SF is not applied)' : ''}. Confidential leases excluded; never blended across lease types.
+        </p>
       </Section>
       )}
 
       <Section title="Pipeline by stage">
-        {safe ? (
+        {!canShowDeals(safe) ? (
           <p className="sp-ins__explain">Deal activity is withheld in prospect-safe mode.</p>
         ) : (
         <>
         <p className="sp-ins__explain">
-          {plural(model.kpis.pipeline.deals, 'live deal')} · {num(model.kpis.pipeline.sf)} SF requested on {num(spaceSf)} SF of space · {model.kpis.pipeline.onVacancy} on vacancies. Requested SF counts each space once, at its most advanced stage, capped at the space.
+          {plural(kpis.pipeline.deals, 'live deal')} · {num(kpis.pipeline.sf)} SF requested on {num(spaceSf)} SF of space · {kpis.pipeline.onVacancy} on vacancies. Requested SF counts each space once, at its most advanced stage, capped at the space.
         </p>
         <ul className="sp-ins__list">
           {byStage.map((row) => (
@@ -218,11 +235,9 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
                     <span>{plural(row.count, 'deal')}</span>
                   </div>
                 </div>
-                {!safe && (
-                  <div className="sp-ins__row-end">
-                    <span className="sp-ins__row-value">{row.sf > 0 ? sf(row.sf) : '—'}</span>
-                  </div>
-                )}
+                <div className="sp-ins__row-end">
+                  <span className="sp-ins__row-value">{row.sf > 0 ? sf(row.sf) : '—'}</span>
+                </div>
               </button>
             </li>
           ))}
@@ -231,7 +246,7 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
         )}
       </Section>
 
-      {!safe && (
+      {canShowIssues(safe) && (
       <Section title="Data issues" aside={<Button size="sm" variant="ghost" iconRight="chevron-right" onClick={() => patch({ mode: 'issues' })}>Review issues</Button>}>
         <div className="sp-ins__counts">
           <Chip tone={counts.error ? 'error' : 'neutral'} icon="warning" count={counts.error}>
@@ -248,23 +263,23 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
       )}
 
       <Section title="Recent changes">
-        {changes.length === 0 ? (
-          <p className="sp-ins__explain">No record changes in the last 30 days.</p>
+        {history.length === 0 ? (
+          <p className="sp-ins__explain">{fullHistory ? 'No record changes in the last 30 days.' : 'No listing changes in the last 30 days.'}</p>
         ) : (
           <ul className="sp-ins__list">
-            {changes.filter((c) => !safe || c.recordType === 'Availability').slice(0, 5).map((c) => {
-              const who = safe ? c.recordType : c.recordLabel;
-              const what = safe ? safeChangeText(c.field) : c.field === 'Record created' ? 'Record created' : `${c.field}: ${c.from ?? '—'} → ${c.to ?? '—'}`;
+            {history.slice(0, 5).map((c) => {
+              const who = fullHistory ? c.recordLabel : c.recordType;
+              const what = !fullHistory ? safeChangeText(c.field) : c.field === 'Record created' ? 'Record created' : `${c.field}: ${c.from ?? '—'} → ${c.to ?? '—'}`;
               const body = (
                 <>
                   <div className="sp-ins__row-main">
                     <div className="sp-ins__row-title">
                       <span>{who}</span>
-                      {!safe && c.recordType !== 'Lease' && <span className="sp-ins__tag">{c.recordType}</span>}
+                      {fullHistory && c.recordType !== 'Lease' && <span className="sp-ins__tag">{c.recordType}</span>}
                     </div>
                     <div className="sp-ins__row-meta">
                       <span>
-                        {fmtDate(c.at).replace(/, \d{4}$/, '')}{!safe && ` · ${c.by}`}
+                        {fmtDate(c.at).replace(/, \d{4}$/, '')}{fullHistory && ` · ${c.by}`}
                       </span>
                     </div>
                     <div className="sp-ins__row-meta">
@@ -288,7 +303,7 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
             })}
           </ul>
         )}
-        {changes.length > 5 && <p className="sp-ins__note">{num(changes.length - 5)} more in the last 30 days.</p>}
+        {history.length > 5 && <p className="sp-ins__note">{num(history.length - 5)} more in the last 30 days.</p>}
       </Section>
     </>
   );

@@ -7,7 +7,7 @@ import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { type Patch } from '../plan/actions';
 import { PATTERN_IDS } from '../plan/Patterns';
-import { segmentText, type SegmentText } from '../plan/segmentText';
+import { badgeLabel, segmentText, type SegmentText } from '../plan/segmentText';
 import { num, sf } from '../../domain/format';
 import { inquiriesFor } from './floorData';
 
@@ -34,6 +34,8 @@ interface Line {
   t: string;
   cls: string;
   font: string;
+  /** Lines that only make sense together (a rate and its lease type): drawn all or none. */
+  pair?: boolean;
 }
 
 interface PlacedLine extends Line {
@@ -109,62 +111,101 @@ function sliceName(text: SegmentText, lines: string[], badges: string[]): string
   const visible = [...lines, ...badges].filter(Boolean).join(' ');
   if (!visible) return text.aria;
   const floorName = text.aria.split(',')[0];
-  const extras = [text.sub, text.meta].filter((t, i, all) => t && !visible.includes(t) && all.indexOf(t) === i);
+  // A fact drawn over two lines ("Ste 350" / "5,500 SF", "$31–$33/SF/yr" / "FSG") is drawn all the same.
+  const drawn = (t: string) => visible.includes(t) || visible.includes(t.replace(/^Asking /, '')) || t.split(' · ').every((part) => visible.includes(part));
+  const extras = [text.sub, text.meta].filter((t, i, all) => t && !drawn(t) && all.indexOf(t) === i);
   return `${[floorName, visible.includes(text.name) ? null : text.name, visible].filter(Boolean).join(', ')}${extras.length ? `. ${extras.join(', ')}` : ''}`;
 }
 
 type NameMode = 'name' | 'tiny' | 'none';
-/** Candidate label lines for a slice whose usable label width is `fw` and bbox height `bh`. */
-function linesFor(text: SegmentText, tier: 0 | 1 | 2 | 3, fw: number, bh: number, mode: NameMode): Line[] {
+/** A rent with its unit and lease type: "$31–$33/SF/yr FSG". */
+const isRate = (t: string) => /^\$\S+\/SF\/(yr|mo) \S+$/.test(t);
+
+/**
+ * Candidate label lines for a slice whose usable label width is `fw` and bbox height `bh`.
+ * A slice is short of width far more often than of height, so a fact that does not fit one line takes
+ * another line rather than being dropped: the suite above the SF, the lease type under the rate.
+ */
+export function linesFor(text: SegmentText, tier: 0 | 1 | 2 | 3, fw: number, bh: number, mode: NameMode): Line[] {
   const lines: Line[] = [];
   const unit = `${text.sfShort} SF`;
-  // Whole name or no name: a fragment ("Café") misleads more than it helps.
+  const budget = Math.max(1, Math.floor((bh - 2 * PAD) / LINE));
+  const sub = (t: string, cls = 'sp-seg__sub'): Line => ({ t, cls, font: FONT_SUB });
+  // Whole name or no name: a fragment ("Café") misleads more than it helps. A slice of 120 px or more may
+  // wrap it once. A narrower one shows it on one line or not at all: a name stacked word by word reads
+  // worse than the suite and SF, and the full name is in the list beside the plate and in the tooltip.
   if (tier <= 2 && mode !== 'none') {
-    const ls = mode === 'name' ? wrapWords(text.name, fw, FONT_NAME, 2) : wrapWords(text.name, fw, FONT_TINY, 3);
-    if (ls.length && ls.join(' ') === text.name) for (const l of ls) lines.push(mode === 'name' ? { t: l, cls: 'sp-seg__name', font: FONT_NAME } : { t: l, cls: 'sp-seg__tiny', font: FONT_TINY });
+    const font = mode === 'name' ? FONT_NAME : FONT_TINY;
+    const ls = wrapWords(text.name, fw, font, tier <= 1 ? 2 : 1);
+    if (ls.length && ls.join(' ') === text.name) for (const l of ls) lines.push({ t: l, cls: mode === 'name' ? 'sp-seg__name' : 'sp-seg__tiny', font });
   }
   const named = lines.length > 0;
-  if (tier <= 1) {
-    if (fits(text.sub, fw, FONT_SUB)) lines.push({ t: text.sub, cls: 'sp-seg__sub', font: FONT_SUB });
-    else if (fits(unit, fw, FONT_SUB)) lines.push({ t: unit, cls: 'sp-seg__sub', font: FONT_SUB });
-    if (text.meta && bh >= 4 * LINE + 2 * PAD) {
-      const short = fits(text.meta, fw, FONT_SUB) ? text.meta : fitParts(text.meta, fw, FONT_SUB);
-      if (short.length >= 4 && fits(short, fw, FONT_SUB)) lines.push({ t: short, cls: 'sp-seg__meta', font: FONT_SUB });
-    }
-  } else if (fits(unit, fw, FONT_SUB)) lines.push({ t: unit, cls: 'sp-seg__sf', font: FONT_SUB });
+  // Suite and SF: on one line, else the suite above the SF; the SF figure is never dropped.
+  const dot = text.sub.indexOf(' · ');
+  const suite = dot > 0 && text.sub.startsWith('Ste ') ? text.sub.slice(0, dot) : '';
+  // Under a name the SF is a plain fact; with no name it leads the label, in bold.
+  const sfCls = named || tier <= 1 ? 'sp-seg__sub' : 'sp-seg__sf';
+  if (tier <= 2 && fits(text.sub, fw, FONT_SUB)) lines.push(sub(text.sub));
+  else if (tier <= 2 && suite && fits(suite, fw, FONT_SUB) && fits(unit, fw, FONT_SUB) && lines.length + 2 <= budget) lines.push(sub(suite), sub(unit, sfCls));
+  else if (fits(unit, fw, FONT_SUB)) lines.push(sub(unit, sfCls));
   else if (fits(unit, fw, FONT_TINY)) lines.push({ t: unit, cls: 'sp-seg__small', font: FONT_TINY });
+  // The lens line. A wide slice takes the full fact, a narrow one its short form or its rent. A rent is
+  // shown whole (unit and lease type), on one line or two; other facts may lose trailing parts.
+  const fact = tier <= 1 ? text.meta : tier === 2 ? text.lensShort || (text.meta.includes('$') ? text.meta : '') : '';
+  if (fact && lines.length) {
+    const plain = fact.replace(/^Asking /, '');
+    let fl: Line[] = [];
+    if (fits(fact, fw, FONT_SUB)) fl = [sub(fact, 'sp-seg__meta')];
+    else if (isRate(plain)) {
+      const cut = plain.lastIndexOf(' ');
+      if (fits(plain, fw, FONT_SUB)) fl = [sub(plain, 'sp-seg__meta')];
+      else if (fits(plain.slice(0, cut), fw, FONT_SUB)) fl = [{ ...sub(plain.slice(0, cut), 'sp-seg__meta'), pair: true }, { ...sub(plain.slice(cut + 1), 'sp-seg__meta'), pair: true }];
+    } else {
+      const short = fitParts(fact, fw, FONT_SUB);
+      if (short.length >= 4) fl = [sub(short, 'sp-seg__meta')];
+    }
+    if (fl.length && lines.length + fl.length <= budget) lines.push(...fl);
+  }
   // No name: the state in a word, or the lens fact ("Feb '27", "$32/SF/yr FSG"), under the SF, so colour
   // is never the only cue.
   if (!named && lines.length && !lines.some((l) => l.cls === 'sp-seg__meta')) {
     const word = /^For sale/.test(text.name) ? 'For sale' : /^Available/.test(text.name) ? 'Available' : null;
-    const fact = text.lensShort || word;
-    if (fact) lines.push(fits(fact, fw, FONT_SUB) ? { t: fact, cls: 'sp-seg__meta', font: FONT_SUB } : { t: fact, cls: 'sp-seg__small', font: FONT_TINY });
+    const short = text.lensShort || word;
+    if (short) lines.push(fits(short, fw, FONT_SUB) ? sub(short, 'sp-seg__meta') : { t: short, cls: 'sp-seg__small', font: FONT_TINY });
   }
   return lines;
 }
 
 /**
- * Place lines centred on the slice: each line sits on the horizontal chord through its own
- * centre, so labels follow a rotated strip instead of spilling over its edges.
+ * Place lines centred on the slice. When every line fits between the same two edges the label shares
+ * one centre line; in a slanted strip each line sits on the horizontal chord through its own centre,
+ * so the label follows the strip instead of spilling over its edges.
  */
 function placeLines(poly: Pt[], cy: number, lines: Line[]): PlacedLine[] {
   const layout = (ls: Line[]) => {
     const top = cy - (ls.length * LINE) / 2;
-    return ls.map((l, i) => {
-      const mid = top + i * LINE + LINE / 2;
-      const c = chord(poly, mid);
-      return { ...l, x: c ? (c[0] + c[1]) / 2 : NaN, y: top + i * LINE + 11, fitsHere: !!c && c[1] - c[0] - 2 * SIDE >= measure(l.t, l.font) };
+    const rows = ls.map((l, i) => {
+      const c = chord(poly, top + i * LINE + LINE / 2);
+      return { ...l, c, x: c ? (c[0] + c[1]) / 2 : NaN, y: top + i * LINE + 11, fitsHere: !!c && c[1] - c[0] - 2 * SIDE >= measure(l.t, l.font) };
     });
+    // One centre line for the whole label when the edges common to every line leave room for the widest.
+    const left = Math.max(...rows.map((r) => (r.c ? r.c[0] : Infinity)));
+    const right = Math.min(...rows.map((r) => (r.c ? r.c[1] : -Infinity)));
+    const widest = Math.max(0, ...rows.map((r) => measure(r.t, r.font)));
+    if (rows.length > 1 && right - left - 2 * SIDE >= widest) for (const r of rows) r.x = (left + right) / 2;
+    return rows;
   };
+  const bare = ({ t, cls, font, pair }: Line): Line => ({ t, cls, font, pair });
   const placed = layout(lines);
   // A name line that does not fit its chord takes every name line with it: never a fragment.
   const isName = (cls: string) => cls === 'sp-seg__name' || cls === 'sp-seg__tiny';
   const nameFailed = placed.some((l) => isName(l.cls) && !l.fitsHere);
   // A lens fact or SF line that misses its chord at 12 px gets a second chance at 11 px (it says the state).
-  const first = placed.map((l) => (!l.fitsHere && !isName(l.cls) && l.font !== FONT_TINY ? { ...l, font: FONT_TINY, cls: 'sp-seg__small', fitsHere: false } : l));
-  const second = layout(first.map(({ t, cls, font }) => ({ t, cls, font })));
-  const kept = second.filter((l) => l.fitsHere && !(nameFailed && isName(l.cls)));
-  return layout(kept.map(({ t, cls, font }) => ({ t, cls, font }))).map(({ t, cls, font, x, y }) => ({ t, cls, font, x, y }));
+  const second = layout(placed.map((l) => (!l.fitsHere && !isName(l.cls) && l.font !== FONT_TINY ? { ...bare(l), font: FONT_TINY, cls: 'sp-seg__small' } : bare(l))));
+  // Likewise a rate and its lease type stay together or go together.
+  const pairFailed = second.some((l) => l.pair && !l.fitsHere);
+  const kept = second.filter((l) => l.fitsHere && !(nameFailed && isName(l.cls)) && !(pairFailed && l.pair));
+  return layout(kept.map(bare)).map(({ t, cls, font, x, y }) => ({ t, cls, font, x, y }));
 }
 
 function placeBadges(poly: Pt[], text: SegmentText, blockTop: number, cy: number): PlacedBadge[] {
@@ -313,10 +354,10 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
             ref={(el) => {
               refs.current[i] = el;
             }}
-            className={['sp-seg', selected ? 'is-selected' : '', dim ? 'is-dim' : '', p === 'dashed' ? 'sp-seg--dashed' : '', s.seg.key.endsWith('-lobby') ? 'sp-seg--lobby' : ''].filter(Boolean).join(' ')}
+            className={['sp-seg', selected ? 'is-selected' : '', dim ? 'is-dim' : '', p === 'dashed' ? 'sp-seg--dashed' : '', s.seg.key.endsWith('-lobby') ? 'sp-seg--lobby' : '', patternFill ? 'sp-seg--patterned' : ''].filter(Boolean).join(' ')}
             role={s.seg.key.endsWith('-lobby') ? 'img' : 'button'}
             tabIndex={s.seg.key.endsWith('-lobby') ? undefined : i === tabStop ? 0 : -1}
-            aria-label={sliceName(s.text, s.lines.map((l) => l.t), s.badges.map((b) => b.text))}
+            aria-label={sliceName(s.text, s.lines.map((l) => l.t), s.badges.map((b) => (b.kind === 'deal' ? badgeLabel({ kind: 'deal', text: b.text }) : b.text)))}
             aria-pressed={s.seg.key.endsWith('-lobby') ? undefined : selected}
             data-key={s.seg.key}
             style={{ color: edge }}
@@ -329,7 +370,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
             <path className="sp-seg__rect" d={d} fill={fill} stroke={edge} />
             {patternFill && <path d={d} fill={patternFill} pointerEvents="none" />}
             {s.lines.map((l, j) => (
-              <text key={j} className={l.cls} x={l.x} y={l.y} fill={color} textAnchor="middle">
+              <text key={j} className={l.cls} x={l.x} y={l.y} fill={color} textAnchor="middle" style={patternFill && !s.seg.key.endsWith('-lobby') ? { stroke: fill } : undefined}>
                 {`${l.t} `}
               </text>
             ))}

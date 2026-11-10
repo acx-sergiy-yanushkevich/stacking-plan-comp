@@ -1,6 +1,6 @@
 import type { ISODate, Property } from './types';
 import { activeDeals, isLeaseKind, leaseEnd, type FloorView, type Segment, type SegmentKind } from './derive';
-import { rentVisible, tenantLabel, termHidden } from './safe';
+import { canShowDeals, canShowInPlaceRent, canShowIssues, canShowTenantRisk, rentVisible, tenantLabel, termHidden } from './safe';
 import { fmtDate, fmtMonths } from './dates';
 import { num, rate as fmtRate, rateRange, usd, usd0 } from './format';
 
@@ -39,22 +39,26 @@ const STATE_LABEL: Record<SegmentKind, string> = {
  * Live deals column is dropped (deal activity is not for prospects).
  */
 export function rentRollRows(p: Property, floors: FloorView[], asOf: ISODate, safe: boolean): string[][] {
-  const header = safe ? RENT_ROLL_HEADER.filter((h) => h !== 'Live deals') : [...RENT_ROLL_HEADER];
-  const rows: string[][] = [[...header]];
+  const rows: string[][] = [dealColumn([...RENT_ROLL_HEADER], safe)];
   for (const f of floors) {
     for (const s of f.segments) {
       if (s.kind === 'unmarketed') continue;
-      const r = segmentRow(f, s, safe);
-      rows.push(safe ? r.slice(0, -1) : r);
+      rows.push(dealColumn(segmentRow(f, s, safe), safe));
     }
   }
   // Leases xRE holds without a floor or unit are still part of the rent roll: list them, flagged (owner outputs only).
-  for (const l of safe ? [] : unplacedLeases(p, asOf)) {
+  for (const l of unplacedRows(p, asOf, safe)) {
     const r = [l.floorId ? (p.floors.find((f) => f.id === l.floorId)?.name ?? '') : '', '', tenantLabel(l, safe), '', 'Not placed (data issue)', l.commencement, leaseEnd(l) ?? '', '', rentVisible(l, safe) && l.rate !== null ? String(l.rate) : '', rentVisible(l, safe) && l.rate !== null ? l.rateUnit : '', l.leaseType, '0'];
-    rows.push(safe ? r.slice(0, -1) : r);
+    rows.push(dealColumn(r, safe));
   }
   return rows;
 }
+
+/** The last column of every rent-roll row is Live deals: dropped when deal activity is withheld. */
+const dealColumn = (row: string[], safe: boolean): string[] => (canShowDeals(safe) ? row : row.slice(0, -1));
+
+/** Unplaced leases are a data issue: listed on owner outputs only. */
+const unplacedRows = (p: Property, asOf: ISODate, safe: boolean) => (canShowIssues(safe) ? unplacedLeases(p, asOf) : []);
 
 /** Active leases that cannot be drawn: no Unit records, or no Floor. */
 export function unplacedLeases(p: Property, asOf: ISODate) {
@@ -105,12 +109,12 @@ function segmentRow(f: FloorView, s: Segment, safe: boolean): string[] {
   }
 
   const risk = s.kind === 'holdover' || s.kind === 'mtm';
-  const months = risk ? (safe ? '' : s.kind === 'holdover' ? 'Holdover' : 'MTM') : s.monthsToExpiry === null ? '' : String(Math.max(0, s.monthsToExpiry));
+  const months = risk ? (termHidden(s.kind, safe) ? '' : s.kind === 'holdover' ? 'Holdover' : 'MTM') : s.monthsToExpiry === null ? '' : String(Math.max(0, s.monthsToExpiry));
   const expirationOut = termHidden(s.kind, safe) ? '' : expiration;
   const live = activeDeals(s.lease?.deals).length + activeDeals(s.availability?.deals).length + activeDeals(s.marketed?.deals).length;
 
   // Prospect-safe: every in-place lease is simply "Leased" with its recorded dates, so no tenant stands out.
-  const state = safe && risk ? 'Leased' : STATE_LABEL[s.kind];
+  const state = termHidden(s.kind, safe) ? 'Leased' : STATE_LABEL[s.kind];
   return [f.floor.name, s.suite ?? '', tenant, String(s.size), state, commencement, expirationOut, months, rate, unit, leaseType, String(live)];
 }
 
@@ -122,8 +126,7 @@ export const RENT_ROLL_DISPLAY_HEADER = ['Floor', 'Suite', 'Tenant', 'RSF', 'Sta
  * asking prices for sale units. Drops the Live deals column in prospect-safe mode.
  */
 export function rentRollDisplay(p: Property, floors: FloorView[], asOf: ISODate, safe: boolean): string[][] {
-  const header = safe ? RENT_ROLL_DISPLAY_HEADER.filter((h) => h !== 'Live deals') : [...RENT_ROLL_DISPLAY_HEADER];
-  const rows: string[][] = [[...header]];
+  const rows: string[][] = [dealColumn([...RENT_ROLL_DISPLAY_HEADER], safe)];
   for (const f of floors) {
     for (const s of f.segments) {
       if (s.kind === 'unmarketed') continue;
@@ -138,13 +141,13 @@ export function rentRollDisplay(p: Property, floors: FloorView[], asOf: ISODate,
         tenant = lease ? `${tenantLabel(lease, safe)} (sublandlord)` : 'Sublease';
         start = lease ? fmtDate(lease.commencement) : a.availableFrom ? fmtDate(a.availableFrom) : 'Now';
         end = s.endDate ? fmtDate(s.endDate) : '—';
-        rate = lease && rentVisible(lease, safe) && lease.rate !== null ? fmtRate(lease.rate, lease.rateUnit, lease.leaseType) : safe ? 'Withheld' : lease?.confidential ? 'Confidential' : '—';
+        rate = lease && rentVisible(lease, safe) && lease.rate !== null ? fmtRate(lease.rate, lease.rateUnit, lease.leaseType) : !canShowInPlaceRent(safe) ? 'Withheld' : lease?.confidential ? 'Confidential' : '—';
         stateExtra = rentVisible(a, safe) ? ` · asking ${rateRange(a.rentLow, a.rentHigh, a.rateUnit, a.leaseType)}${a.subleaseExpiration ? ` thru ${fmtDate(a.subleaseExpiration)}` : ''}` : '';
       } else if (lease) {
         tenant = tenantLabel(lease, safe);
         start = fmtDate(lease.commencement);
-        end = termHidden(s.kind, safe) ? '—' : s.endDate ? fmtDate(s.endDate) : safe ? '—' : 'Month-to-month';
-        rate = rentVisible(lease, safe) && lease.rate !== null ? fmtRate(lease.rate, lease.rateUnit, lease.leaseType) : safe ? 'Withheld' : lease.confidential ? 'Confidential' : '—';
+        end = termHidden(s.kind, safe) ? '—' : s.endDate ? fmtDate(s.endDate) : canShowTenantRisk(safe) ? 'Month-to-month' : '—';
+        rate = rentVisible(lease, safe) && lease.rate !== null ? fmtRate(lease.rate, lease.rateUnit, lease.leaseType) : !canShowInPlaceRent(safe) ? 'Withheld' : lease.confidential ? 'Confidential' : '—';
       } else if (a) {
         tenant = s.kind === 'forsale' ? 'For sale' : 'Available';
         start = s.availableFrom ? fmtDate(s.availableFrom) : 'Now';
@@ -153,16 +156,16 @@ export function rentRollDisplay(p: Property, floors: FloorView[], asOf: ISODate,
         else rate = rentVisible(a, safe) && a.rentHigh > 0 ? `Asking ${rateRange(a.rentLow, a.rentHigh, a.rateUnit, a.leaseType)}` : '—';
       }
       const risk = s.kind === 'holdover' || s.kind === 'mtm';
-      const remaining = risk ? (safe ? '—' : s.kind === 'holdover' ? 'Holdover' : 'MTM') : s.monthsToExpiry === null ? '—' : fmtMonths(Math.max(0, s.monthsToExpiry));
+      const remaining = risk ? (termHidden(s.kind, safe) ? '—' : s.kind === 'holdover' ? 'Holdover' : 'MTM') : s.monthsToExpiry === null ? '—' : fmtMonths(Math.max(0, s.monthsToExpiry));
       const live = activeDeals(s.lease?.deals).length + activeDeals(s.availability?.deals).length + activeDeals(s.marketed?.deals).length;
-      const row = [f.floor.name, s.suite ?? '—', tenant, num(s.size), (safe && risk ? 'Leased' : STATE_LABEL[s.kind]) + stateExtra, start, end, remaining, rate, live ? String(live) : '—'];
-      rows.push(safe ? row.slice(0, -1) : row);
+      const row = [f.floor.name, s.suite ?? '—', tenant, num(s.size), (termHidden(s.kind, safe) ? 'Leased' : STATE_LABEL[s.kind]) + stateExtra, start, end, remaining, rate, live ? String(live) : '—'];
+      rows.push(dealColumn(row, safe));
     }
   }
-  for (const l of safe ? [] : unplacedLeases(p, asOf)) {
+  for (const l of unplacedRows(p, asOf, safe)) {
     const end = leaseEnd(l);
-    const row = [l.floorId ? (p.floors.find((f) => f.id === l.floorId)?.name ?? '—') : '—', '—', tenantLabel(l, safe), '—', 'Not placed (data issue)', fmtDate(l.commencement), end ? fmtDate(end) : 'Month-to-month', '—', rentVisible(l, safe) && l.rate !== null ? fmtRate(l.rate, l.rateUnit, l.leaseType) : safe ? 'Withheld' : '—', '—'];
-    rows.push(safe ? row.slice(0, -1) : row);
+    const row = [l.floorId ? (p.floors.find((f) => f.id === l.floorId)?.name ?? '—') : '—', '—', tenantLabel(l, safe), '—', 'Not placed (data issue)', fmtDate(l.commencement), end ? fmtDate(end) : 'Month-to-month', '—', rentVisible(l, safe) && l.rate !== null ? fmtRate(l.rate, l.rateUnit, l.leaseType) : '—', '—'];
+    rows.push(dealColumn(row, safe));
   }
   return rows;
 }

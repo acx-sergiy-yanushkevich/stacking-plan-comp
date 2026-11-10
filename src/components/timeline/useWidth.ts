@@ -1,17 +1,21 @@
 import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
 
 /**
- * Measured content width of the referenced element, never below `min`.
- * SSR and tests (no ResizeObserver) get `min`. Measurement happens before paint so
- * the SVG is never drawn at the wrong width for a frame.
+ * Measured content-box width of the referenced element (its padding is not drawable space),
+ * never below `min`. SSR and tests (no layout) get `initial`. Measurement happens before paint
+ * so the SVG is never drawn at the wrong width for a frame.
  */
-export function useWidth<T extends HTMLElement>(min = 640): [RefObject<T | null>, number] {
+export function useWidth<T extends HTMLElement>(min = 640, initial = min): [RefObject<T | null>, number] {
   const ref = useRef<T | null>(null);
-  const [width, setWidth] = useState(min);
+  const [width, setWidth] = useState(initial);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const apply = () => setWidth(Math.max(min, Math.floor(el.clientWidth)));
+    const apply = () => {
+      const cs = getComputedStyle(el);
+      const pad = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+      setWidth(Math.max(min, Math.floor(el.clientWidth - pad)));
+    };
     apply();
     if (typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(apply);

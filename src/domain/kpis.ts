@@ -1,19 +1,48 @@
 import type { ISODate, LeaseType, Property } from './types';
 import { yearsBetween } from './dates';
 import { annualRate } from './format';
-import { activeDeals, isLeaseKind, type FloorView, type SegmentKind } from './derive';
+import { activeDeals, isLeaseKind, type FloorView, type Segment, type SegmentKind } from './derive';
+import { marketedFor } from './safe';
 
 export interface RentByType {
   type: LeaseType;
+  /** Annual $/SF, weighted by `sf`. */
   avg: number;
+  /**
+   * Recorded SF of the leases averaged: the sum of their rent-roll rows. It is not scaled by the
+   * over-allocation cap, so the per-type figures can add up to more than the capped leased SF.
+   */
   sf: number;
+}
+
+/** Occupied space already marketed for a later date. */
+export interface ComingSupply {
+  sf: number;
+  /** Earliest available-from date among it; null when there is none. */
+  from: ISODate | null;
+}
+
+/**
+ * Coming supply among `segments` (a floor's, or the whole building's): occupied suites with an
+ * availability dated after `asOf`. Prospect-safe mode leaves quiet listings out.
+ */
+export function comingSupply(segments: Segment[], asOf: ISODate, safe: boolean): ComingSupply {
+  let sf = 0;
+  let from: ISODate | null = null;
+  for (const s of segments) {
+    const m = marketedFor(s, safe);
+    if (!m || !m.availableFrom || m.availableFrom <= asOf) continue;
+    sf += m.size;
+    if (from === null || m.availableFrom < from) from = m.availableFrom;
+  }
+  return { sf, from };
 }
 
 export interface Kpis {
   /** Unaccounted area traced to a lease that has no unit records. */
   unplacedLease: number;
-  /** Occupied space already marketed for a later date (coming supply). */
-  comingAvailable: { sf: number; from: ISODate | null };
+  /** Occupied space already marketed for a later date, quiet listings included (see `comingSupply` for the prospect-safe figure). */
+  comingAvailable: ComingSupply;
   rentable: number;
   leasable: number;
   leased: number;
@@ -29,7 +58,7 @@ export interface Kpis {
   forSale: number;
   maxContiguous: { size: number; floorName: string | null };
   walt: number;
-  /** SF-weighted in-place rent per lease type, largest share first. Never blended across types. */
+  /** In-place rent per lease type, weighted by recorded SF, largest share first. Never blended across types. */
   rentByType: RentByType[];
   expiring12: number;
   /** Distinct leases behind `expiring12`. */
@@ -53,19 +82,20 @@ export function computeKpis(p: Property, floors: FloorView[], asOf: ISODate): Kp
   let waltDen = 0;
   const rent = new Map<LeaseType, { num: number; sf: number }>();
   for (const f of floors) {
-    // Over-allocated floor: scale lease weights so they sum to the capped leased SF.
+    // Over-allocated floor: scale the WALT weights so they sum to the capped leased SF, the figure WALT is read against.
     const raw = f.segments.filter((s) => isLeaseKind(s.kind)).reduce((t, s) => t + s.size, 0);
     const factor = raw > f.leased && raw > 0 ? f.leased / raw : 1;
     for (const s of f.segments) {
       if (!s.lease || !isLeaseKind(s.kind)) continue;
-      const w = s.size * factor;
       const remaining = (s.kind === 'leased' || s.kind === 'sublease') && s.endDate ? Math.max(0, yearsBetween(asOf, s.endDate)) : 0;
-      waltNum += remaining * w;
-      waltDen += w;
+      waltNum += remaining * s.size * factor;
+      waltDen += s.size * factor;
+      // In-place rent is an average of records, so each lease weighs its recorded SF: the SF beside
+      // each type is then the sum of those rent-roll rows, with no cap applied.
       if (!s.lease.confidential && s.lease.rate !== null) {
         const r = rent.get(s.lease.leaseType) ?? { num: 0, sf: 0 };
-        r.num += annualRate(s.lease.rate, s.lease.rateUnit) * w;
-        r.sf += w;
+        r.num += annualRate(s.lease.rate, s.lease.rateUnit) * s.size;
+        r.sf += s.size;
         rent.set(s.lease.leaseType, r);
       }
     }
@@ -108,11 +138,7 @@ export function computeKpis(p: Property, floors: FloorView[], asOf: ISODate): Kp
 
   return {
     unplacedLease: all.filter((x) => x.kind === 'unmarketed' && x.suspect).reduce((t, x) => t + x.size, 0),
-    comingAvailable: (() => {
-      const m = all.filter((x) => x.marketed && x.marketed.availableFrom && x.marketed.availableFrom > asOf);
-      const dates = m.map((x) => x.marketed!.availableFrom!).sort();
-      return { sf: m.reduce((t, x) => t + x.marketed!.size, 0), from: dates[0] ?? null };
-    })(),
+    comingAvailable: comingSupply(all, asOf, false),
     rentable: p.totalBuildingArea,
     leasable,
     leased,

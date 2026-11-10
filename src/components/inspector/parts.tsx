@@ -3,7 +3,6 @@ import type { Deal } from '../../domain/types';
 import { fmtDate } from '../../domain/dates';
 import { sf } from '../../domain/format';
 import { stageRank } from '../../domain/lenses';
-import { prospectLabel } from '../../domain/safe';
 
 /** Section with an 11 px uppercase label and an optional right-hand control. */
 export function Section({ title, aside, children, className = '' }: { title: string; aside?: ReactNode; children: ReactNode; className?: string }) {
@@ -53,7 +52,8 @@ export function dedupeDeals(lists: Array<Deal[] | undefined>): Deal[] {
   return [...seen.values()].sort((a, b) => stageRank(b.stage) - stageRank(a.stage) || (a.updated < b.updated ? 1 : a.updated > b.updated ? -1 : 0));
 }
 
-export function DealList({ deals, safe }: { deals: Deal[]; safe: boolean }) {
+/** Live deals on a block. The caller passes them through `visibleDeals`, so prospect-safe mode never reaches this list. */
+export function DealList({ deals }: { deals: Deal[] }) {
   if (deals.length === 0) return <p className="sp-ins__explain">No live deals.</p>;
   return (
     <ul className="sp-ins__list" aria-label="Deals">
@@ -63,19 +63,17 @@ export function DealList({ deals, safe }: { deals: Deal[]; safe: boolean }) {
             <StageChip stage={d.stage} />
             <div className="sp-ins__row-main">
               <div className="sp-ins__row-title">
-                <span>{prospectLabel(d, safe)}</span>
+                <span>{d.prospect}</span>
                 {d.kind === 'Renewal' && <span className="sp-ins__tag">renewal</span>}
               </div>
               <div className="sp-ins__row-meta">
-                {!safe && d.broker && <span>{d.broker}</span>}
+                {d.broker && <span>{d.broker}</span>}
                 <span>Updated {fmtDate(d.updated)}</span>
               </div>
             </div>
-            {!safe && (
-              <div className="sp-ins__row-end">
-                <span className="sp-ins__row-value">{sf(d.size)}</span>
-              </div>
-            )}
+            <div className="sp-ins__row-end">
+              <span className="sp-ins__row-value">{sf(d.size)}</span>
+            </div>
           </div>
         </li>
       ))}

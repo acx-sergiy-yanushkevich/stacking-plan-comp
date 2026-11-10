@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { levelPolygon, projectPolygon, slicePolygon, type Pt } from '../../domain/geometry';
@@ -8,6 +8,7 @@ import { patternFor } from '../plan/segmentText';
 import { num, pct } from '../../domain/format';
 import { openFloor, openFloorPlate, type Patch } from '../plan/actions';
 import { setHoverFloor, useHoverFloor } from '../../state/hoverStore';
+import { usePrefersReducedMotion } from '../../lib/useMedia';
 import './hero.css';
 
 export interface BuildingHeroProps {
@@ -20,6 +21,37 @@ export interface BuildingHeroProps {
   size?: 'panel' | 'stage';
   /** What a click on a floor does. Default: focus the floor, then open its floor plan on a second click. */
   onPick?: (floorId: string) => void;
+  /** Stage only: how far the building is turned about its vertical axis, in degrees. A change is animated. */
+  angle?: number;
+  /** Stage only: a short fact printed after each floor number (for example "9,300 SF available"). */
+  tagFact?: (floorId: string) => string;
+}
+
+/** Eases a number toward its target; jumps when the viewer asked for reduced motion. */
+function useTween(target: number, ms = 760): number {
+  const reduce = usePrefersReducedMotion();
+  const cur = useRef(target);
+  const [value, setValue] = useState(target);
+  useEffect(() => {
+    if (cur.current === target) return;
+    if (reduce || typeof requestAnimationFrame === 'undefined') {
+      cur.current = target;
+      setValue(target);
+      return;
+    }
+    const from = cur.current;
+    const t0 = performance.now();
+    let raf = 0;
+    const step = (now: number) => {
+      const k = Math.min(1, (now - t0) / ms);
+      cur.current = from + (target - from) * (1 - Math.pow(1 - k, 3));
+      setValue(cur.current);
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, ms, reduce]);
+  return value;
 }
 
 interface Dims {
@@ -73,14 +105,15 @@ const fillOf = (tone: string) => (tone === 'empty' || tone === 'deal-none' ? 'va
  * round; a click focuses the floor, a second click opens its floor plan. Decorative for assistive
  * technology (the stack is the accessible equivalent), so the SVG is a labelled image.
  */
-export function BuildingHero({ model, state, patch, compact, size = 'panel', onPick }: BuildingHeroProps) {
+export function BuildingHero({ model, state, patch, compact, size = 'panel', onPick, angle = 0, tagFact }: BuildingHeroProps) {
   const stage = size === 'stage';
   const { W, H, HZ, LIFT, GAP } = stage ? STAGE : PANEL;
   const { property, floors, safe, highlight, segIndex } = model;
   const hoverId = useHoverFloor();
   const focusId = state.floor ?? (state.select ? (segIndex.get(state.select)?.floorId ?? null) : null);
 
-  const { heroFloors, fit } = useMemo(() => {
+  const tagPad = useMemo(() => (tagFact ? Math.max(0, ...floors.map((f) => tagFact(f.floor.id).length)) * 8.6 + 18 : 0), [tagFact, floors]);
+  const build = useCallback((deg: number) => {
     const base = levelPolygon(projectPolygon(property.footprint, { w: BOX, h: BOX }, 0), { w: BOX, h: BOX }, 0);
     const cx = (Math.min(...base.map((p) => p[0])) + Math.max(...base.map((p) => p[0]))) / 2;
     const cy = (Math.min(...base.map((p) => p[1])) + Math.max(...base.map((p) => p[1]))) / 2;
@@ -94,7 +127,20 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
     const s = Math.min((W - 60) / xr, (H - 14 - n * HZ - LIFT) / yr);
     const ox = W / 2 - (s * (Math.max(...ax) + Math.min(...ax))) / 2;
     const oy = H - 8 - s * Math.max(...ay);
-    const iso = (p: Pt, z: number): Pt => [ox + s * (p[0] - cx - (p[1] - cy)) * COS, oy + s * (p[0] - cx + (p[1] - cy)) * SIN - z];
+    // Track what is drawn, so the stage can fit its viewBox to the building instead of a fixed box.
+    const box = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+    const iso = (p: Pt, z: number): Pt => {
+      const q: Pt = [ox + s * (p[0] - cx - (p[1] - cy)) * COS, oy + s * (p[0] - cx + (p[1] - cy)) * SIN - z];
+      box.x0 = Math.min(box.x0, q[0]); box.x1 = Math.max(box.x1, q[0]);
+      box.y0 = Math.min(box.y0, q[1]); box.y1 = Math.max(box.y1, q[1]);
+      return q;
+    };
+    // Turning the building: every point goes round the plan centre before it is projected. Suites are
+    // sliced first, so they keep their place on the floor whatever the angle.
+    const rad = (deg * Math.PI) / 180;
+    const cs = Math.cos(rad);
+    const sn = Math.sin(rad);
+    const rot = (p: Pt): Pt => (deg === 0 ? p : [cx + (p[0] - cx) * cs - (p[1] - cy) * sn, cy + (p[0] - cx) * sn + (p[1] - cy) * cs]);
     const path = (pts: Pt[]) => `M${pts.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join('L')}Z`;
 
     const heroFloors: HeroFloor[] = floors.map((f, i) => {
@@ -115,7 +161,7 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
       const z1 = z0 + HZ - GAP;
       const slices: HeroSlice[] = parts
         .map((part, j) => {
-          const pts = polys[j] ?? [];
+          const pts = (polys[j] ?? []).map(rot);
           if (pts.length < 3) return null;
           let area = 0;
           for (let a = 0; a < pts.length; a++) {
@@ -137,12 +183,23 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
         })
         .filter((x): x is HeroSlice => x !== null)
         .sort((a, b) => a.depth - b.depth);
-      const edge = poly.map((p) => iso(p, z0 + HZ / 2)).reduce((best, p) => (p[0] > best[0] ? p : best));
+      const edge = poly.map((p) => iso(rot(p), z0 + HZ / 2)).reduce((best, p) => (p[0] > best[0] ? p : best));
       return { id: f.floor.id, name: f.floor.name, level, leasedPct: f.leasable ? f.leased / f.leasable : 0, leasable: f.leasable, available: f.available, keys: f.segments.map((sg) => sg.key), slices, tag: edge };
     });
-    const ground = path(base.map((p) => iso(p, 0)));
-    return { heroFloors: heroFloors.slice().sort((a, b) => a.level - b.level), fit: { ground } };
-  }, [property.footprint, floors, state.lens, safe, W, H, HZ, LIFT, GAP]);
+    const ground = path(base.map((p) => iso(rot(p), 0)));
+    // Room for the lift above, the floor tags on the right and the blurred ground shadow below.
+    const tagRight = Math.max(...heroFloors.map((f) => f.tag[0])) + 34 + tagPad;
+    const vx = Math.floor(box.x0 - 6);
+    const vy = Math.floor(box.y0 - LIFT - 8);
+    const viewBox = `${vx} ${vy} ${Math.ceil(Math.max(box.x1 + 6, tagRight) - vx)} ${Math.ceil(box.y1 + 20 - vy)}`;
+    return { heroFloors: heroFloors.slice().sort((a, b) => a.level - b.level), fit: { ground, viewBox } };
+  }, [property.footprint, floors, state.lens, safe, W, H, HZ, LIFT, GAP, tagPad]);
+  // The frame (viewBox) belongs to the angle being turned to, so the model does not pulse while it turns.
+  const shown = useTween(stage ? angle : 0);
+  const rest = useMemo(() => build(stage ? angle : 0), [build, stage, angle]);
+  const turning = useMemo(() => (shown === (stage ? angle : 0) ? null : build(shown)), [build, shown, stage, angle]);
+  const { heroFloors } = turning ?? rest;
+  const fit = { ground: (turning ?? rest).fit.ground, viewBox: rest.fit.viewBox };
 
   const focusLevel = focusId ? (heroFloors.find((f) => f.id === focusId)?.level ?? null) : null;
   const hot = heroFloors.find((f) => f.id === (hoverId ?? focusId)) ?? null;
@@ -153,8 +210,8 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
   const hint = hot ? (hot.id === focusId ? 'Click again to open the floor plan' : 'Click to focus this floor in the plan') : 'Hover a floor to trace it in the plan';
 
   return (
-    <div className={`sp-hero ${compact ? 'sp-hero--compact' : ''} ${stage ? 'sp-hero--stage' : ''}`}>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`Building model: ${floors.length} floors coloured by the active lens. The stack lists the same suites.`}>
+    <div className={`sp-hero ${compact ? 'sp-hero--compact' : ''} ${stage ? 'sp-hero--stage' : ''} ${tagFact ? 'sp-hero--facts' : ''}`}>
+      <svg viewBox={stage ? fit.viewBox : `0 0 ${W} ${H}`} width={stage ? undefined : '100%'} role="img" aria-label={`Building model: ${floors.length} floors coloured by the active lens. The stack lists the same suites.`}>
         <path className="sp-hero__ground" d={fit.ground} aria-hidden="true" />
         {heroFloors.map((f) => {
           const above = focusLevel !== null && f.level > focusLevel;
@@ -201,6 +258,7 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
             return (
               <text key={f.id} className={`sp-hero__tag ${f.id === hot?.id ? 'is-hot' : ''}`} x={f.tag[0] + 7} y={f.tag[1] + 3 - (lifted ? LIFT : 0)} aria-hidden="true">
                 {f.name.replace(/^Floor\s+/i, '')}
+                {tagFact?.(f.id) ? <tspan className="sp-hero__fact">{` · ${tagFact(f.id)}`}</tspan> : null}
               </text>
             );
           })}
