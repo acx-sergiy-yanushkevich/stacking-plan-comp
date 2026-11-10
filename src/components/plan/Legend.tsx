@@ -19,7 +19,7 @@ export function Legend({ items, note, id, compact }: LegendProps) {
           <span key={i.tone + i.label} className="sp-legend__item" title={i.share > 0 ? `${i.label}: ${num(i.sf)} SF, ${pct(i.share)} of leasable` : `${i.label}: ${num(i.sf)} SF`}>
             <span
               className={`sp-legend__swatch ${i.pattern ? `sp-legend__swatch--${i.pattern}` : ''}`}
-              style={{ background: i.pattern === 'dashed' ? 'transparent' : `var(--tone-${i.tone}-fill)`, borderColor: `var(--tone-${i.tone}-edge)`, color: `var(--tone-${i.tone}-edge)` }}
+              style={{ backgroundColor: i.pattern === 'dashed' ? 'transparent' : `var(--tone-${i.tone}-fill)`, borderColor: `var(--tone-${i.tone}-edge)`, color: `var(--tone-${i.tone}-edge)` }}
               aria-hidden="true"
             />
             <span className="sp-legend__label">{i.label}</span>

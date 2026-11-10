@@ -33,6 +33,8 @@ export interface BlockProps {
   partial?: boolean;
   /** More facts to show when the block is tall enough (a focused floor): rent, term, deal. */
   extra?: string[];
+  /** A focused (tall) row: use the roomier text tier so the suite number stays. */
+  roomy?: boolean;
 }
 
 const PAD = 8;
@@ -45,12 +47,12 @@ const GLYPH: Partial<Record<Segment['kind'], string>> = { available: 'A', sublea
 const STATE_WORD: Partial<Record<Segment['kind'], string[]>> = { available: ['Available'], sublease: ['Sublease'], committed: ['Signed'], forsale: ['For sale'], unmarketed: ['Unaccounted'], projected: ['Vacant'] };
 
 /** One suite on the plan: tone fill, pattern, accent bar, adaptive text, badges. */
-export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelect, onFocus, onKeyDown, enlarged, compact, related, partial, extra }: BlockProps) {
+export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelect, onFocus, onKeyDown, enlarged, compact, related, partial, extra, roomy }: BlockProps) {
   const tone = text.tone;
   const fill = `var(--tone-${tone}-fill)`;
   const edge = `var(--tone-${tone}-edge)`;
   const color = `var(--tone-${tone}-text)`;
-  const tier = textTier(w);
+  const tier = roomy ? (Math.max(0, textTier(w) - 1) as ReturnType<typeof textTier>) : textTier(w);
   // Line budgets: the regular 15 px pitch, and a compact 13 px pitch used only when it lets a whole
   // name keep its SF line (a wrapped name + SF + lens fact needs four lines in a 66 px row).
   const cap15 = Math.max(1, Math.floor((h - PAD * 2 + 3) / LINE));
@@ -209,7 +211,13 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   if (extra && picked && !compactPitch) {
     for (const e of extra) {
       if (lines.length >= cap15) break;
-      if (fits(e, innerBody, FONT_SUB) && !lines.some((l) => l.t.includes(e))) lines.push({ t: e, cls: 'sp-seg__meta', font: FONT_SUB });
+      if (lines.some((l) => l.t.includes(e))) continue;
+      if (fits(e, innerBody, FONT_SUB)) lines.push({ t: e, cls: 'sp-seg__meta', font: FONT_SUB });
+      else {
+        // Too long for one line: two whole lines, or not at all.
+        const two = wrapWords(e, innerBody, FONT_SUB, 2);
+        if (two.join(' ') === e && lines.length + two.length <= cap15) for (const t of two) lines.push({ t, cls: 'sp-seg__meta', font: FONT_SUB });
+      }
     }
   }
   const lineX = (l: Line) => (l.cls === 'sp-seg__micro' ? 2 : l.cls === 'sp-seg__tiny' ? 4 : PAD) + accentPad;

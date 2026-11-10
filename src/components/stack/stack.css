@@ -50,7 +50,6 @@
 @media (max-width: 1099px) { .sp-stage .sp-seg { scroll-margin-bottom: 50vh; } }
 
 /* Focus + hover link with the building model */
-.sp-stack__row { transition: transform var(--sp-ease-slow); }
 .sp-stack__rowbg.is-floor-selected { stroke: var(--sp-color-brand); stroke-opacity: 0.35; }
 .sp-stack__rowbg.is-hot { fill: var(--sp-color-brand-soft); }
 
@@ -79,9 +78,9 @@
 .sp-pfloor__bar { display: flex; gap: 2px; height: 10px; margin: 0 10px 6px; }
 .sp-pbar { min-width: 4px; flex-basis: 0; border: 1px solid; border-radius: 3px; }
 .sp-pbar.is-selected { outline: 2px solid var(--sp-color-brand); outline-offset: 1px; }
-.sp-pbar--hatch { background-image: repeating-linear-gradient(45deg, transparent 0 3px, currentColor 3px 4.2px) !important; }
-.sp-pbar--dots { background-image: radial-gradient(currentColor 1px, transparent 1.3px) !important; background-size: 5px 5px !important; }
-.sp-pbar--dashed { border-style: dashed; background: transparent !important; }
+.sp-pbar--hatch { background-image: repeating-linear-gradient(45deg, transparent 0 3px, currentColor 3px 4.2px); }
+.sp-pbar--dots { background-image: radial-gradient(currentColor 1px, transparent 1.3px); background-size: 5px 5px; }
+.sp-pbar--dashed { border-style: dashed; background-color: transparent !important; }
 .sp-pbar--lobby { background: var(--tone-muted-fill); border-color: var(--tone-muted-edge); color: var(--sp-color-border-strong); background-image: repeating-linear-gradient(45deg, transparent 0 3px, currentColor 3px 4px); }
 .sp-pfloor__suites { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--sp-color-border); }
 .sp-pfloor__suites > li + li { border-top: 1px solid var(--sp-color-border); }

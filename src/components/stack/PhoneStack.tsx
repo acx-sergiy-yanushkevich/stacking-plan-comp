@@ -54,14 +54,18 @@ export function PhoneStack({ model, state, patch, title, legendNote, textFor, hi
           const texts = f.segments.map((seg) => ({ seg, text: textFor(seg, f) }));
           return (
             <li key={f.floor.id} className={`sp-pfloor ${state.floor === f.floor.id ? 'is-open' : ''}`}>
-              <button type="button" className="sp-pfloor__head" data-floor={f.floor.id} onClick={() => openFloor(patch, f.floor.id)} aria-label={`${f.floor.name}: ${pct(leasedPct)} leased, ${num(f.leasable)} RSF leasable${f.available ? `, ${num(f.available)} SF available` : ''}. Open floor summary.`}>
-                <span className="sp-pfloor__num">{floorNum}</span>
+              <button type="button" className="sp-pfloor__head" data-floor={f.floor.id} onClick={() => openFloor(patch, f.floor.id)}>
+                <span className="sp-pfloor__num">
+                  <span className="sp-sr-only">Floor </span>
+                  {floorNum}
+                </span>
                 <span className="sp-pfloor__facts">
                   <span className="sp-pfloor__pct">{pct(leasedPct)} leased</span>
                   <span>{num(f.leasable)} RSF</span>
                   {f.available > 0 && <span className="sp-pfloor__avail">{num(f.available)} SF available</span>}
                   {f.overAllocatedBy > 0 && !state.safe && <span className="sp-pfloor__warn">+{num(f.overAllocatedBy)} SF over</span>}
                 </span>
+                <span className="sp-sr-only">. Open floor summary</span>
                 <Icon name="chevron-right" size={14} />
               </button>
               <div className="sp-pfloor__bar" aria-hidden="true">
@@ -69,7 +73,7 @@ export function PhoneStack({ model, state, patch, title, legendNote, textFor, hi
                   <span
                     key={seg.key}
                     className={`sp-pbar ${text.pattern ? `sp-pbar--${text.pattern}` : ''} ${state.select === seg.key ? 'is-selected' : ''}`}
-                    style={{ flexGrow: Math.max(1, seg.size), background: `var(--tone-${text.tone}-fill)`, borderColor: `var(--tone-${text.tone}-edge)`, color: `var(--tone-${text.tone}-edge)` }}
+                    style={{ flexGrow: Math.max(1, seg.size), backgroundColor: `var(--tone-${text.tone}-fill)`, borderColor: `var(--tone-${text.tone}-edge)`, color: `var(--tone-${text.tone}-edge)` }}
                   />
                 ))}
                 {f.floor.nonLeasable > 0 && <span className="sp-pbar sp-pbar--lobby" style={{ flexGrow: f.floor.nonLeasable }} />}
@@ -90,7 +94,7 @@ export function PhoneStack({ model, state, patch, title, legendNote, textFor, hi
                       >
                         <span
                           className={`sp-psuite__swatch ${text.pattern ? `sp-pbar--${text.pattern}` : ''}`}
-                          style={{ background: `var(--tone-${text.tone}-fill)`, borderColor: `var(--tone-${text.tone}-edge)`, color: `var(--tone-${text.tone}-edge)` }}
+                          style={{ backgroundColor: `var(--tone-${text.tone}-fill)`, borderColor: `var(--tone-${text.tone}-edge)`, color: `var(--tone-${text.tone}-edge)` }}
                           aria-hidden="true"
                         />
                         <span className="sp-psuite__main">

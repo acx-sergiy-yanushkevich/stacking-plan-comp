@@ -24,3 +24,5 @@
 
 .sp-kpi--static { cursor: default; }
 .sp-kpi--static:hover { background: var(--sp-color-card); }
+
+.sp-kpi__value > span:first-child { white-space: nowrap; }

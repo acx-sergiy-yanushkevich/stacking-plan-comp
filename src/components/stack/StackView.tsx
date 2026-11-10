@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { blockLayout } from '../../domain/layout';
@@ -8,8 +8,8 @@ import { matchingInquiries } from '../../domain/finder';
 import { useIsPhone } from '../../lib/useMedia';
 import { useHoverKeys, usePinnedKeys, setPinnedKeys, setHoverFloor, useHoverFloor } from '../../state/hoverStore';
 import type { FloorView, Segment } from '../../domain/derive';
-import type { LensId } from '../../domain/lenses';
 import { PhoneStack } from './PhoneStack';
+import { focusFacts } from '../plan/focusFacts';
 import { useWidth } from '../../lib/useWidth';
 import { clearSelection, openFloor, selectSegment } from '../plan/actions';
 import { Legend } from '../plan/Legend';
@@ -38,8 +38,6 @@ const MIN_BLOCK_DESKTOP = 124;
 const FOCUS_H = 132;
 const MIN_BLOCK_FOCUS = 156;
 
-const EXTRA_LENSES: LensId[] = ['status', 'rent', 'deals'];
-
 const segIndexLease = (idx: Map<string, { lease?: { id: string } }>, key: string) => idx.get(key)?.lease?.id ?? null;
 
 export default function StackView({ model, state, patch, bare, rowHeight }: StackViewProps) {
@@ -57,6 +55,12 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
   const { floors, segIndex } = model;
   const highlight = hoverKeys ?? model.highlight;
 
+  /** Facts a focused floor adds to a suite (term, rent, deal), never one that is already drawn. */
+  const extrasFor = useCallback(
+    (seg: Segment, f: FloorView) => focusFacts(seg, state.lens, { safe: state.safe, asOf: model.asOf, today: model.today, floorName: f.floor.name }),
+    [state.lens, state.safe, model.asOf, model.today],
+  );
+
   // The focused floor: the one whose summary is open, or the floor of the selected suite. Its row grows
   // to full width and height so every suite on it is readable; rows above it do not move.
   const focusId = !bare && !phone ? (state.floor ?? (state.select ? (segIndex.get(state.select)?.floorId ?? null) : null)) : null;
@@ -68,10 +72,13 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
     let y = 0;
     return floors.map((f) => {
       const focused = f.floor.id === focusId;
-      const h = focused ? FOCUS_H : rowH;
-      const share = focused ? 1 : Math.max(0.6, f.floor.size / maxSize);
+      // A focused row grows only by the lines it gains; a floor with nothing to add keeps its size.
+      const extraMax = focused ? Math.max(0, ...f.segments.map((sg) => extrasFor(sg, f).length)) : 0;
+      const multi = f.segments.length > 1;
+      const h = focused && extraMax > 0 ? Math.min(FOCUS_H, Math.max(rowH, 13 + 15 * (4 + extraMax))) : rowH;
+      const share = focused && multi ? 1 : Math.max(0.6, f.floor.size / maxSize);
       const fw = Math.round(planPx * share);
-      const minBlock = phone ? MIN_BLOCK_PHONE : focused ? MIN_BLOCK_FOCUS : MIN_BLOCK_DESKTOP;
+      const minBlock = phone ? MIN_BLOCK_PHONE : focused && multi ? MIN_BLOCK_FOCUS : MIN_BLOCK_DESKTOP;
       const nonLeasablePx = f.floor.nonLeasable > 0 ? Math.max(MIN_BLOCK, Math.round((fw * f.floor.nonLeasable) / f.floor.size)) : 0;
       const leasablePx = fw - nonLeasablePx - (nonLeasablePx ? 2 : 0);
       const boxes = blockLayout(f.segments, leasablePx, minBlock, 2);
@@ -79,7 +86,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
       y += h + ROW_GAP;
       return row;
     });
-  }, [floors, planPx, rowH, phone, focusId]);
+  }, [floors, planPx, rowH, phone, focusId, extrasFor]);
   const anyEnlarged = rows.some((r) => r.boxes.some((b) => b.enlarged));
   const lastRow = rows[rows.length - 1];
   const height = lastRow ? lastRow.y + lastRow.h + 2 : 0;
@@ -107,6 +114,22 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
     [model.searchReasons, model.asOf, model.today, state.safe, state.lens, state.inquiry, matchCount],
   );
   const hoverFloor = useHoverFloor();
+
+  // Focus changes row heights. When it follows a click in the plan, scroll by the same amount so the
+  // row under the pointer does not move.
+  const anchor = useRef<{ id: string; top: number; at: number } | null>(null);
+  const onPointerDownCapture = (e: PointerEvent<SVGSVGElement>) => {
+    const row = (e.target as Element).closest?.('[data-row]');
+    anchor.current = row ? { id: row.getAttribute('data-row')!, top: row.getBoundingClientRect().top, at: Date.now() } : null;
+  };
+  useLayoutEffect(() => {
+    const a = anchor.current;
+    anchor.current = null;
+    if (!a || Date.now() - a.at > 1500 || !svgRef.current) return;
+    const el = svgRef.current.querySelector(`[data-row="${CSS.escape(a.id)}"]`);
+    const d = el ? el.getBoundingClientRect().top - a.top : 0;
+    if (Math.abs(d) > 1) window.scrollBy(0, d);
+  }, [focusId]);
 
   // Roving tabindex across the grid
   const [focusKey, setFocusKey] = useState<string | null>(null);
@@ -187,7 +210,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
   const over = state.safe ? [] : floors.filter((f) => f.overAllocatedBy > 0);
   const legendNote = [
     anyEnlarged ? `Small suites are drawn at a minimum width for legibility; other suites on that floor shrink to compensate.` : '',
-    focusId ? 'The focused floor is drawn at full width.' : '',
+    rows.some((r) => r.focused && r.f.segments.length > 1) ? 'The focused floor is drawn at full width.' : '',
     over.length ? `${over.map((f) => `${f.floor.name} records exceed its leasable area by ${num(f.overAllocatedBy)} SF`).join('; ')}; legend shares use recorded SF.` : '',
   ]
     .filter(Boolean)
@@ -215,6 +238,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
       <div className="sp-stack__body" ref={ref}>
         <svg
           ref={svgRef}
+          onPointerDownCapture={onPointerDownCapture}
           viewBox={`0 0 ${width} ${height}`}
           width={width}
           height={height}
@@ -229,7 +253,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
             const floorSelected = state.floor === f.floor.id;
             const floorNum = f.floor.name.replace(/^Floor\s+/i, '');
             return (
-              <g key={f.floor.id} role="row" className="sp-stack__row" aria-rowindex={ri + 1} transform={`translate(0 ${r.y})`} onPointerEnter={() => setHoverFloor(f.floor.id)} onPointerLeave={() => setHoverFloor(null)}>
+              <g key={f.floor.id} role="row" className="sp-stack__row" data-row={f.floor.id} aria-rowindex={ri + 1} transform={`translate(0 ${r.y})`} onPointerEnter={() => setHoverFloor(f.floor.id)} onPointerLeave={() => setHoverFloor(null)}>
                 <rect className={`sp-stack__rowbg ${floorSelected || r.focused ? 'is-floor-selected' : ''} ${hoverFloor === f.floor.id ? 'is-hot' : ''}`} x={0} y={-3} width={gutter + r.w + 6} height={r.h + 6} rx={6} />
                 <line className="sp-stack__floorline" x1={gutter} x2={gutter + r.w} y1={r.h + 3} y2={r.h + 3} />
                 {/* Gutter */}
@@ -284,7 +308,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                       <text className="sp-gutter__rsf" x={44} y={r.h >= 60 ? 50 : 37}>
                         {num(f.leasable)} RSF
                       </text>
-                      {r.focused && (
+                      {r.focused && r.h >= 100 && (
                         <text className="sp-gutter__rsf" x={8} y={84}>
                           {f.available > 0 ? `${num(f.available)} SF available` : 'Nothing available'}
                         </text>
@@ -314,11 +338,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                   const seg = segIndex.get(b.key)!;
                   const text = textFor(seg, f);
                   // A focused floor has room for the facts the other lenses carry.
-                  const extra = r.focused
-                    ? EXTRA_LENSES.filter((l) => l !== state.lens && !(l === 'status' && state.lens === 'expiry') && !(l === 'deals' && state.safe))
-                        .map((l) => segmentText(seg, { safe: state.safe, asOf: model.asOf, today: model.today, lens: l, floorName: f.floor.name }).meta)
-                        .filter((m, i, all) => m && m !== text.meta && !/hidden|withheld|^No live deal/i.test(m) && all.indexOf(m) === i)
-                    : undefined;
+                  const extra = r.focused ? extrasFor(seg, f) : undefined;
                   return (
                     <Block
                       key={b.key}
@@ -335,6 +355,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                       focusable={activeKey === b.key}
                       enlarged={b.enlarged}
                       extra={extra}
+                      roomy={r.focused}
                       compact={phone}
                       onSelect={() => selectSegment(patch, b.key)}
                       onFocus={() => setFocusKey(b.key)}

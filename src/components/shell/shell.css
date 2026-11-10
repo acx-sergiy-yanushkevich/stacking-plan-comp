@@ -28,6 +28,12 @@
 .sp-header__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .sp-header__asof .sp-btn { font-variant-numeric: tabular-nums; }
 .sp-header__asof--projected .sp-btn { background: var(--sp-color-warn-soft); border-color: var(--sp-color-warn); color: var(--sp-color-warn); }
+/* Narrow desktop and tablet: the controls take their own row so the title and facts keep the full width. */
+@media (max-width: 1180px) {
+  .sp-header { flex-wrap: wrap; }
+  .sp-header__text { flex: 1 1 0; }
+  .sp-header__actions { flex: 1 1 100%; justify-content: flex-start; }
+}
 @media (max-width: 760px) {
   .sp-header__facts .sp-dot { display: none; }
   .sp-header__facts { gap: 2px 12px; }

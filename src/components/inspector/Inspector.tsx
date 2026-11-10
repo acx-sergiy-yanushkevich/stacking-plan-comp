@@ -132,7 +132,7 @@ export default function Inspector({ model, state, patch, mode, areaPanel }: Insp
         {head.close && <Button variant="ghost" size="sm" icon="close" iconOnly aria-label="Close" title="Close (Esc)" onClick={head.close} />}
       </div>
       <div className="sp-ins__body" ref={bodyRef}>
-        {(mode === 'building' || mode === 'floor') && state.view !== 'map' && <BuildingHero model={model} state={state} patch={patch} />}
+        {(mode === 'building' || mode === 'floor' || mode === 'block') && state.view !== 'map' && <BuildingHero model={model} state={state} patch={patch} compact={mode === 'block'} />}
         <div key={bodyKey} className="sp-ins__content">
           {body}
         </div>

@@ -3,6 +3,8 @@ import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { levelPolygon, projectPolygon, slicePolygon, type Pt } from '../../domain/geometry';
 import { toneFor } from '../../domain/lenses';
+import { PATTERN_IDS } from '../plan/Patterns';
+import { patternFor } from '../plan/segmentText';
 import { num, pct } from '../../domain/format';
 import { openFloor, openFloorPlate, type Patch } from '../plan/actions';
 import { setHoverFloor, setHoverKeys, useHoverFloor } from '../../state/hoverStore';
@@ -12,6 +14,8 @@ export interface BuildingHeroProps {
   model: PlanModel;
   state: PlanState;
   patch: Patch;
+  /** Smaller, without the hint line (while a suite's details are open). */
+  compact?: boolean;
 }
 
 const W = 328;
@@ -32,6 +36,8 @@ interface Face {
 interface HeroSlice {
   key: string;
   tone: string;
+  /** Same second cue as the stack: dots for sublease, hatch for committed and lobby, dashed for vacant. */
+  pattern: 'hatch' | 'dots' | 'dashed' | null;
   depth: number;
   top: string;
   walls: Face[];
@@ -45,6 +51,8 @@ interface HeroFloor {
   available: number;
   keys: string[];
   slices: HeroSlice[];
+  /** Where the floor-number tag sits: just right of the slab. */
+  tag: Pt;
 }
 
 const fillOf = (tone: string) => (tone === 'empty' || tone === 'deal-none' ? 'var(--sp-color-card-2)' : `var(--tone-${tone}-solid, var(--tone-${tone}-fill))`);
@@ -55,7 +63,7 @@ const fillOf = (tone: string) => (tone === 'empty' || tone === 'deal-none' ? 'va
  * round; a click focuses the floor, a second click opens its floor plan. Decorative for assistive
  * technology (the stack is the accessible equivalent), so the SVG is a labelled image.
  */
-export function BuildingHero({ model, state, patch }: BuildingHeroProps) {
+export function BuildingHero({ model, state, patch, compact }: BuildingHeroProps) {
   const { property, floors, safe, highlight, segIndex } = model;
   const hoverId = useHoverFloor();
   const focusId = state.floor ?? (state.select ? (segIndex.get(state.select)?.floorId ?? null) : null);
@@ -82,7 +90,14 @@ export function BuildingHero({ model, state, patch }: BuildingHeroProps) {
       const k = Math.sqrt(f.floor.size / maxSize);
       const poly: Pt[] = base.map(([u, v]) => [cx + (u - cx) * k, cy + (v - cy) * k]);
       const lobbyKey = `${f.floor.id}-lobby`;
-      const parts = [...f.segments.map((sg) => ({ key: sg.key, size: sg.size, tone: toneFor(sg, state.lens, safe) as string })), ...(f.floor.nonLeasable > 0 ? [{ key: lobbyKey, size: f.floor.nonLeasable, tone: 'muted' }] : [])];
+      const cue = (p: string | null): HeroSlice['pattern'] => (p === 'hatch' || p === 'dots' || p === 'dashed' ? p : null);
+      const parts = [
+        ...f.segments.map((sg) => {
+          const tone = toneFor(sg, state.lens, safe);
+          return { key: sg.key, size: sg.size, tone: tone as string, pattern: cue(patternFor(sg, tone, state.lens)) };
+        }),
+        ...(f.floor.nonLeasable > 0 ? [{ key: lobbyKey, size: f.floor.nonLeasable, tone: 'muted', pattern: 'hatch' as const }] : []),
+      ];
       const polys = parts.length === 1 ? [poly] : slicePolygon(poly, parts.map((p) => p.size));
       const z0 = level * HZ;
       const z1 = z0 + HZ - 1;
@@ -106,11 +121,12 @@ export function BuildingHero({ model, state, patch }: BuildingHeroProps) {
             walls.push({ d: path([iso(pts[a], z0), iso(pts[b], z0), iso(pts[b], z1), iso(pts[a], z1)]), shade: ny > nx ? 0.1 : 0.26 });
           }
           const depth = pts.reduce((t, p) => t + p[0] + p[1], 0) / pts.length;
-          return { key: part.key, tone: part.tone, depth, top: path(pts.map((p) => iso(p, z1))), walls };
+          return { key: part.key, tone: part.tone, pattern: part.pattern, depth, top: path(pts.map((p) => iso(p, z1))), walls };
         })
         .filter((x): x is HeroSlice => x !== null)
         .sort((a, b) => a.depth - b.depth);
-      return { id: f.floor.id, name: f.floor.name, level, leasedPct: f.leasable ? f.leased / f.leasable : 0, leasable: f.leasable, available: f.available, keys: f.segments.map((sg) => sg.key), slices };
+      const edge = poly.map((p) => iso(p, z0 + HZ / 2)).reduce((best, p) => (p[0] > best[0] ? p : best));
+      return { id: f.floor.id, name: f.floor.name, level, leasedPct: f.leasable ? f.leased / f.leasable : 0, leasable: f.leasable, available: f.available, keys: f.segments.map((sg) => sg.key), slices, tag: edge };
     });
     const ground = path(base.map((p) => iso(p, 0)));
     return { heroFloors: heroFloors.slice().sort((a, b) => a.level - b.level), fit: { ground } };
@@ -118,13 +134,14 @@ export function BuildingHero({ model, state, patch }: BuildingHeroProps) {
 
   const focusLevel = focusId ? (heroFloors.find((f) => f.id === focusId)?.level ?? null) : null;
   const hot = heroFloors.find((f) => f.id === (hoverId ?? focusId)) ?? null;
+  const NB = '\u00a0';
   const caption = hot
-    ? `${hot.name} · ${pct(hot.leasedPct)} leased · ${num(hot.leasable)} RSF${hot.available ? ` · ${num(hot.available)} SF available` : ''}`
-    : `${floors.length} floors · ${num(model.kpis.leasable)} RSF leasable`;
+    ? `${hot.name.replace(' ', NB)} · ${pct(hot.leasedPct)}${NB}leased · ${num(hot.leasable)}${NB}RSF${hot.available ? ` · ${num(hot.available)}${NB}SF${NB}available` : ''}`
+    : `${floors.length}${NB}floors · ${num(model.kpis.leasable)}${NB}RSF leasable`;
   const hint = hot ? (hot.id === focusId ? 'Click again to open the floor plan' : 'Click to focus this floor in the plan') : 'Hover a floor to trace it in the plan';
 
   return (
-    <div className="sp-hero">
+    <div className={`sp-hero ${compact ? 'sp-hero--compact' : ''}`}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`Building model: ${floors.length} floors coloured by the active lens. The stack lists the same suites.`}>
         <path className="sp-hero__ground" d={fit.ground} aria-hidden="true" />
         {heroFloors.map((f) => {
@@ -157,21 +174,34 @@ export function BuildingHero({ model, state, patch }: BuildingHeroProps) {
                   <g key={sl.key} className={`sp-hero__slice ${dim ? 'is-dim' : ''} ${selected ? 'is-selected' : ''}`}>
                     {sl.walls.map((w, i) => (
                       <g key={i}>
-                        <path className="sp-hero__face" d={w.d} fill={fillOf(sl.tone)} />
+                        <path className={`sp-hero__face ${sl.pattern === 'dashed' ? 'is-dashed' : ''}`} d={w.d} fill={fillOf(sl.tone)} style={{ color: `var(--tone-${sl.tone}-edge)` }} />
+                        {(sl.pattern === 'hatch' || sl.pattern === 'dots') && <path className="sp-hero__pattern" d={w.d} fill={`url(#${sl.pattern === 'hatch' ? PATTERN_IDS.hatch : PATTERN_IDS.dots})`} style={{ color: `var(--tone-${sl.tone}-edge)` }} />}
                         <path className="sp-hero__shade" d={w.d} fillOpacity={w.shade} />
                       </g>
                     ))}
-                    <path className="sp-hero__face sp-hero__top" d={sl.top} fill={fillOf(sl.tone)} />
+                    <path className={`sp-hero__face sp-hero__top ${sl.pattern === 'dashed' ? 'is-dashed' : ''}`} d={sl.top} fill={fillOf(sl.tone)} style={{ color: `var(--tone-${sl.tone}-edge)` }} />
+                    {(sl.pattern === 'hatch' || sl.pattern === 'dots') && <path className="sp-hero__pattern" d={sl.top} fill={`url(#${sl.pattern === 'hatch' ? PATTERN_IDS.hatch : PATTERN_IDS.dots})`} style={{ color: `var(--tone-${sl.tone}-edge)` }} />}
                   </g>
                 );
               })}
             </g>
           );
         })}
+        {/* Floor-number tags: the top and bottom floors always, plus the floor under the pointer or in focus. */}
+        {heroFloors
+          .filter((f) => f.level === 0 || f.level === heroFloors.length - 1 || f.id === hot?.id)
+          .map((f) => {
+            const lifted = focusLevel !== null && f.level > focusLevel;
+            return (
+              <text key={f.id} className={`sp-hero__tag ${f.id === hot?.id ? 'is-hot' : ''}`} x={f.tag[0] + 7} y={f.tag[1] + 3 - (lifted ? LIFT : 0)} aria-hidden="true">
+                {f.name.replace(/^Floor\s+/i, '')}
+              </text>
+            );
+          })}
       </svg>
       <p className="sp-hero__cap">
         <span className="sp-hero__cap-main">{caption}</span>
-        <span className="sp-hero__cap-hint">{hint}</span>
+        {!compact && <span className="sp-hero__cap-hint">{hint}</span>}
       </p>
     </div>
   );

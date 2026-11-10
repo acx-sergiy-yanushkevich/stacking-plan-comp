@@ -172,7 +172,7 @@ export default function FloorView({ model, state, patch }: FloorViewProps) {
                   <>
                     <span className="sp-fkpi__value">{tenantLabel(next.lease, safe)}</span>
                     <span className="sp-fkpi__context">
-                      {fmtDate(next.endDate)} · {fmtMonths(next.monthsToExpiry)}
+                      {fmtDate(next.endDate)} · {fmtMonths(next.monthsToExpiry).replace(/ /g, '\u00a0')}
                     </span>
                   </>
                 ) : (

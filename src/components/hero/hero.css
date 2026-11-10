@@ -6,7 +6,12 @@
 .sp-hero__face { stroke: var(--sp-color-card); stroke-width: 0.6; stroke-linejoin: round; stroke-opacity: 0.85; }
 .sp-hero__shade { fill: #0b1020; pointer-events: none; }
 .sp-hero__floor.is-hot { filter: brightness(1.07) saturate(1.15); }
-.sp-hero__floor.is-hot .sp-hero__face, .sp-hero__floor.is-focus .sp-hero__face { stroke: var(--sp-color-brand); stroke-opacity: 0.9; stroke-width: 0.9; }
+.sp-hero__floor.is-hot .sp-hero__face, .sp-hero__floor.is-focus .sp-hero__face { stroke: var(--sp-color-brand); stroke-opacity: 1; stroke-width: 1.8; }
+.sp-hero__floor.is-hot .sp-hero__shade { fill: var(--sp-color-brand); fill-opacity: 0.3; }
+.sp-hero__pattern { pointer-events: none; }
+.sp-hero__face.is-dashed { stroke: currentColor; stroke-dasharray: 3 2; stroke-opacity: 1; }
+.sp-hero__tag { font-size: 10px; font-weight: 600; fill: var(--sp-color-text-faint); font-variant-numeric: tabular-nums; pointer-events: none; }
+.sp-hero__tag.is-hot { font-size: 12px; font-weight: 700; fill: var(--sp-color-brand-strong); }
 /* Floors above the focused one lift and fade, so its plate (suite by suite) shows. */
 .sp-hero__floor.is-above { opacity: 0.2; }
 .sp-hero__floor.is-above.is-hot { opacity: 0.6; }
@@ -18,5 +23,8 @@
 /* The phone sheet has no room for it; the floor cards carry the same information. */
 .sp-sheet .sp-hero { display: none; }
 @media print { .sp-hero { display: none; } }
-/* Lifted floors let clicks through their top faces, so the exposed plate of the focused floor is clickable. */
-.sp-hero__floor.is-above .sp-hero__top { pointer-events: none; }
+/* Lifted floors are click-through: the exposed plate of the focused floor is the target for the second click. */
+.sp-hero__floor.is-above { pointer-events: none; }
+/* Compact: beside a suite's details. */
+.sp-hero--compact svg { height: 150px; width: auto; margin: 0 auto; }
+.sp-hero--compact .sp-hero__cap { min-height: 0; text-align: center; align-items: center; }
