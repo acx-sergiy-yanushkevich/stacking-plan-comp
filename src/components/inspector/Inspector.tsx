@@ -5,6 +5,16 @@ import type { InspectorMode, PlanState } from '../../state/planState';
 import { sf } from '../../domain/format';
 import { Button } from '../ui';
 import { clearSelection, type Patch } from '../plan/actions';
+import { segmentText } from '../plan/segmentText';
+import { canShowIssues, canShowTenantRisk } from '../../domain/safe';
+import { BuildingHero } from '../hero/BuildingHero';
+import { BuildingPanel } from './BuildingPanel';
+import { BlockPanel } from './BlockPanel';
+import { FloorPanel } from './FloorPanel';
+import { FindPanel } from './FindPanel';
+import { WorklistPanel } from './WorklistPanel';
+import { IssuesPanel } from './IssuesPanel';
+import './inspector.css';
 
 /** Close a block/floor panel and put keyboard focus back on the block (or floor label) it came from. */
 function closeAndRefocus(patch: Patch, key: string | null, floorId: string | null) {
@@ -13,15 +23,6 @@ function closeAndRefocus(patch: Patch, key: string | null, floorId: string | nul
   if (!sel) return;
   requestAnimationFrame(() => document.querySelector<HTMLElement>(sel)?.focus());
 }
-import { segmentText } from '../plan/segmentText';
-import { BuildingPanel } from './BuildingPanel';
-import { BlockPanel } from './BlockPanel';
-import { FloorPanel } from './FloorPanel';
-import { FindPanel } from './FindPanel';
-import { WorklistPanel } from './WorklistPanel';
-import { IssuesPanel } from './IssuesPanel';
-import { BuildingHero } from '../hero/BuildingHero';
-import './inspector.css';
 
 export interface InspectorProps {
   model: PlanModel;
@@ -56,9 +57,9 @@ function headFor(mode: InspectorMode, model: PlanModel, state: PlanState, patch:
     case 'find':
       return { title: 'Find space', subtitle: model.filterLabel ?? 'Rank every space that fits a requirement', close: () => { patch({ mode: 'building', req: null, max: null, by: null, inquiry: null }); refocusTrigger(); } };
     case 'worklist':
-      return { title: model.safe ? 'Lease expirations' : 'Renewal worklist', subtitle: model.filterLabel ?? 'Leases ending in a window', close: () => { patch({ mode: 'building', window: null }); refocusTrigger(); } };
+      return { title: canShowTenantRisk(model.safe) ? 'Renewal worklist' : 'Lease expirations', subtitle: model.filterLabel ?? 'Leases ending in a window', close: () => { patch({ mode: 'building', window: null }); refocusTrigger(); } };
     case 'issues':
-      return { title: 'Data issues', subtitle: `${model.counts.error} errors · ${model.counts.warning} warnings · ${model.counts.info} info`, close: () => { patch({ mode: 'building' }); refocusTrigger(); } };
+      return { title: 'Data issues', subtitle: canShowIssues(model.safe) ? `${model.counts.error} errors · ${model.counts.warning} warnings · ${model.counts.info} info` : undefined, close: () => { patch({ mode: 'building' }); refocusTrigger(); } };
     case 'area':
       return { title: 'Area', subtitle: `${model.property.city}, ${model.property.state}`, close: () => { patch({ mode: 'building' }); refocusTrigger(); } };
     case 'building':

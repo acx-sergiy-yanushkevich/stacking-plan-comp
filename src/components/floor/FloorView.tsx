@@ -1,6 +1,6 @@
 import { useMemo, type KeyboardEvent } from 'react';
 import type { FloorView as FloorViewModel } from '../../domain/derive';
-import { num, pct, sf } from '../../domain/format';
+import { num, pct } from '../../domain/format';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { backToStack, openFloorPlate } from '../plan/actions';
@@ -8,6 +8,7 @@ import { Button } from '../ui';
 import { FloorPlate } from './FloorPlate';
 import { MiniStack } from './MiniStack';
 import { FloorSummary } from './FloorSummary';
+import { availabilityFact } from './floorData';
 import { plateAspect, usePlateSize } from './usePlateSize';
 import './floor.css';
 
@@ -106,7 +107,7 @@ export default function FloorView({ model, state, patch }: FloorViewProps) {
       <div className="sp-floor__title">
         <h2 className="sp-floor__h">{floor.floor.name}</h2>
         <p className="sp-floor__facts">
-          {num(floor.leasable)} RSF leasable · {pct(leasedShare)} leased · {sf(floor.available)} available
+          {num(floor.leasable)} RSF leasable · {pct(leasedShare)} leased · {availabilityFact(floor, model.asOf, model.safe)}
         </p>
       </div>
 

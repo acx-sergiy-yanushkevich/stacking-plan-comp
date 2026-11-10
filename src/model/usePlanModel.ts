@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { Deal, ISODate, Property, Touch } from '../domain/types';
+import { safeFloors } from '../domain/safe';
 import { deriveFloors, isLeaseKind, segmentIndex, activeDeals, type FloorView, type Segment } from '../domain/derive';
 import { computeKpis, kpiDeltas, type Kpis } from '../domain/kpis';
 import { rollover, bucketOf, type RolloverBucket } from '../domain/rollover';
@@ -140,8 +141,10 @@ function search(floors: FloorView[], q: string, safe: boolean): Map<string, stri
 
 export function usePlanModel(property: Property, state: PlanState, today: ISODate): PlanModel {
   const { asOf, safe, lens } = state;
-  const floors = useMemo(() => deriveFloors(property, asOf, today), [property, asOf, today]);
-  const floorsToday = useMemo(() => (asOf === today ? floors : deriveFloors(property, today, today)), [property, floors, asOf, today]);
+  // One projection for every view: in prospect-safe mode the floors no longer carry a quiet (unpublished)
+  // listing, so no KPI, bar, finder option or label built from them can show it.
+  const floors = useMemo(() => safeFloors(deriveFloors(property, asOf, today), safe), [property, asOf, today, safe]);
+  const floorsToday = useMemo(() => (asOf === today ? floors : safeFloors(deriveFloors(property, today, today), safe)), [property, floors, asOf, today, safe]);
   const segIndex = useMemo(() => segmentIndex(floors), [floors]);
   const kpis = useMemo(() => computeKpis(property, floors, asOf), [property, floors, asOf]);
   const kpisToday = useMemo(() => (asOf === today ? kpis : computeKpis(property, floorsToday, today)), [property, floorsToday, kpis, asOf, today]);
@@ -155,7 +158,8 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
 
   const inquiry = state.inquiry ? property.inquiries.find((i) => i.id === state.inquiry) ?? null : null;
   const req = useMemo(() => {
-    if (inquiry) return { size: inquiry.minSize, max: inquiry.maxSize, by: inquiry.neededBy, type: 'any' as FitType };
+    // An inquiry carries no space type (Inquiry has none), so the Direct / Sublease control applies to it too.
+    if (inquiry) return { size: inquiry.minSize, max: inquiry.maxSize, by: inquiry.neededBy, type: state.fit as FitType };
     if (state.req) return { size: state.req, max: state.max, by: state.by, type: state.fit as FitType };
     return null;
   }, [inquiry, state.req, state.max, state.by, state.fit]);
@@ -203,12 +207,15 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
     filterLabel = `${who ? `Space for ${who}: ` : 'Space that fits '}${num(req.size)}${req.max ? `–${num(req.max)}` : '+'} SF${req.by ? ` by ${fmtDate(req.by)}` : ''} · ${fits.options.length} option${fits.options.length === 1 ? '' : 's'}`;
   } else if (searchMatches && searchMatches.size === 0) {
     highlight = null;
-    filterLabel = `No tenant, suite or prospect matches “${state.q}”. Try a suite number (“350”) or a floor (“Floor 8”).`;
+    // Prospect-safe search skips tenants and prospects, and never repeats the query: it may be a tenant name.
+    filterLabel = safe
+      ? 'No suite or floor matches. Try a suite number (“350”) or a floor (“Floor 8”).'
+      : `No tenant, suite or prospect matches “${state.q}”. Try a suite number (“350”) or a floor (“Floor 8”).`;
   } else if (searchMatches) {
     highlight = searchMatches;
     const reasons = searchReasons ? [...searchReasons.entries()] : [];
     const detail = reasons.length === 1 ? `: ${reasons[0][1] === 'Tenant' ? 'tenant name' : reasons[0][1]} on ${floors.find((f) => f.segments.some((s) => s.key === reasons[0][0]))?.floor.name ?? ''}${segIndex.get(reasons[0][0])?.suite ? ` Ste ${segIndex.get(reasons[0][0])!.suite}` : ''}` : '';
-    filterLabel = `Search “${state.q}” · ${searchMatches.size} match${searchMatches.size === 1 ? '' : 'es'}${detail}`;
+    filterLabel = `${safe ? 'Search' : `Search “${state.q}”`} · ${searchMatches.size} match${searchMatches.size === 1 ? '' : 'es'}${detail}`;
   } else if (activeWorklist && effectiveWindow) {
     highlight = new Set(activeWorklist.map((r) => r.segKey));
     const total = activeWorklist.reduce((s, r) => s + r.size, 0);

@@ -6,23 +6,57 @@
 .sp-kpi:last-child { border-right: 0; }
 .sp-kpi:hover { background: var(--sp-color-card-2); }
 .sp-kpi.is-active { background: var(--sp-color-brand-soft); box-shadow: inset 0 -3px 0 var(--sp-color-brand); }
-.sp-kpi__label { display: flex; align-items: center; gap: 6px; }
+/* A KPI label is one short phrase: it never breaks across lines ("Largest / block"). */
+.sp-kpi__label { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .sp-kpi__value { font-size: var(--sp-text-22); font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; color: var(--sp-color-text); display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .sp-kpi__unit { font-size: var(--sp-text-13); font-weight: 500; color: var(--sp-color-text-weak); letter-spacing: 0; }
 .sp-kpi__delta { font-size: var(--sp-text-12); font-weight: 600; padding: 1px 6px; border-radius: 10px; background: var(--sp-color-card-2); color: var(--sp-color-text-weak); }
 .sp-kpi__delta--up { background: var(--sp-color-success-soft); color: var(--sp-color-success); }
 .sp-kpi__delta--down { background: var(--sp-color-error-soft); color: var(--sp-color-error); }
 .sp-kpi__context { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-@media (max-width: 1199px) { .sp-kpi__context { display: none; } }
-@media (max-width: 760px) {
-  .sp-kpis { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
-  .sp-kpi { flex: 0 0 auto; min-width: 34%; padding: 6px 10px; gap: 0; scroll-snap-align: start; }
-  .sp-kpi__value { font-size: 15px; }
-  .sp-kpi__label { font-size: 10px; }
-  .sp-kpi__context { display: none; }
-}
+.sp-kpi__value > span:first-child { white-space: nowrap; }
 
 .sp-kpi--static { cursor: default; }
 .sp-kpi--static:hover { background: var(--sp-color-card); }
 
-.sp-kpi__value > span:first-child { white-space: nowrap; }
+@media (max-width: 1199px) { .sp-kpi__context { display: none; } }
+
+/*
+ * Tablet: six tiles stay on one row, so each tightens until its label and figure fit whole.
+ * The `:root[data-skin]` prefix is there to outrank the skin's own tile gap, padding and figure
+ * size (`:root[data-skin='glass'] .sp-kpi`), which are set for the wide layout.
+ */
+@media (min-width: 761px) and (max-width: 1099px) {
+  /* The figure itself has no break point; only its unit may drop to a second line before anything is cut. */
+  .sp-kpi__value > span:first-child { white-space: normal; }
+}
+@media (min-width: 761px) and (max-width: 979px) {
+  :root[data-skin] section.sp-kpis { gap: 6px; }
+  :root[data-skin] .sp-kpis .sp-kpi { padding: 10px 10px 11px; }
+  :root[data-skin] .sp-kpis .sp-kpi__value { font-size: 20px; letter-spacing: -0.02em; gap: 2px 6px; }
+  .sp-kpi__label { letter-spacing: 0.02em; }
+}
+@media (min-width: 761px) and (max-width: 899px) {
+  .sp-kpi__label { font-size: 10px; letter-spacing: 0.01em; }
+  :root[data-skin] .sp-kpis .sp-kpi__value { font-size: var(--sp-text-18); }
+}
+
+/* Phones: every figure is on screen at once, three across and two down; nothing scrolls off the edge. */
+@media (max-width: 760px) {
+  :root[data-skin] section.sp-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; overflow: visible; }
+  .sp-kpi { padding: 6px 9px 7px; gap: 1px; }
+  .sp-kpi:nth-child(3n) { border-right: 0; }
+  .sp-kpi:nth-child(-n + 3) { border-bottom: 1px solid var(--sp-color-border); }
+  .sp-kpi__value { font-size: var(--sp-text-15); gap: 2px 6px; }
+  .sp-kpi__label { font-size: 10px; letter-spacing: 0.02em; }
+  .sp-kpi__unit { font-size: var(--sp-text-11); }
+  .sp-kpi__delta { font-size: var(--sp-text-11); padding: 0 5px; }
+  .sp-kpi__context { display: none; }
+}
+/* Very narrow phones: two across, so "Expiring 12 mo" still fits on one line. */
+@media (max-width: 359px) {
+  :root[data-skin] section.sp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sp-kpi:nth-child(3n) { border-right: 1px solid var(--sp-color-border); }
+  .sp-kpi:nth-child(2n) { border-right: 0; }
+  .sp-kpi:nth-child(-n + 4) { border-bottom: 1px solid var(--sp-color-border); }
+}

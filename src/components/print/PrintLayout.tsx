@@ -3,7 +3,8 @@ import type { PlanState } from '../../state/planState';
 import { fmtDate, fmtMonths } from '../../domain/dates';
 import { num, pct, rate, sf } from '../../domain/format';
 import { rentRollDisplay, unplacedLeases } from '../../domain/exportCsv';
-import { rentVisible, tenantLabel } from '../../domain/safe';
+import { comingSupply } from '../../domain/kpis';
+import { canShowDeals, canShowInPlaceRent, canShowIssues, canShowTenantRisk, rentVisible, tenantLabel } from '../../domain/safe';
 import { Legend } from '../plan/Legend';
 import StackView from '../stack/StackView';
 import './print.css';
@@ -21,9 +22,17 @@ export interface PrintLayoutProps {
  */
 export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
   const { property: p, kpis: k, safe } = model;
-  const rows = rentRollDisplay(p, model.floors, model.asOf, safe).filter((r, i) => i === 0 || !safe || r[4] !== 'Not placed (data issue)');
+  // The rent roll, the worklist and the supply figures each arrive already passed through the prospect-safe policy.
+  const rows = rentRollDisplay(p, model.floors, model.asOf, safe);
   const worklist: WorklistRow[] = model.worklist('12');
-  const atRisk: WorklistRow[] = safe ? [] : model.worklist('risk');
+  // Without the at-risk row, a share of leased SF would let a reader work the at-risk SF out: shares are then of the SF listed.
+  const showRisk = canShowTenantRisk(safe);
+  const atRisk: WorklistRow[] = showRisk ? model.worklist('risk') : [];
+  const unplaced = canShowIssues(safe) ? unplacedLeases(p, model.asOf).length : 0;
+  const coming = comingSupply(model.floors.flatMap((f) => f.segments), model.asOf, safe);
+  const overBy = model.roll.overAllocated.reduce((t, o) => t + o.sf, 0);
+  const showDeals = canShowDeals(safe);
+  const showRent = canShowInPlaceRent(safe);
   const noop = () => {};
   return (
     <div className={`sp-print ${visible ? 'sp-print--visible' : ''}`} aria-hidden={!visible} inert={!visible}>
@@ -48,8 +57,8 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
           <Kpi label="Available" value={sf(k.availableDirect + k.availableSublease)} note={`${num(k.availableDirect)} direct · ${num(k.availableSublease)} sublease`} />
           <Kpi label="Largest block" value={sf(k.maxContiguous.size)} note={k.maxContiguous.floorName ?? ''} />
           <Kpi label="Expiring 12 mo" value={sf(k.expiring12)} note={`${k.expiring12Leases} leases`} />
-          <Kpi label="WALT" value={`${k.walt.toFixed(1)} yr`} note="SF-weighted" />
-          <Kpi label="Pipeline" value={safe ? 'Withheld' : `${k.pipeline.deals} deals`} note={safe ? 'Prospect-safe' : `${sf(k.pipeline.sf)} requested`} />
+          <Kpi label="WALT" value={`${k.walt.toFixed(2)} yr`} note="SF-weighted" />
+          <Kpi label="Pipeline" value={showDeals ? `${k.pipeline.deals} deals` : 'Withheld'} note={showDeals ? `${sf(k.pipeline.sf)} requested` : 'Prospect-safe'} />
         </div>
         <Legend items={model.legend} compact />
         <div className="sp-print__plan">
@@ -86,15 +95,17 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
               <td className="num">{num(k.leased)} leased</td>
               <td colSpan={rows[0].length - 4}>
                 {pct(k.occupancy)} leased · {num(k.availableDirect + k.availableSublease)} SF available · {num(k.committed)} SF signed, not in
-                {safe && model.roll.overAllocated.length > 0 && ` · rows sum to ${num(k.leased + model.roll.overAllocated.reduce((t, o) => t + o.sf, 0))} SF; leased is capped at the leasable area (${num(k.leased)} SF)`}
-                {!safe && model.roll.overAllocated.length > 0 && ` · rows sum to ${num(k.leased + model.roll.overAllocated.reduce((t, o) => t + o.sf, 0))} SF; ${model.roll.overAllocated.map((o) => `${o.floor} records exceed its leasable area by ${num(o.sf)} SF`).join(', ')}, so leased is capped at ${num(k.leased)} SF`}
+                {overBy > 0 &&
+                  (canShowIssues(safe)
+                    ? ` · rows sum to ${num(k.leased + overBy)} SF; ${model.roll.overAllocated.map((o) => `${o.floor} records exceed its leasable area by ${num(o.sf)} SF`).join(', ')}, so leased is capped at ${num(k.leased)} SF`
+                    : ` · rows sum to ${num(k.leased + overBy)} SF; leased is capped at the leasable area (${num(k.leased)} SF)`)}
               </td>
             </tr>
           </tbody>
         </table>
-        {!safe && unplacedLeases(p, model.asOf).length > 0 && (
+        {unplaced > 0 && (
           <p className="sp-print__note" style={{ marginTop: 6 }}>
-            {unplacedLeases(p, model.asOf).length} lease{unplacedLeases(p, model.asOf).length === 1 ? ' is' : 's are'} not placed on the plan (no floor or unit records) and {unplacedLeases(p, model.asOf).length === 1 ? 'is' : 'are'} listed above as “Not placed”; see Data issues.
+            {unplaced} lease{unplaced === 1 ? ' is' : 's are'} not placed on the plan (no floor or unit records) and {unplaced === 1 ? 'is' : 'are'} listed above as “Not placed”; see Data issues.
           </p>
         )}
       </section>
@@ -104,14 +115,14 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
         <div className="sp-print__two">
           <div>
             <h2>Lease rollover</h2>
-            <p className="sp-print__note">SF of leases ending in each 12-month period from {fmtDate(model.asOf)}.{safe ? ' Shares are of the SF listed here.' : ''}</p>
+            <p className="sp-print__note">SF of leases ending in each 12-month period from {fmtDate(model.asOf)}.{showRisk ? '' : ' Shares are of the SF listed here.'}</p>
             <table className="sp-print__table sp-print__table--tight">
               <thead>
                 <tr>
                   <th>Period</th>
                   <th className="num">SF</th>
                   <th className="num">Leases</th>
-                  <th className="num">{safe ? 'Share of listed SF' : 'Share of leased'}</th>
+                  <th className="num">{showRisk ? 'Share of leased' : 'Share of listed SF'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -120,10 +131,10 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
                     <td>{b.label}</td>
                     <td className="num">{b.sf ? num(b.sf) : '—'}</td>
                     <td className="num">{b.leases || '—'}</td>
-                    <td className="num">{b.sf ? pct(b.sf / (safe ? model.roll.buckets.reduce((t, x) => t + x.sf, 0) : k.leased)) : '—'}</td>
+                    <td className="num">{b.sf ? pct(b.sf / (showRisk ? k.leased : model.roll.buckets.reduce((t, x) => t + x.sf, 0))) : '—'}</td>
                   </tr>
                 ))}
-                {!safe && (
+                {showRisk && (
                 <tr>
                   <td>At risk (holdover, month-to-month)</td>
                   <td className="num">{num(model.roll.atRisk)}</td>
@@ -132,28 +143,30 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
                 )}
               </tbody>
             </table>
-            {!safe && k.rentByType.length > 0 && (
+            {showRent && k.rentByType.length > 0 && (
               <>
                 <h2 style={{ marginTop: 14 }}>In-place rent by lease type</h2>
                 <table className="sp-print__table sp-print__table--tight">
                   <thead>
                     <tr>
                       <th>Type</th>
-                      <th className="num">Leased SF</th>
-                      <th className="num">SF-weighted average</th>
+                      <th className="num">Recorded SF</th>
+                      <th className="num">Average, weighted by recorded SF</th>
                     </tr>
                   </thead>
                   <tbody>
                     {k.rentByType.map((r) => (
                       <tr key={r.type}>
                         <td>{r.type}</td>
-                        <td className="num">{num(Math.round(r.sf))}</td>
+                        <td className="num">{num(r.sf)}</td>
                         <td className="num">${r.avg.toFixed(2)}/SF/yr</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                <p className="sp-print__note">Confidential leases excluded; never blended across lease types.</p>
+                <p className="sp-print__note">
+                  Recorded SF is the sum of the rent-roll rows with a rent on record{overBy > 0 ? '; the over-allocation cap on leased SF is not applied' : ''}. Confidential leases excluded; never blended across lease types.
+                </p>
               </>
             )}
             <h2 style={{ marginTop: 14 }}>Coming supply</h2>
@@ -161,7 +174,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
               <tbody>
                 <tr>
                   <td>Occupied, marketed for later</td>
-                  <td className="num">{k.comingAvailable.sf ? `${num(k.comingAvailable.sf)} SF${k.comingAvailable.from ? ` from ${fmtDate(k.comingAvailable.from)}` : ''}` : '—'}</td>
+                  <td className="num">{coming.sf ? `${num(coming.sf)} SF${coming.from ? ` from ${fmtDate(coming.from)}` : ''}` : '—'}</td>
                 </tr>
                 <tr>
                   <td>Signed, not yet in</td>
@@ -175,7 +188,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
             </table>
           </div>
           <div>
-            <h2>{safe ? 'Lease expirations · next 12 months' : atRisk.length ? 'Renewal worklist · at risk and next 12 months' : 'Renewal worklist · next 12 months'}</h2>
+            <h2>{!showRisk ? 'Lease expirations · next 12 months' : atRisk.length ? 'Renewal worklist · at risk and next 12 months' : 'Renewal worklist · next 12 months'}</h2>
             <table className="sp-print__table sp-print__table--tight">
               <thead>
                 <tr>
@@ -184,8 +197,8 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
                   <th className="num">RSF</th>
                   <th>Ends</th>
                   <th className="num">Left</th>
-                  {!safe && <th>Rent</th>}
-                  {!safe && <th>Renewal</th>}
+                  {showRent && <th>Rent</th>}
+                  {showDeals && <th>Renewal</th>}
                 </tr>
               </thead>
               <tbody>
@@ -198,8 +211,8 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
                     <td className="num">{num(r.size)}</td>
                     <td>{r.kind === 'holdover' ? `Holdover · expired ${r.endDate ? fmtDate(r.endDate) : ''}` : 'Month-to-month'}</td>
                     <td className="num">—</td>
-                    <td>{r.seg.lease && rentVisible(r.seg.lease, safe) && r.seg.lease.rate !== null ? rate(r.seg.lease.rate, r.seg.lease.rateUnit, r.seg.lease.leaseType) : '—'}</td>
-                    <td>{r.renewal ? r.renewal.stage : '—'}</td>
+                    {showRent && <td>{rentText(r, safe)}</td>}
+                    {showDeals && <td>{r.renewal ? r.renewal.stage : '—'}</td>}
                   </tr>
                 ))}
                 {worklist.map((r) => (
@@ -211,13 +224,13 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
                     <td className="num">{num(r.size)}</td>
                     <td>{r.endDate ? fmtDate(r.endDate) : 'MTM'}</td>
                     <td className="num">{r.months === null ? '—' : fmtMonths(r.months)}</td>
-                    {!safe && <td>{r.seg.lease && rentVisible(r.seg.lease, safe) && r.seg.lease.rate !== null ? rate(r.seg.lease.rate, r.seg.lease.rateUnit, r.seg.lease.leaseType) : '—'}</td>}
-                    {!safe && <td>{r.renewal ? r.renewal.stage : '—'}</td>}
+                    {showRent && <td>{rentText(r, safe)}</td>}
+                    {showDeals && <td>{r.renewal ? r.renewal.stage : '—'}</td>}
                   </tr>
                 ))}
                 {worklist.length === 0 && (
                   <tr>
-                    <td colSpan={7}>No leases end in the next 12 months.</td>
+                    <td colSpan={5 + (showRent ? 1 : 0) + (showDeals ? 1 : 0)}>No leases end in the next 12 months.</td>
                   </tr>
                 )}
               </tbody>
@@ -227,6 +240,12 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
       </section>
     </div>
   );
+}
+
+/** In-place rent of a worklist row; a dash when it is confidential or not on record. */
+function rentText(r: WorklistRow, safe: boolean): string {
+  const lease = r.seg.lease;
+  return lease && rentVisible(lease, safe) && lease.rate !== null ? rate(lease.rate, lease.rateUnit, lease.leaseType) : '—';
 }
 
 const SECTIONS = 3;

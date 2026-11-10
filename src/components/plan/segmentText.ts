@@ -3,7 +3,7 @@ import type { ISODate } from '../../domain/types';
 import { fmtDate, fmtMonthYear, fmtMonthYearShort, fmtMonths } from '../../domain/dates';
 import { compactRate, num, rate, sf, usd, usd0 } from '../../domain/format';
 import { dealCount, rentType, rentValue, topDeal, toneFor, type LensId, type Tone } from '../../domain/lenses';
-import { prospectLabel, rentVisible, tenantLabel } from '../../domain/safe';
+import { canShowActivity, canShowDeals, canShowInPlaceRent, canShowIssues, canShowListingStatus, canShowTenant, canShowTenantRisk, marketedFor, rentVisible, tenantLabel, termHidden } from '../../domain/safe';
 import type { PatternKind } from './Patterns';
 
 export interface Badge {
@@ -69,9 +69,11 @@ export function patternFor(seg: Segment, tone: Tone, lens: LensId): PatternKind 
   return null;
 }
 
+/** A badge as it is spoken or listed: the deal badge draws only its count ("1"), which means nothing read alone. */
+export const badgeLabel = (b: Badge): string => (b.kind === 'deal' ? `${b.text} live deal${b.text === '1' ? '' : 's'}` : b.text);
+
 export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
   const { safe, lens } = o;
-  void o.asOf;
   const kind: Segment['kind'] = seg.kind;
   const tone = toneFor(seg, lens, safe);
   const pattern = patternFor(seg, tone, lens);
@@ -89,24 +91,27 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
     case 'mtm':
     case 'sublease': {
       name = lease ? tenantLabel(lease, safe) : name;
-      if (kind === 'sublease' && a) name = safe ? 'Sublease' : `${tenantLabel(lease!, safe)} · sublease`;
-      if (kind === 'holdover' && !safe) badges.push({ kind: 'risk', text: 'Holdover', title: `Expired ${seg.endDate ? fmtDate(seg.endDate) : ''}, no termination recorded` });
-      if (kind === 'mtm' && !safe) badges.push({ kind: 'risk', text: 'MTM', title: 'Month-to-month: no expiration date' });
+      if (kind === 'sublease' && a) name = lease && canShowTenant(safe) ? `${lease.tenant} · sublease` : 'Sublease';
+      if (kind === 'holdover' && canShowTenantRisk(safe)) badges.push({ kind: 'risk', text: 'Holdover', title: `Expired ${seg.endDate ? fmtDate(seg.endDate) : ''}, no termination recorded` });
+      if (kind === 'mtm' && canShowTenantRisk(safe)) badges.push({ kind: 'risk', text: 'MTM', title: 'Month-to-month: no expiration date' });
       if (kind === 'mtm') meta = 'Month-to-month';
       else if (kind === 'holdover') meta = `Expired ${seg.endDate ? fmtMonthYear(seg.endDate) : ''}`;
       else if (seg.endDate && seg.monthsToExpiry !== null) meta = `Exp ${fmtMonthYear(seg.endDate)} · ${fmtMonths(seg.monthsToExpiry)}`;
       if (kind === 'sublease' && a?.subleaseExpiration) meta = `Sublease thru ${fmtMonthYear(a.subleaseExpiration)}`;
-      if (safe && (kind === 'holdover' || kind === 'mtm')) meta = 'Term not disclosed';
-      if (seg.marketed && !seg.marketed.sublease && seg.marketed.kind === 'Lease') {
-        badges.push({ kind: 'info', text: seg.marketed.availableFrom ? `Avail ${fmtMonthYearShort(seg.marketed.availableFrom)}` : 'Marketed', title: `Occupied, already marketed for a later date${seg.marketed.published === false && !safe ? ' · quiet listing, not published' : ''}` });
+      if (termHidden(kind, safe)) meta = 'Term not disclosed';
+      // A quiet listing is not shown to a prospect at all; to the broker it is marked as quiet.
+      const marketed = marketedFor(seg, safe);
+      if (marketed && !marketed.sublease && marketed.kind === 'Lease') {
+        badges.push({ kind: 'info', text: marketed.availableFrom ? `Avail ${fmtMonthYearShort(marketed.availableFrom)}` : 'Marketed', title: `Occupied, already marketed for a later date${marketed.published === false ? ' · quiet listing, not published' : ''}` });
       }
-      if (seg.marketed?.kind === 'Sale') badges.push({ kind: 'sale', text: 'For sale' });
-      if (seg.next && !safe) badges.push({ kind: 'info', text: `Next: ${tenantLabel(seg.next.lease, safe)}`, title: `Signed lease commences ${fmtDate(seg.next.lease.commencement)}` });
-      if (lease?.confidential && !safe) badges.push({ kind: 'lock', text: 'Confidential', title: 'Rent is confidential' });
+      if (marketed?.kind === 'Sale') badges.push({ kind: 'sale', text: 'For sale' });
+      if (seg.next && canShowTenant(safe)) badges.push({ kind: 'info', text: `Next: ${seg.next.lease.tenant}`, title: `Signed lease commences ${fmtDate(seg.next.lease.commencement)}` });
+      // The lock would single one tenant out, so prospect-safe withholds every in-place rent the same way.
+      if (lease?.confidential && canShowTenant(safe)) badges.push({ kind: 'lock', text: 'Confidential', title: 'Rent is confidential' });
       break;
     }
     case 'committed': {
-      name = lease ? (safe ? 'Committed' : `${tenantLabel(lease, safe)}`) : name;
+      name = lease && canShowTenant(safe) ? lease.tenant : name;
       meta = lease ? `Moves in ${fmtMonthYear(lease.commencement)}` : '';
       badges.push({ kind: 'info', text: 'Signed, not in', title: 'Lease signed; tenant has not taken occupancy' });
       break;
@@ -115,18 +120,24 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
       name = seg.availableFrom ? `Available ${fmtMonthYearShort(seg.availableFrom)}` : 'Available now';
       if (a) meta = `${a.sublease ? 'Sublease' : 'Direct'}${a.divisible && a.minDivisible ? ` · divisible to ${num(a.minDivisible)}` : ''}`;
       if (a && rentVisible(a, safe) && a.rentHigh > 0) meta = compactRate(a.rentLow, a.rentHigh, a.rateUnit, a.leaseType);
-      if (a && a.published === false && !safe) badges.push({ kind: 'info', text: 'Quiet', title: 'Listing not published to marketing channels' });
+      if (a && a.published === false && canShowListingStatus(safe)) badges.push({ kind: 'info', text: 'Quiet', title: 'Listing not published to marketing channels' });
       break;
     }
     case 'projected': {
       name = seg.endDate ? `Vacated\u00a0${fmtMonthYearShort(seg.endDate)}` : 'Projected vacancy';
-      meta = lease && !safe ? `${tenantLabel(lease, safe)} ${seg.endDate && seg.endDate < o.asOf ? 'left' : 'leaves'}${seg.endDate && seg.endDate < o.asOf ? ` ${fmtMonthYearShort(seg.endDate)}` : ''}` : 'No availability yet';
+      meta = lease && canShowTenant(safe) ? `${lease.tenant} ${seg.endDate && seg.endDate < o.asOf ? 'left' : 'leaves'}${seg.endDate && seg.endDate < o.asOf ? ` ${fmtMonthYearShort(seg.endDate)}` : ''}` : 'No availability yet';
       break;
     }
     case 'unmarketed': {
-      name = safe ? `${sf(seg.size)} not available` : `${sf(seg.size)} unaccounted`;
-      meta = safe ? 'Not on the market' : seg.suspect ? `Likely ${seg.suspect.tenant}` : 'No lease or availability';
-      if (!safe) badges.push({ kind: 'warn', text: 'Data gap' });
+      // A gap in the records is a data issue; a prospect sees space that is simply not on offer.
+      if (canShowIssues(safe)) {
+        name = `${sf(seg.size)} unaccounted`;
+        meta = seg.suspect ? `Likely ${seg.suspect.tenant}` : 'No lease or availability';
+        badges.push({ kind: 'warn', text: 'Data gap' });
+      } else {
+        name = `${sf(seg.size)} not available`;
+        meta = 'Not on the market';
+      }
       break;
     }
     case 'forsale': {
@@ -144,27 +155,29 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
   if (lens === 'rent') {
     const v = rentValue(seg);
     const t = rentType(seg);
-    if (safe && kind !== 'available' && kind !== 'sublease') meta = 'Rent hidden';
+    if (!canShowInPlaceRent(safe) && kind !== 'available' && kind !== 'sublease') meta = 'Rent hidden';
     else if (seg.lease?.confidential && kind !== 'available') meta = 'Rent confidential';
     else if (v !== null && t && seg.availability && (kind === 'available' || kind === 'sublease'))
       meta = `Asking ${compactRate(seg.availability.rentLow, seg.availability.rentHigh, seg.availability.rateUnit, seg.availability.leaseType)}`;
     else if (v !== null && t && seg.lease && seg.lease.rate !== null) meta = rate(seg.lease.rate, seg.lease.rateUnit, seg.lease.leaseType);
   }
-  if (lens === 'deals' && !safe) {
+  if (lens === 'deals' && canShowDeals(safe)) {
     const d = topDeal(seg);
-    if (d) meta = `${d.stage} · ${prospectLabel(d, safe)}${d.kind === 'Renewal' ? ' (renewal)' : ''}`;
+    if (d) meta = `${d.stage} · ${d.prospect}${d.kind === 'Renewal' ? ' (renewal)' : ''}`;
     else if (kind === 'available' || kind === 'projected' || kind === 'unmarketed') meta = 'No live deal';
   }
 
-  const deals = safe ? 0 : dealCount(seg);
+  const deals = canShowDeals(safe) ? dealCount(seg) : 0;
   if (deals > 0) badges.push({ kind: 'deal', text: String(deals), title: `${deals} live deal${deals === 1 ? '' : 's'}` });
   if (o.matches) badges.push({ kind: 'match', text: o.matchLabel ?? (o.matches === 1 ? '1 inquiry fits' : `${o.matches} inquiries fit`), title: o.matchLabel ? 'This space satisfies the inquiry being matched' : 'Open inquiries this space could satisfy' });
   // CRM on the canvas: how recently the tenant relationship was touched, for leases inside the renewal window.
   const projected = !!o.today && o.today !== o.asOf;
-  if (!safe && !projected && lease?.lastTouch && (kind === 'leased' || kind === 'holdover' || kind === 'mtm') && (seg.monthsToExpiry === null || seg.monthsToExpiry <= 24)) {
+  const touchable = canShowActivity(safe) && !projected && !!lease && (kind === 'leased' || kind === 'holdover' || kind === 'mtm');
+  if (touchable && lease.lastTouch && (seg.monthsToExpiry === null || seg.monthsToExpiry <= 24)) {
     const days = Math.max(0, Math.round((Date.parse(o.today ?? o.asOf) - Date.parse(lease.lastTouch.date)) / 86_400_000));
     badges.push({ kind: days <= 30 ? 'info' : days <= 90 ? 'warn' : 'risk', text: `${lease.lastTouch.type} ${days} d`, title: `Last touch: ${lease.lastTouch.type} ${days} days ago by ${lease.lastTouch.by}` });
-  } else if (!safe && !projected && lease && !lease.lastTouch && (kind === 'leased' || kind === 'holdover' || kind === 'mtm') && seg.monthsToExpiry !== null && seg.monthsToExpiry <= 24) {
+  } else if (touchable && !lease.lastTouch && seg.monthsToExpiry !== null && seg.monthsToExpiry <= 12) {
+    // Silence is the norm 1–2 years out; flag it only inside the year, where a renewal should be under way.
     badges.push({ kind: 'info', text: 'No activity', title: 'No activity logged on this tenant' });
   }
 
@@ -174,7 +187,7 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
   if (lens === 'rent') {
     const v = rentValue(seg);
     const t = rentType(seg);
-    if (v !== null && t && !(seg.lease?.confidential && kind !== 'available') && !(safe && kind !== 'available' && kind !== 'sublease')) {
+    if (v !== null && t && !(seg.lease?.confidential && kind !== 'available') && !(!canShowInPlaceRent(safe) && kind !== 'available' && kind !== 'sublease')) {
       // Exact figure with its unit, never rounded: "$29.75/yr FSG" (the lease's own unit, as recorded).
       const unit = seg.lease ? seg.lease.rateUnit : seg.availability?.rateUnit ?? 'yr';
       const asking = (kind === 'available' || kind === 'sublease') && seg.availability;
@@ -185,14 +198,14 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
       }
     }
   }
-  if (lens === 'deals' && !safe) {
+  if (lens === 'deals' && canShowDeals(safe)) {
     const d = topDeal(seg);
     if (d) lensShort = d.stage === 'Lease Out' ? 'Lease out' : d.stage;
   }
   if (kind === 'committed' && lens === 'status' && lease) lensShort = `In ${fmtMonthYearShort(lease.commencement)}`;
-  if (safe && (kind === 'holdover' || kind === 'mtm')) lensShort = '';
+  if (termHidden(kind, safe)) lensShort = '';
   const lines = [name, sub, meta].filter(Boolean);
-  const badgeText = badges.map((b) => (b.kind === 'deal' ? `${b.text} live deal${b.text === '1' ? '' : 's'}` : b.text)).join(', ');
+  const badgeText = badges.map(badgeLabel).join(', ');
   const tooltip = [...lines, badgeText].filter(Boolean).join('\n');
   const aria = `${o.floorName}, ${lines.join(', ')}${badgeText ? `, ${badgeText}` : ''}`;
   return { tone, pattern, name, sub, meta, badges, tooltip, aria, sfShort: num(seg.size), lensShort };
@@ -201,5 +214,3 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
 export function kindLabel(kind: Segment['kind']): string {
   return KIND_LABEL[kind];
 }
-
-export { fmtMonths };

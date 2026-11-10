@@ -20,10 +20,13 @@
     --sp-shadow-pop: 0 20px 56px rgba(6, 2, 20, 0.66), 0 2px 6px rgba(6, 2, 20, 0.45);
 
     /* Status lens: teal is space you can lease, amber is leaving soon, red is at risk. */
-    --tone-leased-fill: rgba(52, 46, 92, 0.86); --tone-leased-text: #efeaff; --tone-leased-edge: rgba(255, 255, 255, 0.18);
-    --tone-neutral-fill: rgba(52, 46, 92, 0.86); --tone-neutral-text: #efeaff; --tone-neutral-edge: rgba(255, 255, 255, 0.18);
-    --tone-muted-fill: rgba(40, 30, 74, 0.7); --tone-muted-text: #aba1c6; --tone-muted-edge: rgba(255, 255, 255, 0.12);
-    --tone-leased-solid: #443c76; --tone-neutral-solid: #443c76; --tone-muted-solid: #30265a;
+    /* Leased is most of the building, so it must read as a block, not as the card. The fills are opaque and
+       stay calm (under 2:1 on the card); the 1 px edge carries the boundary: every edge here is opaque and
+       at least 3:1 against the card (measured #1f1041, up to #392c57 in the brightest glow). */
+    --tone-leased-fill: #443a7a; --tone-leased-text: #f6f2ff; --tone-leased-edge: #857bbd;
+    --tone-neutral-fill: #443a7a; --tone-neutral-text: #f6f2ff; --tone-neutral-edge: #857bbd;
+    --tone-muted-fill: #2b2050; --tone-muted-text: #b4abcf; --tone-muted-edge: #8177ad;
+    --tone-leased-solid: #554a90; --tone-neutral-solid: #554a90; --tone-muted-solid: #30265a;
     --tone-expiring-fill: #6e3a12; --tone-expiring-text: #ffeacc; --tone-expiring-edge: #ffb347;
     --tone-risk-fill: #531c24; --tone-risk-text: #ffdad6; --tone-risk-edge: #ff6259;
     --tone-available-fill: #1bcbb3; --tone-available-text: #04231e; --tone-available-edge: #86f3e2;
@@ -31,32 +34,35 @@
     --tone-sublease-fill: #164a50; --tone-sublease-text: #b9f4e9; --tone-sublease-edge: #2fd1b8;
     --tone-committed-fill: #26316c; --tone-committed-text: #d0dbff; --tone-committed-edge: #7d9cff;
     --tone-forsale-fill: #4b2a86; --tone-forsale-text: #ead9ff; --tone-forsale-edge: #c9a0ff;
-    --tone-empty-fill: transparent; --tone-empty-text: #b7adcf; --tone-empty-edge: #746a98;
+    --tone-empty-fill: transparent; --tone-empty-text: #b7adcf; --tone-empty-edge: #857bab;
     --tone-projected-fill: #14343a; --tone-projected-text: #adf2e5; --tone-projected-edge: #2fd1b8;
-    --tone-confidential-fill: #37304b; --tone-confidential-text: #cfc8df; --tone-confidential-edge: #625a7c;
+    --tone-confidential-fill: #3a3350; --tone-confidential-text: #d6d0e6; --tone-confidential-edge: #847d9f;
 
-    /* Expiration lens: a sunset, lightness ordered (soonest is brightest). */
+    /* Expiration lens: a sunset, lightness ordered (soonest is brightest), each step also stepping in hue
+       (amber, orange, rose, magenta, violet, slate) so neighbours stay apart; every edge is ≥ 6:1 on the card.
+       1–2 yr is a light rose with dark text, well away from the dark maroon of Holdover / MTM. */
     --tone-exp-0-fill: #ffb95c; --tone-exp-0-text: #2a1203; --tone-exp-0-edge: #ffdba6;
     --tone-exp-1-fill: #f47a42; --tone-exp-1-text: #2a1203; --tone-exp-1-edge: #ffae85;
-    --tone-exp-2-fill: #c0453f; --tone-exp-2-text: #ffffff; --tone-exp-2-edge: #e98580;
-    --tone-exp-3-fill: #8a3352; --tone-exp-3-text: #ffe6ee; --tone-exp-3-edge: #bd6c8a;
-    --tone-exp-4-fill: #5a2a55; --tone-exp-4-text: #f2e0f0; --tone-exp-4-edge: #92608c;
-    --tone-exp-5-fill: #33213f; --tone-exp-5-text: #dbd0e6; --tone-exp-5-edge: #6c5a7c;
+    --tone-exp-2-fill: #e55f86; --tone-exp-2-text: #2a0612; --tone-exp-2-edge: #f9a6bd;
+    --tone-exp-3-fill: #9c4277; --tone-exp-3-text: #ffffff; --tone-exp-3-edge: #d58ab2;
+    --tone-exp-4-fill: #74508f; --tone-exp-4-text: #ffffff; --tone-exp-4-edge: #b896d6;
+    --tone-exp-5-fill: #505584; --tone-exp-5-text: #ffffff; --tone-exp-5-edge: #9aa0d4;
 
-    /* Rent lens: night-sky blue to neon cyan (gross scale). */
-    --tone-rent-0-fill: #1c2748; --tone-rent-0-text: #d6e4ff; --tone-rent-0-edge: #33426e;
-    --tone-rent-1-fill: #1d3d66; --tone-rent-1-text: #d9ecff; --tone-rent-1-edge: #37608f;
-    --tone-rent-2-fill: #1b5a86; --tone-rent-2-text: #e6f5ff; --tone-rent-2-edge: #3a85b5;
-    --tone-rent-3-fill: #17769e; --tone-rent-3-text: #ffffff; --tone-rent-3-edge: #52b0d6;
-    --tone-rent-4-fill: #4fd0ee; --tone-rent-4-text: #04202e; --tone-rent-4-edge: #a5ecfb;
-    --tone-rent-net-fill: #2b2748; --tone-rent-net-text: #e9e6f5; --tone-rent-net-edge: #4fd0ee;
+    /* Rent lens: night-sky blue to neon cyan (gross scale). Five even lightness steps (L* 18, 33, 48, 67, 84),
+       so neighbours differ at a glance; the text flips from light to dark between steps 2 and 3. */
+    --tone-rent-0-fill: #1a2c52; --tone-rent-0-text: #d9e8ff; --tone-rent-0-edge: #6283b8;
+    --tone-rent-1-fill: #1e4f8c; --tone-rent-1-text: #e9f3ff; --tone-rent-1-edge: #5e8fcb;
+    --tone-rent-2-fill: #2474bb; --tone-rent-2-text: #ffffff; --tone-rent-2-edge: #74b3ea;
+    --tone-rent-3-fill: #45aee0; --tone-rent-3-text: #04202e; --tone-rent-3-edge: #9dd6f3;
+    --tone-rent-4-fill: #6fe0f7; --tone-rent-4-text: #04202e; --tone-rent-4-edge: #c6f4fd;
+    --tone-rent-net-fill: #2b2748; --tone-rent-net-text: #e9e6f5; --tone-rent-net-edge: #6fe0f7;
 
     /* Deals lens: the further a deal has gone, the hotter the pink. */
-    --tone-deal-0-fill: #3a2148; --tone-deal-0-text: #f3d9ee; --tone-deal-0-edge: #6a3a7a;
-    --tone-deal-1-fill: #6a2a6a; --tone-deal-1-text: #ffe3f5; --tone-deal-1-edge: #a04c9c;
+    --tone-deal-0-fill: #4a2a5e; --tone-deal-0-text: #f3d9ee; --tone-deal-0-edge: #a56cbb;
+    --tone-deal-1-fill: #7a2f7a; --tone-deal-1-text: #ffe3f5; --tone-deal-1-edge: #c065bb;
     --tone-deal-2-fill: #b83585; --tone-deal-2-text: #ffffff; --tone-deal-2-edge: #ee7cba;
     --tone-deal-3-fill: #ff7fbf; --tone-deal-3-text: #33061f; --tone-deal-3-edge: #ffc0e0;
-    --tone-deal-none-fill: transparent; --tone-deal-none-text: #b7adcf; --tone-deal-none-edge: #746a98;
+    --tone-deal-none-fill: transparent; --tone-deal-none-text: #b7adcf; --tone-deal-none-edge: #857bab;
 
     --sp-glass-edge: rgba(255, 255, 255, 0.14);
     --sp-glass-float: rgba(28, 17, 56, 0.985);
@@ -90,6 +96,22 @@
     --sp-brand-grad: linear-gradient(135deg, #c2187a, #c2410c);
     --sp-brand-glow: 0 8px 20px rgba(214, 51, 132, 0.34);
     --sp-title-grad: linear-gradient(90deg, #b3400a, #c2187a 55%, #6d28d9);
+
+    /* Tones by day. The white glass pane of glass.css disappears on this pale card (1.07:1), so leased is a
+       cool slate tint with a clear edge, and every pale fill gets an opaque edge of at least 3:1 against the
+       card (measured #fff5fa; #e6f5f7 and #e8e4ec at its darkest). Fills and text otherwise stay as in tokens.css. */
+    --tone-leased-fill: #dfe3f0; --tone-leased-text: #111827; --tone-leased-edge: #677097;
+    --tone-neutral-fill: #dfe3f0; --tone-neutral-text: #111827; --tone-neutral-edge: #677097;
+    --tone-muted-fill: #efedf4; --tone-muted-text: #4b5470; --tone-muted-edge: #7f7b98;
+    /* Opaque equivalents for the 3D map and the building model: a periwinkle that cannot be taken for a
+       light-grey basemap building (#cfd4da). */
+    --tone-leased-solid: #9097cc; --tone-neutral-solid: #9097cc; --tone-muted-solid: #aaa5d0;
+    --tone-empty-edge: #787f92; --tone-deal-none-edge: #787f92;
+    --tone-confidential-edge: #757a86;
+    --tone-exp-2-edge: #b85f14; --tone-exp-3-edge: #a8691c; --tone-exp-4-edge: #a3742a; --tone-exp-5-edge: #9a7c46;
+    --tone-rent-0-edge: #5d87a8; --tone-rent-1-edge: #4f82ad; --tone-rent-2-edge: #3d76a6; --tone-rent-3-edge: #2f6c9e;
+    --tone-deal-0-edge: #5f80cf; --tone-deal-1-edge: #4f74c8;
+
     --sp-aurora:
       radial-gradient(1100px 700px at 86% -10%, rgba(255, 176, 92, 0.6), transparent 62%),
       radial-gradient(1200px 780px at 8% -6%, rgba(255, 110, 160, 0.42), transparent 62%),
@@ -119,7 +141,6 @@
       --sp-glass-blur: none; --sp-aurora: none;
       --sp-color-card: #1c1238; --sp-color-card-2: #241845; --sp-glass-float: #1c1238; --sp-glass-control: #241845; --sp-glass-control-on: #35265e;
       --sp-color-border: #35285a; --sp-glass-edge: #463770;
-      --tone-leased-fill: #2f2a52; --tone-neutral-fill: #2f2a52; --tone-muted-fill: #251c44;
     }
     :root[data-skin='glass'][data-palette='vice'][data-theme='light'] { --sp-aurora: none; }
     :root[data-skin='glass'][data-palette='vice'] .sp-header__title h1 {

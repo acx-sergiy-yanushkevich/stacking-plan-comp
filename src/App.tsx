@@ -4,7 +4,7 @@ import { segmentText } from './components/plan/segmentText';
 import { property, TODAY } from './data/mock/property';
 import { usePlanModel } from './model/usePlanModel';
 import { usePlanState, useDocumentTitle } from './state/usePlanState';
-import { deriveMode, isVice } from './state/planState';
+import { deriveMode, isVice, shownView } from './state/planState';
 import { rentRollRows, toCsv } from './domain/exportCsv';
 import { Header, type ExportKind } from './components/shell/Header';
 import { Toolbar } from './components/shell/Toolbar';
@@ -22,7 +22,7 @@ const AreaPanel = lazy(() => import('./components/map/AreaPanel').then((m) => ({
 import { PrintLayout } from './components/print/PrintLayout';
 import { csvBlob, download } from './lib/exportFile';
 import { svgToPng } from './lib/exportPng';
-import { useIsNarrow } from './lib/useMedia';
+import { useIsNarrow, useIsPhone } from './lib/useMedia';
 import { clearSelection } from './components/plan/actions';
 import { focusSegment, refocusTrigger, rememberTrigger } from './state/focusStore';
 import { Patterns } from './components/plan/Patterns';
@@ -41,6 +41,7 @@ function Shell() {
   const model = usePlanModel(property, state, TODAY);
   const toast = useToast();
   const narrow = useIsNarrow();
+  const phone = useIsPhone();
   useDocumentTitle(state.safe, state.skin === 'classic' ? undefined : property.name);
   const mode = deriveMode(state);
   const [announce, setAnnounce] = useState('');
@@ -187,8 +188,7 @@ function Shell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [model, state, patch, mode, dataSource],
   );
-  // The building model needs width: below the desktop layout the stack stands in for it.
-  const view = narrow && state.view === 'building' ? 'stack' : state.view;
+  const view = shownView(state.view, phone);
   // The building view shows a floor itself; the inspector joins it for a suite, a search, the worklist or issues.
   const showInspector = view === 'building' ? mode !== 'building' && mode !== 'floor' : view !== 'floor' || mode === 'block';
   const sheetOpen = narrow && mode !== 'building';

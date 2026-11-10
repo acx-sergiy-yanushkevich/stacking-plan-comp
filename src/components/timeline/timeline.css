@@ -81,10 +81,49 @@
 .sp-mini__year { font-size: 9px; fill: var(--sp-color-text-faint); }
 .sp-cursor--compact .sp-cursor__handle { rx: 2; }
 
-/* Phones: the timeline scrolls horizontally with the cursor pinned by the browser scroll. */
-@media (max-width: 760px) {
-  .sp-timeline { padding-left: var(--sp-space-1); padding-right: var(--sp-space-1); -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); }
+/*
+ * Stacked chart (hosts under 640 px: phones, a narrow split view). The SVG fits the host, so
+ * nothing scrolls sideways and nothing is cut at the edge: each bar is a thin bar under its own
+ * full label, and the rollover band is a grid of buttons above the chart.
+ */
+.sp-timeline--stacked { padding-left: var(--sp-space-2); padding-right: var(--sp-space-2); }
+/* The label is drawn on the card, not on the bar: card-coloured halo so the cursor line and gridlines pass behind it. */
+.sp-tl-bar--stacked .sp-tl-bar__text { fill: var(--sp-color-text); paint-order: stroke; stroke: var(--sp-color-card); stroke-width: 3px; stroke-linejoin: round; }
+.sp-tl-bar--stacked .sp-tl-bar__sub { opacity: 1; }
+.sp-tl-bar__lane { fill: transparent; }
+.sp-tl-bar--stacked:hover .sp-tl-bar__lane { fill: var(--sp-color-card-2); }
+.sp-tl-bar--stacked.is-selected .sp-tl-bar__lane { fill: var(--sp-color-brand-soft); }
+.sp-tl-bar--stacked:focus-visible .sp-tl-bar__lane { stroke: var(--sp-color-focus); stroke-width: 2; }
+/* A dimmed lane keeps its label (faded with the bar): hiding it would leave a list of unnamed bars. */
+.sp-tl-rows--stacked .sp-seg.is-dim text { display: inline; }
+.sp-tl-rows--stacked .sp-tl-tag text { font-size: 10px; }
+/* A sideways drag on the cursor moves the date; an up-down drag still scrolls the page. */
+.sp-cursor { touch-action: pan-y; }
+
+/* Rollover buckets as buttons: every figure whole, three or more to a row. */
+.sp-tl-roll { padding: var(--sp-space-2) 0 var(--sp-space-3); }
+.sp-tl-roll__head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 2px 12px; margin-bottom: 6px; }
+.sp-tl-roll__risk { font-size: var(--sp-text-12); font-weight: 600; color: var(--tone-risk-edge); white-space: nowrap; }
+.sp-tl-roll__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; }
+.sp-tl-roll__col {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 0; min-height: 40px; padding: 5px 9px 6px; text-align: left;
+  border: 1px solid var(--sp-color-border); border-radius: 8px; background: var(--sp-color-card-2); transition: background var(--sp-ease), border-color var(--sp-ease);
 }
+.sp-tl-roll__col.is-active { background: var(--sp-color-brand-soft); border-color: var(--sp-color-brand); }
+.sp-tl-roll__label { font-size: var(--sp-text-11); color: var(--sp-color-text-weak); white-space: nowrap; }
+.sp-tl-roll__value { font-size: var(--sp-text-13); font-weight: 600; color: var(--sp-color-text); white-space: nowrap; }
+.sp-tl-roll__col.is-empty .sp-tl-roll__value { color: var(--sp-color-text-faint); font-weight: 400; }
+.sp-tl-roll__col.is-active .sp-tl-roll__label, .sp-tl-roll__col.is-active .sp-tl-roll__value { color: var(--sp-color-brand-strong); }
+
+/* Legend folded behind one row, as on the phone stack: the chart starts on the first screen. */
+.sp-tl-legend summary { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 36px; padding: 0 10px; border: 1px solid var(--sp-color-border); border-radius: 8px; font-size: var(--sp-text-12); font-weight: 600; color: var(--sp-color-text-weak); cursor: pointer; list-style: none; }
+.sp-tl-legend summary::-webkit-details-marker { display: none; }
+.sp-tl-legend[open] summary { margin-bottom: 8px; }
+.sp-tl-legend[open] summary .sp-icon { transform: rotate(180deg); }
+.sp-tl-card .sp-stack__head:has(.sp-tl-legend) { flex-direction: column; align-items: stretch; gap: 6px; }
+.sp-tl-card .sp-stack__head:has(.sp-tl-legend) .sp-stack__title { justify-content: space-between; }
+.sp-tl-card .sp-stack__head:has(.sp-tl-legend) .sp-stack__title .sp-weak { display: inline; white-space: nowrap; }
+.sp-tl-card .sp-stack__head:has(.sp-tl-legend) .sp-stack__title h2 { white-space: nowrap; }
 
 .sp-tl-bar__text--outside .sp-tl-bar__sub { fill: var(--sp-color-text-weak); }
 .sp-cursor line { stroke-opacity: 0.55; }
@@ -95,3 +134,8 @@
 
 .sp-tl-card { padding: 0; }
 .sp-tl-card .sp-timeline { padding-top: 0; }
+
+/* Wide chart on a small tablet: the legend's one-column list (stack.css, under 761 px) becomes two columns, so the chart starts sooner. */
+@media (min-width: 620px) and (max-width: 760px) {
+  .sp-tl-card .sp-stack__head .sp-legend { grid-template-columns: 1fr 1fr; column-gap: 28px; }
+}

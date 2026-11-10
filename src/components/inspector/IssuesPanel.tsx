@@ -1,11 +1,11 @@
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import type { Issue, IssueSeverity } from '../../domain/issues';
-import { plural } from '../../domain/format';
 import { Button, Icon } from '../ui';
 import { openFloor, selectSegment, type Patch, type RecordAction } from '../plan/actions';
 import { focusSegment, setReturnMode } from '../../state/focusStore';
 import { useRecordAction } from './Actions';
+import { canShowIssues } from '../../domain/safe';
 import { Section } from './parts';
 
 export interface IssuesPanelProps {
@@ -45,8 +45,19 @@ export function fixAction(fix: string): RecordAction {
 }
 
 export function IssuesPanel({ model, patch }: IssuesPanelProps) {
-  const { issues, counts, safe } = model;
+  const { issues, safe } = model;
   const run = useRecordAction();
+
+  if (!canShowIssues(safe)) {
+    // Titles name tenants and prospects, and even a count says the records are wrong: nothing is shown.
+    return (
+      <div className="sp-empty">
+        <Icon name="shield" size={24} />
+        <div className="sp-empty__title">Data issues are withheld</div>
+        <p>Data issues are for the people who maintain the plan. They are not shown while prospect-safe is on.</p>
+      </div>
+    );
+  }
 
   if (issues.length === 0) {
     return (
@@ -54,19 +65,6 @@ export function IssuesPanel({ model, patch }: IssuesPanelProps) {
         <Icon name="check" size={24} />
         <div className="sp-empty__title">No data issues</div>
         <p>Every lease and availability is placed, in term and verified.</p>
-      </div>
-    );
-  }
-
-  if (safe) {
-    // Issue titles name tenants, prospects and rents; prospect-safe shows only the counts.
-    return (
-      <div className="sp-empty">
-        <Icon name="shield" size={24} />
-        <div className="sp-empty__title">
-          {plural(counts.error, 'error')} · {plural(counts.warning, 'warning')} · {plural(counts.info, 'info item')}
-        </div>
-        <p>Issue details name tenants and prospects, so they are hidden while prospect-safe is on.</p>
       </div>
     );
   }

@@ -11,7 +11,8 @@ export interface RolloverChartProps {
   activeBucket: number | null;
   onBucket: (key: number | null) => void;
   onAtRisk?: () => void;
-  safe?: boolean;
+  /** Draw the at-risk row (holdover and month-to-month). The caller decides: it is withheld from prospects. */
+  showRisk?: boolean;
 }
 
 // Geometry (SVG user units; the panel is 360 px wide so this renders 1:1 on desktop).
@@ -36,11 +37,11 @@ function barPath(x: number, y: number, w: number, h: number): string {
  * hue; the active bucket is emphasised and the rest recede. At-risk space is
  * a separate rose row because holdover and MTM leases have no period.
  */
-export function RolloverChart({ buckets, atRisk, atRiskLeases, activeBucket, onBucket, onAtRisk, safe = false }: RolloverChartProps) {
-  const max = Math.max(1, ...buckets.map((b) => b.sf), atRisk);
+export function RolloverChart({ buckets, atRisk, atRiskLeases, activeBucket, onBucket, onAtRisk, showRisk = true }: RolloverChartProps) {
+  const max = Math.max(1, ...buckets.map((b) => b.sf), showRisk ? atRisk : 0);
   const x0 = LABEL_W;
   const plotW = W - LABEL_W - VALUE_W;
-  const rows = buckets.length + (safe ? 0 : 1);
+  const rows = buckets.length + (showRisk ? 1 : 0);
   const H = PAD_TOP * 2 + rows * ROW;
   const anyActive = activeBucket !== null;
   const [focusIdx, setFocusIdx] = useState(0);
@@ -100,7 +101,7 @@ export function RolloverChart({ buckets, atRisk, atRiskLeases, activeBucket, onB
           </g>
         );
       })}
-      {!safe && (() => {
+      {showRisk && (() => {
         const y = PAD_TOP + buckets.length * ROW;
         const w = scale(atRisk);
         const label = `At risk ${atRisk > 0 ? num(atRisk) : '—'}: holdover and month-to-month, ${atRisk > 0 ? `${num(atRisk)} SF, ${plural(atRiskLeases, 'lease')}` : 'none'}`;

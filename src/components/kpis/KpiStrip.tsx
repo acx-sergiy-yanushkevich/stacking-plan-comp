@@ -2,6 +2,7 @@ import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { fmtMonthYearShort } from '../../domain/dates';
 import { num, pct, plural, sfDelta } from '../../domain/format';
+import { waltCard, waltTitle } from './walt';
 
 export type KpiAction = 'status' | 'find' | 'find-largest' | 'expiry-worklist' | 'timeline' | 'deals';
 
@@ -71,12 +72,13 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
     {
       id: 'timeline',
       label: 'WALT',
-      value: k.walt.toFixed(1),
+      value: waltCard(k.walt),
       unit: 'yr',
       context: 'In-place, SF-weighted',
-      delta: d ? (() => { const dw = Number(k.walt.toFixed(1)) - Number(model.kpisToday.walt.toFixed(1)); return { text: `${dw >= 0 ? '+' : '−'}${Math.abs(dw).toFixed(1)} yr`, good: dw >= 0 }; })() : null,
+      // The chip is the difference of the two figures as shown, so the card reconciles with today's card.
+      delta: d ? (() => { const dw = Number(waltCard(k.walt)) - Number(waltCard(model.kpisToday.walt)); return { text: `${dw >= 0 ? '+' : '−'}${Math.abs(dw).toFixed(2)} yr`, good: dw >= 0 }; })() : null,
       active: false,
-      title: 'Weighted average lease term remaining. Click for the lease timeline.',
+      title: waltTitle(k.walt, model.safe),
     },
     safe
       ? {

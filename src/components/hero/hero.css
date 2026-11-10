@@ -31,9 +31,27 @@
 
 /* Stage: the model as a view of its own (BuildingView). No panel chrome; lifted floors stay reachable. */
 .sp-hero--stage { margin: 0; padding: 0; border-bottom: 0; }
-.sp-hero--stage .sp-hero__tag { font-size: 12px; }
-.sp-hero--stage .sp-hero__tag.is-hot { font-size: 15px; }
+.sp-hero--stage .sp-hero__tag { font-size: 15px; }
+.sp-hero--stage .sp-hero__tag.is-hot { font-size: 18px; }
+/* With a fact after each number the tags are the model's legend: set them at reading size. */
+.sp-hero--facts .sp-hero__tag { font-size: 15px; }
+.sp-hero--facts .sp-hero__tag.is-hot { font-size: 17px; }
+.sp-hero__fact { font-weight: 500; fill: var(--sp-color-text-weak); }
+.sp-hero__tag.is-hot .sp-hero__fact { fill: var(--sp-color-text); }
 .sp-hero--stage .sp-hero__face { stroke-width: 0.9; }
 .sp-hero--stage .sp-hero__floor.is-hot .sp-hero__face, .sp-hero--stage .sp-hero__floor.is-focus .sp-hero__face { stroke-width: 2.2; }
-.sp-hero--stage .sp-hero__floor.is-above { pointer-events: auto; opacity: 0.38; }
-.sp-hero--stage .sp-hero__floor.is-above.is-hot { opacity: 0.8; }
+.sp-hero--stage .sp-hero__floor.is-above { pointer-events: auto; }
+/* Translucent blocks stacked over each other blur into one haze, so on the stage lifted floors are
+   drawn as their plate outlines only, stacked like contour lines; the focused floor stays solid below. */
+.sp-hero--stage .sp-hero__floor.is-above,
+.sp-hero--stage .sp-hero__floor.is-above.is-hot { opacity: 1; }
+.sp-hero--stage .sp-hero__floor.is-above .sp-hero__face:not(.sp-hero__top),
+.sp-hero--stage .sp-hero__floor.is-above .sp-hero__shade,
+.sp-hero--stage .sp-hero__floor.is-above .sp-hero__pattern { display: none; }
+.sp-hero--stage .sp-hero__floor.is-above .sp-hero__top { fill: var(--sp-color-text-faint); fill-opacity: 0.06; stroke: var(--sp-color-border-strong); stroke-opacity: 1; stroke-width: 1; }
+.sp-hero--stage .sp-hero__floor.is-above.is-hot .sp-hero__top { fill: var(--sp-color-brand); fill-opacity: 0.18; stroke: var(--sp-color-brand); stroke-width: 1.6; }
+/* A filter greys the suites it does not match (neutral, not a faint lens colour) and keeps their edges,
+   so the building keeps its shape and the matches are the only colour on it. */
+.sp-hero--stage .sp-hero__slice.is-dim { opacity: 1; }
+.sp-hero--stage .sp-hero__slice.is-dim .sp-hero__face { fill: var(--sp-color-page); fill-opacity: 1; stroke: var(--sp-color-border-strong); stroke-opacity: 0.7; }
+.sp-hero--stage .sp-hero__slice.is-dim .sp-hero__pattern { display: none; }

@@ -14,6 +14,7 @@ import { useWidth } from '../../lib/useWidth';
 import { clearSelection, openFloor, selectSegment } from '../plan/actions';
 import { Legend } from '../plan/Legend';
 import { segmentText } from '../plan/segmentText';
+import { availabilityFact } from '../floor/floorData';
 import { Block } from './Block';
 import { FilterBar } from './FilterBar';
 import '../plan/plan.css';
@@ -262,7 +263,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                   className="sp-gutter__btn"
                   tabIndex={-1}
                   data-floor={f.floor.id}
-                  aria-label={`${f.floor.name}: ${pct(leasedPct)} leased, ${num(f.leasable)} RSF leasable${f.overAllocatedBy ? `, records exceed leasable area by ${num(f.overAllocatedBy)} SF` : ''}. Open floor summary.`}
+                  aria-label={`${f.floor.name}: ${pct(leasedPct)} leased, ${num(f.leasable)} RSF leasable${f.overAllocatedBy && !state.safe ? `, records exceed leasable area by ${num(f.overAllocatedBy)} SF` : ''}. Open floor summary.`}
                   onClick={() => openFloor(patch, f.floor.id)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -310,7 +311,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                       </text>
                       {r.focused && r.h >= 100 && (
                         <text className="sp-gutter__rsf" x={8} y={84}>
-                          {f.available > 0 ? `${num(f.available)} SF available` : 'Nothing available'}
+                          {f.available > 0 ? `${num(f.available)} SF available` : availabilityFact(f, model.asOf, state.safe)}
                         </text>
                       )}
                       {f.overAllocatedBy > 0 && !state.safe && (

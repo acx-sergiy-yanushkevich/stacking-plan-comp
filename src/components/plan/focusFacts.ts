@@ -1,5 +1,6 @@
 import type { Segment } from '../../domain/derive';
 import { toneFor, type LensId } from '../../domain/lenses';
+import { canShowDeals } from '../../domain/safe';
 import { segmentText, type SegmentTextOptions } from './segmentText';
 
 /** The rate inside a fact ("Asking $30–$32/SF/yr FSG" → "$30–$32/SF/yr"), so the same rent is never shown twice. */
@@ -25,7 +26,7 @@ export function focusFacts(seg: Segment, lens: LensId, opts: Omit<SegmentTextOpt
   // Rent, unless the active lens already shows a rate for this space (asking rent on an availability).
   if (lens !== 'rent') add(segmentText(seg, { ...opts, lens: 'rent' }).meta);
   // Deal: only when a live deal exists (the deals lens falls back to the term for space without one).
-  if (lens !== 'deals' && !opts.safe) {
+  if (lens !== 'deals' && canShowDeals(opts.safe)) {
     const tone = toneFor(seg, 'deals', false);
     if (tone.startsWith('deal-') && tone !== 'deal-none') add(segmentText(seg, { ...opts, lens: 'deals' }).meta);
   }

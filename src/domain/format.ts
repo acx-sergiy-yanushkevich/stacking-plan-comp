@@ -3,13 +3,11 @@ import type { LeaseType, RateUnit } from './types';
 const int = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const pct1 = new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
-const pctWhole = new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 0 });
 
 /** Exact SF, never rounded or abbreviated (a top complaint about competitor tools). */
 export const sf = (n: number) => `${int.format(n)} SF`;
 export const num = (n: number) => int.format(n);
 export const pct = (ratio: number) => pct1.format(ratio);
-export const pct0 = (ratio: number) => pctWhole.format(ratio);
 
 const dollars = (v: number) => (Number.isInteger(v) ? `$${int.format(v)}` : money.format(v));
 

@@ -70,22 +70,36 @@ describe('BuildingView', () => {
     expect(parseState('', TODAY).view).toBe('building');
   });
 
-  it('opens on the floor with the most available space, with the model, a plate and the floor summary', () => {
+  it('stands alone with no floor open: the turned model with a fact per floor, a prompt and quick starts, no plate', () => {
     const html = render('');
-    expect(shownFloor(html)).toBe('Floor 12');
-    expect(html).toContain('Most space available');
+    expect(shownFloor(html)).toBe('Pick a floor');
+    expect(html).toContain('is-alone');
     expect(html).toContain('sp-hero--stage');
-    expect(html).toContain('Floor 12 plate, schematic');
-    expect(html).toContain('Largest contiguous');
+    expect(html).toContain('sp-hero--facts');
+    expect(html).toContain('9,300 SF available');
+    expect(html).toContain('aria-label="Floors with the most space"');
     expect(html).toContain('aria-label="Floors"');
+    expect(html).not.toContain('plate, schematic');
   });
 
-  it('shows the pinned floor and offers to unpin it', () => {
+  it('opens the pinned floor beside the docked model and offers the whole building back', () => {
     const html = render('?floor=F6');
     expect(shownFloor(html)).toBe('Floor 6');
+    expect(html).not.toContain('is-alone');
+    expect(html).not.toContain('sp-hero--facts');
     expect(html).toContain('Cirrus Energy');
+    expect(html).toContain('Floor 6 plate, schematic');
+    expect(html).toContain('Largest contiguous');
     expect(html).toContain('Pinned');
-    expect(html).toContain('Unpin');
+    expect(html).toContain('Whole building');
+    // Nothing is free today, but the floor is marketed for later: say when, not "0 SF available".
+    expect(html).toContain('21,400 SF marketed from Apr\u00a0&#x27;27');
+    // The listing is unpublished, so a prospect sees the floor as leased.
+    expect(render('?floor=F6&safe=1')).not.toContain('marketed from');
+  });
+
+  it('explains an over-allocated floor beside the legend', () => {
+    expect(render('')).toContain('Floor 7 records exceed its leasable area by 500 SF');
   });
 
   it('opens on the first floor a search or the finder is lighting', () => {

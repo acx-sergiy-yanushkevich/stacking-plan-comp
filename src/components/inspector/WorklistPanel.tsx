@@ -4,7 +4,7 @@ import type { PlanState, WindowKey } from '../../state/planState';
 import { daysBetween, fmtDate, fmtMonths, fmtMonthYearShort } from '../../domain/dates';
 import { rentRollRows, toCsv } from '../../domain/exportCsv';
 import { plural, rate, sf } from '../../domain/format';
-import { rentVisible, tenantLabel, termHidden } from '../../domain/safe';
+import { brokerLabel, canShowActivity, canShowDeals, canShowInPlaceRent, canShowRecordActions, canShowTenantRisk, marketedFor, rentVisible, tenantLabel, termHidden } from '../../domain/safe';
 import { download } from '../../lib/download';
 import { Button, Chip, Icon } from '../ui';
 import { selectSegment, type Patch } from '../plan/actions';
@@ -25,8 +25,9 @@ function endText(row: WorklistRow, safe: boolean): string | null {
   return `${row.kind === 'holdover' ? 'Expired' : 'Ends'} ${fmtDate(row.seg.endDate)}`;
 }
 
-function monthsLeft(row: WorklistRow, safe = false) {
-  if (safe && (row.kind === 'holdover' || row.kind === 'mtm' || row.months === null)) return <span className="sp-ins__row-value">—</span>;
+function monthsLeft(row: WorklistRow, safe: boolean) {
+  // A lease with no months left to state is month-to-month in all but name: withheld the same way.
+  if (termHidden(row.kind, safe) || (row.months === null && !canShowTenantRisk(safe))) return <span className="sp-ins__row-value">—</span>;
   if (row.kind === 'holdover') return <Chip tone="error">Holdover</Chip>;
   if (row.kind === 'mtm' || row.months === null) return <Chip tone="error">MTM</Chip>;
   return <span className="sp-ins__row-value">{fmtMonths(row.months)}</span>;
@@ -34,8 +35,10 @@ function monthsLeft(row: WorklistRow, safe = false) {
 
 export function WorklistPanel({ model, state, patch }: WorklistPanelProps) {
   const { safe, today } = model;
-  const window: WindowKey = state.window === 'risk' && safe ? '12' : (state.window ?? '12');
-  const windows = safe ? WINDOWS.filter((w) => w !== 'risk') : WINDOWS;
+  // The at-risk window lists holdover and month-to-month tenants; a prospect gets the 12-month view instead.
+  const showRisk = canShowTenantRisk(safe);
+  const window: WindowKey = state.window === 'risk' && !showRisk ? '12' : (state.window ?? '12');
+  const windows = showRisk ? WINDOWS : WINDOWS.filter((w) => w !== 'risk');
   const run = useRecordAction();
 
   useEffect(() => {
@@ -74,14 +77,16 @@ export function WorklistPanel({ model, state, patch }: WorklistPanelProps) {
           <div className="sp-empty">
             <Icon name="check" size={24} />
             <div className="sp-empty__title">Nothing ending in this window</div>
-            <p>{safe ? 'Try a longer window.' : 'Try a longer window or check At risk.'}</p>
+            <p>{showRisk ? 'Try a longer window or check At risk.' : 'Try a longer window.'}</p>
           </div>
         ) : (
           <ul className="sp-ins__list" aria-label={`${WINDOW_LABEL[window]} worklist`}>
             {rows.map((row) => {
               const lease = row.seg.lease!;
-              const rent = rentVisible(lease, safe) && lease.rate !== null ? rate(lease.rate, lease.rateUnit, lease.leaseType) : safe ? 'Rent hidden' : lease.confidential ? 'Confidential' : 'Rent hidden';
+              const rent = rentVisible(lease, safe) && lease.rate !== null ? rate(lease.rate, lease.rateUnit, lease.leaseType) : canShowInPlaceRent(safe) && lease.confidential ? 'Confidential' : 'Rent hidden';
               const touch = row.lastTouch ? `${daysBetween(row.lastTouch.date, today)} d ago · ${row.lastTouch.type}` : 'No touch logged';
+              const broker = brokerLabel(row.broker, safe);
+              const marketed = marketedFor(row.seg, safe);
               const selected = state.select === row.segKey;
               return (
                 <li key={`${row.segKey}`}>
@@ -89,12 +94,12 @@ export function WorklistPanel({ model, state, patch }: WorklistPanelProps) {
                     <div className="sp-ins__row-main">
                       <div className="sp-ins__row-title">
                         <span>{tenantLabel(lease, safe)}</span>
-                        {row.renewal && !safe && <StageChip stage={row.renewal.stage} />}
+                        {row.renewal && canShowDeals(safe) && <StageChip stage={row.renewal.stage} />}
                       </div>
-                      {row.seg.marketed && !row.seg.marketed.sublease && (
+                      {marketed && !marketed.sublease && (
                         <div className="sp-ins__row-meta">
                           <Chip tone="warn" icon="warning" title="The suite is already on the market for a later date: the tenant is expected to leave">
-                            {row.seg.marketed.availableFrom ? `Marketed from ${fmtMonthYearShort(row.seg.marketed.availableFrom)}` : 'Marketed'}
+                            {marketed.availableFrom ? `Marketed from ${fmtMonthYearShort(marketed.availableFrom)}` : 'Marketed'}
                           </Chip>
                         </div>
                       )}
@@ -103,10 +108,10 @@ export function WorklistPanel({ model, state, patch }: WorklistPanelProps) {
                           <span key={i}>{part}</span>
                         ))}
                       </div>
-                      {!safe && (
+                      {(broker || canShowActivity(safe)) && (
                         <div className="sp-ins__row-meta">
-                          {row.broker && <span>{row.broker}</span>}
-                          <span>{touch}</span>
+                          {broker && <span>{broker}</span>}
+                          {canShowActivity(safe) && <span>{touch}</span>}
                         </div>
                       )}
                     </div>
@@ -115,7 +120,7 @@ export function WorklistPanel({ model, state, patch }: WorklistPanelProps) {
                       {monthsLeft(row, safe)}
                     </div>
                   </button>
-                  {!safe && (
+                  {canShowRecordActions(safe) && (
                     <div className="sp-ins__row-actions">
                       <Button size="sm" variant="ghost" icon="phone" onClick={() => run('log-call', `Lease ${lease.id}`)}>
                         Log call

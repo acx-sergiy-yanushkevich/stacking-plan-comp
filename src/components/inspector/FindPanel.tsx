@@ -3,7 +3,7 @@ import type { PlanModel } from '../../model/usePlanModel';
 import type { FitKind, PlanState } from '../../state/planState';
 import { addMonths, fmtDate, fmtMonthYear } from '../../domain/dates';
 import { num, plural, sf } from '../../domain/format';
-import { prospectLabel } from '../../domain/safe';
+import { canShowDeals, canShowInquiries } from '../../domain/safe';
 import { Button, Chip, Icon, Segmented, SelectField, TextField } from '../ui';
 import { selectSegment, type Patch } from '../plan/actions';
 import { Section } from './parts';
@@ -66,7 +66,7 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
           </div>
           {inquiry && (
             <p className="sp-ins__note" style={{ margin: '4px 0 8px' }}>
-              Based on the inquiry from <strong>{prospectLabel(inquiry, safe)}</strong>: {num(inquiry.minSize)}–{num(inquiry.maxSize)} SF by {fmtDate(inquiry.neededBy)}. Editing a field keeps these values and drops the link.
+              Based on {canShowInquiries(safe) ? <>the inquiry from <strong>{inquiry.prospect}</strong></> : 'an open inquiry'}: {num(inquiry.minSize)}–{num(inquiry.maxSize)} SF by {fmtDate(inquiry.neededBy)}. Editing a field keeps these values and drops the link.
             </p>
           )}
           <div className="sp-ins__form-row">
@@ -90,15 +90,17 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
               <Segmented aria-label="Space type" options={TYPES} value={state.fit} onChange={(fit) => patch({ fit })} />
             </div>
           </div>
-          <SelectField label="Match an open inquiry" value={state.inquiry ?? ''} onChange={(e) => patch({ inquiry: e.target.value || null, req: null, max: null, by: null })}>
-            <option value="">— None —</option>
-            {property.inquiries.map((i) => (
-              <option key={i.id} value={i.id}>
-                {prospectLabel(i, safe)}
-                {safe ? ` (${i.id})` : ''}
-              </option>
-            ))}
-          </SelectField>
+          {/* The open inquiries are other prospects' requirements: the list is the broker's, not a prospect's. */}
+          {canShowInquiries(safe) && (
+            <SelectField label="Match an open inquiry" value={state.inquiry ?? ''} onChange={(e) => patch({ inquiry: e.target.value || null, req: null, max: null, by: null })}>
+              <option value="">— None —</option>
+              {property.inquiries.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.prospect}
+                </option>
+              ))}
+            </SelectField>
+          )}
           <p className="sp-ins__largest">
             Largest block now: <strong>{largest.size > 0 ? sf(largest.size) : '—'}</strong>
             {largest.size > 0 && largest.floorName ? ` on ${largest.floorName}` : ''}
@@ -181,12 +183,12 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
                             late
                           </Chip>
                         )}
-                        {o.inquiries > 0 && !safe && (
+                        {o.inquiries > 0 && canShowInquiries(safe) && (
                           <Chip tone="success" icon="inquiry">
                             {o.inquiries === 1 ? '1 inquiry fits' : `${o.inquiries} inquiries fit`}
                           </Chip>
                         )}
-                        {o.deals > 0 && !safe && (
+                        {o.deals > 0 && canShowDeals(safe) && (
                           <Chip tone="brand" icon="deal">
                             {plural(o.deals, 'live deal')}
                           </Chip>

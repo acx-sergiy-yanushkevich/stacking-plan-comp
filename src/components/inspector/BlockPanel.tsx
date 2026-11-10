@@ -6,7 +6,23 @@ import { daysBetween, fmtDate, fmtMonths } from '../../domain/dates';
 import { matchingInquiries } from '../../domain/finder';
 import { num, rate, rateRange, sf, usd, usd0 } from '../../domain/format';
 import { STALE_DAYS } from '../../domain/issues';
-import { contactLabel, prospectLabel, rentVisible, tenantLabel } from '../../domain/safe';
+import {
+  brokerLabel,
+  canShowActivity,
+  canShowInPlaceRent,
+  canShowDeals,
+  canShowIssues,
+  canShowListingStatus,
+  canShowRecordActions,
+  canShowTenant,
+  contactLabel,
+  marketedFor,
+  rentVisible,
+  tenantLabel,
+  termHidden,
+  visibleDeals,
+  visibleInquiries,
+} from '../../domain/safe';
 import { Chip } from '../ui';
 import { selectSegment, type Patch } from '../plan/actions';
 import { kindLabel } from '../plan/segmentText';
@@ -21,7 +37,8 @@ export interface BlockPanelProps {
 }
 
 function Verified({ at, today, safe }: { at: string; today: string; safe: boolean }) {
-  const stale = !safe && daysBetween(at, today) > STALE_DAYS;
+  // A stale record is a data issue, flagged for the people who maintain the plan.
+  const stale = canShowIssues(safe) && daysBetween(at, today) > STALE_DAYS;
   return (
     <span>
       {fmtDate(at)}
@@ -52,11 +69,12 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
   const changesFor = property.history.filter((c) => c.segKey === seg.key || (lease && c.recordType === 'Lease' && c.recordLabel.includes(lease.tenant)) || (a && c.recordType === 'Availability' && c.recordLabel.includes(a.suite))).sort((x, y) => (x.at < y.at ? 1 : -1));
 
   // Lease facts
-  const rentText = lease ? (rentVisible(lease, safe) && lease.rate !== null ? rate(lease.rate, lease.rateUnit, lease.leaseType) : safe ? 'Hidden' : lease.confidential ? 'Confidential' : 'Not on record') : undefined;
+  const rentText = lease ? (rentVisible(lease, safe) && lease.rate !== null ? rate(lease.rate, lease.rateUnit, lease.leaseType) : !canShowInPlaceRent(safe) ? 'Hidden' : lease.confidential ? 'Confidential' : 'Not on record') : undefined;
   const remaining = (() => {
     if (!lease) return undefined;
-    if (seg.kind === 'mtm') return safe ? '—' : 'Month-to-month';
-    if (seg.kind === 'holdover') return safe ? '—' : `Holdover · expired ${seg.endDate ? fmtDate(seg.endDate) : ''}`;
+    if (termHidden(seg.kind, safe)) return '—';
+    if (seg.kind === 'mtm') return 'Month-to-month';
+    if (seg.kind === 'holdover') return `Holdover · expired ${seg.endDate ? fmtDate(seg.endDate) : ''}`;
     if (seg.kind === 'committed') return `Moves in ${fmtDate(lease.commencement)}`;
     if (seg.kind === 'projected') return `Vacated ${seg.endDate ? fmtDate(seg.endDate) : ''}`;
     if (seg.monthsToExpiry !== null) return seg.kind === 'sublease' && seg.headMonths != null ? `${fmtMonths(seg.headMonths)} on the head lease · sublease ${fmtMonths(seg.monthsToExpiry)}` : fmtMonths(seg.monthsToExpiry);
@@ -64,16 +82,25 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
   })();
   const otherFloors = lease ? leaseFloors(property, lease).filter((f) => f.id !== seg.floorId) : [];
 
-  // Deals on this block (lease renewals count only while the lease is in place or committed).
-  const deals = dedupeDeals([
-    carriesLease && seg.kind !== 'projected' ? lease?.deals : undefined,
-    a?.deals,
-    seg.marketed?.deals,
-    seg.kind === 'committed' ? seg.origin?.deals : undefined,
-  ]).filter((d) => d.stage !== 'Lease Out' || seg.kind === 'committed');
+  // The listing on an occupied suite; a quiet one is not shown to a prospect.
+  const marketed = marketedFor(seg, safe);
 
-  // Inquiries a vacancy could satisfy.
-  const inquiries = a && a.kind === 'Lease' ? matchingInquiries(property.inquiries, { size: a.size, divisible: a.divisible, minDivisible: a.minDivisible, from: seg.availableFrom ?? a.availableFrom }, asOf) : [];
+  // Deals on this block (lease renewals count only while the lease is in place or committed); none in prospect-safe mode.
+  const deals = visibleDeals(
+    dedupeDeals([
+      carriesLease && seg.kind !== 'projected' ? lease?.deals : undefined,
+      a?.deals,
+      seg.marketed?.deals,
+      seg.kind === 'committed' ? seg.origin?.deals : undefined,
+    ]).filter((d) => d.stage !== 'Lease Out' || seg.kind === 'committed'),
+    safe,
+  );
+
+  // Inquiries a vacancy could satisfy; none in prospect-safe mode.
+  const inquiries = visibleInquiries(
+    a && a.kind === 'Lease' ? matchingInquiries(property.inquiries, { size: a.size, divisible: a.divisible, minDivisible: a.minDivisible, from: seg.availableFrom ?? a.availableFrom }, asOf) : [],
+    safe,
+  );
 
   // Footer actions
   const actions: ActionItem[] = [];
@@ -98,14 +125,14 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
         <Section title={seg.kind === 'committed' ? 'Signed lease' : seg.kind === 'projected' ? 'Previous lease' : 'Lease'}>
           <Facts
             items={[
-              !safe && ['Tenant', <strong key="t">{tenantLabel(lease, safe)}</strong>],
+              canShowTenant(safe) && ['Tenant', <strong key="t">{lease.tenant}</strong>],
               ['Contact', contactLabel(lease.tenantContact, safe)],
-              !safe && ['Industry', lease.industry],
-              ['Term', safe && (seg.kind === 'holdover' || seg.kind === 'mtm') ? `${fmtDate(lease.commencement)} – not disclosed` : `${fmtDate(lease.commencement)} – ${seg.endDate ? fmtDate(seg.endDate) : 'open (MTM)'}`],
+              canShowTenant(safe) && ['Industry', lease.industry],
+              ['Term', termHidden(seg.kind, safe) ? `${fmtDate(lease.commencement)} – not disclosed` : `${fmtDate(lease.commencement)} – ${seg.endDate ? fmtDate(seg.endDate) : 'open (MTM)'}`],
               ['Remaining', remaining],
               ['Rent', rentText],
-              !safe && ['Broker', lease.owner],
-              !safe && ['Last touch', touchText(lease.lastTouch)],
+              ['Broker', brokerLabel(lease.owner, safe)],
+              canShowActivity(safe) && ['Last touch', touchText(lease.lastTouch)],
               otherFloors.length > 0 && ['Total', `${sf(lease.units.reduce((s, u) => s + u.size, 0))} across ${otherFloors.length + 1} floors`],
               otherFloors.length > 0 && [
                 'Also on',
@@ -120,7 +147,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
                   })}
                 </span>,
               ],
-              ['Verified', <Verified key="v" at={lease.verifiedAt} today={today} safe={safe} />],
+              canShowActivity(safe) && ['Verified', <Verified key="v" at={lease.verifiedAt} today={today} safe={safe} />],
             ]}
           />
         </Section>
@@ -140,7 +167,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
             items={[
               ['Type', availabilityType(a)],
               ['Status', a.status],
-              safe ? null : ['Listing', a.published === false ? 'Quiet · not published' : 'Published'],
+              canShowListingStatus(safe) && ['Listing', a.published === false ? 'Quiet · not published' : 'Published'],
               ['Available', seg.availableFrom ? fmtDate(seg.availableFrom) : a.availableFrom && a.availableFrom > asOf ? fmtDate(a.availableFrom) : 'Now'],
               a.sublease && a.subleaseExpiration ? ['Sublease thru', fmtDate(a.subleaseExpiration)] : null,
               ['Asking', rentVisible(a, safe) && a.rentHigh > 0 ? rateRange(a.rentLow, a.rentHigh, a.rateUnit, a.leaseType) : 'Hidden'],
@@ -166,7 +193,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
         </Section>
       )}
 
-      {!safe && changesFor.length > 0 && (
+      {canShowActivity(safe) && changesFor.length > 0 && (
         <Section title="Changes">
           <ul className="sp-ins__list">
             {changesFor.slice(0, 5).map((c) => (
@@ -190,14 +217,22 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
         </Section>
       )}
 
-      {seg.kind === 'unmarketed' && (
+      {seg.kind === 'unmarketed' && !canShowIssues(safe) && (
+        <Section title="Not available">
+          <p className="sp-ins__p">
+            <strong>{sf(seg.size)}</strong> on {floorName} is not on the market.
+          </p>
+        </Section>
+      )}
+
+      {seg.kind === 'unmarketed' && canShowIssues(safe) && (
         <Section title="Unaccounted area">
           <p className="sp-ins__p">
             <strong>{sf(seg.size)}</strong> of {floorName}’s leasable area has no lease or availability record.
           </p>
           {seg.suspect ? (
             <div className="sp-ins__card">
-              <div className="sp-ins__card-title">Likely {tenantLabel(seg.suspect, safe)}</div>
+              <div className="sp-ins__card-title">Likely {seg.suspect.tenant}</div>
               <p className="sp-ins__explain">
                 This lease is on {floorName} but has no Unit records, so it cannot be drawn. Add its unit to place it.
               </p>
@@ -217,18 +252,18 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
         </Section>
       )}
 
-      {seg.marketed && (
-        <Section title={seg.marketed.kind === 'Sale' ? 'Offered for sale' : 'Marketed for later'}>
+      {marketed && (
+        <Section title={marketed.kind === 'Sale' ? 'Offered for sale' : 'Marketed for later'}>
           <div className="sp-ins__card">
             <Facts
               items={[
-                ['Type', availabilityType(seg.marketed)],
-                seg.marketed.kind === 'Lease' && ['Available from', seg.marketed.availableFrom ? fmtDate(seg.marketed.availableFrom) : 'Now'],
-                !safe && ['Listing', seg.marketed.published === false ? 'Quiet · not published' : 'Published'],
-                seg.marketed.kind === 'Lease' && ['Asking', rentVisible(seg.marketed, safe) && seg.marketed.rentHigh > 0 ? rateRange(seg.marketed.rentLow, seg.marketed.rentHigh, seg.marketed.rateUnit, seg.marketed.leaseType) : 'Hidden'],
-                seg.marketed.kind === 'Sale' && ['Asking price', rentVisible(seg.marketed, safe) && seg.marketed.askingPrice ? usd0(seg.marketed.askingPrice) : 'Hidden'],
-                ['Size', sf(seg.marketed.size)],
-                seg.marketed.kind === 'Lease' && ['Divisible', seg.marketed.divisible ? (seg.marketed.minDivisible ? `Yes · min ${sf(seg.marketed.minDivisible)}` : 'Yes') : 'No'],
+                ['Type', availabilityType(marketed)],
+                marketed.kind === 'Lease' && ['Available from', marketed.availableFrom ? fmtDate(marketed.availableFrom) : 'Now'],
+                canShowListingStatus(safe) && ['Listing', marketed.published === false ? 'Quiet · not published' : 'Published'],
+                marketed.kind === 'Lease' && ['Asking', rentVisible(marketed, safe) && marketed.rentHigh > 0 ? rateRange(marketed.rentLow, marketed.rentHigh, marketed.rateUnit, marketed.leaseType) : 'Hidden'],
+                marketed.kind === 'Sale' && ['Asking price', rentVisible(marketed, safe) && marketed.askingPrice ? usd0(marketed.askingPrice) : 'Hidden'],
+                ['Size', sf(marketed.size)],
+                marketed.kind === 'Lease' && ['Divisible', marketed.divisible ? (marketed.minDivisible ? `Yes · min ${sf(marketed.minDivisible)}` : 'Yes') : 'No'],
               ]}
             />
           </div>
@@ -258,13 +293,13 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
                 <div className="sp-ins__row">
                   <div className="sp-ins__row-main">
                     <div className="sp-ins__row-title">
-                      <span>{prospectLabel(i, safe)}</span>
+                      <span>{i.prospect}</span>
                     </div>
                     <div className="sp-ins__row-meta">
                       <span>
                         {num(i.minSize)}–{num(i.maxSize)} SF · by {fmtDate(i.neededBy)}
                       </span>
-                      {!safe && <span>{i.broker}</span>}
+                      <span>{i.broker}</span>
                     </div>
                   </div>
                 </div>
@@ -274,13 +309,13 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
         </Section>
       )}
 
-      {!safe && (deals.length > 0 || a || (carriesLease && seg.kind !== 'projected')) && (
+      {canShowDeals(safe) && (deals.length > 0 || a || (carriesLease && seg.kind !== 'projected')) && (
         <Section title={`Deals${deals.length ? ` · ${deals.length}` : ''}`}>
-          <DealList deals={deals} safe={safe} />
+          <DealList deals={deals} />
         </Section>
       )}
 
-      {!safe && (
+      {canShowRecordActions(safe) && (
         <Section title={`${kindLabel(seg.kind)} actions`} className="sp-ins__section--actions">
           <Actions items={actions} />
         </Section>

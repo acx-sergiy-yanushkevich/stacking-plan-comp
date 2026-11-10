@@ -9,9 +9,13 @@ import type { ISODate } from '../../domain/types';
 import { clearSelection, selectSegment, toggleBucket, type Patch } from '../plan/actions';
 import { TimelineAxis } from './TimelineAxis';
 import { TimelineRows, type BarHover } from './TimelineRows';
-import { layoutRows, rowsHeight, viewAxis } from './layout';
+import { layoutRows, layoutStackedRows, rowsHeight, viewAxis } from './layout';
 import { AsOfCursor } from './AsOfCursor';
+import { RolloverChips } from './RolloverChips';
+import { barLabel, SUB_FONT, tagWidth, wrapLabel, type LabelLine } from './barLabel';
 import { useWidth } from './useWidth';
+import { measure } from '../../lib/textFit';
+import { Icon } from '../ui';
 import './timeline.css';
 
 export interface TimelineViewProps {
@@ -21,13 +25,21 @@ export interface TimelineViewProps {
 }
 
 export const GUTTER = 88;
+/**
+ * Below this width a bar cannot hold its label, and a wider SVG in a scrolling box would cut
+ * names and figures at the screen edge. The chart switches to the stacked layout instead: it
+ * fits the host, and every bar's full label is written above it.
+ */
 const MIN_WIDTH = 640;
+/** The stacked chart's own floor: narrower than this it scrolls sideways rather than squeeze the axis. */
+const STACKED_MIN_WIDTH = 280;
 /** Top strip: year labels, the cursor handle and the Today label. */
 const STRIP_H = 28;
 /** Rollover band under the strip. */
 const BAND_H = 56;
-const ROWS_TOP = STRIP_H + BAND_H + 2;
 const BOTTOM_PAD = 6;
+/** Matches `.sp-tl-tip { max-width }`. */
+const TIP_MAX_WIDTH = 320;
 
 /**
  * Lease timeline (DESIGN.md §2.5): one SVG with a floor gutter, a rollover band measured
@@ -35,13 +47,39 @@ const BOTTOM_PAD = 6;
  * cursor. Moving the cursor patches `asOf`, so every view recomputes from the same model.
  */
 export default function TimelineView({ model, state, patch }: TimelineViewProps) {
-  const [hostRef, width] = useWidth<HTMLDivElement>(MIN_WIDTH);
+  // SSR and tests have no layout: they render the wide chart.
+  const [hostRef, width] = useWidth<HTMLDivElement>(STACKED_MIN_WIDTH, MIN_WIDTH);
+  const stackedMode = width < MIN_WIDTH;
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const plotWidth = Math.max(200, width - GUTTER - 8);
   const rows = model.timeline.rows;
-  const laid = useMemo(() => layoutRows(rows, model.asOf, ROWS_TOP, model.safe), [rows, model.asOf, model.safe]);
-  const height = ROWS_TOP + rowsHeight(laid) + BOTTOM_PAD;
+  // Stacked: the gutter is as wide as its widest line ("Floor 12" over "20,800 SF"), no wider.
+  const gutter = stackedMode
+    ? Math.ceil(Math.max(50, ...rows.map((r) => measure(`${num(r.floor.size - r.floor.nonLeasable)} SF`, SUB_FONT)))) + 12
+    : GUTTER;
+  const plotWidth = Math.max(200, width - gutter - (stackedMode ? 2 : 8));
+  const bandHeight = stackedMode ? 0 : BAND_H;
+  const rowsTop = STRIP_H + bandHeight + 2;
+  // Stacked: every bar's whole label, wrapped to the plot. The lane heights follow from the line counts.
+  const labels = useMemo(() => {
+    if (!stackedMode) return null;
+    const out = new Map<string, LabelLine[]>();
+    for (const row of rows) {
+      for (const bar of row.bars) {
+        const seg = model.segIndex.get(bar.segKey);
+        if (!seg) continue;
+        const { name, sub, risk } = barLabel(bar, seg, { safe: model.safe, asOf: model.asOf, today: model.today, lens: state.lens, floorName: row.floor.name });
+        out.set(bar.key, wrapLabel(name, sub, plotWidth - 6, risk ? tagWidth(risk) + 5 : 0));
+      }
+    }
+    return out;
+  }, [stackedMode, rows, model.segIndex, model.safe, model.asOf, model.today, state.lens, plotWidth]);
+  const laid = useMemo(
+    () => (labels ? layoutStackedRows(rows, rowsTop, (bar) => labels.get(bar.key)?.length ?? 1) : layoutRows(rows, model.asOf, rowsTop, model.safe)),
+    [labels, rows, model.asOf, model.safe, rowsTop],
+  );
+  const height = rowsTop + rowsHeight(laid) + BOTTOM_PAD;
   const clipId = `sp-tl-plot-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
+  const legendStates = model.legend.filter((i) => i.sf > 0).length;
 
   // The axis follows as-of (as-of + 10 yr). Freeze it while dragging so the chart does not
   // rescale under the pointer; it snaps to the new extent on release.
@@ -69,6 +107,8 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
     } else {
       tipStyle = { left: hover.clientX - rect.left + 12, top: hover.clientY - rect.top + 16 };
     }
+    // Keep the tip inside the host: hanging off its right edge would make the host scroll sideways.
+    if (tipStyle) tipStyle.left = Math.max(0, Math.min(tipStyle.left, rect.width - TIP_MAX_WIDTH - 8));
   }
 
   return (
@@ -77,16 +117,28 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
         <div className="sp-stack__title">
           <h2>Lease timeline</h2>
           <span className="sp-weak">
-            as of {fmtDate(model.asOf)} · {num(model.kpis.leasable)} RSF leasable
+            as of {fmtDate(model.asOf)}
+            {!stackedMode && ` · ${num(model.kpis.leasable)} RSF leasable`}
           </span>
         </div>
-        <Legend items={model.legend} compact />
+        {stackedMode ? (
+          <details className="sp-tl-legend">
+            <summary>
+              Legend · {legendStates} states
+              <Icon name="chevron-down" size={14} />
+            </summary>
+            <Legend items={model.legend} compact />
+          </details>
+        ) : (
+          <Legend items={model.legend} compact />
+        )}
       </div>
-    <div className="sp-timeline" ref={hostRef}>
+    <div className={`sp-timeline ${stackedMode ? 'sp-timeline--stacked' : ''}`} ref={hostRef}>
+      {stackedMode && <RolloverChips buckets={model.roll.buckets} atRisk={model.safe ? 0 : model.roll.atRisk} asOf={model.asOf} activeBucket={state.bucket} onBucket={onBucket} />}
       <svg ref={svgRef} className="sp-timeline__svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="group" aria-label={`Lease timeline, ${rows.length} floors`}>
         <defs>
           <clipPath id={clipId}>
-            <rect x={GUTTER} y={0} width={plotWidth} height={height} />
+            <rect x={gutter} y={0} width={plotWidth} height={height} />
           </clipPath>
         </defs>
         <TimelineAxis
@@ -94,17 +146,17 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
           end={end}
           asOf={model.asOf}
           today={model.today}
-          plotLeft={GUTTER}
+          plotLeft={gutter}
           plotWidth={plotWidth}
           stripHeight={STRIP_H}
-          bandHeight={BAND_H}
+          bandHeight={bandHeight}
           height={height - BOTTOM_PAD}
           buckets={model.roll.buckets}
           atRisk={model.safe ? 0 : model.roll.atRisk}
           activeBucket={state.bucket}
           onBucket={onBucket}
         />
-        <line className="sp-cursor__line sp-cursor__line--under" x1={GUTTER + dateToX(model.asOf, start, end, plotWidth)} x2={GUTTER + dateToX(model.asOf, start, end, plotWidth)} y1={0} y2={height - BOTTOM_PAD} />
+        <line className="sp-cursor__line sp-cursor__line--under" x1={gutter + dateToX(model.asOf, start, end, plotWidth)} x2={gutter + dateToX(model.asOf, start, end, plotWidth)} y1={0} y2={height - BOTTOM_PAD} />
         <TimelineRows
           rows={laid}
           segIndex={model.segIndex}
@@ -114,12 +166,13 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
           today={model.today}
           lens={state.lens}
           safe={model.safe}
-          plotLeft={GUTTER}
+          plotLeft={gutter}
           plotWidth={plotWidth}
           clipId={clipId}
           highlight={model.highlight}
           selected={state.select}
           hovered={hover?.key ?? null}
+          stacked={labels}
           onSelect={onSelect}
           onHover={onHover}
         />
@@ -129,7 +182,7 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
           start={start}
           end={end}
           svgRef={svgRef}
-          plotLeft={GUTTER}
+          plotLeft={gutter}
           plotWidth={plotWidth}
           top={0}
           height={height - BOTTOM_PAD}
@@ -145,7 +198,9 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
           {hover.text}
         </div>
       )}
-      <p className="sp-timeline__note">Drag the cursor or use ← → to move the as-of date; the whole plan recomputes.</p>
+      <p className="sp-timeline__note">
+        {stackedMode ? 'Drag the date handle to move the as-of date; the whole plan recomputes. Tap a lease for its details.' : 'Drag the cursor or use ← → to move the as-of date; the whole plan recomputes.'}
+      </p>
     </div>
     </section>
   );

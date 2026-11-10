@@ -22,7 +22,10 @@
 .sp-header__facts > span { white-space: nowrap; }
 .sp-header__verified { display: inline-flex; align-items: center; gap: 4px; color: var(--sp-color-success); font-weight: 500; }
 .sp-header__stale { margin-left: 6px; }
-.sp-header__sale { display: inline-flex; align-items: center; gap: 4px; color: var(--tone-forsale-text); font-weight: 600; }
+/* The sale listing is one more fact: same size and colour as its neighbours, so it never competes with the title. */
+.sp-header__sale { display: inline-flex; align-items: center; gap: 4px; }
+.sp-header__sale .sp-icon, .sp-header__sale svg { color: var(--tone-forsale-edge); flex: none; }
+.sp-header__sale-label { font-weight: 500; }
 .sp-header__verified--stale { color: var(--sp-color-warn); }
 .sp-header__stale { color: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; margin-left: 2px; }
 .sp-header__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }

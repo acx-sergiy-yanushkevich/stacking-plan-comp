@@ -2,15 +2,30 @@
    floor under the pointer (or pinned), its plate above, its numbers and lists below. Tokens only. */
 .sp-bview { display: flex; flex-direction: column; min-width: 0; }
 .sp-bview__grid {
-  display: grid; grid-template-columns: minmax(380px, 5fr) minmax(0, 7fr); gap: var(--sp-space-5);
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp-space-6);
   align-items: start; padding: var(--sp-space-4);
 }
 /* The model stays put while the floor column beside it changes height from floor to floor. */
 .sp-bview__model {
-  display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: var(--sp-space-3); align-items: center;
+  display: grid; grid-template-columns: 76px auto; gap: var(--sp-space-4); align-items: center;
   position: sticky; top: var(--sp-space-3);
 }
-.sp-bview__model .sp-hero svg { max-height: min(640px, calc(100vh - 120px)); }
+/* The viewBox is fitted to the building, so sizing by height leaves no dead space beside it;
+   the column takes the model's own width and the floor column gets the rest. */
+.sp-bview__model .sp-hero svg { width: auto; height: clamp(320px, calc(100vh - var(--sp-bview-top, 430px) - 24px), 640px); max-width: min(46vw, 520px); }
+/* Alone: no floor is open, so the model takes the view: a narrow column with the prompt and the quick
+   starts, and the building beside it as tall as the screen allows. */
+.sp-bview__grid.is-alone { grid-template-columns: minmax(200px, 250px) minmax(0, 1fr); }
+.sp-bview__grid.is-alone .sp-bview__model { position: static; justify-content: center; order: 2; }
+.sp-bview__grid.is-alone .sp-bview__model .sp-hero svg { height: clamp(440px, calc(100vh - var(--sp-bview-top, 430px) - 24px), 780px); max-width: min(62vw, 900px); }
+.sp-bview__alone { order: 1; display: flex; flex-direction: column; gap: var(--sp-space-3); padding-top: var(--sp-space-2); }
+.sp-bview__alone .sp-floor__facts { line-height: 1.5; }
+.sp-bview__starts { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-space-2); font-size: var(--sp-text-12); margin-top: var(--sp-space-2); }
+.sp-bview__stage { min-width: 0; transform-origin: center; will-change: transform; }
+/* The floor column comes in from the right as the model docks. */
+@keyframes sp-bview-in { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+.sp-bview__floor { animation: sp-bview-in 520ms cubic-bezier(0.22, 0.8, 0.2, 1) 140ms both; }
+@media (prefers-reduced-motion: reduce) { .sp-bview__floor { animation: none; } }
 .sp-bview__floor { display: flex; flex-direction: column; gap: var(--sp-space-2); min-width: 0; }
 .sp-bview__floor-head { display: flex; align-items: baseline; gap: var(--sp-space-3); flex-wrap: wrap; }
 .sp-bview__actions { margin-left: auto; display: inline-flex; gap: var(--sp-space-2); align-self: center; }
@@ -23,10 +38,26 @@
 .sp-bview__info .sp-fkpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .sp-bview__info .sp-fkpi--wide { grid-column: auto; }
 /* With the inspector open beside it, the view is narrower: a slimmer model column and two-up numbers. */
-.sp-main:not(.sp-main--wide) .sp-bview__grid { grid-template-columns: minmax(320px, 5fr) minmax(0, 6fr); gap: var(--sp-space-4); }
-.sp-main:not(.sp-main--wide) .sp-bview__model { grid-template-columns: minmax(0, 1fr); }
-.sp-main:not(.sp-main--wide) .sp-bview__model .sp-mini { display: none; }
+.sp-main:not(.sp-main--wide) .sp-bview__grid { grid-template-columns: auto minmax(0, 1fr); gap: var(--sp-space-4); }
+.sp-main:not(.sp-main--wide) .sp-bview__model .sp-hero svg { max-width: min(32vw, 420px); }
+/* The picker stays (it is the keyboard way between floors), reduced to the floor numbers. */
+.sp-main:not(.sp-main--wide) .sp-bview__model { grid-template-columns: 40px auto; gap: var(--sp-space-3); }
+.sp-main:not(.sp-main--wide) .sp-bview__model .sp-mini { width: 40px; }
+.sp-main:not(.sp-main--wide) .sp-bview__model .sp-mini__pct { display: none; }
 .sp-main:not(.sp-main--wide) .sp-bview__info .sp-fkpis { grid-template-columns: 1fr 1fr; }
 @media (max-width: 1280px) { .sp-bview__info .sp-fkpis { grid-template-columns: 1fr 1fr; } }
 /* The inspector opens beside this view for a suite or a search; the model is already on screen. */
 .sp-app[data-view='building'] .sp-inspector .sp-hero { display: none; }
+
+/* Tablet (761–1099 px): one column. Alone, the prompt sits above the model; with a floor open the model
+   is a short band above the floor's plate and lists, and the picker runs along its top. */
+@media (max-width: 1099px) {
+  .sp-bview__grid, .sp-bview__grid.is-alone, .sp-main:not(.sp-main--wide) .sp-bview__grid { grid-template-columns: minmax(0, 1fr); }
+  .sp-bview__model, .sp-main:not(.sp-main--wide) .sp-bview__model { position: static; grid-template-columns: 76px auto; justify-content: center; }
+  .sp-bview__grid.is-alone .sp-bview__model { order: 2; }
+  .sp-bview__model .sp-mini, .sp-main:not(.sp-main--wide) .sp-bview__model .sp-mini { width: 76px; }
+  .sp-main:not(.sp-main--wide) .sp-bview__model .sp-mini__pct { display: inline; }
+  .sp-bview__model .sp-hero svg, .sp-main:not(.sp-main--wide) .sp-bview__model .sp-hero svg { height: 320px; max-width: calc(100vw - 180px); }
+  .sp-bview__grid.is-alone .sp-bview__model .sp-hero svg { height: clamp(360px, 52vh, 560px); max-width: calc(100vw - 180px); }
+  .sp-bview__starts { flex-direction: row; flex-wrap: wrap; align-items: center; }
+}

@@ -1,16 +1,26 @@
 import type { Deal, Inquiry, ISODate } from '../../domain/types';
+import { fmtMonthYearShort } from '../../domain/dates';
 import { activeDeals, isLeaseKind, type FloorView, type Segment } from '../../domain/derive';
 import { matchingInquiries } from '../../domain/finder';
+import { sf } from '../../domain/format';
 import type { Issue } from '../../domain/issues';
+import { comingSupply, type ComingSupply } from '../../domain/kpis';
+import { visibleDeals, visibleInquiries, visibleIssues } from '../../domain/safe';
 
-/** Pure helpers shared by the floor plate, its KPIs and its lists. */
+/**
+ * Pure helpers shared by the floor plate, its KPIs and its lists. Everything a list renders takes
+ * `safe`, so a list cannot be built without the prospect-safe policy having been applied to it.
+ */
 
 export interface FloorDeal {
   deal: Deal;
   seg: Segment;
 }
 
-/** Live (not yet signed) deals on a floor, each once, most advanced stage first within a suite. */
+/**
+ * Live (not yet signed) deals on a floor, each once, in plan order. This is the unfiltered record:
+ * anything that renders deals takes `floorDeals`, which applies the prospect-safe policy.
+ */
 export function liveDeals(floor: FloorView): FloorDeal[] {
   const seen = new Set<string>();
   const out: FloorDeal[] = [];
@@ -23,6 +33,11 @@ export function liveDeals(floor: FloorView): FloorDeal[] {
     }
   }
   return out;
+}
+
+/** The live deals a floor's list may show: all of them, or none in prospect-safe mode. */
+export function floorDeals(floor: FloorView, safe: boolean): FloorDeal[] {
+  return visibleDeals(liveDeals(floor), safe);
 }
 
 export interface Space {
@@ -64,11 +79,12 @@ export interface FloorInquiry {
   segs: Segment[];
 }
 
-/** Open inquiries that fit any available or marketed space on the floor, soonest needed first. */
-export function fittingInquiries(floor: FloorView, inquiries: Inquiry[], asOf: ISODate): FloorInquiry[] {
+/** Open inquiries that fit any available or marketed space on the floor, soonest needed first; none in prospect-safe mode. */
+export function fittingInquiries(floor: FloorView, inquiries: Inquiry[], asOf: ISODate, safe: boolean): FloorInquiry[] {
   const byId = new Map<string, FloorInquiry>();
+  const open = visibleInquiries(inquiries, safe);
   for (const seg of floor.segments) {
-    for (const inquiry of inquiriesFor(seg, inquiries, asOf)) {
+    for (const inquiry of inquiriesFor(seg, open, asOf)) {
       const hit = byId.get(inquiry.id);
       if (hit) hit.segs.push(seg);
       else byId.set(inquiry.id, { inquiry, segs: [seg] });
@@ -87,22 +103,28 @@ export function nextExpiry(floor: FloorView): Segment | null {
   return best;
 }
 
+/** Data issues recorded against a floor; none in prospect-safe mode. */
+export function floorIssues(issues: Issue[], floorId: string, safe: boolean): Issue[] {
+  return visibleIssues(issues, safe).filter((i) => i.floorId === floorId);
+}
+
+/** Occupied space on the floor that is marketed for a later date (quiet listings left out in prospect-safe mode). */
+export function floorComing(floor: FloorView, asOf: ISODate, safe: boolean): ComingSupply | null {
+  const coming = comingSupply(floor.segments, asOf, safe);
+  return coming.sf > 0 && coming.from ? coming : null;
+}
+
+/** "21,400 SF marketed from Apr '27": the coming supply in a phrase. */
+export function comingText(coming: ComingSupply): string {
+  return `${sf(coming.sf)} marketed${coming.from ? ` from ${fmtMonthYearShort(coming.from)}` : ''}`;
+}
+
 /**
- * Issue titles name tenants and prospects. In prospect-safe mode the title is replaced by a
- * neutral phrase keyed on the issue id prefix (see `findIssues`); titles that only carry
- * floor, suite or SF facts are kept.
+ * What a floor offers, in a phrase, for a heading or a summary line. A floor with nothing vacant
+ * but space marketed for later says so ("21,400 SF marketed from Apr '27") instead of "0 SF available".
  */
-export function issueTitle(issue: Issue, safe: boolean): string {
-  if (!safe) return issue.title;
-  const id = issue.id;
-  if (id.startsWith('nounits-')) return 'A lease is missing from the plan';
-  if (id.startsWith('nofloor-')) return 'A lease has no floor';
-  if (id.startsWith('hold-')) return 'A tenant is in holdover';
-  if (id.startsWith('mtm-')) return 'A tenant is month-to-month';
-  if (id.startsWith('forsale-occupied-')) return 'A leased suite is offered for sale';
-  if (id.startsWith('conflict-')) return 'A leased suite is marked vacant';
-  if (id.startsWith('stale-D')) return 'A deal has not been updated in 30+ days';
-  if (id.startsWith('stale-L')) return 'A lease has not been verified recently';
-  if (id.startsWith('over-') || id.startsWith('gap-') || id.startsWith('orphan-') || id.startsWith('afloor-') || id.startsWith('stale-A')) return issue.title;
-  return `${issue.severity === 'error' ? 'Error' : issue.severity === 'warning' ? 'Warning' : 'Note'} on this floor`;
+export function availabilityFact(floor: FloorView, asOf: ISODate, safe: boolean): string {
+  const coming = floorComing(floor, asOf, safe);
+  if (floor.available > 0) return `${sf(floor.available)} available${coming ? ` · ${comingText(coming)}` : ''}`;
+  return coming ? comingText(coming) : 'Nothing available';
 }

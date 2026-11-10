@@ -10,6 +10,8 @@ export const STATES = [
   ['33-building', '?view=building'],
   ['34-building-pinned', '?view=building&floor=F8'],
   ['35-building-find', '?view=building&req=12000'],
+  ['38-building-suite', '?view=building&select=A02'],
+  ['39-building-expiry', '?view=building&lens=expiry'],
   ['00-stack-status', '?view=stack'],
   ['01-stack-expiry', '?view=stack&lens=expiry'],
   ['02-stack-deals', '?view=stack&lens=deals'],
@@ -73,6 +75,20 @@ await dark.screenshot({ path: `${out}/26-dark-stack.png`, fullPage: true });
 await dark.goto(base + '?view=map', { waitUntil: 'networkidle' });
 await dark.waitForTimeout(2500);
 await dark.screenshot({ path: `${out}/27-dark-map.png` });
+// Daytime theme and the tablet layout of the Building view.
+for (const [name, qs, w] of [
+  ['36-light-building', '?view=building&theme=light', 1440],
+  ['37-light-stack', '?view=stack&theme=light', 1440],
+  ['40-light-building-pinned', '?view=building&floor=F3&theme=light', 1440],
+  ['41-light-map', '?view=map&theme=light', 1440],
+  ['42-tablet-building', '?view=building', 1024],
+  ['43-tablet-building-pinned', '?view=building&floor=F8', 1024],
+]) {
+  await dark.setViewportSize({ width: w, height: 1100 });
+  await dark.goto(base + qs, { waitUntil: 'networkidle' });
+  await dark.waitForTimeout(qs.includes('view=map') ? 2500 : 350);
+  await dark.screenshot({ path: `${out}/${name}.png`, fullPage: !qs.includes('view=map') });
+}
 const print = await browser.newPage({ viewport: { width: 1400, height: 1000 }, locale: 'en-US', reducedMotion: 'reduce' });
 hook(print, 'print');
 await print.goto(base + '?view=stack&print=1', { waitUntil: 'networkidle' });

@@ -1,5 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { contactLabel, prospectLabel, rentVisible, SAFE_TITLE, tenantLabel, TITLE } from './safe';
+import { property, TODAY } from '../data/mock/property';
+import { deriveFloors } from './derive';
+import {
+  brokerLabel,
+  canShowActivity,
+  canShowBrokers,
+  canShowDeals,
+  canShowInPlaceRent,
+  canShowInquiries,
+  canShowIssues,
+  canShowListingStatus,
+  canShowRecordActions,
+  canShowTenant,
+  canShowTenantRisk,
+  contactLabel,
+  listingVisible,
+  marketedFor,
+  prospectLabel,
+  rentVisible,
+  safeFloors,
+  SAFE_TITLE,
+  tenantLabel,
+  termHidden,
+  TITLE,
+  visibleDeals,
+  visibleInquiries,
+  visibleIssues,
+} from './safe';
 
 describe('prospect-safe helpers', () => {
   it('replaces the tenant name in safe mode', () => {
@@ -29,12 +56,80 @@ describe('prospect-safe helpers', () => {
 });
 
 describe('rentVisible for availabilities', () => {
-  it('shows asking rents to prospects but never in-place or confidential rents', async () => {
-    const { rentVisible } = await import('./safe');
-    const { property } = await import('../data/mock/property');
+  it('shows asking rents to prospects but never in-place or confidential rents', () => {
     const avail = property.availabilities[0];
     expect(rentVisible(avail, true)).toBe(true);
     expect(rentVisible({ confidential: false }, true)).toBe(false);
     expect(rentVisible({ confidential: true }, false)).toBe(false);
+  });
+});
+
+describe('prospect-safe policy', () => {
+  const questions = { canShowTenant, canShowTenantRisk, canShowDeals, canShowInquiries, canShowIssues, canShowBrokers, canShowActivity, canShowListingStatus, canShowRecordActions, canShowInPlaceRent };
+
+  it('answers every question yes for the broker and no for a prospect', () => {
+    for (const [name, ask] of Object.entries(questions)) {
+      expect(ask(false), `${name} outside prospect-safe`).toBe(true);
+      expect(ask(true), `${name} in prospect-safe`).toBe(false);
+    }
+  });
+
+  it('projects withheld lists to nothing, and hands the broker a copy of the whole list', () => {
+    const items = [{ id: 'D1' }, { id: 'D2' }];
+    for (const project of [visibleDeals, visibleInquiries, visibleIssues]) {
+      expect(project(items, true)).toEqual([]);
+      expect(project(items, false)).toEqual(items);
+      expect(project(items, false)).not.toBe(items);
+      expect(project(undefined, false)).toEqual([]);
+    }
+  });
+
+  it('withholds a broker name and a holdover or month-to-month term', () => {
+    expect(brokerLabel('Dana Whitfield', false)).toBe('Dana Whitfield');
+    expect(brokerLabel('Dana Whitfield', true)).toBeUndefined();
+    for (const kind of ['holdover', 'mtm']) {
+      expect(termHidden(kind, true)).toBe(true);
+      expect(termHidden(kind, false)).toBe(false);
+    }
+    expect(termHidden('leased', true)).toBe(false);
+  });
+});
+
+describe('quiet listings', () => {
+  const floors = deriveFloors(property, TODAY, TODAY);
+  const cirrus = floors.flatMap((f) => f.segments).find((s) => s.key === 'L13-U1')!;
+
+  it('the mock has an occupied suite marketed quietly for later', () => {
+    expect(cirrus.marketed?.published).toBe(false);
+    expect(cirrus.marketed?.availableFrom).toBe('2027-04-01');
+  });
+
+  it('a prospect sees published listings only', () => {
+    expect(listingVisible({ published: false }, false)).toBe(true);
+    expect(listingVisible({ published: false }, true)).toBe(false);
+    expect(listingVisible({ published: true }, true)).toBe(true);
+    // No flag recorded: the listing is published.
+    expect(listingVisible({}, true)).toBe(true);
+  });
+
+  it('marketedFor withholds the quiet listing from a prospect and keeps a published one', () => {
+    expect(marketedFor(cirrus, false)).toBe(cirrus.marketed);
+    expect(marketedFor(cirrus, true)).toBeUndefined();
+    const published = { ...cirrus, marketed: { ...cirrus.marketed!, published: true } };
+    expect(marketedFor(published, true)).toBe(published.marketed);
+    expect(marketedFor({}, true)).toBeUndefined();
+  });
+
+  it('safeFloors removes quiet listings from the plan a prospect sees, and nothing else', () => {
+    expect(safeFloors(floors, false)).toBe(floors);
+    const safe = safeFloors(floors, true);
+    const segs = safe.flatMap((f) => f.segments);
+    expect(segs.every((s) => !s.marketed || s.marketed.published !== false)).toBe(true);
+    expect(segs.find((s) => s.key === 'L13-U1')!.marketed).toBeUndefined();
+    // Same suites, sizes and states; floors without a quiet listing are passed through untouched.
+    expect(segs.map((s) => [s.key, s.kind, s.size])).toEqual(floors.flatMap((f) => f.segments).map((s) => [s.key, s.kind, s.size]));
+    expect(safe.filter((f, i) => f !== floors[i]).map((f) => f.floor.id)).toEqual(['F6']);
+    // The input is not mutated.
+    expect(cirrus.marketed).toBeDefined();
   });
 });

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../data/mock/property';
 import { deriveFloors, isLeaseKind } from './derive';
-import { computeKpis, kpiDeltas } from './kpis';
+import { annualRate } from './format';
+import { comingSupply, computeKpis, kpiDeltas } from './kpis';
 
 const at = (asOf: string) => deriveFloors(property, asOf, TODAY);
 
@@ -39,6 +40,23 @@ describe('computeKpis today', () => {
     expect(k.rentByType[0].type).toBe('FSG');
     expect(new Set(k.rentByType.map((r) => r.type)).size).toBe(k.rentByType.length);
   });
+  it('rent by type is weighted by recorded SF, so each figure is a sum of rent-roll rows', () => {
+    // The lease rows that carry a rent: in place (holdover, MTM and sublandlords included), not confidential.
+    const rows = floors.flatMap((f) => f.segments).filter((s) => s.lease && isLeaseKind(s.kind) && !s.lease.confidential && s.lease.rate !== null);
+    for (const r of k.rentByType) {
+      const own = rows.filter((s) => s.lease!.leaseType === r.type);
+      const recorded = own.reduce((t, s) => t + s.size, 0);
+      expect(r.sf, `${r.type} SF`).toBe(recorded);
+      expect(Number.isInteger(r.sf)).toBe(true);
+      expect(r.avg).toBeCloseTo(own.reduce((t, s) => t + annualRate(s.lease!.rate!, s.lease!.rateUnit) * s.size, 0) / recorded, 10);
+    }
+    // Floor 7 is over-allocated by 500 SF: the recorded SF is not scaled down to the capped leased figure.
+    const f7 = floors.find((f) => f.floor.id === 'F7')!;
+    expect(f7.overAllocatedBy).toBe(500);
+    const f7Fsg = f7.segments.filter((s) => rows.includes(s) && s.lease!.leaseType === 'FSG').reduce((t, s) => t + s.size, 0);
+    expect(f7Fsg).toBeGreaterThan(0);
+    expect(k.rentByType.find((r) => r.type === 'FSG')!.sf).toBe(rows.filter((s) => s.lease!.leaseType === 'FSG').reduce((t, s) => t + s.size, 0));
+  });
   it('leaseCount is the number of distinct leases drawn on the plan', () => {
     const drawn = new Set(
       floors
@@ -68,5 +86,23 @@ describe('kpiDeltas', () => {
     expect(d.occupancy).toBeCloseTo(later.occupancy - today.occupancy, 10);
     expect(d.pipelineDeals).toBe(later.pipeline.deals - today.pipeline.deals);
     expect(kpiDeltas(today, today)).toEqual({ leased: 0, occupancy: 0, availableDirect: 0, availableSublease: 0, expiring12: 0, walt: 0, pipelineDeals: 0, maxContiguous: 0 });
+  });
+});
+
+describe('comingSupply', () => {
+  const segs = at(TODAY).flatMap((f) => f.segments);
+
+  it('sums occupied space marketed for a later date, with the earliest date', () => {
+    expect(comingSupply(segs, TODAY, false)).toEqual({ sf: 21400, from: '2027-04-01' });
+  });
+  it('leaves a quiet listing out of what a prospect is told is coming', () => {
+    expect(comingSupply(segs, TODAY, true)).toEqual({ sf: 0, from: null });
+  });
+  it('keeps a published listing in prospect-safe mode', () => {
+    const published = segs.map((s) => (s.marketed ? { ...s, marketed: { ...s.marketed, published: true } } : s));
+    expect(comingSupply(published, TODAY, true)).toEqual({ sf: 21400, from: '2027-04-01' });
+  });
+  it('counts nothing once the available-from date has passed', () => {
+    expect(comingSupply(segs, '2027-04-01', false)).toEqual({ sf: 0, from: null });
   });
 });

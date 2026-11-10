@@ -15,6 +15,47 @@ function context(): CanvasRenderingContext2D | null {
   return ctx;
 }
 
+/**
+ * The app sets every label in tabular figures (`font-variant-numeric: tabular-nums`, base.css), which a
+ * canvas cannot be told about. In Inter that feature changes the advance of the digits and of some
+ * punctuation (a "1" and a hyphen are each over 2 px wider at 12 px), so the canvas measures
+ * "Ste 1100 · 10,400 SF" about 9 px short of what is drawn. Each affected character is corrected by the
+ * difference between its tabular advance, read once per font from a hidden element, and its canvas
+ * advance. No correction where there is no layout (tests, SSR).
+ */
+const TABULAR = /[0-9()*+,\-.:;<=>[\]{}~]/g;
+const deltas = new Map<string, Map<string, number>>();
+let probe: HTMLSpanElement | null | undefined;
+function tabularDelta(c: CanvasRenderingContext2D, font: string, ch: string): number {
+  let byChar = deltas.get(font);
+  if (!byChar) deltas.set(font, (byChar = new Map()));
+  const hit = byChar.get(ch);
+  if (hit !== undefined) return hit;
+  let d = 0;
+  try {
+    if (probe === undefined) {
+      probe = typeof document !== 'undefined' && document.body ? document.createElement('span') : null;
+      if (probe) {
+        probe.setAttribute('aria-hidden', 'true');
+        probe.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;white-space:pre;pointer-events:none';
+        document.body.appendChild(probe);
+      }
+    }
+    if (probe) {
+      probe.style.font = font;
+      probe.style.fontVariantNumeric = 'tabular-nums';
+      probe.textContent = ch.repeat(10);
+      const drawn = probe.getBoundingClientRect().width / 10;
+      c.font = font;
+      if (drawn > 0) d = drawn - c.measureText(ch).width;
+    }
+  } catch {
+    d = 0;
+  }
+  byChar.set(ch, d);
+  return d;
+}
+
 export function measure(text: string, font: string): number {
   const key = font + '\u0000' + text;
   const hit = cache.get(key);
@@ -24,6 +65,8 @@ export function measure(text: string, font: string): number {
   if (c) {
     c.font = font;
     w = c.measureText(text).width;
+    const affected = text.match(TABULAR);
+    if (affected) for (const ch of affected) w += tabularDelta(c, font, ch);
   } else {
     const size = Number(/(\d+(?:\.\d+)?)px/.exec(font)?.[1] ?? 13);
     w = text.length * size * 0.55;
@@ -119,6 +162,7 @@ if (typeof document !== 'undefined' && document.fonts) {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
       cache.clear();
+      deltas.clear();
       fontEpoch += 1;
       fontListeners.forEach((l) => l());
     }, 30);

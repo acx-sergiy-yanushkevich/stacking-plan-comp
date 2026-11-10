@@ -32,10 +32,6 @@ export function addMonths(d: ISODate, n: number): ISODate {
   return `${ny}-${String(nm).padStart(2, '0')}-${String(Math.min(day, lastDay)).padStart(2, '0')}`;
 }
 
-export function addDays(d: ISODate, n: number): ISODate {
-  return new Date(Date.parse(d) + n * 86_400_000).toISOString().slice(0, 10);
-}
-
 export const yearOf = (d: ISODate) => Number(d.slice(0, 4));
 
 /** First day of the month containing `d`. */
@@ -69,6 +65,3 @@ export function fmtMonths(m: number): string {
   const r = m % 12;
   return r ? `${y} yr ${r} mo` : `${y} yr`;
 }
-
-/** Real calendar today as ISO (UI only; the domain receives dates as arguments). */
-export const isoToday = (): ISODate => new Date().toISOString().slice(0, 10);
