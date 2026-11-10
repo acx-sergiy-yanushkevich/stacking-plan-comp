@@ -177,7 +177,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
           <Legend items={model.legend} compact id="sp-legend" note={legendNote} />
         </div>
       )}
-      {!bare && model.filterLabel && <FilterBar label={model.filterLabel} patch={patch} />}
+      {!bare && model.filterLabel && <FilterBar label={model.filterLabel} alternatives={!!model.partial && model.partial.size > 0} patch={patch} />}
       <div className="sp-stack__body" ref={ref}>
         <svg
           ref={svgRef}

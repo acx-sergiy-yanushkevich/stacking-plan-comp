@@ -68,8 +68,7 @@
 .sp-toolbar__search .sp-field { width: 100%; }
 .sp-toolbar__lens-select { display: none; }
 @media (max-width: 760px) {
-  .sp-toolbar { gap: 6px; padding: 6px 8px; position: sticky; top: 0; z-index: 20; }
-  .sp-toolbar__search { display: none; }
+  .sp-toolbar { gap: 6px; padding: 6px 8px; }
   .sp-toolbar__group:last-child { width: auto; margin-left: auto; }
   .sp-toolbar__group:last-child .sp-btn { height: 28px; padding: 0 8px; font-size: var(--sp-text-12); }
   .sp-toolbar__lens { display: none; }
@@ -77,5 +76,5 @@
   .sp-toolbar .sp-segmented--lg .sp-segmented__opt { padding: 0 8px; }
   .sp-toolbar__group:last-child { width: 100%; }
   .sp-toolbar__group:last-child .sp-btn { flex: 1; }
-  .sp-toolbar__search { max-width: none; margin-left: 0; width: 100%; }
+  .sp-toolbar__search { max-width: none; margin-left: 0; width: 100%; flex: 1 1 100%; }
 }

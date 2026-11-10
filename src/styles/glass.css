@@ -121,7 +121,6 @@
   /* A frosted panel is its own stacking context: the bands that own dropdowns sit above the ones below. */
   :root[data-skin='glass'] .sp-header { position: relative; z-index: 30; padding: 16px 20px; }
   :root[data-skin='glass'] .sp-toolbar { position: relative; z-index: 20; }
-  @media (max-width: 760px) { :root[data-skin='glass'] .sp-toolbar { position: sticky; } }
   :root[data-skin='glass'] .sp-header__title h1 { font-size: 22px; letter-spacing: -0.025em; }
   :root[data-skin='glass'] .sp-header__property { font-size: var(--sp-text-13); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
   @media (max-width: 760px) { :root[data-skin='glass'] .sp-header__title h1 { font-size: 17px; } }

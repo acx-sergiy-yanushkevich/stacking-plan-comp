@@ -83,7 +83,7 @@
 
 /* Phones: the timeline scrolls horizontally with the cursor pinned by the browser scroll. */
 @media (max-width: 760px) {
-  .sp-timeline { padding-left: var(--sp-space-1); padding-right: var(--sp-space-1); }
+  .sp-timeline { padding-left: var(--sp-space-1); padding-right: var(--sp-space-1); -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); }
 }
 
 .sp-tl-bar__text--outside .sp-tl-bar__sub { fill: var(--sp-color-text-weak); }
