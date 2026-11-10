@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { levelPolygon, projectPolygon, slicePolygon, type Pt } from '../../domain/geometry';
@@ -25,6 +25,14 @@ export interface BuildingHeroProps {
   angle?: number;
   /** Stage only: a short fact printed after each floor number (for example "9,300 SF available"). */
   tagFact?: (floorId: string) => string;
+  /** A tooltip for each floor of the model (its numbers in a sentence). */
+  floorTitle?: (floorId: string) => string;
+  /**
+   * Stage only: what stands to the left of the drawing (the floor picker). It is given the height of the
+   * drawing and `--sp-hero-band-mid` / `--sp-hero-band` (the middle and the height of the stack of
+   * floors, as fractions of that height), so its rows can line up with the floors they name.
+   */
+  beside?: ReactNode;
 }
 
 /** Eases a number toward its target; jumps when the viewer asked for reduced motion. */
@@ -66,6 +74,11 @@ interface Dims {
 }
 const PANEL: Dims = { W: 328, H: 276, HZ: 10, LIFT: 20, GAP: 1 };
 const STAGE: Dims = { W: 600, H: 640, HZ: 28, LIFT: 44, GAP: 2 };
+/** Floor labels are HTML over the drawing, so their size is in CSS px whatever the model's scale. */
+const TAG_PX = 12;
+const FACT_PX = 13;
+/** An average glyph is about 0.56 em wide in the UI font: enough to reserve room for a label without measuring it. */
+const GLYPH = 0.56;
 const COS = 0.866;
 const SIN = 0.5;
 const BOX = 200;
@@ -103,16 +116,23 @@ const fillOf = (tone: string) => (tone === 'empty' || tone === 'deal-none' ? 'va
  * The building in axonometric view: every floor is a slab cut into its suites and coloured by the
  * active lens. It mirrors the stack: hovering a floor here lights it in the plan and the other way
  * round; a click focuses the floor, a second click opens its floor plan. Decorative for assistive
- * technology (the stack is the accessible equivalent), so the SVG is a labelled image.
+ * technology (the stack, or in the Building view the floor picker, is the accessible equivalent), so
+ * the SVG is a labelled image. The floor numbers are HTML laid over the drawing: they keep their size
+ * in CSS px however small the model is drawn.
  */
-export function BuildingHero({ model, state, patch, compact, size = 'panel', onPick, angle = 0, tagFact }: BuildingHeroProps) {
+export function BuildingHero({ model, state, patch, compact, size = 'panel', onPick, angle = 0, tagFact, floorTitle, beside }: BuildingHeroProps) {
   const stage = size === 'stage';
   const { W, H, HZ, LIFT, GAP } = stage ? STAGE : PANEL;
   const { property, floors, safe, highlight, segIndex } = model;
   const hoverId = useHoverFloor();
   const focusId = state.floor ?? (state.select ? (segIndex.get(state.select)?.floorId ?? null) : null);
 
-  const tagPad = useMemo(() => (tagFact ? Math.max(0, ...floors.map((f) => tagFact(f.floor.id).length)) * 8.6 + 18 : 0), [tagFact, floors]);
+  // Room to the right of the drawing for the floor labels, in CSS px: the number, and the longest fact.
+  const tagRoom = useMemo(() => {
+    const digits = Math.max(1, ...floors.map((f) => f.floor.name.replace(/^Floor\s+/i, '').length));
+    const fact = tagFact ? Math.max(0, ...floors.map((f) => tagFact(f.floor.id).length)) : 0;
+    return Math.ceil(10 + digits * TAG_PX * 0.64 + (fact ? (fact + 3) * FACT_PX * GLYPH : 0));
+  }, [tagFact, floors]);
   const build = useCallback((deg: number) => {
     const base = levelPolygon(projectPolygon(property.footprint, { w: BOX, h: BOX }, 0), { w: BOX, h: BOX }, 0);
     const cx = (Math.min(...base.map((p) => p[0])) + Math.max(...base.map((p) => p[0]))) / 2;
@@ -186,20 +206,24 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
       const edge = poly.map((p) => iso(rot(p), z0 + HZ / 2)).reduce((best, p) => (p[0] > best[0] ? p : best));
       return { id: f.floor.id, name: f.floor.name, level, leasedPct: f.leasable ? f.leased / f.leasable : 0, leasable: f.leasable, available: f.available, keys: f.segments.map((sg) => sg.key), slices, tag: edge };
     });
-    const ground = path(base.map((p) => iso(rot(p), 0)));
-    // Room for the lift above, the floor tags on the right and the blurred ground shadow below.
-    const tagRight = Math.max(...heroFloors.map((f) => f.tag[0])) + 34 + tagPad;
+    const groundPts = base.map((p) => iso(rot(p), 0));
+    const ground = path(groundPts);
+    // The building's left corner at ground level: the stack of floors rises from here, one HZ per floor.
+    const corner = groundPts.reduce((best, p) => (p[0] < best[0] ? p : best));
+    // Room for the lift above and the blurred ground shadow below; the floor labels sit outside the drawing.
     const vx = Math.floor(box.x0 - 6);
     const vy = Math.floor(box.y0 - LIFT - 8);
-    const viewBox = `${vx} ${vy} ${Math.ceil(Math.max(box.x1 + 6, tagRight) - vx)} ${Math.ceil(box.y1 + 20 - vy)}`;
-    return { heroFloors: heroFloors.slice().sort((a, b) => a.level - b.level), fit: { ground, viewBox } };
-  }, [property.footprint, floors, state.lens, safe, W, H, HZ, LIFT, GAP, tagPad]);
+    const frame = { x: vx, y: vy, w: Math.ceil(box.x1 + 6 - vx), h: Math.ceil(box.y1 + 20 - vy) };
+    const band = { mid: (corner[1] - (n * HZ) / 2 - vy) / frame.h, height: (n * HZ) / frame.h };
+    return { heroFloors: heroFloors.slice().sort((a, b) => a.level - b.level), fit: { ground, frame, band } };
+  }, [property.footprint, floors, state.lens, safe, W, H, HZ, LIFT, GAP]);
   // The frame (viewBox) belongs to the angle being turned to, so the model does not pulse while it turns.
   const shown = useTween(stage ? angle : 0);
   const rest = useMemo(() => build(stage ? angle : 0), [build, stage, angle]);
   const turning = useMemo(() => (shown === (stage ? angle : 0) ? null : build(shown)), [build, shown, stage, angle]);
   const { heroFloors } = turning ?? rest;
-  const fit = { ground: (turning ?? rest).fit.ground, viewBox: rest.fit.viewBox };
+  const frame = stage ? rest.fit.frame : { x: 0, y: 0, w: W, h: H };
+  const ground = (turning ?? rest).fit.ground;
 
   const focusLevel = focusId ? (heroFloors.find((f) => f.id === focusId)?.level ?? null) : null;
   const hot = heroFloors.find((f) => f.id === (hoverId ?? focusId)) ?? null;
@@ -209,60 +233,95 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
     : `${floors.length}${NB}floors · ${num(model.kpis.leasable)}${NB}RSF leasable`;
   const hint = hot ? (hot.id === focusId ? 'Click again to open the floor plan' : 'Click to focus this floor in the plan') : 'Hover a floor to trace it in the plan';
 
+  // Every floor is numbered on the stage while the numbers have room: with less than a line of type per floor, they
+  // would run into each other at a readable size, so a small model names its top and bottom floors, the
+  // open floor and the floor under the pointer (the picker beside it names them all).
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const [drawnHeight, setDrawnHeight] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const el = svgRef.current;
+    if (!el || !stage) return;
+    // The laid-out height: a transform in progress (the dock animation) must not count.
+    const measure = () => setDrawnHeight(el.clientHeight || null);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [stage]);
+  const roomy = stage && (drawnHeight === null || (HZ * drawnHeight) / frame.h >= (tagFact ? FACT_PX : TAG_PX));
+  const tagged = heroFloors.filter((f) => roomy || f.level === 0 || f.level === heroFloors.length - 1 || f.id === hot?.id || f.id === focusId);
+  // In the Building view the floor picker stands beside the model; in a panel the stack is on screen.
+  const label = stage
+    ? `Building model: ${floors.length} floors, each cut into its suites and coloured by the active lens. The floor picker beside it lists every floor with the same figures.`
+    : `Building model: ${floors.length} floors coloured by the active lens. The stack lists the same suites.`;
+
   return (
-    <div className={`sp-hero ${compact ? 'sp-hero--compact' : ''} ${stage ? 'sp-hero--stage' : ''} ${tagFact ? 'sp-hero--facts' : ''}`}>
-      <svg viewBox={stage ? fit.viewBox : `0 0 ${W} ${H}`} width={stage ? undefined : '100%'} role="img" aria-label={`Building model: ${floors.length} floors coloured by the active lens. The stack lists the same suites.`}>
-        <path className="sp-hero__ground" d={fit.ground} aria-hidden="true" />
-        {heroFloors.map((f) => {
-          const above = focusLevel !== null && f.level > focusLevel;
-          const cls = ['sp-hero__floor', f.id === hoverId ? 'is-hot' : '', f.id === focusId ? 'is-focus' : '', above ? 'is-above' : ''].filter(Boolean).join(' ');
-          return (
-            <g
-              key={f.id}
-              className={cls}
-              aria-hidden="true"
-              transform={above ? `translate(0 ${-LIFT})` : undefined}
-              onPointerEnter={() => setHoverFloor(f.id)}
-              onPointerLeave={() => setHoverFloor(null)}
-              onClick={() => {
-                if (onPick) onPick(f.id);
-                else if (f.id === focusId) openFloorPlate(patch, f.id);
-                else openFloor(patch, f.id);
-              }}
-            >
-              {f.slices.map((sl) => {
-                const dim = !!highlight && !highlight.has(sl.key);
-                const selected = state.select === sl.key;
-                return (
-                  <g key={sl.key} className={`sp-hero__slice ${dim ? 'is-dim' : ''} ${selected ? 'is-selected' : ''}`}>
-                    {sl.walls.map((w, i) => (
-                      <g key={i}>
-                        <path className={`sp-hero__face ${sl.pattern === 'dashed' ? 'is-dashed' : ''}`} d={w.d} fill={fillOf(sl.tone)} style={{ color: `var(--tone-${sl.tone}-edge)` }} />
-                        {(sl.pattern === 'hatch' || sl.pattern === 'dots') && <path className="sp-hero__pattern" d={w.d} fill={`url(#${sl.pattern === 'hatch' ? PATTERN_IDS.hatch : PATTERN_IDS.dots})`} style={{ color: `var(--tone-${sl.tone}-edge)` }} />}
-                        <path className="sp-hero__shade" d={w.d} fillOpacity={w.shade} />
-                      </g>
-                    ))}
-                    <path className={`sp-hero__face sp-hero__top ${sl.pattern === 'dashed' ? 'is-dashed' : ''}`} d={sl.top} fill={fillOf(sl.tone)} style={{ color: `var(--tone-${sl.tone}-edge)` }} />
-                    {(sl.pattern === 'hatch' || sl.pattern === 'dots') && <path className="sp-hero__pattern" d={sl.top} fill={`url(#${sl.pattern === 'hatch' ? PATTERN_IDS.hatch : PATTERN_IDS.dots})`} style={{ color: `var(--tone-${sl.tone}-edge)` }} />}
-                  </g>
-                );
-              })}
-            </g>
-          );
-        })}
-        {/* Floor-number tags: the top and bottom floors always, plus the floor under the pointer or in focus. */}
-        {heroFloors
-          .filter((f) => stage || f.level === 0 || f.level === heroFloors.length - 1 || f.id === hot?.id)
-          .map((f) => {
-            const lifted = focusLevel !== null && f.level > focusLevel;
+    <div
+      className={`sp-hero ${compact ? 'sp-hero--compact' : ''} ${stage ? 'sp-hero--stage' : ''} ${tagFact ? 'sp-hero--facts' : ''}`}
+      style={{ '--sp-hero-ratio': (frame.w / frame.h).toFixed(4), '--sp-hero-room': `${tagRoom}px`, '--sp-hero-band-mid': rest.fit.band.mid.toFixed(4), '--sp-hero-band': rest.fit.band.height.toFixed(4), '--sp-hero-floors': floors.length } as CSSProperties}
+    >
+      {stage && beside && <div className="sp-hero__beside">{beside}</div>}
+      <div className="sp-hero__canvas">
+        <svg ref={svgRef} viewBox={`${frame.x} ${frame.y} ${frame.w} ${frame.h}`} role="img" aria-label={label}>
+          <path className="sp-hero__ground" d={ground} aria-hidden="true" />
+          {heroFloors.map((f) => {
+            const above = focusLevel !== null && f.level > focusLevel;
+            const cls = ['sp-hero__floor', f.id === hoverId ? 'is-hot' : '', f.id === focusId ? 'is-focus' : '', above ? 'is-above' : ''].filter(Boolean).join(' ');
             return (
-              <text key={f.id} className={`sp-hero__tag ${f.id === hot?.id ? 'is-hot' : ''}`} x={f.tag[0] + 7} y={f.tag[1] + 3 - (lifted ? LIFT : 0)} aria-hidden="true">
-                {f.name.replace(/^Floor\s+/i, '')}
-                {tagFact?.(f.id) ? <tspan className="sp-hero__fact">{` · ${tagFact(f.id)}`}</tspan> : null}
-              </text>
+              <g
+                key={f.id}
+                className={cls}
+                aria-hidden="true"
+                transform={above ? `translate(0 ${-LIFT})` : undefined}
+                onPointerEnter={() => setHoverFloor(f.id)}
+                onPointerLeave={() => setHoverFloor(null)}
+                onClick={() => {
+                  if (onPick) onPick(f.id);
+                  else if (f.id === focusId) openFloorPlate(patch, f.id);
+                  else openFloor(patch, f.id);
+                }}
+              >
+                {floorTitle && <title>{floorTitle(f.id)}</title>}
+                {f.slices.map((sl) => {
+                  const dim = !!highlight && !highlight.has(sl.key);
+                  const selected = state.select === sl.key;
+                  return (
+                    <g key={sl.key} className={`sp-hero__slice ${dim ? 'is-dim' : ''} ${selected ? 'is-selected' : ''}`}>
+                      {sl.walls.map((w, i) => (
+                        <g key={i}>
+                          <path className={`sp-hero__face ${sl.pattern === 'dashed' ? 'is-dashed' : ''}`} d={w.d} fill={fillOf(sl.tone)} style={{ color: `var(--tone-${sl.tone}-edge)` }} />
+                          {(sl.pattern === 'hatch' || sl.pattern === 'dots') && <path className="sp-hero__pattern" d={w.d} fill={`url(#${sl.pattern === 'hatch' ? PATTERN_IDS.hatch : PATTERN_IDS.dots})`} style={{ color: `var(--tone-${sl.tone}-edge)` }} />}
+                          <path className="sp-hero__shade" d={w.d} fillOpacity={w.shade} />
+                        </g>
+                      ))}
+                      <path className={`sp-hero__face sp-hero__top ${sl.pattern === 'dashed' ? 'is-dashed' : ''}`} d={sl.top} fill={fillOf(sl.tone)} style={{ color: `var(--tone-${sl.tone}-edge)` }} />
+                      {(sl.pattern === 'hatch' || sl.pattern === 'dots') && <path className="sp-hero__pattern" d={sl.top} fill={`url(#${sl.pattern === 'hatch' ? PATTERN_IDS.hatch : PATTERN_IDS.dots})`} style={{ color: `var(--tone-${sl.tone}-edge)` }} />}
+                    </g>
+                  );
+                })}
+              </g>
             );
           })}
-      </svg>
+        </svg>
+        {/* Floor numbers: on the stage every floor; in a panel the top and bottom floors, plus the floor under the pointer or in focus. */}
+        <div className="sp-hero__tags" aria-hidden="true">
+          {tagged.map((f) => {
+            const lifted = focusLevel !== null && f.level > focusLevel;
+            const fact = tagFact?.(f.id);
+            return (
+              <span
+                key={f.id}
+                className={`sp-hero__tag ${f.id === hot?.id ? 'is-hot' : ''}`}
+                style={{ left: `${(((f.tag[0] - frame.x) / frame.w) * 100).toFixed(2)}%`, top: `${(((f.tag[1] - (lifted ? LIFT : 0) - frame.y) / frame.h) * 100).toFixed(2)}%` }}
+              >
+                {f.name.replace(/^Floor\s+/i, '')}
+                {fact ? <span className="sp-hero__fact">{` · ${fact}`}</span> : null}
+              </span>
+            );
+          })}
+        </div>
+      </div>
       {!stage && (
         <p className="sp-hero__cap">
           <span className="sp-hero__cap-main">{caption}</span>

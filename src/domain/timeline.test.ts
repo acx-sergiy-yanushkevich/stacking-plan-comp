@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../data/mock/property';
 import { deriveFloors } from './derive';
+import { safeFloors } from './safe';
 import { dateToX, timelineModel, xToDate, yearTicks } from './timeline';
 
 describe('timelineModel', () => {
@@ -88,5 +89,31 @@ describe('axis maths', () => {
       expect(t.date).toBe(`${t.label}-01-01`);
     }
     expect(yearTicks('2020-01-01', '2020-12-31')[0].label).toBe('2020');
+  });
+});
+
+describe('timelineModel in prospect-safe mode', () => {
+  const floors = deriveFloors(property, TODAY, TODAY);
+  const open = timelineModel(property, floors, TODAY, TODAY);
+  const safe = timelineModel(property, safeFloors(floors, true), TODAY, TODAY);
+  const bars = (m: typeof open) => m.rows.flatMap((r) => r.bars);
+  const inPlace = floors.flatMap((f) => f.segments).filter((s) => s.kind === 'leased' || s.kind === 'holdover' || s.kind === 'mtm');
+
+  it('draws every lease in place as the same open-ended bar: no end date for any of them', () => {
+    for (const s of inPlace) {
+      const bar = bars(safe).find((b) => b.key === `tl-${s.key}`)!;
+      expect([bar.kind, bar.end], s.key).toEqual(['mtm', null]);
+    }
+    // Outside the mode an ordinary lease keeps its end and a holdover its own kind.
+    expect(bars(open).find((b) => b.key === 'tl-L13-U1')).toMatchObject({ kind: 'leased', end: '2027-03-31' });
+    expect(bars(open).some((b) => b.kind === 'holdover')).toBe(true);
+    expect(bars(safe).some((b) => b.kind === 'holdover')).toBe(false);
+  });
+
+  it('keeps the bars for space on offer, signed leases and the sublease end exactly as they were', () => {
+    const keep = (m: typeof open) => bars(m).filter((b) => b.kind === 'available' || b.kind === 'forsale' || b.kind === 'committed' || b.kind === 'sublease' || b.kind === 'projected');
+    // The quiet listing on Floor 6 is removed by the same projection; everything else is unchanged.
+    expect(keep(safe)).toEqual(keep(open).filter((b) => b.key !== 'tl-L13-U1-mkt'));
+    expect(bars(safe).length).toBe(bars(open).length - 1);
   });
 });

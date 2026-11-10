@@ -9,7 +9,8 @@ export interface RolloverChipsProps {
   atRisk: number;
   asOf: ISODate;
   activeBucket: number | null;
-  onBucket: (key: number) => void;
+  /** Omitted when periods cannot be opened (prospect-safe). */
+  onBucket?: (key: number) => void;
 }
 
 /**
@@ -34,18 +35,27 @@ export function RolloverChips({ buckets, atRisk, asOf, activeBucket, onBucket }:
           const active = activeBucket === b.key;
           const when = b.label.startsWith('<') ? 'in the next 12 months' : i === periods ? `${periods}+ years out` : `${b.label} out`;
           return (
-            <button
-              key={b.key}
-              type="button"
-              className={`sp-tl-roll__col ${active ? 'is-active' : ''} ${b.sf === 0 ? 'is-empty' : ''}`}
-              aria-pressed={active}
-              title={`${b.leases ? `${sf(b.sf)} in ${plural(b.leases, 'lease')}` : 'No leases'} ending ${when} from ${fmtDate(asOf)}. ${active ? 'Tap to clear the filter.' : 'Tap to highlight them.'}`}
-              onClick={() => onBucket(b.key)}
-            >
-              <span className="sp-tl-roll__label">{b.label}</span>
-              <span className="sp-tl-roll__value">{b.sf > 0 ? `${num(b.sf)} SF` : '—'}</span>
-              <span className="sp-sr-only">, {plural(b.leases, 'lease')}</span>
-            </button>
+            // No handler (prospect-safe: which leases end when is withheld) makes the period a figure, not a button.
+            onBucket ? (
+              <button
+                key={b.key}
+                type="button"
+                className={`sp-tl-roll__col ${active ? 'is-active' : ''} ${b.sf === 0 ? 'is-empty' : ''}`}
+                aria-pressed={active}
+                title={`${b.leases ? `${sf(b.sf)} in ${plural(b.leases, 'lease')}` : 'No leases'} ending ${when} from ${fmtDate(asOf)}. ${active ? 'Tap to clear the filter.' : 'Tap to highlight them.'}`}
+                onClick={() => onBucket(b.key)}
+              >
+                <span className="sp-tl-roll__label">{b.label}</span>
+                <span className="sp-tl-roll__value">{b.sf > 0 ? `${num(b.sf)} SF` : '—'}</span>
+                <span className="sp-sr-only">, {plural(b.leases, 'lease')}</span>
+              </button>
+            ) : (
+              <div key={b.key} className={`sp-tl-roll__col sp-tl-roll__col--static ${b.sf === 0 ? 'is-empty' : ''}`} title={`${b.leases ? `${sf(b.sf)} in ${plural(b.leases, 'lease')}` : 'No leases'} ending ${when} from ${fmtDate(asOf)}.`}>
+                <span className="sp-tl-roll__label">{b.label}</span>
+                <span className="sp-tl-roll__value">{b.sf > 0 ? `${num(b.sf)} SF` : '—'}</span>
+                <span className="sp-sr-only">, {plural(b.leases, 'lease')}</span>
+              </div>
+            )
           );
         })}
       </div>

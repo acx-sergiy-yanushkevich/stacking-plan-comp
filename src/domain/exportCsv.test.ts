@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../data/mock/property';
 import { deriveFloors } from './derive';
+import { safeFloors } from './safe';
 import { RENT_ROLL_HEADER, rentRollRows, toCsv, rentRollDisplay, unplacedLeases } from './exportCsv';
 
 const floors = deriveFloors(property, TODAY, TODAY);
@@ -95,17 +96,42 @@ describe('toCsv', () => {
     expect(toCsv([['Floor 6', '600', '21400']])).toBe('Floor 6,600,21400');
   });
 
-  it('withholds the term of holdover and MTM leases in safe mode: no past expiration, no "0 mo"', () => {
-    const safeRows = rentRollRows(property, floors, TODAY, true);
-    for (const r of safeRows.slice(1)) if (r[col('State')] === 'Leased' && r[col('Expiration')]) expect(r[col('Expiration')] >= TODAY).toBe(true);
-    const display = rentRollDisplay(property, floors, TODAY, true);
-    const ei = display[0].indexOf('Expiration');
-    const ri = display[0].indexOf('Remaining');
-    const si = display[0].indexOf('State');
-    for (const r of display.slice(1)) {
-      if (r[si] !== 'Leased') continue;
-      expect(r[ri]).not.toBe('0 mo');
-      if (r[ei] !== '—') expect(new Date(r[ei]).getTime()).toBeGreaterThanOrEqual(new Date(TODAY).getTime());
+  it('safe mode gives no lease in place an expiration or months remaining: at-risk and ordinary rows are the same shape', () => {
+    const atRisk = new Set(floors.flatMap((f) => f.segments).filter((s) => s.kind === 'holdover' || s.kind === 'mtm').map((s) => s.suite));
+    expect(atRisk.size).toBe(2);
+    // Whether the caller projected the floors first (the app does) or not, the rows are the same.
+    for (const input of [floors, safeFloors(floors, true)]) {
+      const rows = rentRollRows(property, input, TODAY, true).slice(1);
+      const leased = rows.filter((r) => r[col('State')] === 'Leased');
+      expect(leased.length).toBeGreaterThan(10);
+      expect([...atRisk].every((suite) => leased.some((r) => r[col('Suite')] === suite))).toBe(true);
+      for (const r of leased) expect([r[col('Expiration')], r[col('Months remaining')], r[col('Rate')]], `Ste ${r[col('Suite')]}`).toEqual(['', '', '']);
+      expect(rows.some((r) => /Holdover|Month-to-month|MTM/.test(r.join(' ')))).toBe(false);
+
+      const display = rentRollDisplay(property, input, TODAY, true);
+      const [si, ei, ri] = ['State', 'Expiration', 'Remaining'].map((h) => display[0].indexOf(h as (typeof display)[0][number]));
+      for (const r of display.slice(1).filter((x) => x[si] === 'Leased')) expect([r[ei], r[ri]], `Ste ${r[1]}`).toEqual(['—', '—']);
+      expect(display.slice(1).some((r) => /Holdover|Month-to-month|MTM/.test(r.join(' ')))).toBe(false);
+    }
+    // The broker's export still has every term.
+    const open = rentRollRows(property, floors, TODAY, false);
+    expect(open.find((r) => r[col('Suite')] === '600')![col('Expiration')]).toBe('2027-03-31');
+    expect(open.some((r) => r[col('Months remaining')] === 'Holdover')).toBe(true);
+  });
+
+  it('the prospect-safe CSV carries the sublease asking rent the prospect-safe PDF prints (Ste 720)', () => {
+    for (const input of [floors, safeFloors(floors, true)]) {
+      const row = rentRollRows(property, input, TODAY, true).find((r) => r[col('Suite')] === '720')!;
+      expect(row[col('State')]).toBe('Sublease');
+      expect([row[col('Rate')], row[col('Unit')], row[col('Lease type')]]).toEqual(['24–26', 'yr', 'FSG']);
+      // The sublease's own end, never the head lease's; no tenant, no in-place rent.
+      expect(row[col('Expiration')]).toBe('2030-09-30');
+      expect(row[col('Months remaining')]).toBe('');
+      expect(row[col('Tenant')]).toBe('Tenant');
+      const pdf = rentRollDisplay(property, input, TODAY, true).find((r) => r[1] === '720')!;
+      expect(pdf[4]).toBe('Sublease · asking $24–$26/SF/yr FSG thru Sep 30, 2030');
+      expect(pdf[8]).toBe('Withheld');
+      expect([pdf[6], pdf[7]]).toEqual(['—', '—']);
     }
   });
 

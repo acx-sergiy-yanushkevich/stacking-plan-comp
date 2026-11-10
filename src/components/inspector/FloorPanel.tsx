@@ -3,7 +3,7 @@ import type { PlanState } from '../../state/planState';
 import type { FloorView } from '../../domain/derive';
 import { fmtMonthYear, fmtMonthYearShort } from '../../domain/dates';
 import { pct, plural, sf } from '../../domain/format';
-import { canShowIssues, tenantLabel } from '../../domain/safe';
+import { canShowIssues, canShowLeaseTerm, tenantLabel } from '../../domain/safe';
 import { comingText, floorComing, nextExpiry } from '../floor/floorData';
 import { Button, Icon } from '../ui';
 import { openFloorPlate, selectSegment, type Patch } from '../plan/actions';
@@ -51,11 +51,14 @@ export function FloorPanel({ floor, model, state, patch }: FloorPanelProps) {
             <span className="sp-ins__kpi-value">{floor.maxContiguous > 0 ? sf(floor.maxContiguous) : '—'}</span>
             <span className="sp-ins__kpi-sub">{floor.bestRun.length > 1 ? `${floor.bestRun.length} adjacent direct suites` : floor.bestRun.length === 1 ? 'One direct suite' : coming?.from ? `No direct space until ${fmtMonthYearShort(coming.from)}` : 'No direct space now'}</span>
           </div>
-          <div className="sp-ins__kpi">
-            <span className="sp-label">Next expiry</span>
-            <span className="sp-ins__kpi-value">{next?.endDate ? fmtMonthYear(next.endDate) : '—'}</span>
-            <span className="sp-ins__kpi-sub">{next?.lease ? tenantLabel(next.lease, safe) : 'No lease ending'}</span>
-          </div>
+          {/* Prospect-safe shows no lease term, so there is no "next expiry" to name. */}
+          {canShowLeaseTerm(safe) && (
+            <div className="sp-ins__kpi">
+              <span className="sp-label">Next expiry</span>
+              <span className="sp-ins__kpi-value">{next?.endDate ? fmtMonthYear(next.endDate) : '—'}</span>
+              <span className="sp-ins__kpi-sub">{next?.lease ? tenantLabel(next.lease, safe) : 'No lease ending'}</span>
+            </div>
+          )}
         </div>
         {floor.overAllocatedBy > 0 && canShowIssues(safe) && (
           <p className="sp-ins__note sp-ins__warn">Over-allocated by {sf(floor.overAllocatedBy)}: leases and availabilities exceed the leasable area.</p>

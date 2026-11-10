@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../../data/mock/property';
 import { deriveFloors, segmentIndex } from '../../domain/derive';
+import { safeFloors } from '../../domain/safe';
 import { badgeLabel, segmentText } from './segmentText';
 
 const index = segmentIndex(deriveFloors(property, TODAY, TODAY));
@@ -73,6 +74,54 @@ describe('accessible name', () => {
         const parts = segmentText(seg, { ...opts, lens }).aria.split(', ');
         expect(parts.filter((p) => /^\d+$/.test(p)), parts.join(' | ')).toEqual([]);
       }
+    }
+  });
+});
+
+describe('prospect-safe: every lease in place reads the same', () => {
+  const floors = deriveFloors(property, TODAY, TODAY);
+  const raw = floors.flatMap((f) => f.segments).filter((s) => s.kind === 'leased' || s.kind === 'holdover' || s.kind === 'mtm');
+  const projected = segmentIndex(safeFloors(floors, true));
+  // What is left of a label once the suite's own identity (number and size) is taken out.
+  const shape = (seg: (typeof raw)[number], lens: 'status' | 'expiry' | 'rent') => {
+    const t = segmentText(seg, { ...opts, safe: true, lens });
+    const strip = (s: string) => s.replace(t.sub, 'SUB');
+    return JSON.stringify([t.tone, t.pattern, t.name, t.meta, t.lensShort, t.badges.map((b) => b.text), strip(t.tooltip), strip(t.aria)]);
+  };
+
+  it('holdover, month-to-month and ordinary leases produce one and the same text, tone, tooltip and accessible name', () => {
+    expect(raw.some((s) => s.kind === 'holdover') && raw.some((s) => s.kind === 'mtm')).toBe(true);
+    for (const lens of ['status', 'expiry', 'rent'] as const) {
+      // A lease marketed for later with a published listing carries an "Avail" badge: that is the listing's date, compared apart.
+      const plain = raw.filter((s) => !s.marketed || s.marketed.published === false);
+      expect(new Set(plain.map((s) => shape(s, lens))).size, `${lens}, unprojected segments`).toBe(1);
+      expect(new Set(plain.map((s) => shape(projected.get(s.key)!, lens))).size, `${lens}, projected segments`).toBe(1);
+    }
+  });
+
+  it('says "Leased" and never a date, months left or "not disclosed"', () => {
+    for (const s of raw) {
+      for (const lens of ['status', 'expiry'] as const) {
+        const t = segmentText(s, { ...opts, safe: true, lens });
+        expect(t.meta).toBe('Leased');
+        expect(t.lensShort).toBe('');
+        expect(`${t.tooltip} ${t.aria}`).not.toMatch(/Exp|Expired|Month-to-month|not disclosed|\d+ (mo|yr)\b|left/);
+      }
+    }
+  });
+
+  it('the broker still sees each term', () => {
+    expect(segmentText(byTenant('Cirrus Energy'), opts).meta).toMatch(/^Exp Mar 2027/);
+    expect(segmentText(raw.find((s) => s.kind === 'mtm')!, opts).meta).toBe('Month-to-month');
+    expect(segmentText(raw.find((s) => s.kind === 'holdover')!, opts).meta).toMatch(/^Expired /);
+  });
+
+  it('a sublet suite keeps the sublease end, which is part of the offer, and drops the head lease term', () => {
+    const sub = floors.flatMap((f) => f.segments).find((s) => s.kind === 'sublease')!;
+    for (const seg of [sub, projected.get(sub.key)!]) {
+      expect(segmentText(seg, { ...opts, safe: true }).meta).toBe('Sublease thru Sep 2030');
+      expect(segmentText(seg, { ...opts, safe: true, lens: 'expiry' }).meta).toBe('Sublease thru Sep 2030');
+      expect(segmentText(seg, { ...opts, safe: true }).lensShort).toBe('');
     }
   });
 });

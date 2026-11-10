@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../data/mock/property';
 import { deriveFloors, segmentIndex, type FloorView } from './derive';
-import { LENSES, dealCount, isVacantKind, legendFor, rentType, rentValue, stageRank, toneFor, topDeal, type LensId, type Tone } from './lenses';
+import { LENSES, dealCount, isVacantKind, legendFor, rentType, rentValue, stageRank, toneFor, toneLabel, topDeal, type LensId, type Tone } from './lenses';
+import { safeFloors } from './safe';
 
 const at = (asOf: string) => deriveFloors(property, asOf, TODAY);
 const seg = (floors: FloorView[], key: string) => {
@@ -199,5 +200,32 @@ describe('legendFor', () => {
     const asking = legendFor('rent', false, today).find((i) => i.pattern === 'asking');
     // Direct vacancies + the suite 720 sublease, at their recorded SF.
     expect(asking?.sf).toBe(26200 + 7000);
+  });
+});
+
+describe('prospect-safe: no lease can be told apart by its term', () => {
+  const leases = today.flatMap((f) => f.segments).filter((s) => s.kind === 'leased' || s.kind === 'holdover' || s.kind === 'mtm');
+
+  it('colours every lease in place the same in every lens, whether the floors were projected or not', () => {
+    for (const floors of [today, safeFloors(today, true)]) {
+      const index = segmentIndex(floors);
+      for (const lens of ['status', 'expiry', 'rent'] as const) {
+        const tones = new Set(leases.map((s) => toneFor(index.get(s.key)!, lens, true)));
+        expect([...tones], lens).toHaveLength(1);
+      }
+    }
+    expect(toneFor(seg(today, 'L06-U1'), 'expiry', true)).toBe('leased');
+    expect(toneFor(seg(today, 'L13-U1'), 'expiry', true)).toBe('leased');
+    // The broker still sees the ramp and the risk tone.
+    expect(new Set(leases.map((s) => toneFor(s, 'expiry', false))).size).toBeGreaterThan(3);
+  });
+
+  it('the safe expiration legend has no ramp, no risk and no "term not disclosed" entry: one Leased tone', () => {
+    const legend = legendFor('expiry', true, safeFloors(today, true));
+    expect(legend.map((i) => i.tone)).toEqual(['leased', 'sublease', 'committed', 'projected', 'empty', 'muted']);
+    expect(legend.map((i) => i.label).join(' ')).not.toMatch(/not disclosed|Holdover|MTM|mo\b|yr\b/);
+    expect(toneLabel('leased', 'expiry', true)).toBe('Leased');
+    // Its SF is every lease in place, the at-risk ones included.
+    expect(legend[0].sf).toBe(leases.reduce((t, s) => t + s.size, 0));
   });
 });

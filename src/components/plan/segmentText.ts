@@ -94,11 +94,14 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
       if (kind === 'sublease' && a) name = lease && canShowTenant(safe) ? `${lease.tenant} · sublease` : 'Sublease';
       if (kind === 'holdover' && canShowTenantRisk(safe)) badges.push({ kind: 'risk', text: 'Holdover', title: `Expired ${seg.endDate ? fmtDate(seg.endDate) : ''}, no termination recorded` });
       if (kind === 'mtm' && canShowTenantRisk(safe)) badges.push({ kind: 'risk', text: 'MTM', title: 'Month-to-month: no expiration date' });
-      if (kind === 'mtm') meta = 'Month-to-month';
+      // Prospect-safe: no lease in place shows its term. Every one reads "Leased", so a holdover or a
+      // month-to-month lease cannot be told from an ordinary one by a missing date.
+      if (termHidden(kind, safe)) meta = kind === 'sublease' ? '' : 'Leased';
+      else if (kind === 'mtm') meta = 'Month-to-month';
       else if (kind === 'holdover') meta = `Expired ${seg.endDate ? fmtMonthYear(seg.endDate) : ''}`;
       else if (seg.endDate && seg.monthsToExpiry !== null) meta = `Exp ${fmtMonthYear(seg.endDate)} · ${fmtMonths(seg.monthsToExpiry)}`;
+      // The sublease's own end is part of the offer, not a lease term: it stays in every mode.
       if (kind === 'sublease' && a?.subleaseExpiration) meta = `Sublease thru ${fmtMonthYear(a.subleaseExpiration)}`;
-      if (termHidden(kind, safe)) meta = 'Term not disclosed';
       // A quiet listing is not shown to a prospect at all; to the broker it is marked as quiet.
       const marketed = marketedFor(seg, safe);
       if (marketed && !marketed.sublease && marketed.kind === 'Lease') {
@@ -149,7 +152,7 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
   }
 
   // Lens-specific line 3 overrides
-  if (lens === 'expiry' && seg.monthsToExpiry !== null && (kind === 'leased' || kind === 'sublease' || kind === 'committed')) {
+  if (lens === 'expiry' && seg.monthsToExpiry !== null && !termHidden(kind, safe) && (kind === 'leased' || kind === 'sublease' || kind === 'committed')) {
     meta = `${fmtMonths(seg.monthsToExpiry)} left${seg.endDate ? ` · ${fmtMonthYearShort(seg.endDate)}` : ''}`;
   }
   if (lens === 'rent') {
@@ -183,7 +186,7 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
 
   // Short lens value: the one fact the active lens colours by, in a few characters.
   let lensShort = '';
-  if ((lens === 'expiry' || lens === 'status') && seg.endDate && (kind === 'leased' || kind === 'sublease' || kind === 'committed')) lensShort = fmtMonthYearShort(seg.endDate);
+  if ((lens === 'expiry' || lens === 'status') && seg.endDate && !termHidden(kind, safe) && (kind === 'leased' || kind === 'sublease' || kind === 'committed')) lensShort = fmtMonthYearShort(seg.endDate);
   if (lens === 'rent') {
     const v = rentValue(seg);
     const t = rentType(seg);
@@ -203,7 +206,6 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
     if (d) lensShort = d.stage === 'Lease Out' ? 'Lease out' : d.stage;
   }
   if (kind === 'committed' && lens === 'status' && lease) lensShort = `In ${fmtMonthYearShort(lease.commencement)}`;
-  if (termHidden(kind, safe)) lensShort = '';
   const lines = [name, sub, meta].filter(Boolean);
   const badgeText = badges.map(badgeLabel).join(', ');
   const tooltip = [...lines, badgeText].filter(Boolean).join('\n');

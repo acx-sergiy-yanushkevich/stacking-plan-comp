@@ -103,12 +103,21 @@
     --tone-leased-fill: #dfe3f0; --tone-leased-text: #111827; --tone-leased-edge: #677097;
     --tone-neutral-fill: #dfe3f0; --tone-neutral-text: #111827; --tone-neutral-edge: #677097;
     --tone-muted-fill: #efedf4; --tone-muted-text: #4b5470; --tone-muted-edge: #7f7b98;
-    /* Opaque equivalents for the 3D map and the building model: a periwinkle that cannot be taken for a
-       light-grey basemap building (#cfd4da). */
-    --tone-leased-solid: #9097cc; --tone-neutral-solid: #9097cc; --tone-muted-solid: #aaa5d0;
+    /* Opaque equivalents for the building model and the 3D map. The model draws them as they are, beside
+       the legend, the stack and the plate, so each is its fill a step stronger: the same hue, within 10 L*
+       of it, and recognisably the legend's swatch. The map deepens them toward the tone's edge itself
+       (MapView), which keeps a leased floor well apart from a light-grey basemap building (#cfd4da). */
+    --tone-leased-solid: #c6cee6; --tone-neutral-solid: #c6cee6; --tone-muted-solid: #d6d1e8;
     --tone-empty-edge: #787f92; --tone-deal-none-edge: #787f92;
     --tone-confidential-edge: #757a86;
-    --tone-exp-2-edge: #b85f14; --tone-exp-3-edge: #a8691c; --tone-exp-4-edge: #a3742a; --tone-exp-5-edge: #9a7c46;
+    /* Daytime expiration lens: lightness ordered (soonest is darkest) and stepping in hue as the night ramp
+       does (red, orange, amber, pink, lavender, pale blue), so no two neighbours are one amber apart. */
+    --tone-exp-0-fill: #a8321a; --tone-exp-0-text: #ffffff; --tone-exp-0-edge: #7a2210;
+    --tone-exp-1-fill: #d9641f; --tone-exp-1-text: #1a0d05; --tone-exp-1-edge: #9c4310;
+    --tone-exp-2-fill: #f2a640; --tone-exp-2-text: #181818; --tone-exp-2-edge: #a8650f;
+    --tone-exp-3-fill: #ecbfd3; --tone-exp-3-text: #181818; --tone-exp-3-edge: #a24a78;
+    --tone-exp-4-fill: #ded3f4; --tone-exp-4-text: #181818; --tone-exp-4-edge: #6f55ad;
+    --tone-exp-5-fill: #d9e5f1; --tone-exp-5-text: #181818; --tone-exp-5-edge: #55708f;
     --tone-rent-0-edge: #5d87a8; --tone-rent-1-edge: #4f82ad; --tone-rent-2-edge: #3d76a6; --tone-rent-3-edge: #2f6c9e;
     --tone-deal-0-edge: #5f80cf; --tone-deal-1-edge: #4f74c8;
 

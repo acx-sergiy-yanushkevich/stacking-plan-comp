@@ -357,6 +357,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                       enlarged={b.enlarged}
                       extra={extra}
                       roomy={r.focused}
+                      keepSuite={bare}
                       compact={phone}
                       onSelect={() => selectSegment(patch, b.key)}
                       onFocus={() => setFocusKey(b.key)}

@@ -1,4 +1,5 @@
 import type { ISODate } from '../domain/types';
+import { canKeepSearch, canShowIssues, canShowLeaseTerm } from '../domain/safe';
 
 /**
  * URL-synced plan state. Pure: no React, no DOM. `usePlanState` wires it to
@@ -105,10 +106,42 @@ function text(v: string | null): string | null {
   return v !== null && v !== '' ? v : null;
 }
 
+/**
+ * What prospect-safe mode never holds, whatever asked for it: the renewal worklist and the rollover
+ * highlight (both point at single leases by their term) and the data-issues panel. Idempotent, and
+ * the identity outside prospect-safe mode.
+ */
+export function safeState(s: PlanState): PlanState {
+  if (!s.safe) return s;
+  const window = canShowLeaseTerm(s.safe) ? s.window : null;
+  const bucket = canShowLeaseTerm(s.safe) ? s.bucket : null;
+  const mode = (s.mode === 'worklist' && !canShowLeaseTerm(s.safe)) || (s.mode === 'issues' && !canShowIssues(s.safe)) ? 'building' : s.mode;
+  return window === s.window && bucket === s.bucket && mode === s.mode ? s : { ...s, window, bucket, mode };
+}
+
+/**
+ * Crossing into prospect-safe mode, by the switch or by opening a link that has it on: on top of
+ * `safeState`, a search in progress is dropped, because it may be a tenant, contact or prospect name
+ * and would otherwise sit in the search box and the URL. Typing a suite or floor afterwards works.
+ */
+export function enterSafe(s: PlanState): PlanState {
+  const next = safeState(s);
+  return next.safe && next.q && !canKeepSearch(next.safe) ? { ...next, q: '' } : next;
+}
+
+/**
+ * The one way state changes: apply a patch, then hold the prospect-safe invariants. Every control
+ * goes through this (`usePlanState`), so no handler has to remember to clear anything itself.
+ */
+export function applyPatch(prev: PlanState, patch: Partial<PlanState>): PlanState {
+  const next = { ...prev, ...patch };
+  return next.safe && !prev.safe ? enterSafe(next) : safeState(next);
+}
+
 export function parseState(search: string, today: ISODate): PlanState {
   const p = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
   const d = defaultState(today);
-  return {
+  return enterSafe({
     view: oneOf(VIEWS, p.get('view'), d.view),
     lens: oneOf(LENSES, p.get('lens'), d.lens),
     asOf: isoOrNull(p.get('asOf')) ?? today,
@@ -128,7 +161,7 @@ export function parseState(search: string, today: ISODate): PlanState {
     census: text(p.get('census')),
     theme: oneOfOrNull(THEMES, p.get('theme')),
     ...(p.get('skin') === 'classic' ? { skin: 'classic' as const } : p.get('skin') === 'aurora' ? { skin: 'aurora' as const } : {}),
-  };
+  });
 }
 
 /** Query string with defaults omitted; '' when everything is default, otherwise leading `?`. */
@@ -175,11 +208,12 @@ export function isDark(s: Pick<PlanState, 'skin' | 'theme'>, prefersDark: boolea
  * the most specific thing the URL points at: a block, a floor, a search, a window.
  */
 export function deriveMode(s: PlanState): InspectorMode {
-  if (s.mode !== 'building') return s.mode;
+  // Prospect-safe has no worklist and no issues panel (`safeState`); a state built by hand is held to the same rule.
+  if (s.mode !== 'building' && safeState(s).mode === s.mode) return s.mode;
   if (s.select) return 'block';
   if (s.floor) return 'floor';
   if (s.req !== null || s.inquiry) return 'find';
-  if (s.window) return 'worklist';
+  if (s.window && canShowLeaseTerm(s.safe)) return 'worklist';
   return 'building';
 }
 

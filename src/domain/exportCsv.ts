@@ -35,8 +35,10 @@ const STATE_LABEL: Record<SegmentKind, string> = {
  * Rent roll rows for the as-of date: header first, then one row per segment
  * (top floor first, left to right). Unmarketed gaps are not records, so they are
  * skipped. RSF is the exact number, never formatted. Rates carry no `$` so the
- * CSV opens as numbers; the Unit column says `yr`/`mo`. In prospect-safe mode the
- * Live deals column is dropped (deal activity is not for prospects).
+ * CSV opens as numbers; the Unit column says `yr`/`mo`. In prospect-safe mode the Live deals column
+ * is dropped (deal activity is not for prospects), no lease in place has an expiration or months
+ * remaining (every one is "Leased"), and a sublet suite is written as the space on offer: its asking
+ * rent and the sublease's own end, the same facts the prospect-safe PDF prints for it.
  */
 export function rentRollRows(p: Property, floors: FloorView[], asOf: ISODate, safe: boolean): string[][] {
   const rows: string[][] = [dealColumn([...RENT_ROLL_HEADER], safe)];
@@ -86,6 +88,13 @@ function segmentRow(f: FloorView, s: Segment, safe: boolean): string[] {
     if (lease && rentVisible(lease, safe) && lease.rate !== null) {
       rate = String(lease.rate);
       unit = lease.rateUnit;
+    } else if (!canShowInPlaceRent(safe) && rentVisible(avail, safe) && avail.rentHigh > 0) {
+      // Prospect-safe: the head lease's rent and term are withheld, which would leave the suite's asking
+      // rent out of the file while the PDF prints it. Asking rents are marketing information: the row
+      // carries the offer instead (asking range, its unit and type, the sublease's own end).
+      rate = `${avail.rentLow}–${avail.rentHigh}`;
+      unit = avail.rateUnit;
+      leaseType = avail.leaseType;
     }
   } else if (lease) {
     tenant = tenantLabel(lease, safe);
@@ -108,15 +117,21 @@ function segmentRow(f: FloorView, s: Segment, safe: boolean): string[] {
     }
   }
 
+  // Prospect-safe: no lease in place has an expiration or months remaining, so a holdover or a
+  // month-to-month lease cannot be found by its empty cells.
+  const hidden = termHidden(s.kind, safe);
   const risk = s.kind === 'holdover' || s.kind === 'mtm';
-  const months = risk ? (termHidden(s.kind, safe) ? '' : s.kind === 'holdover' ? 'Holdover' : 'MTM') : s.monthsToExpiry === null ? '' : String(Math.max(0, s.monthsToExpiry));
-  const expirationOut = termHidden(s.kind, safe) ? '' : expiration;
+  const months = hidden ? '' : risk ? (s.kind === 'holdover' ? 'Holdover' : 'MTM') : s.monthsToExpiry === null ? '' : String(Math.max(0, s.monthsToExpiry));
+  // A sublet suite in prospect-safe mode: the sublease's own end (part of the offer), never the head lease's.
+  const expirationOut = hidden ? (s.kind === 'sublease' ? (avail?.subleaseExpiration ?? '') : '') : expiration;
   const live = activeDeals(s.lease?.deals).length + activeDeals(s.availability?.deals).length + activeDeals(s.marketed?.deals).length;
 
-  // Prospect-safe: every in-place lease is simply "Leased" with its recorded dates, so no tenant stands out.
-  const state = termHidden(s.kind, safe) ? 'Leased' : STATE_LABEL[s.kind];
+  const state = stateLabel(s, safe);
   return [f.floor.name, s.suite ?? '', tenant, String(s.size), state, commencement, expirationOut, months, rate, unit, leaseType, String(live)];
 }
+
+/** The State cell: prospect-safe shows every lease in place as "Leased" (a sublet suite stays "Sublease"). */
+const stateLabel = (s: Segment, safe: boolean): string => (termHidden(s.kind, safe) && s.kind !== 'sublease' ? 'Leased' : STATE_LABEL[s.kind]);
 
 export const RENT_ROLL_DISPLAY_HEADER = ['Floor', 'Suite', 'Tenant', 'RSF', 'State', 'Commencement', 'Expiration', 'Remaining', 'Rate / price', 'Live deals'] as const;
 
@@ -132,6 +147,7 @@ export function rentRollDisplay(p: Property, floors: FloorView[], asOf: ISODate,
       if (s.kind === 'unmarketed') continue;
       const lease = isLeaseKind(s.kind) || s.kind === 'committed' || s.kind === 'projected' ? s.lease : undefined;
       const a = s.availability;
+      const hidden = termHidden(s.kind, safe);
       let tenant = '—';
       let start = '—';
       let end = '—';
@@ -140,13 +156,14 @@ export function rentRollDisplay(p: Property, floors: FloorView[], asOf: ISODate,
       if (s.kind === 'sublease' && a) {
         tenant = lease ? `${tenantLabel(lease, safe)} (sublandlord)` : 'Sublease';
         start = lease ? fmtDate(lease.commencement) : a.availableFrom ? fmtDate(a.availableFrom) : 'Now';
-        end = s.endDate ? fmtDate(s.endDate) : '—';
+        // The Expiration column is the head lease's; the sublease's own end is in the State cell.
+        end = hidden ? '—' : s.endDate ? fmtDate(s.endDate) : '—';
         rate = lease && rentVisible(lease, safe) && lease.rate !== null ? fmtRate(lease.rate, lease.rateUnit, lease.leaseType) : !canShowInPlaceRent(safe) ? 'Withheld' : lease?.confidential ? 'Confidential' : '—';
         stateExtra = rentVisible(a, safe) ? ` · asking ${rateRange(a.rentLow, a.rentHigh, a.rateUnit, a.leaseType)}${a.subleaseExpiration ? ` thru ${fmtDate(a.subleaseExpiration)}` : ''}` : '';
       } else if (lease) {
         tenant = tenantLabel(lease, safe);
         start = fmtDate(lease.commencement);
-        end = termHidden(s.kind, safe) ? '—' : s.endDate ? fmtDate(s.endDate) : canShowTenantRisk(safe) ? 'Month-to-month' : '—';
+        end = hidden ? '—' : s.endDate ? fmtDate(s.endDate) : canShowTenantRisk(safe) ? 'Month-to-month' : '—';
         rate = rentVisible(lease, safe) && lease.rate !== null ? fmtRate(lease.rate, lease.rateUnit, lease.leaseType) : !canShowInPlaceRent(safe) ? 'Withheld' : lease.confidential ? 'Confidential' : '—';
       } else if (a) {
         tenant = s.kind === 'forsale' ? 'For sale' : 'Available';
@@ -156,9 +173,9 @@ export function rentRollDisplay(p: Property, floors: FloorView[], asOf: ISODate,
         else rate = rentVisible(a, safe) && a.rentHigh > 0 ? `Asking ${rateRange(a.rentLow, a.rentHigh, a.rateUnit, a.leaseType)}` : '—';
       }
       const risk = s.kind === 'holdover' || s.kind === 'mtm';
-      const remaining = risk ? (termHidden(s.kind, safe) ? '—' : s.kind === 'holdover' ? 'Holdover' : 'MTM') : s.monthsToExpiry === null ? '—' : fmtMonths(Math.max(0, s.monthsToExpiry));
+      const remaining = hidden ? '—' : risk ? (s.kind === 'holdover' ? 'Holdover' : 'MTM') : s.monthsToExpiry === null ? '—' : fmtMonths(Math.max(0, s.monthsToExpiry));
       const live = activeDeals(s.lease?.deals).length + activeDeals(s.availability?.deals).length + activeDeals(s.marketed?.deals).length;
-      const row = [f.floor.name, s.suite ?? '—', tenant, num(s.size), (termHidden(s.kind, safe) ? 'Leased' : STATE_LABEL[s.kind]) + stateExtra, start, end, remaining, rate, live ? String(live) : '—'];
+      const row = [f.floor.name, s.suite ?? '—', tenant, num(s.size), stateLabel(s, safe) + stateExtra, start, end, remaining, rate, live ? String(live) : '—'];
       rows.push(dealColumn(row, safe));
     }
   }

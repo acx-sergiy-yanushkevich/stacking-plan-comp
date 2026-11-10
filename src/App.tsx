@@ -1,19 +1,22 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { getFontEpoch, subscribeFonts } from './lib/textFit';
 import { segmentText } from './components/plan/segmentText';
 import { property, TODAY } from './data/mock/property';
 import { usePlanModel } from './model/usePlanModel';
 import { usePlanState, useDocumentTitle } from './state/usePlanState';
+import { useAnnouncement } from './state/useAnnouncement';
 import { deriveMode, isVice, shownView } from './state/planState';
 import { rentRollRows, toCsv } from './domain/exportCsv';
 import { Header, type ExportKind } from './components/shell/Header';
 import { Toolbar } from './components/shell/Toolbar';
 import { KpiStrip, type KpiAction } from './components/kpis/KpiStrip';
+import { KpiReveal } from './components/kpis/KpiReveal';
 import { ToastProvider, useToast, Sheet } from './components/ui';
 import StackView from './components/stack/StackView';
 import Inspector from './components/inspector/Inspector';
 import FloorView from './components/floor/FloorView';
 import BuildingView from './components/building/BuildingView';
+import { isFloorOpen } from './components/building/openFloor';
 import TimelineView from './components/timeline/TimelineView';
 import { MiniTimeline } from './components/timeline/MiniTimeline';
 import { createDataSource } from './data/sources';
@@ -44,7 +47,9 @@ function Shell() {
   const phone = useIsPhone();
   useDocumentTitle(state.safe, state.skin === 'classic' ? undefined : property.name);
   const mode = deriveMode(state);
-  const [announce, setAnnounce] = useState('');
+  // The live region's text is dropped in the render in which prospect-safe changes, so a sentence written
+  // for the broker ("Opened Cirrus Energy…") never outlives the moment the mode is turned on.
+  const [announce, setAnnounce] = useAnnouncement(state.safe);
   useEffect(() => {
     const t = window.setTimeout(() => {
       const k = model.kpis;
@@ -191,6 +196,9 @@ function Shell() {
   const view = shownView(state.view, phone);
   // The building view shows a floor itself; the inspector joins it for a suite, a search, the worklist or issues.
   const showInspector = view === 'building' ? mode !== 'building' && mode !== 'floor' : view !== 'floor' || mode === 'block';
+  // While the Building view shows the whole building, its KPIs stand beside the model; the strip above the
+  // plan comes in when a floor opens (and in every other view).
+  const kpisOnTop = view !== 'building' || isFloorOpen(model);
   const sheetOpen = narrow && mode !== 'building';
   const sheetTitle = mode === 'block' ? 'Suite' : mode === 'floor' ? 'Floor' : mode === 'find' ? 'Find space' : mode === 'worklist' ? 'Renewal worklist' : mode === 'issues' ? 'Data issues' : 'Area';
 
@@ -206,11 +214,13 @@ function Shell() {
         {announce}
       </div>
       <Header model={model} state={state} patch={patch} onExport={onExport} miniTimeline={<MiniTimeline model={model} asOf={state.asOf} onChange={(asOf) => patch({ asOf })} width={312} height={64} />} />
-      <KpiStrip model={model} state={state} onAction={onKpi} />
+      <KpiReveal open={kpisOnTop}>
+        <KpiStrip model={model} state={state} onAction={onKpi} />
+      </KpiReveal>
       <Toolbar state={state} patch={patch} />
       <main className={`sp-main sp-no-print ${showInspector ? '' : 'sp-main--wide'}`} id="sp-plan" tabIndex={-1}>
         <div className="sp-stage" key={view === 'map' ? 'map' : `fonts-${fontTick}`}>
-          {view === 'building' && <BuildingView model={model} state={state} patch={patch} />}
+          {view === 'building' && <BuildingView model={model} state={state} patch={patch} onKpi={onKpi} />}
           {view === 'stack' && <StackView model={model} state={state} patch={patch} />}
           {view === 'floor' && <FloorView model={model} state={state} patch={patch} />}
           {view === 'timeline' && <TimelineView model={model} state={state} patch={patch} />}

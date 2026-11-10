@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../../data/mock/property';
 import { deriveFloors } from '../../domain/derive';
 import { toneFor } from '../../domain/lenses';
-import { dominantTone, floorColorExpression, inflatePolygon, mixHex, normalizeHex, resolveToneHex, toneColorExpression } from './mapStyle';
+import { dominantTone, floorState, floorColorExpression, inflatePolygon, mixHex, normalizeHex, resolveToneHex, toneColorExpression } from './mapStyle';
 
 describe('dominantTone', () => {
   const floors = deriveFloors(property, TODAY, TODAY);
@@ -65,5 +65,39 @@ describe('inflatePolygon', () => {
     expect(out.coordinates[0][2]).toEqual([2.5, 2.5]);
     expect(out.coordinates[0][4]).toEqual(out.coordinates[0][0]);
     expect(inflatePolygon(sq, 1)).toBe(sq);
+  });
+});
+
+describe('floorState: what the map floor list says after the leased share', () => {
+  const floors = deriveFloors(property, TODAY, TODAY);
+  const say = (id: string, lens: 'status' | 'expiry' | 'rent' = 'status', safe = false) => floorState(floors.find((f) => f.floor.id === id)!, lens, safe);
+
+  it('names the vacancy in exact SF where one word used to hide it (Floors 8 and 1)', () => {
+    expect(say('F8')).toBe('7,400 SF available');
+    expect(say('F1')).toBe('4,000 SF available · 2,600 SF for sale');
+    expect(say('F12')).toBe('9,300 SF available');
+  });
+
+  it('keeps the word for a state that is not plain leased, and adds nothing to a fully leased floor', () => {
+    expect(say('F10')).toBe('');
+    expect(say('F6')).toBe('Expiring');
+    expect(say('F3')).toBe('At risk · 5,500 SF available');
+  });
+
+  it('says a sublease is a sublease, and names an area with no record', () => {
+    expect(say('F7')).toBe('7,000 SF sublease available');
+    expect(say('F2')).toBe('5,400 SF unaccounted');
+  });
+
+  it('prospect-safe: no risk or expiry word, and a gap is space that is not on the market', () => {
+    expect(say('F3', 'status', true)).toBe('5,500 SF available');
+    expect(say('F6', 'status', true)).toBe('');
+    expect(say('F2', 'status', true)).toBe('5,400 SF not on the market');
+    for (const f of floors) expect(floorState(f, 'status', true)).not.toMatch(/risk|Expiring|unaccounted/i);
+  });
+
+  it('in the other lenses the band that colours the floor leads, then the space on offer', () => {
+    expect(say('F8', 'expiry')).toMatch(/ · 7,400 SF available$/);
+    expect(say('F8', 'expiry').split(' · ')[0].length).toBeGreaterThan(0);
   });
 });

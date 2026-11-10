@@ -22,7 +22,8 @@ export interface TimelineAxisProps {
   buckets: RolloverBucket[];
   atRisk: number;
   activeBucket: number | null;
-  onBucket: (key: number) => void;
+  /** Omitted when periods cannot be opened (prospect-safe): the band is then figures, not buttons. */
+  onBucket?: (key: number) => void;
 }
 
 const LABEL_FONT = '11px Inter, system-ui, sans-serif';
@@ -61,7 +62,7 @@ export function TimelineAxis({ start, end, asOf, today, plotLeft, plotWidth, str
   const keyActivate = (key: number) => (e: KeyboardEvent<SVGGElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      onBucket(key);
+      onBucket?.(key);
     }
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
       e.preventDefault();
@@ -71,7 +72,7 @@ export function TimelineAxis({ start, end, asOf, today, plotLeft, plotWidth, str
       next?.focus();
     } else if (e.key === 'Escape' && activeBucket !== null) {
       e.preventDefault();
-      onBucket(activeBucket);
+      onBucket?.(activeBucket);
     }
   };
 
@@ -113,17 +114,18 @@ export function TimelineAxis({ start, end, asOf, today, plotLeft, plotWidth, str
           const [valueText, small] = fitsIn(value, VALUE_FONT) ? [value, false] : fitsIn(num(b.sf), VALUE_FONT) ? [num(b.sf), false] : fitsIn(num(b.sf), VALUE_FONT_SM) ? [num(b.sf), true] : ['', false];
           const compactLabel = b.label === '< 12 mo' ? '<12 mo' : b.label.replace(/ yr$/, '');
           const labelText = fitsIn(b.label, LABEL_FONT) ? b.label : fitsIn(compactLabel, LABEL_FONT) ? compactLabel : '';
-          const title = `${b.leases ? `${sf(b.sf)} in ${plural(b.leases, 'lease')}` : 'No leases'} ending ${b.label.startsWith('<') ? 'in the next 12 months' : b.label.endsWith('+ yr') ? `${periods}+ years out` : `${b.label} out`} from ${fmtDate(asOf)}. ${active ? 'Click to clear the filter.' : 'Click to highlight them.'}`;
+          const title = `${b.leases ? `${sf(b.sf)} in ${plural(b.leases, 'lease')}` : 'No leases'} ending ${b.label.startsWith('<') ? 'in the next 12 months' : b.label.endsWith('+ yr') ? `${periods}+ years out` : `${b.label} out`} from ${fmtDate(asOf)}.${onBucket ? (active ? ' Click to clear the filter.' : ' Click to highlight them.') : ''}`;
           return (
             <g
               key={b.key}
               className={`sp-tl-band__col ${i % 2 ? 'is-alt' : ''} ${active ? 'is-active' : ''} ${b.sf === 0 ? 'is-empty' : ''}`}
-              role="button"
-              tabIndex={i === (activeBucket !== null ? buckets.findIndex((x) => x.key === activeBucket) : 0) ? 0 : -1}
-              aria-pressed={active}
+              role={onBucket ? 'button' : 'img'}
+              tabIndex={onBucket ? (i === (activeBucket !== null ? buckets.findIndex((x) => x.key === activeBucket) : 0) ? 0 : -1) : undefined}
+              aria-pressed={onBucket ? active : undefined}
               aria-label={`${[labelText, valueText].filter(Boolean).join(' ')}${labelText || valueText ? '. ' : ''}${b.label}: ${sf(b.sf)}, ${plural(b.leases, 'lease')}`}
-              onClick={() => onBucket(b.key)}
-              onKeyDown={keyActivate(b.key)}
+              onClick={onBucket && (() => onBucket(b.key))}
+              onKeyDown={onBucket && keyActivate(b.key)}
+              style={onBucket ? undefined : { cursor: 'default' }}
             >
               <title>{title}</title>
               <rect className="sp-tl-band__fill" x={x0} y={bandTop} width={w} height={bandHeight} />

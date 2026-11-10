@@ -1,63 +1,111 @@
-/* Building view: the model is the plan. Left: floor picker and the axonometric model. Right: the
-   floor under the pointer (or pinned), its plate above, its numbers and lists below. Tokens only. */
-.sp-bview { display: flex; flex-direction: column; min-width: 0; }
+/* Building view: the model is the plan.
+   Alone (no floor open): the building's KPIs and quick starts in a column, the model beside it with
+   its floor picker and a fact after each floor number.
+   Docked (a floor open): picker and model on the left, the floor's plate, numbers and lists beside it.
+
+   The layout follows the width of the card (container queries), not of the window: the inspector
+   opening beside the view, a tablet and a narrow desktop are then one case, decided by the room there is.
+   Tokens only. */
+.sp-bview { display: flex; flex-direction: column; min-width: 0; container: sp-bview / inline-size; }
 .sp-bview__grid {
   display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp-space-6);
   align-items: start; padding: var(--sp-space-4);
 }
-/* The model stays put while the floor column beside it changes height from floor to floor. */
+
+/* ── The model group: the picker and the model, always side by side ────────────────── */
 .sp-bview__model {
-  display: grid; grid-template-columns: 76px auto; gap: var(--sp-space-4); align-items: center;
+  --sp-bview-pick: 76px; --sp-hero-gap: var(--sp-space-4);
+  display: flex; flex-direction: column; align-items: center; min-width: 0;
+  /* Docked: it stays put while the floor column beside it changes height from floor to floor. */
   position: sticky; top: var(--sp-space-3);
 }
-/* The viewBox is fitted to the building, so sizing by height leaves no dead space beside it;
-   the column takes the model's own width and the floor column gets the rest. */
-.sp-bview__model .sp-hero svg { width: auto; height: clamp(320px, calc(100vh - var(--sp-bview-top, 430px) - 24px), 640px); max-width: min(46vw, 520px); }
-/* Alone: no floor is open, so the model takes the view: a narrow column with the prompt and the quick
-   starts, and the building beside it as tall as the screen allows. */
-.sp-bview__grid.is-alone { grid-template-columns: minmax(200px, 250px) minmax(0, 1fr); }
-.sp-bview__grid.is-alone .sp-bview__model { position: static; justify-content: center; order: 2; }
-.sp-bview__grid.is-alone .sp-bview__model .sp-hero svg { height: clamp(440px, calc(100vh - var(--sp-bview-top, 430px) - 24px), 780px); max-width: min(62vw, 900px); }
-.sp-bview__alone { order: 1; display: flex; flex-direction: column; gap: var(--sp-space-3); padding-top: var(--sp-space-2); }
-.sp-bview__alone .sp-floor__facts { line-height: 1.5; }
-.sp-bview__starts { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-space-2); font-size: var(--sp-text-12); margin-top: var(--sp-space-2); }
-.sp-bview__stage { min-width: 0; transform-origin: center; will-change: transform; }
-/* The floor column comes in from the right as the model docks. */
+.sp-bview__stage { min-width: 0; will-change: transform; }
+.sp-bview__stage .sp-mini { width: var(--sp-bview-pick); }
+/* The model is sized by height, from the room below it on first load; `--sp-hero-ratio` (width over
+   height of the drawing) turns a width limit into a height limit, so the drawing is never letterboxed and
+   the floor labels, placed in % of its box, stay on their floors. */
+.sp-bview__model .sp-hero svg {
+  width: auto;
+  height: min(clamp(300px, calc(100vh - var(--sp-bview-top, 430px) - 28px), 640px), calc(var(--sp-bview-max, 420px) / var(--sp-hero-ratio, 1)));
+}
+.sp-bview__grid.is-docked .sp-bview__model .sp-hero svg { --sp-bview-max: min(30cqw, 440px); }
+
+/* ── Alone ──────────────────────────────────────────────────────────────────────────── */
+.sp-bview__grid.is-alone { grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); }
+/* The KPI list lays itself out by the width it is given (kpis.css): a list in a column, six tiles in a row. */
+.sp-bview__alone { display: flex; flex-direction: column; gap: var(--sp-space-3); min-width: 0; container-type: inline-size; }
+.sp-bview__starts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-space-2); }
+.sp-bview__starts-label { flex: 1 0 100%; }
+/* The model column measures itself (container units), so the model takes the width that is really left
+   after the picker and the labels, whatever stands beside the view. */
+.sp-bview__grid.is-alone .sp-bview__model { position: static; container-type: inline-size; gap: var(--sp-space-2); }
+.sp-bview__grid.is-alone .sp-bview__model .sp-hero svg {
+  /* The width left for the drawing. Written on the drawing itself: the label room is a property of the model inside. */
+  --sp-bview-max: calc(100cqw - var(--sp-bview-pick) - var(--sp-hero-gap) - var(--sp-hero-room, 28px));
+  height: min(clamp(280px, calc(100vh - var(--sp-bview-top, 400px) - 64px), 760px), calc(var(--sp-bview-max) / var(--sp-hero-ratio, 1)));
+}
+/* Alone, the picker is a ladder against the building: each row sits level with the floor it names (the
+   model says where its stack of floors is). Rows keep a readable minimum, so on a small model the ladder
+   is a little taller than the stack and stays centred on it. */
+.sp-bview__grid.is-alone .sp-hero { min-height: calc(var(--sp-hero-floors, 12) * 22px + 4px); }
+.sp-bview__grid.is-alone .sp-hero__beside { display: block; }
+.sp-bview__grid.is-alone .sp-mini { position: relative; height: 100%; }
+.sp-bview__grid.is-alone .sp-mini__list {
+  position: absolute; left: 0; right: 0; top: calc(var(--sp-hero-band-mid, 0.5) * 100%); transform: translateY(-50%);
+  height: calc(var(--sp-hero-band, 0.6) * 100%); min-height: calc(var(--sp-hero-floors, 12) * 22px); gap: 2px;
+}
+.sp-bview__grid.is-alone .sp-mini__list > li { flex: 1 1 0; min-height: 0; display: flex; }
+.sp-bview__grid.is-alone .sp-mini__row { height: auto; }
+/* The caption has one fixed line: pointing from floor to floor changes its words, never the layout.
+   Should a very narrow view need a second line, it runs over the top of the model instead of pushing it. */
+.sp-bview__caption {
+  align-self: stretch; height: 20px; overflow: visible; text-align: center;
+  font-size: var(--sp-text-13); line-height: 20px; color: var(--sp-color-text-weak); font-variant-numeric: tabular-nums;
+}
+.sp-bview__caption strong { color: var(--sp-color-text); font-weight: 600; }
+.sp-bview__note { align-self: stretch; text-align: center; font-size: var(--sp-text-12); line-height: 1.35; color: var(--sp-color-text-faint); }
+
+/* ── Docked ─────────────────────────────────────────────────────────────────────────── */
+/* The floor column comes in from the right as the model docks; the KPI column fades back in as it undocks. */
 @keyframes sp-bview-in { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes sp-bview-fade { from { opacity: 0; } to { opacity: 1; } }
 .sp-bview__floor { animation: sp-bview-in 520ms cubic-bezier(0.22, 0.8, 0.2, 1) 140ms both; }
-@media (prefers-reduced-motion: reduce) { .sp-bview__floor { animation: none; } }
-.sp-bview__floor { display: flex; flex-direction: column; gap: var(--sp-space-2); min-width: 0; }
-.sp-bview__floor-head { display: flex; align-items: baseline; gap: var(--sp-space-3); flex-wrap: wrap; }
+.sp-bview__alone, .sp-bview__caption, .sp-bview__note { animation: sp-bview-fade 420ms ease 120ms both; }
+@media (prefers-reduced-motion: reduce) { .sp-bview__floor, .sp-bview__alone, .sp-bview__caption, .sp-bview__note { animation: none; } }
+/* The floor column also measures itself: its head and its four numbers arrange by the room they have. */
+.sp-bview__floor { display: flex; flex-direction: column; gap: var(--sp-space-2); min-width: 0; container-type: inline-size; }
+.sp-bview__floor-head { display: flex; align-items: baseline; gap: var(--sp-space-2) var(--sp-space-3); flex-wrap: wrap; }
 .sp-bview__actions { margin-left: auto; display: inline-flex; gap: var(--sp-space-2); align-self: center; }
-.sp-bview__state { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); min-height: 18px; }
-/* Tall enough for a typical floor, so pointing from floor to floor does not make the page jump. */
+.sp-bview__state { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }
 .sp-bview__info {
   display: flex; flex-direction: column; gap: var(--sp-space-3); min-height: 300px;
   margin-top: var(--sp-space-2); padding-top: var(--sp-space-3); border-top: 1px solid var(--sp-color-border);
 }
-.sp-bview__info .sp-fkpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .sp-bview__info .sp-fkpi--wide { grid-column: auto; }
-/* With the inspector open beside it, the view is narrower: a slimmer model column and two-up numbers. */
-.sp-main:not(.sp-main--wide) .sp-bview__grid { grid-template-columns: auto minmax(0, 1fr); gap: var(--sp-space-4); }
-.sp-main:not(.sp-main--wide) .sp-bview__model .sp-hero svg { max-width: min(32vw, 420px); }
-/* The picker stays (it is the keyboard way between floors), reduced to the floor numbers. */
-.sp-main:not(.sp-main--wide) .sp-bview__model { grid-template-columns: 40px auto; gap: var(--sp-space-3); }
-.sp-main:not(.sp-main--wide) .sp-bview__model .sp-mini { width: 40px; }
-.sp-main:not(.sp-main--wide) .sp-bview__model .sp-mini__pct { display: none; }
-.sp-main:not(.sp-main--wide) .sp-bview__info .sp-fkpis { grid-template-columns: 1fr 1fr; }
-@media (max-width: 1280px) { .sp-bview__info .sp-fkpis { grid-template-columns: 1fr 1fr; } }
+.sp-bview__info .sp-fkpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@container (max-width: 639px) { .sp-bview__info .sp-fkpis { grid-template-columns: 1fr 1fr; } }
+/* A narrow floor column: the name and the actions share the first line, the floor's numbers take the second. */
+@container (max-width: 719px) {
+  .sp-bview__floor-head { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 2px var(--sp-space-3); }
+  .sp-bview__floor-head .sp-bview__actions { grid-area: 1 / 2; justify-self: end; margin-left: 0; }
+  .sp-bview__floor-head .sp-floor__facts { grid-area: 2 / 1 / 3 / 3; }
+  .sp-bview__info { margin-top: 0; padding-top: var(--sp-space-2); min-height: 0; }
+}
 /* The inspector opens beside this view for a suite or a search; the model is already on screen. */
 .sp-app[data-view='building'] .sp-inspector .sp-hero { display: none; }
 
-/* Tablet (761–1099 px): one column. Alone, the prompt sits above the model; with a floor open the model
-   is a short band above the floor's plate and lists, and the picker runs along its top. */
-@media (max-width: 1099px) {
-  .sp-bview__grid, .sp-bview__grid.is-alone, .sp-main:not(.sp-main--wide) .sp-bview__grid { grid-template-columns: minmax(0, 1fr); }
-  .sp-bview__model, .sp-main:not(.sp-main--wide) .sp-bview__model { position: static; grid-template-columns: 76px auto; justify-content: center; }
-  .sp-bview__grid.is-alone .sp-bview__model { order: 2; }
-  .sp-bview__model .sp-mini, .sp-main:not(.sp-main--wide) .sp-bview__model .sp-mini { width: 76px; }
-  .sp-main:not(.sp-main--wide) .sp-bview__model .sp-mini__pct { display: inline; }
-  .sp-bview__model .sp-hero svg, .sp-main:not(.sp-main--wide) .sp-bview__model .sp-hero svg { height: 320px; max-width: calc(100vw - 180px); }
-  .sp-bview__grid.is-alone .sp-bview__model .sp-hero svg { height: clamp(360px, 52vh, 560px); max-width: calc(100vw - 180px); }
-  .sp-bview__starts { flex-direction: row; flex-wrap: wrap; align-items: center; }
+/* ── A card under 1040 px (a tablet, or the inspector open on a laptop) ─────────────── */
+/* Docked: the model is a compact figure and the picker keeps the floor numbers alone (it is the keyboard
+   way between floors), so the plate and the floor's numbers share the first screen with the model. */
+@container sp-bview (max-width: 1039px) {
+  .sp-bview__grid.is-docked { gap: var(--sp-space-4); }
+  .sp-bview__grid.is-docked .sp-bview__model { --sp-bview-pick: 40px; --sp-hero-gap: var(--sp-space-2); }
+  .sp-bview__grid.is-docked .sp-bview__model .sp-hero svg { --sp-bview-max: min(20cqw, 200px); height: min(300px, calc(var(--sp-bview-max) / var(--sp-hero-ratio, 1))); }
+}
+/* ── A card under 1100 px ───────────────────────────────────────────────────────────── */
+/* Alone: one column, so the model keeps the width its floor facts need. The six KPIs in a row, the quick
+   starts on a line, then the model with its picker. */
+@container sp-bview (max-width: 1099px) {
+  .sp-bview__grid.is-alone { grid-template-columns: minmax(0, 1fr); gap: var(--sp-space-3); }
+  .sp-bview__starts-label { flex: none; }
 }

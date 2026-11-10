@@ -1,4 +1,4 @@
-import { toneLabel, toneShort } from '../../domain/lenses';
+import { toneLabel } from '../../domain/lenses';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { FilterSpecification, GeoJSONSource, Map as MapLibreMap, MapLayerMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -24,6 +24,7 @@ import {
   LAYER_FLOORS,
   SOURCE_FLOORS,
   dominantTone,
+  floorState,
   floorColorExpression,
   resolveToneHex,
   resolveVarHex,
@@ -172,6 +173,7 @@ function FloorList({ floors, selected, onSelect, toneOf, stateOf, shortOf }: { f
   };
   return (
     <div ref={ref} className="sp-map-floors" role="group" aria-label="Floors" onKeyDown={onKey}>
+      {/* Each row's accessible name starts with the text on the row, then adds the floor's size and its dominant state. */}
       {ordered.map((f, i) => (
         <button
           key={f.floor.id}
@@ -179,16 +181,16 @@ function FloorList({ floors, selected, onSelect, toneOf, stateOf, shortOf }: { f
           data-floor={f.floor.id}
           className="sp-map-floor"
           aria-pressed={f.floor.id === selected}
-          aria-label={`${f.floor.sequence} ${pct(f.leasable > 0 ? f.leased / f.leasable : 0)} ${shortOf(f)} ${floorTip(f)}${stateOf(f) ? ` · mostly ${stateOf(f)}` : ''}${f.available ? `, ${num(f.available)} SF available` : ''}`}
-          title={`${floorTip(f)}${stateOf(f) ? ` · mostly ${stateOf(f)}` : ''}`}
+          aria-label={`${f.floor.sequence} ${pct(f.leasable > 0 ? f.leased / f.leasable : 0)} leased${shortOf(f) ? ` ${shortOf(f)}` : ''}. ${f.floor.name}, ${num(f.leasable)} RSF${stateOf(f) ? `, mostly ${stateOf(f)}` : ''}`}
+          title={`${floorTip(f)}${shortOf(f) ? ` · ${shortOf(f)}` : ''}${stateOf(f) ? ` · mostly ${stateOf(f)}` : ''}`}
           tabIndex={i === focusIndex ? 0 : -1}
           onClick={() => onSelect(f.floor.id)}
           onDoubleClick={() => undefined}
         >
           <span className="sp-map-floor__swatch" style={{ background: `var(--tone-${toneOf(f)}-fill)`, borderColor: `var(--tone-${toneOf(f)}-edge)` }} aria-hidden="true" />
           <span className="sp-map-floor__num">{`${f.floor.sequence} `}</span>
-          <span className="sp-map-floor__pct">{`${pct(f.leasable > 0 ? f.leased / f.leasable : 0)} `}</span>
-          <span className="sp-map-floor__state">{`${shortOf(f)} `}</span>
+          <span className="sp-map-floor__pct">{`${pct(f.leasable > 0 ? f.leased / f.leasable : 0)} leased `}</span>
+          {shortOf(f) && <span className="sp-map-floor__state">{`${shortOf(f)} `}</span>}
         </button>
       ))}
     </div>
@@ -224,14 +226,8 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
   const mapProperty = useMemo(() => (live ? { ...property, footprint: live.polygon, footprintSource: live.source } : property), [property, live]);
 
   const toneOf = useCallback((f: FloorView) => dominantTone(f, state.lens, state.safe), [state.lens, state.safe]);
-  const shortOf = useCallback(
-    (f: FloorView) => {
-      const share = f.leasable > 0 ? f.available / f.leasable : 0;
-      if (state.lens === 'status' && share >= 0.5) return share === 0.5 ? 'Half available' : 'Mostly available';
-      return toneShort(dominantTone(f, state.lens, state.safe), state.lens, state.safe);
-    },
-    [state.lens, state.safe],
-  );
+  // What is true of the floor in exact SF ("7,400 SF available"), not only its dominant state.
+  const shortOf = useCallback((f: FloorView) => floorState(f, state.lens, state.safe), [state.lens, state.safe]);
   const stateOf = useCallback((f: FloorView) => toneLabel(dominantTone(f, state.lens, state.safe), state.lens, state.safe), [state.lens, state.safe]);
   const toneOfSeg = useCallback((s: FloorView['segments'][number]) => toneFor(s, state.lens, state.safe), [state.lens, state.safe]);
   const features = useMemo(() => toFloorFeatures(suiteExtrusionFeatures(mapProperty, floors, toneOfSeg, property.floorHeightFt), INFLATE), [mapProperty, floors, toneOfSeg, property.floorHeightFt]);

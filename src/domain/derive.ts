@@ -41,6 +41,11 @@ export interface Segment {
   suspect?: Lease;
   /** For available segments: date it becomes available when that is after as-of (null = now). */
   availableFrom?: ISODate | null;
+  /**
+   * Prospect-safe projection only (`safeFloors`): this is a lease in place whose term is withheld.
+   * `endDate` and `monthsToExpiry` are null (a sublet suite keeps the sublease's own end).
+   */
+  termWithheld?: boolean;
 }
 
 export interface FloorView {

@@ -46,7 +46,9 @@ describe('PhoneStack', () => {
   it('shows no tenant name in prospect-safe mode', () => {
     const { html } = render(true);
     for (const l of property.leases) expect(html).not.toContain(l.tenant);
-    expect(html).toContain('Term not disclosed');
+    // No lease shows its term: nothing says when one ends, and none is marked as the one without a date.
+    expect(html).not.toMatch(/Term not disclosed|\bExp(ired)? [A-Z][a-z]{2}|Month-to-month|Holdover/);
+    expect(html).toContain('Leased');
   });
 
   it('names a floor header by its visible text (no separate aria-label)', () => {

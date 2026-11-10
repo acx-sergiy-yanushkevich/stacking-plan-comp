@@ -60,8 +60,14 @@ describe('PrintLayout', () => {
       expect(html, `names ${l.tenant}`).not.toContain(l.tenant);
       if (l.owner) expect(html, `names broker ${l.owner}`).not.toContain(l.owner);
     }
-    // Rent and renewal columns are gone from the expirations table, so its empty row spans five columns.
-    expect(html).toContain('Lease expirations · next 12 months');
-    expect(html).not.toMatch(/<th>Rent<\/th>|<th>Renewal<\/th>/);
+    // No lease shows its term, so the report has no expirations table at all (and so no rent or renewal column).
+    expect(html).not.toMatch(/Lease expirations|Renewal worklist|No leases end in the next 12 months/);
+    expect(html).not.toMatch(/<th>Rent<\/th>|<th>Renewal<\/th>|<th>Ends<\/th>/);
+    expect(html).toContain('lease terms are withheld');
+    // The rent roll: every lease in place is "Leased" with no expiration and nothing remaining.
+    const roll = pages.slice(0, pages.indexOf('<h2>Lease rollover</h2>'));
+    const leased = [...roll.matchAll(/<tr>(.*?)<\/tr>/g)].map((m) => [...m[1].matchAll(/<td[^>]*>(.*?)<\/td>/g)].map((c) => c[1])).filter((r) => r[4] === 'Leased');
+    expect(leased.length).toBeGreaterThan(10);
+    for (const r of leased) expect([r[6], r[7]], `Ste ${r[1]}`).toEqual(['—', '—']);
   });
 });

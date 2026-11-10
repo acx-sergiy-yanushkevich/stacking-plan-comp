@@ -5,6 +5,7 @@ import { findIssues, issueCounts, recentChanges } from '../../domain/issues';
 import { computeKpis, kpiDeltas } from '../../domain/kpis';
 import { legendFor } from '../../domain/lenses';
 import { rollover } from '../../domain/rollover';
+import { canShowLeaseTerm, publishedFloors, safeFloors } from '../../domain/safe';
 import { timelineModel } from '../../domain/timeline';
 import { WINDOW_MONTHS, type PlanModel, type WorklistRow } from '../../model/usePlanModel';
 import type { PlanState, WindowKey } from '../../state/planState';
@@ -15,11 +16,13 @@ import type { PlanState, WindowKey } from '../../state/planState';
  */
 export function buildModel(state: PlanState): PlanModel {
   const asOf = state.asOf;
-  const floors = deriveFloors(property, asOf, TODAY);
-  const floorsToday = asOf === TODAY ? floors : deriveFloors(property, TODAY, TODAY);
-  const kpis = computeKpis(property, floors, asOf);
-  const kpisToday = asOf === TODAY ? kpis : computeKpis(property, floorsToday, TODAY);
-  const issues = findIssues(property, floors, TODAY);
+  // As in `usePlanModel`: totals keep the real lease terms; `floors` is the prospect-safe projection every view draws.
+  const totals = publishedFloors(deriveFloors(property, asOf, TODAY), state.safe);
+  const totalsToday = asOf === TODAY ? totals : publishedFloors(deriveFloors(property, TODAY, TODAY), state.safe);
+  const floors = safeFloors(totals, state.safe);
+  const kpis = computeKpis(property, totals, asOf);
+  const kpisToday = asOf === TODAY ? kpis : computeKpis(property, totalsToday, TODAY);
+  const issues = findIssues(property, totals, TODAY);
   const inquiry = state.inquiry ? property.inquiries.find((i) => i.id === state.inquiry) ?? null : null;
   const req = inquiry
     ? { size: inquiry.minSize, max: inquiry.maxSize, by: inquiry.neededBy, type: state.fit }
@@ -44,7 +47,7 @@ export function buildModel(state: PlanState): PlanModel {
     kpis,
     kpisToday,
     deltas: asOf === TODAY ? null : kpiDeltas(kpis, kpisToday),
-    roll: rollover(floors, asOf, 'rolling', 8),
+    roll: rollover(totals, asOf, 'rolling', 8),
     issues,
     counts: issueCounts(issues),
     changes: recentChanges(property, TODAY, 30),
@@ -52,7 +55,7 @@ export function buildModel(state: PlanState): PlanModel {
     req,
     fits,
     worklist,
-    activeWorklist: state.window ? worklist(state.window) : null,
+    activeWorklist: state.window && canShowLeaseTerm(state.safe) ? worklist(state.window) : null,
     searchReasons: null,
     searchMatches: null,
     bucketKeys: null,

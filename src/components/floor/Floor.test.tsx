@@ -86,7 +86,8 @@ describe('FloorView', () => {
     const html = text(render('?view=floor&floor=F6'));
     expect(html).toMatch(/100\.0% leased · 21,400 SF marketed from Apr\s'27/);
     expect(html).toMatch(/no direct space until Apr\s'27/);
-    expect(html).not.toContain('0 SF available');
+    // The figure "0 SF available" itself, not the tail of another floor's "9,300 SF available" in the floor picker.
+    expect(html).not.toMatch(/(?<![\d,])0 SF available/);
     expect(html).not.toContain('no direct space now');
   });
 
@@ -97,13 +98,28 @@ describe('FloorView', () => {
     expect(html).not.toMatch(/marketed|Avail\sApr|until Apr|quiet/i);
   });
 
-  it('offers record actions for the floor under its KPIs: a deal, an availability, a call to the next tenant to expire', () => {
+  it('offers record actions for the floor under its KPIs: a deal, an availability, a call to the tenant who most needs it', () => {
     const html = text(render('?view=floor&floor=F6'));
     expect(html).toContain('aria-label="Floor 6 record actions"');
     expect(html).toContain('New deal on Floor 6');
     expect(html).toContain('Create availability');
-    expect(html).toContain('aria-label="Log call with Cirrus Energy, the next lease to expire on Floor 6"');
+    // The tenant is named on the button itself, with the reason.
+    expect(html).toMatch(/Log call with Cirrus Energy \(expires Mar\s'27\)/);
     expect(text(render('?view=floor&floor=F12'))).toContain('New deal on Floor 12');
+  });
+
+  it('the floor-level call goes to the holdover tenant on Floor 3, not to the lease expiring in 2029', () => {
+    const html = text(render('?view=floor&floor=F3'));
+    expect(html).toContain('Log call with Argosy Partners (holdover)');
+    expect(html).not.toContain('Log call with S&amp;P Enterprises');
+  });
+
+  it('prospect-safe: no floor names a next expiry, and no lease on any plate shows its term', () => {
+    for (const f of property.floors) {
+      const html = text(render(`?view=floor&floor=${f.id}&safe=1`));
+      expect(html, f.name).not.toMatch(/Next expiry|None dated|Term not disclosed|\bExp(ired)? [A-Z][a-z]{2}/);
+    }
+    expect(text(render('?view=floor&floor=F3'))).toContain('Next expiry');
   });
 
   it('renders every floor without throwing, including the over-allocated one', () => {
@@ -112,6 +128,32 @@ describe('FloorView', () => {
       expect(html).toContain(f.name);
     }
     expect(render('?view=floor&floor=F7')).toContain('Over-allocated by');
+  });
+});
+
+describe('floor plate key', () => {
+  // The test render has no canvas: text is measured by the average-glyph estimate at the 640 px fallback width.
+  it('every tenant on every floor is named on the plate or in the key directly under it, never dropped', () => {
+    for (const f of property.floors) {
+      const html = text(render(`?view=floor&floor=${f.id}`));
+      const plate = html.slice(html.indexOf('class="sp-plate"'), html.indexOf('class="sp-plate__caption"'));
+      const drawn = [...plate.matchAll(/<text class="sp-seg__(?:name|tiny)"[^>]*>([^<]*)</g)].map((m) => m[1].trim()).join(' ');
+      const key = [...plate.matchAll(/<li>(.*?)<\/li>/g)].map((m) => m[1].replace(/<[^>]+>/g, '')).join(' ');
+      const model = buildModel(parseState(`?floor=${f.id}`, TODAY));
+      for (const s of model.selectedFloor!.segments) {
+        if (!s.lease || s.kind === 'available' || s.kind === 'projected' || s.kind === 'unmarketed' || s.kind === 'forsale') continue;
+        const name = s.lease.tenant;
+        expect(drawn.includes(name) || name.split(' ').every((w) => drawn.includes(w)) || key.includes(name), `${f.name}: ${name}`).toBe(true);
+      }
+    }
+  });
+
+  it('a key entry pairs the marker on the slice with the name, suite and SF', () => {
+    const all = property.floors.map((f) => text(render(`?view=floor&floor=${f.id}`))).join('');
+    const entries = [...all.matchAll(/<ol class="sp-plate__key"[^>]*>(.*?)<\/ol>/g)].flatMap((m) => [...m[1].matchAll(/<li>(.*?)<\/li>/g)].map((li) => li[1].replace(/<[^>]+>/g, '')));
+    for (const e of entries) expect(e).toMatch(/^\d+Marker \d+: .+ · (Ste \d+ · )?[\d,]+ SF$/);
+    // As many markers drawn on the plates as entries listed under them.
+    expect((all.match(/<g class="sp-seg__key"/g) ?? []).length).toBe(entries.length);
   });
 });
 

@@ -1,13 +1,13 @@
 import type { FloorView as FloorViewModel } from '../../domain/derive';
 import { fmtDate, fmtMonths, fmtMonthYearShort } from '../../domain/dates';
 import { num, pct, sf } from '../../domain/format';
-import { canShowIssues, canShowRecordActions, tenantLabel } from '../../domain/safe';
+import { canShowIssues, canShowLeaseTerm, canShowRecordActions, tenantLabel } from '../../domain/safe';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { useRecordAction } from '../inspector/Actions';
 import { Button, Chip } from '../ui';
 import { FloorLists } from './FloorLists';
-import { comingText, floorComing, nextExpiry } from './floorData';
+import { callTarget, comingText, floorComing, nextExpiry } from './floorData';
 
 export interface FloorSummaryProps {
   floor: FloorViewModel;
@@ -27,6 +27,8 @@ export function FloorSummary({ floor, model, state, patch }: FloorSummaryProps) 
   // Occupied space already on the market for a later date: a floor with nothing vacant is not a floor with nothing to offer.
   const coming = floorComing(floor, asOf, safe);
   const next = nextExpiry(floor);
+  // The call goes to the tenant who most needs it: a holdover or month-to-month tenant before the nearest expiry.
+  const call = callTarget(floor);
   return (
     <>
       <dl className="sp-fkpis">
@@ -63,21 +65,24 @@ export function FloorSummary({ floor, model, state, patch }: FloorSummaryProps) 
             </span>
           </dd>
         </div>
-        <div className="sp-fkpi">
-          <dt>Next expiry</dt>
-          <dd>
-            {next && next.lease && next.endDate && next.monthsToExpiry !== null ? (
-              <>
-                <span className="sp-fkpi__value">{tenantLabel(next.lease, safe)}</span>
-                <span className="sp-fkpi__context">
-                  {fmtDate(next.endDate)} · {fmtMonths(next.monthsToExpiry).replace(/ /g, ' ')}
-                </span>
-              </>
-            ) : (
-              <span className="sp-fkpi__value sp-fkpi__value--muted">None dated</span>
-            )}
-          </dd>
-        </div>
+        {/* Prospect-safe shows no lease term, so there is no "next expiry" to name. */}
+        {canShowLeaseTerm(safe) && (
+          <div className="sp-fkpi">
+            <dt>Next expiry</dt>
+            <dd>
+              {next && next.lease && next.endDate && next.monthsToExpiry !== null ? (
+                <>
+                  <span className="sp-fkpi__value">{tenantLabel(next.lease, safe)}</span>
+                  <span className="sp-fkpi__context">
+                    {fmtDate(next.endDate)} · {fmtMonths(next.monthsToExpiry).replace(/ /g, ' ')}
+                  </span>
+                </>
+              ) : (
+                <span className="sp-fkpi__value sp-fkpi__value--muted">None dated</span>
+              )}
+            </dd>
+          </div>
+        )}
       </dl>
       {floor.overAllocatedBy > 0 && canShowIssues(safe) && (
         <Chip tone="error" icon="warning" className="sp-floor__warn" title="Leases and availabilities add up to more than the leasable area; occupancy is capped at 100%.">
@@ -92,15 +97,9 @@ export function FloorSummary({ floor, model, state, patch }: FloorSummaryProps) 
           <Button size="sm" icon="plus" onClick={() => run('new-availability', name)}>
             Create availability
           </Button>
-          {next?.lease && (
-            <Button
-              size="sm"
-              icon="phone"
-              aria-label={`Log call with ${next.lease.tenant}, the next lease to expire on ${name}`}
-              title={`${next.lease.tenant}: the next lease to expire on ${name}`}
-              onClick={() => run('log-call', `Lease ${next.lease!.id} (${next.lease!.tenant})`)}
-            >
-              Log call
+          {call && (
+            <Button size="sm" icon="phone" title={`${call.lease.tenant}: ${call.why} on ${name}`} onClick={() => run('log-call', `Lease ${call.lease.id} (${call.lease.tenant})`)}>
+              Log call with {call.lease.tenant} ({call.reason})
             </Button>
           )}
         </div>

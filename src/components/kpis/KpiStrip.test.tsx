@@ -7,14 +7,15 @@ import { computeKpis, kpiDeltas } from '../../domain/kpis';
 import { parseState } from '../../state/planState';
 import type { PlanModel } from '../../model/usePlanModel';
 import { KpiStrip } from './KpiStrip';
+import { KpiReveal } from './KpiReveal';
 import { waltCard, waltTitle } from './walt';
 
-function render(asOf: string, safe = false) {
+function render(asOf: string, safe = false, variant?: 'strip' | 'column') {
   const floors = deriveFloors(property, asOf, TODAY);
   const kpis = computeKpis(property, floors, asOf);
   const kpisToday = computeKpis(property, deriveFloors(property, TODAY, TODAY), TODAY);
   const model = { kpis, kpisToday, deltas: asOf === TODAY ? null : kpiDeltas(kpis, kpisToday), safe } as unknown as PlanModel;
-  const html = renderToString(<KpiStrip model={model} state={parseState(safe ? '?safe=1' : '', TODAY)} onAction={() => {}} />);
+  const html = renderToString(<KpiStrip model={model} state={parseState(safe ? '?safe=1' : '', TODAY)} onAction={() => {}} variant={variant} />);
   return { html, kpis, kpisToday };
 }
 
@@ -55,5 +56,52 @@ describe('KpiStrip', () => {
     const { html } = render(TODAY, true);
     expect(html).toContain('Withheld');
     expect(html).not.toContain('on vacancies');
+  });
+});
+
+describe('KpiStrip, column variant', () => {
+  /** The same card with only the wrapper's class differing: everything a card says is shared. */
+  const cards = (html: string) => html.replace(/^<section class="[^"]*"/, '<section');
+
+  it('is the same six cards as the strip: labels, figures, notes, tooltips and pressed state', () => {
+    const strip = render(TODAY).html;
+    const column = render(TODAY, false, 'column').html;
+    expect(column).toContain('class="sp-kpis sp-kpis--col sp-no-print"');
+    expect(column).not.toContain('sp-card');
+    expect(cards(column)).toBe(cards(strip));
+    expect(column.match(/<button type="button" class="sp-kpi/g)?.length).toBe(6);
+    expect(column).toContain('title="Space a tenant could take on the as-of date. Click to find space by size."');
+  });
+
+  it('carries the time-travel change chips', () => {
+    const { html } = render('2028-01-01', false, 'column');
+    expect(html.match(/class="sp-kpi__delta/g)?.length).toBe(6);
+    expect(cards(html)).toBe(cards(render('2028-01-01').html));
+  });
+
+  it('withholds the pipeline in prospect-safe mode, as the strip does', () => {
+    const { html } = render(TODAY, true, 'column');
+    expect(html).toContain('Withheld');
+    expect(html).not.toContain('on vacancies');
+    expect(html).toContain('sp-kpi--static');
+    expect(cards(html)).toBe(cards(render(TODAY, true).html));
+  });
+});
+
+describe('KpiReveal', () => {
+  const slot = (open: boolean) => renderToString(<KpiReveal open={open}><p>figures</p></KpiReveal>);
+
+  it('shows its content when open', () => {
+    const html = slot(true);
+    expect(html).toContain('figures');
+    expect(html).not.toContain('hidden');
+    expect(html).not.toContain('inert');
+  });
+
+  it('renders nothing reachable when closed: hidden, inert and empty', () => {
+    const html = slot(false);
+    expect(html).not.toContain('figures');
+    expect(html).toMatch(/<div class="sp-kpis-slot sp-no-print" hidden=""/);
+    expect(html).toContain('inert');
   });
 });
