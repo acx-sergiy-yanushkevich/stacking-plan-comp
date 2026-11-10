@@ -36,11 +36,47 @@
 .sp-header__asof--locked .sp-btn { cursor: default; }
 .sp-header__asof--locked .sp-btn:hover { background: var(--sp-color-card); }
 .sp-header__asof-note { font-size: var(--sp-text-11); line-height: 1.2; color: var(--sp-color-text-weak); white-space: nowrap; }
+/* Palette control: two options, each a swatch of the palette's accent and highlight beside its name. */
+.sp-palette__dot { width: 12px; height: 12px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1px var(--sp-color-border-strong); }
+.sp-palette__dot--ascendix { background: linear-gradient(135deg, #00aff0 0 50%, #ff9c00 50% 100%); }
+.sp-palette__dot--vice { background: linear-gradient(135deg, #ff7ab8 0 50%, #1bcbb3 50% 100%); }
+/* How the plan looks (palette, theme): a group of its own, apart from the controls of what it shows. */
+.sp-header__look { display: flex; align-items: center; gap: 8px; flex: none; }
+/* Wide: the title and the plan's controls share the first line and the facts run under both, so one more
+   control never costs the header a line. From 1400 px the look controls end the first line and the facts
+   have the whole second one; under that they end the facts' line instead. */
+@media (min-width: 1181px) {
+  .sp-header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 6px 10px; }
+  .sp-header__icon { grid-area: 1 / 1 / 3 / 2; align-self: start; margin-right: 2px; }
+  .sp-header__text { display: contents; }
+  .sp-header__title { grid-area: 1 / 2 / 2 / 3; }
+  .sp-header__actions { grid-area: 1 / 3 / 2 / 5; }
+  .sp-header__facts { grid-area: 2 / 2 / 3 / 4; margin-top: 0; }
+  .sp-header__look { grid-area: 2 / 4 / 3 / 5; justify-self: end; gap: 6px; }
+  .sp-palette .sp-segmented__opt { padding: 0 8px; }
+  /* The embedded skin has no look controls: its facts take the whole line. */
+  .sp-header:not(:has(.sp-header__look)) .sp-header__facts { grid-column: 2 / 5; }
+}
+@media (min-width: 1400px) {
+  .sp-header__actions { grid-area: 1 / 3 / 2 / 4; }
+  .sp-header__look { grid-area: 1 / 4 / 2 / 5; }
+  .sp-header__facts { grid-area: 2 / 2 / 3 / 5; }
+}
 /* Narrow desktop and tablet: the controls take their own row so the title and facts keep the full width. */
 @media (max-width: 1180px) {
   .sp-header { flex-wrap: wrap; }
-  .sp-header__text { flex: 1 1 0; }
-  .sp-header__actions { flex: 1 1 100%; justify-content: flex-start; }
+  .sp-header__text { flex: 1 1 100%; }
+  /* The title keeps the icon beside it: the text block is as wide as the row less the icon. */
+  .sp-header__text { max-width: calc(100% - 40px - var(--sp-space-3)); }
+  .sp-header__actions { flex: 1 1 auto; justify-content: flex-start; }
+}
+/* A narrow tablet: the palette keeps its two swatches and gives up its names (still the options' accessible
+   names and tooltips), so the look controls stay on the controls' line. */
+@media (max-width: 899px) {
+  .sp-palette .sp-segmented__label { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .sp-palette .sp-segmented__opt { padding: 0 8px; }
+  .sp-palette__dot { width: 14px; height: 14px; }
+  .sp-header__actions, .sp-header__look { gap: 6px; }
 }
 @media (max-width: 760px) {
   .sp-header__facts .sp-dot { display: none; }
@@ -97,4 +133,50 @@
   .sp-toolbar__search { flex: 1 1 100%; }
   .sp-toolbar__find .sp-toolbar__group { width: 100%; }
   .sp-toolbar__find .sp-toolbar__group .sp-btn { flex: 1; height: 28px; padding: 0 8px; font-size: var(--sp-text-12); }
+}
+
+/* ── A tablet, 761–1099 px ──────────────────────────────── */
+/* It is short of height more than of width (1024 × 768): the header and the toolbar each take two or three
+   lines there. Less air round and between the bands, so the plan, or an open floor's four figures, starts
+   on the first screen. Nothing is hidden and no control is smaller. */
+@media (min-width: 761px) and (max-width: 1099px) {
+  .sp-app { gap: var(--sp-space-2); padding-top: var(--sp-space-2); }
+  :root[data-skin] .sp-header { padding: 9px 14px; gap: 6px var(--sp-space-3); }
+  .sp-header__facts { margin-top: 1px; }
+  .sp-toolbar { padding: 6px var(--sp-space-3); gap: 6px var(--sp-space-3); }
+}
+
+/* ── A phone ────────────────────────────────────────────── */
+/* What stands above the plan is kept to five short bands, so the stack, or the map, starts in the top
+   half of the screen: the title on one line (the mark is left out), the controls in two rows with the
+   look controls ending the second, the lens picker beside the view tabs. */
+@media (max-width: 760px) {
+  .sp-app { padding: 4px var(--sp-space-2) var(--sp-space-2); gap: 5px; }
+  :root[data-skin] .sp-header { padding: 6px 10px 8px; gap: 6px; }
+  .sp-header__icon { display: none; }
+  .sp-header__text { max-width: none; }
+  :root[data-skin] .sp-header__title h1 { font-size: 16px; }
+  :root[data-skin] .sp-header__property { font-size: var(--sp-text-11); }
+  .sp-header__title { gap: 2px 6px; }
+  /* The controls flow as the header's own items: date and mode on one row, issues, export and the look on the next. */
+  .sp-header__actions { display: contents; }
+  .sp-header .sp-btn { height: 28px; font-size: var(--sp-text-12); padding: 0 9px; gap: 5px; }
+  .sp-header .sp-btn--icon { padding: 0; }
+  .sp-header__look { gap: 6px; margin-left: auto; }
+  /* The palette is its two swatches here (the names stay as accessible names and tooltips). */
+  :root[data-skin] .sp-palette.sp-segmented { padding: 2px; }
+  .sp-palette .sp-segmented__opt { padding: 0 6px; height: 24px; }
+  .sp-toolbar { padding: 5px 8px; gap: 5px 6px; }
+  :root[data-skin] .sp-toolbar .sp-segmented { padding: 2px; }
+  .sp-toolbar__lens-select { flex: 1 1 150px; min-width: 0; }
+  .sp-toolbar__lens-select .sp-field, .sp-toolbar__lens-select .sp-select { width: 100%; }
+  .sp-toolbar__find { gap: 5px; }
+}
+/* Touch: 40 px rows in the phone header, 36 px tabs and 34 px swatches (the toolbar's buttons keep 44), all well over the 24 px minimum. */
+@media (max-width: 760px) and (pointer: coarse) {
+  .sp-header .sp-btn { min-height: 40px; }
+  .sp-header .sp-btn--icon { min-width: 40px; }
+  .sp-header .sp-switch { min-height: 40px; }
+  .sp-toolbar .sp-segmented__opt { min-height: 36px; }
+  .sp-palette .sp-segmented__opt { min-height: 34px; min-width: 28px; }
 }

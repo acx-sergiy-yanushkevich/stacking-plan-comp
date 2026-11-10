@@ -98,7 +98,7 @@
 .sp-pbadge--warn { background: #a04d00; color: #fff; }
 .sp-pbadge--info { background: var(--sp-color-card); border-color: var(--sp-color-border-strong); color: var(--sp-color-text); }
 .sp-pbadge--deal { background: var(--sp-color-pill-deal, var(--sp-color-brand-strong)); color: #fff; }
-.sp-pbadge--sale { background: #4b2c87; color: #fff; }
+.sp-pbadge--sale { background: var(--sp-color-pill-sale, #4b2c87); color: #fff; }
 .sp-pbadge--lock { background: #3b3f46; color: #fff; }
 .sp-pbadge--match { background: #0b7a66; color: #fff; }
 .sp-psuite--lobby { min-height: 36px; background: transparent; }

@@ -20,7 +20,8 @@ const VIEWS: Array<{ id: View; label: string; icon: 'building' | 'stack' | 'time
 export function Toolbar({ state, patch }: ToolbarProps) {
   const phone = useIsPhone();
   const view: View = state.view === 'floor' ? 'stack' : shownView(state.view, phone);
-  const views = phone ? VIEWS.filter((v) => v.id !== 'building') : VIEWS;
+  // A phone has no room for the model, and its tabs are words alone: without their icons the lens picker fits beside them.
+  const views = phone ? VIEWS.filter((v) => v.id !== 'building').map(({ id, label }) => ({ id, label })) : VIEWS;
   const toggleMode = (mode: 'find' | 'worklist') => {
     if (state.mode === mode) patch({ mode: 'building', req: null, max: null, by: null, inquiry: null, window: null });
     else {

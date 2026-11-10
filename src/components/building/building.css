@@ -119,6 +119,16 @@
   .sp-bview__floor { gap: 6px; }
   .sp-bview__floor .sp-plate__caption { margin-top: 2px; line-height: 1.35; }
 }
+/* The same card in a tablet's window: the head (title, legend) and the top of the floor column are set
+   tighter still, with the rest of the tablet chrome (shell.css). */
+@media (min-width: 761px) and (max-width: 1099px) {
+  .sp-bview > .sp-stack__head { padding: 7px 14px; gap: 4px 12px; }
+  .sp-bview > .sp-stack__head .sp-legend { gap: 3px 14px; }
+  .sp-bview__grid.is-docked { padding-top: var(--sp-space-2); }
+  .sp-bview__floor { gap: 4px; }
+  .sp-bview__floor .sp-plate__caption { margin-top: 0; font-size: var(--sp-text-11); }
+  .sp-bview__grid.is-docked .sp-bview__info { padding-top: 6px; }
+}
 /* The same narrow card on a laptop, where it is narrow because the inspector stands beside it and not
    because the window is: the window is wide and tall enough, so the model takes the height there is
    below the legend (up to a quarter of the card's width), instead of the tablet's compact figure. */

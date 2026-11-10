@@ -1,5 +1,6 @@
-/* Vice City palette for the glass skin (the default look; `?skin=aurora` returns to the original
-   blue glass, `?skin=classic` to the flat Lightning look).
+/* Vice City palette for the glass skin: the second palette, selected by `?palette=vice` or the header's
+   palette control (the default is ascendix.css; `?skin=aurora` returns to the original blue glass,
+   `?skin=classic` to the flat Lightning look).
    Token overrides on top of glass.css: the rules there only read tokens, so layout and behaviour
    are unchanged. This palette is dark by default (App sets data-theme when the URL names none);
    light is the same sunset by day. Screen only: print and PDF keep the plain white report. */

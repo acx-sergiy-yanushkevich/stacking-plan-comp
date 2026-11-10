@@ -4,7 +4,7 @@ An interactive stacking plan that lets a broker see a building's availability, e
 
 Built for the Ascendix Tech Challenge, November 2026. It is a prototype on mock data, not a production application.
 
-![Building view: the model, the floor plan and the floor's details](docs/shots/vice/34-building-pinned.png)
+![Building view: the model, the floor plan and the floor's details](docs/shots/readme/34-building-pinned.png)
 
 ## The problem
 
@@ -24,7 +24,7 @@ One model of the building, shown four ways, with the answers to the questions ab
 
 | Stack | Timeline | 3D map |
 |---|---|---|
-| ![Stack view](docs/shots/vice/00-stack-status.png) | ![Lease timeline](docs/shots/vice/16-timeline.png) | ![3D building on the map](docs/shots/vice/18-map.png) |
+| ![Stack view](docs/shots/readme/00-stack-status.png) | ![Lease timeline](docs/shots/readme/16-timeline.png) | ![3D building on the map](docs/shots/readme/18-map.png) |
 
 **For the broker**
 
@@ -44,16 +44,18 @@ One model of the building, shown four ways, with the answers to the questions ab
 - **Space for sale.** For-sale units appear on the plan as their own state, and a building sale listing shows as a banner.
 - **Present mode.** The 3D building orbits while the as-of date advances, and can be recorded as a video.
 
-It works with a keyboard and a screen reader, and on a phone. The colours follow the challenge's Vice City theme: neon on deep purple by default, with a daytime version behind the theme switch.
+It works with a keyboard and a screen reader, and on a phone. It opens in the Ascendix colours (Primary Blue and Primary Orange on the company navies, dark by default, with a daytime version behind the theme switch). The challenge's Vice City theme, neon on deep purple, is the second palette: the header's palette control or `?palette=vice` selects it.
 
-![Daytime theme](docs/shots/vice/26-light-building.png)
+![Vice City palette](docs/shots/readme/44-vice-building.png)
+
+![Daytime theme](docs/shots/readme/26-light-building.png)
 
 ## Tools used
 
 **AI**
 
 - **Claude Code** with Claude Fable 5.1 and 5.2 and Claude Opus 5.5 wrote the design specification, the code and the tests, working from a written brief.
-- **An AI review council.** After each build, independent AI reviewers scored screenshots and the running app against a fixed UI and UX rubric, and the fixes at least two of them agreed on went into the next round. Rounds 0 to 10 used three reviewers (two Claude Opus 5.5 sessions and Grok 4.7); round 10 averaged 37 out of 40. From round 11 a fourth reviewer, GPT-6.1 Sol, joined. Round 11 was the first to score the Vice City colours and the Building view, and averaged 35 out of 40 for UI and UX and 8.1 out of 10 for engineering. Its fixes are in this build, and round 12 is scoring them. The reports are in `docs/judging/`.
+- **An AI review council.** After each build, independent AI reviewers scored screenshots and the running app against a fixed UI and UX rubric, and the fixes at least two of them agreed on went into the next round. Rounds 0 to 10 used three reviewers (two Claude Opus 5.5 sessions and Grok 4.7); round 10 averaged 37 out of 40. From round 11 a fourth reviewer, GPT-6.1 Sol, joined. Round 11 was the first to score the Vice City colours and the Building view and averaged about 86 out of 100 (UI, UX and engineering). Round 12 averaged 90.5 and round 13 averaged 93.5, with every reviewer at 90 or above. Round 14 is scoring this build, the first in the Ascendix colours. The reports are in `docs/judging/`.
 - **AI-assisted research** for the competitor analysis in `docs/COMPETITORS.md`, from public vendor pages, help centres and review sites.
 
 **Application**
@@ -162,7 +164,8 @@ All state lives in the URL, so every view can be linked to.
 | `q` | text | Search tenant, suite or prospect |
 | `mode` | `issues`, `area`, … | Inspector panel, when not implied by the above |
 | `theme` | `light`, `dark` | Theme (default `dark`) |
-| `skin` | `aurora`, `classic` | The original blue palette, or the flat Salesforce Lightning look, instead of the default Vice City palette |
+| `palette` | `vice` | The Vice City palette instead of the default Ascendix colours |
+| `skin` | `aurora`, `classic` | The original blue glass, or the flat Salesforce Lightning look, instead of either palette |
 | `print` | `1` | Print layout |
 | `live` | `1` | Fetch footprint and area data live |
 | `census` | API key | US Census API key for live demographics |

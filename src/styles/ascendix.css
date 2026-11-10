@@ -1,0 +1,226 @@
+/* Ascendix palette for the glass skin: the company colours, and the default look (`?palette=vice`
+   selects Vice City; `?skin=aurora` and `?skin=classic` opt out of both).
+
+     Primary Blue   #00AFF0    Secondary Blue 1 #2491DD    Primary Text    #292D3B
+     Primary Orange #FF9C00    Secondary Blue 2 #284058    Background Grey #F7F7F7
+                               Secondary Blue 3 #1E2D3C
+
+   Token overrides on top of glass.css, built the way vice.css is: the rules there only read tokens, so
+   layout and behaviour are unchanged. Dark by default (App sets data-theme when the URL names none).
+   Screen only: print and PDF keep the plain white report. Every tone is checked by ascendix.test.ts
+   against the card colours measured in the browser. */
+@media screen {
+  /* ── Night: Secondary Blue 2 glass on a Secondary Blue 3 page ───────────────────────── */
+  :root[data-skin='glass'][data-palette='ascendix'][data-theme='dark'] {
+    color-scheme: dark;
+    --sp-color-page: #1e2d3c;
+    --sp-color-card: rgba(40, 64, 88, 0.46);
+    --sp-color-card-2: rgba(255, 255, 255, 0.06);
+    --sp-color-border: rgba(255, 255, 255, 0.1);
+    --sp-color-border-strong: rgba(255, 255, 255, 0.26);
+    --sp-color-text: #f5f8fb; --sp-color-text-weak: #c5d0dc; --sp-color-text-faint: #adbbca;
+    /* Primary Blue is the interactive accent: 5.0:1 on the card, 4.5:1 where the glow is brightest. Small
+       text on controls uses the lighter `-strong`. */
+    --sp-color-brand: #00aff0; --sp-color-brand-strong: #7bd4f8; --sp-color-pill-deal: #1a66a3; --sp-color-pill-sale: #4a46a8;
+    --sp-color-brand-fill: #00aff0;
+    --sp-color-brand-soft: rgba(0, 175, 240, 0.16); --sp-color-on-brand: #062233;
+    /* Primary Orange is the highlight: the focus ring, "expiring", the warm end of the ramps. */
+    --sp-color-focus: #ff9c00;
+    --sp-color-warn: #ffb347; --sp-color-warn-soft: #4a3411; --sp-color-error: #ff958b; --sp-color-error-soft: #4d2126;
+    --sp-color-success: #6fdca6; --sp-color-success-soft: #173d2e; --sp-color-dim: rgba(30, 45, 60, 0.72);
+    --sp-shadow-pop: 0 20px 56px rgba(8, 16, 26, 0.62), 0 2px 6px rgba(8, 16, 26, 0.42);
+
+    /* Status lens: green is space you can lease (well away from the blue selection ring), orange is
+       leaving soon, red is at risk. Leased is most of the building: a calm slate from Secondary Blue 2,
+       under 2:1 on the card, with the 1 px edge carrying the boundary. Every edge here is opaque and at
+       least 3:1 against the card (measured #21364b; #1d3043 at its darkest, #203b54 in the brightest glow). */
+    --tone-leased-fill: #36516d; --tone-leased-text: #f3f7fb; --tone-leased-edge: #93aac1;
+    --tone-neutral-fill: #36516d; --tone-neutral-text: #f3f7fb; --tone-neutral-edge: #93aac1;
+    --tone-muted-fill: #2b4158; --tone-muted-text: #bfccda; --tone-muted-edge: #8fa2b6;
+    /* Opaque equivalents for the building model and the 3D map. */
+    --tone-leased-solid: #41627f; --tone-neutral-solid: #41627f; --tone-muted-solid: #2f475f;
+    --tone-expiring-fill: #70450a; --tone-expiring-text: #ffeccb; --tone-expiring-edge: #ff9c00;
+    --tone-risk-fill: #5a1f24; --tone-risk-text: #ffdcd8; --tone-risk-edge: #ff6b61;
+    --tone-available-fill: #34c684; --tone-available-text: #04261a; --tone-available-edge: #a2f2cd;
+    --tone-available-later-fill: #17412f; --tone-available-later-text: #aef0d0; --tone-available-later-edge: #3fcf8f;
+    --tone-sublease-fill: #1c4d36; --tone-sublease-text: #b9f3d9; --tone-sublease-edge: #3fcf8f;
+    --tone-committed-fill: #21407d; --tone-committed-text: #d6e2ff; --tone-committed-edge: #86abff;
+    --tone-forsale-fill: #453a82; --tone-forsale-text: #e6e0fd; --tone-forsale-edge: #ab9ef6;
+    --tone-empty-fill: transparent; --tone-empty-text: #bfccda; --tone-empty-edge: #93a6ba;
+    --tone-projected-fill: #173a2a; --tone-projected-text: #aef0d0; --tone-projected-edge: #3fcf8f;
+    --tone-confidential-fill: #3b4756; --tone-confidential-text: #d7dfe8; --tone-confidential-edge: #94a1b0;
+
+    /* Expiration lens: from the orange toward the blues, lightness ordered (soonest is brightest) and
+       stepping in hue (light orange, Primary Orange, red-orange, mauve, violet, steel blue) so neighbours
+       stay apart. Holdover / MTM is a dark maroon, far below every step. */
+    --tone-exp-0-fill: #ffc56e; --tone-exp-0-text: #2a1500; --tone-exp-0-edge: #ffe2b5;
+    --tone-exp-1-fill: #ff9c00; --tone-exp-1-text: #2a1500; --tone-exp-1-edge: #ffc774;
+    --tone-exp-2-fill: #e2603a; --tone-exp-2-text: #1f0a04; --tone-exp-2-edge: #f6a68c;
+    --tone-exp-3-fill: #ab5683; --tone-exp-3-text: #ffffff; --tone-exp-3-edge: #e0a0bf;
+    --tone-exp-4-fill: #6d5a9e; --tone-exp-4-text: #ffffff; --tone-exp-4-edge: #b9a8e0;
+    --tone-exp-5-fill: #34568a; --tone-exp-5-text: #ffffff; --tone-exp-5-edge: #8fb0e0;
+
+    /* Rent lens: the company blues, darkest to lightest (gross scale). Five lightness steps 13 L* or more
+       apart; the text flips from light to dark between steps 1 and 2 (Secondary Blue 1 carries dark text). */
+    --tone-rent-0-fill: #1b3a5c; --tone-rent-0-text: #d9e9f8; --tone-rent-0-edge: #7f9dbd;
+    --tone-rent-1-fill: #1f5c8c; --tone-rent-1-text: #ffffff; --tone-rent-1-edge: #7fb0d8;
+    --tone-rent-2-fill: #2491dd; --tone-rent-2-text: #04182a; --tone-rent-2-edge: #86c6f2;
+    --tone-rent-3-fill: #5cc3f2; --tone-rent-3-text: #04202e; --tone-rent-3-edge: #b0e2f9;
+    --tone-rent-4-fill: #bdebff; --tone-rent-4-text: #04202e; --tone-rent-4-edge: #e6f7ff;
+    --tone-rent-net-fill: #2d3c4c; --tone-rent-net-text: #e8eef4; --tone-rent-net-edge: #5cc3f2;
+
+    /* Deals lens: the further a deal has gone, the hotter the orange. */
+    --tone-deal-0-fill: #4e3b25; --tone-deal-0-text: #f6e3c8; --tone-deal-0-edge: #b59468;
+    --tone-deal-1-fill: #8a5210; --tone-deal-1-text: #fff0d9; --tone-deal-1-edge: #d69a4f;
+    --tone-deal-2-fill: #cf7a12; --tone-deal-2-text: #1f0e00; --tone-deal-2-edge: #f2b469;
+    --tone-deal-3-fill: #ffb84d; --tone-deal-3-text: #2a1500; --tone-deal-3-edge: #ffdca6;
+    --tone-deal-none-fill: transparent; --tone-deal-none-text: #bfccda; --tone-deal-none-edge: #93a6ba;
+
+    /* A calmer frost than the default glass: less saturation, so the navy stays navy under the glow. */
+    --sp-glass-blur: blur(22px) saturate(125%);
+    --sp-glass-edge: rgba(255, 255, 255, 0.13);
+    --sp-glass-float: rgba(30, 46, 62, 0.985);
+    --sp-glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 16px 40px rgba(8, 16, 26, 0.42);
+    --sp-glass-lift: inset 0 1px 0 rgba(255, 255, 255, 0.13), 0 22px 48px rgba(8, 16, 26, 0.55);
+    --sp-glass-active: linear-gradient(180deg, rgba(0, 175, 240, 0.24), rgba(36, 145, 221, 0.1));
+    --sp-glass-active-ring: inset 0 0 0 1.5px #00aff0, 0 14px 34px rgba(0, 175, 240, 0.26);
+    --sp-glass-control: rgba(255, 255, 255, 0.07);
+    --sp-glass-control-on: rgba(255, 255, 255, 0.18);
+    --sp-glass-gloss: rgba(255, 255, 255, 0.16);
+    --sp-glass-pane-shadow: drop-shadow(0 1px 2px rgba(8, 16, 26, 0.42));
+    --sp-brand-grad: linear-gradient(135deg, #00aff0, #2491dd);
+    --sp-brand-glow: 0 8px 22px rgba(0, 175, 240, 0.32);
+    --sp-title-grad: linear-gradient(90deg, #ffffff, #d9f2fd 55%, #8fd9f8);
+    /* A calm glow from navy to blue: no sunset. */
+    --sp-aurora:
+      radial-gradient(1200px 720px at 14% -14%, rgba(36, 145, 221, 0.18), transparent 62%),
+      radial-gradient(900px 560px at 92% -10%, rgba(0, 175, 240, 0.1), transparent 60%),
+      radial-gradient(1100px 780px at 100% 104%, rgba(40, 64, 88, 0.45), transparent 62%),
+      radial-gradient(900px 640px at -4% 100%, rgba(36, 145, 221, 0.12), transparent 60%);
+  }
+
+  /* ── Day: white glass on Background Grey ────────────────────────────────────────────── */
+  :root[data-skin='glass'][data-palette='ascendix'][data-theme='light'] {
+    color-scheme: light;
+    --sp-color-page: #f7f7f7;
+    --sp-color-card: rgba(255, 255, 255, 0.72);
+    --sp-color-card-2: rgba(41, 45, 59, 0.04);
+    --sp-color-border: rgba(41, 45, 59, 0.1);
+    --sp-color-border-strong: rgba(41, 45, 59, 0.28);
+    --sp-color-text: #292d3b; --sp-color-text-weak: #4d5566; --sp-color-text-faint: #596274;
+    /* Primary Blue is 2.4:1 on white: accent text and icons use Secondary Blue 1, darkened to 5.3:1.
+       Primary Blue and Secondary Blue 1 themselves are kept for fills, bars and large shapes (`-fill`). */
+    --sp-color-brand: #1a6fb0; --sp-color-brand-strong: #155a91; --sp-color-pill-deal: #155a91; --sp-color-pill-sale: #4a46a8;
+    --sp-color-brand-fill: #2491dd;
+    --sp-color-brand-soft: rgba(0, 175, 240, 0.12); --sp-color-on-brand: #ffffff;
+    --sp-color-focus: #c25e00;
+    --sp-color-warn: #8f4700; --sp-color-warn-soft: #fdf0dc; --sp-color-error: #ba0517; --sp-color-error-soft: #fdeaec;
+    --sp-color-success: #1e6b39; --sp-color-success-soft: #e7f4ea; --sp-color-dim: rgba(255, 255, 255, 0.65);
+    --sp-shadow-pop: 0 18px 50px rgba(30, 45, 60, 0.2), 0 2px 6px rgba(30, 45, 60, 0.12);
+
+    /* Tones by day. Leased is a pale blue-grey with a clear edge; every pale fill gets an opaque edge of
+       at least 3:1 against the card (measured #fdfdfd; #f5f9fb at its most tinted). */
+    --tone-leased-fill: #e1e8f0; --tone-leased-text: #292d3b; --tone-leased-edge: #647a92;
+    --tone-neutral-fill: #e1e8f0; --tone-neutral-text: #292d3b; --tone-neutral-edge: #647a92;
+    --tone-muted-fill: #eff1f5; --tone-muted-text: #4d5566; --tone-muted-edge: #727d8d;
+    /* The building model draws these as they are, beside the legend: each is its fill a step stronger.
+       The 3D map deepens them toward the tone's edge (MapView). */
+    --tone-leased-solid: #c9d5e3; --tone-neutral-solid: #c9d5e3; --tone-muted-solid: #d9dee7;
+    --tone-expiring-fill: #ffe1ad; --tone-expiring-text: #292d3b; --tone-expiring-edge: #b35c00;
+    --tone-risk-fill: #f8d9e0; --tone-risk-text: #292d3b; --tone-risk-edge: #b3113e;
+    --tone-available-fill: #1a7f4f; --tone-available-text: #ffffff; --tone-available-edge: #115a37;
+    --tone-available-later-fill: #dbf1e5; --tone-available-later-text: #14573a; --tone-available-later-edge: #1a7f4f;
+    --tone-sublease-fill: #cfeadb; --tone-sublease-text: #14573a; --tone-sublease-edge: #1a7f4f;
+    --tone-committed-fill: #dbe6fb; --tone-committed-text: #1b3b7a; --tone-committed-edge: #3a63c2;
+    --tone-forsale-fill: #e6e2f8; --tone-forsale-text: #3b2f80; --tone-forsale-edge: #6a58c4;
+    --tone-empty-fill: transparent; --tone-empty-text: #4d5566; --tone-empty-edge: #767f8f;
+    --tone-projected-fill: #e8f5ee; --tone-projected-text: #14573a; --tone-projected-edge: #1a7f4f;
+    --tone-confidential-fill: #e4e6ea; --tone-confidential-text: #3b3f46; --tone-confidential-edge: #757a86;
+
+    /* Daytime expiration lens: lightness ordered the other way (soonest is darkest) and stepping in hue
+       as the night ramp does: red-orange, deep orange, Primary Orange for the three steps that need
+       attention, then lavender, periwinkle and pale steel blue. Holdover / MTM (a pale pink) stands beside
+       the ramp: every warm step is 12 L* or more below it, every cool step a different hue family. */
+    --tone-exp-0-fill: #b03a16; --tone-exp-0-text: #ffffff; --tone-exp-0-edge: #7d260c;
+    --tone-exp-1-fill: #e07400; --tone-exp-1-text: #1f0e00; --tone-exp-1-edge: #9a4c00;
+    --tone-exp-2-fill: #ff9c00; --tone-exp-2-text: #1f0e00; --tone-exp-2-edge: #a35f00;
+    --tone-exp-3-fill: #c9bbef; --tone-exp-3-text: #292d3b; --tone-exp-3-edge: #6a52b0;
+    --tone-exp-4-fill: #c2d2f7; --tone-exp-4-text: #292d3b; --tone-exp-4-edge: #4866b0;
+    --tone-exp-5-fill: #e1eff7; --tone-exp-5-text: #292d3b; --tone-exp-5-edge: #4d7288;
+
+    /* Rent lens by day: the same company blues, lightest to darkest. */
+    --tone-rent-0-fill: #e6f5fd; --tone-rent-0-text: #292d3b; --tone-rent-0-edge: #5a89a8;
+    --tone-rent-1-fill: #b5e0f7; --tone-rent-1-text: #292d3b; --tone-rent-1-edge: #4a84ab;
+    --tone-rent-2-fill: #5cc3f2; --tone-rent-2-text: #04202e; --tone-rent-2-edge: #2a79a8;
+    --tone-rent-3-fill: #2491dd; --tone-rent-3-text: #04182a; --tone-rent-3-edge: #17629c;
+    --tone-rent-4-fill: #284058; --tone-rent-4-text: #ffffff; --tone-rent-4-edge: #16293c;
+    --tone-rent-net-fill: #eef1f5; --tone-rent-net-text: #292d3b; --tone-rent-net-edge: #1c78bd;
+
+    /* Deals lens by day: pale to hot. */
+    --tone-deal-0-fill: #fff0d6; --tone-deal-0-text: #292d3b; --tone-deal-0-edge: #a8722a;
+    --tone-deal-1-fill: #ffd28a; --tone-deal-1-text: #292d3b; --tone-deal-1-edge: #a2650f;
+    --tone-deal-2-fill: #ff9c00; --tone-deal-2-text: #1f0e00; --tone-deal-2-edge: #a35f00;
+    --tone-deal-3-fill: #b8500a; --tone-deal-3-text: #ffffff; --tone-deal-3-edge: #7a3305;
+    --tone-deal-none-fill: transparent; --tone-deal-none-text: #4d5566; --tone-deal-none-edge: #767f8f;
+
+    --sp-glass-edge: rgba(255, 255, 255, 0.9);
+    --sp-glass-float: rgba(255, 255, 255, 0.985);
+    --sp-glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 12px 32px rgba(30, 45, 60, 0.09), 0 1px 2px rgba(30, 45, 60, 0.08);
+    --sp-glass-lift: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 18px 40px rgba(30, 45, 60, 0.15), 0 2px 4px rgba(30, 45, 60, 0.1);
+    --sp-glass-active: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(222, 243, 253, 0.84));
+    --sp-glass-active-ring: inset 0 0 0 1.5px #1a6fb0, 0 14px 34px rgba(0, 175, 240, 0.2);
+    --sp-glass-control: rgba(255, 255, 255, 0.6);
+    --sp-glass-control-on: rgba(255, 255, 255, 0.96);
+    --sp-glass-gloss: rgba(255, 255, 255, 0.7);
+    --sp-glass-pane-shadow: drop-shadow(0 1px 1.5px rgba(30, 45, 60, 0.16));
+    --sp-brand-grad: linear-gradient(135deg, #1c78bd, #155a91);
+    --sp-brand-glow: 0 8px 20px rgba(36, 145, 221, 0.3);
+    --sp-title-grad: linear-gradient(90deg, #292d3b, #284058 55%, #1a6fb0);
+    --sp-aurora:
+      radial-gradient(1200px 760px at 8% -10%, rgba(0, 175, 240, 0.16), transparent 62%),
+      radial-gradient(1000px 680px at 96% -6%, rgba(36, 145, 221, 0.12), transparent 62%),
+      radial-gradient(1000px 760px at 100% 100%, rgba(40, 64, 88, 0.07), transparent 62%);
+  }
+
+  /* ── The few rules a token cannot reach ─────────────────────────────────────────────── */
+  /* The property name carries the brand: white running into a light Primary Blue at night, Primary Text
+     running into the blues by day. */
+  :root[data-skin='glass'][data-palette='ascendix'] .sp-header__title h1 {
+    background: var(--sp-title-grad); -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+  }
+  /* The app's mark is a large shape: Primary Blue itself, in both themes. */
+  :root[data-skin='glass'][data-palette='ascendix'] .sp-header__icon { background: linear-gradient(135deg, #00aff0, #2491dd); box-shadow: 0 8px 20px rgba(0, 175, 240, 0.3); color: #062233; }
+  /* Text on the brand colour follows the token: the night brand is light, so its text is dark. */
+  :root[data-skin='glass'][data-palette='ascendix'] .sp-skip,
+  :root[data-skin='glass'][data-palette='ascendix'][data-theme='dark'] .sp-btn__count { color: var(--sp-color-on-brand); }
+  /* Bars are fills, not text: Primary Blue at night, Secondary Blue 1 by day (3.4:1 on white). */
+  :root[data-skin='glass'][data-palette='ascendix'] .sp-roll__mark { fill: var(--sp-color-brand-fill); }
+  :root[data-skin='glass'][data-palette='ascendix'] .sp-roll__bar--risk .sp-roll__mark { fill: var(--tone-risk-edge); }
+  :root[data-skin='glass'][data-palette='ascendix'] .sp-fkpi__bar-fill,
+  :root[data-skin='glass'][data-palette='ascendix'] .sp-mini__fill { background: var(--sp-color-brand-fill); }
+  /* Neutral badges sit on the brightest fills of the night ramps: give them a solid ground. */
+  :root[data-skin='glass'][data-palette='ascendix'][data-theme='dark'] .sp-badge--info rect { fill: var(--sp-glass-float); }
+  :root[data-skin='glass'][data-palette='ascendix'][data-theme='dark'] .sp-pbadge--info { background: var(--sp-glass-float); }
+  :root[data-skin='glass'][data-palette='ascendix'][data-theme='dark'] .sp-segmented__opt[aria-checked='true'] { box-shadow: 0 2px 8px rgba(8, 16, 26, 0.4); }
+  :root[data-skin='glass'][data-palette='ascendix'][data-theme='dark'] .sp-stack .sp-seg:hover .sp-seg__rect { filter: drop-shadow(0 3px 8px rgba(0, 175, 240, 0.32)); }
+  :root[data-skin='glass'][data-palette='ascendix'][data-theme='light'] .sp-segmented__opt[aria-checked='true'] { box-shadow: 0 2px 8px rgba(30, 45, 60, 0.16); }
+  :root[data-skin='glass'][data-palette='ascendix'][data-theme='light'] .sp-stack .sp-seg:hover .sp-seg__rect { filter: drop-shadow(0 3px 6px rgba(30, 45, 60, 0.24)); }
+
+  /* Less transparency / more contrast / forced colours: solid panels, no blur, no backdrop, plain title. */
+  @media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
+    :root[data-skin='glass'][data-palette='ascendix'][data-theme='dark'] {
+      --sp-glass-blur: none; --sp-aurora: none;
+      --sp-color-card: #253b50; --sp-color-card-2: #2b435a; --sp-glass-float: #1f2f3f; --sp-glass-control: #2b435a; --sp-glass-control-on: #3a556f;
+      --sp-color-border: #3a5068; --sp-glass-edge: #4a627b;
+    }
+    :root[data-skin='glass'][data-palette='ascendix'][data-theme='light'] {
+      --sp-glass-blur: none; --sp-aurora: none;
+      --sp-color-card: #ffffff; --sp-color-card-2: #f2f4f7; --sp-glass-float: #ffffff; --sp-glass-control: #f2f4f7; --sp-glass-control-on: #ffffff;
+      --sp-color-border: #d6dae1; --sp-glass-edge: #c2c8d2;
+    }
+    :root[data-skin='glass'][data-palette='ascendix'] .sp-header__title h1 {
+      background: none; -webkit-text-fill-color: currentColor; color: var(--sp-color-text);
+    }
+  }
+}

@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
-import { isDark, type PlanState } from '../../state/planState';
+import { PALETTES, isDark, palettePatch, paletteOf, type PlanState } from '../../state/planState';
 import { daysBetween, fmtDate } from '../../domain/dates';
 import { num, pct, usd, usd0 } from '../../domain/format';
-import { Button, Chip, Icon, Menu, Switch, useToastBoundary } from '../ui';
+import { Button, Chip, Icon, Menu, Segmented, Switch, useToastBoundary } from '../ui';
 import { canTimeTravel, planDate } from '../../domain/safe';
 import { AsOfPopover } from './AsOfPopover';
 import { rememberTrigger } from '../../state/focusStore';
@@ -30,6 +30,8 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
   const standalone = state.skin !== 'classic';
   const prefersDark = usePrefersDark();
   const dark = isDark(state, prefersDark);
+  // The two palettes belong to the default skin; `skin=aurora` has colours of its own and offers no choice.
+  const palette = paletteOf(state);
   // A toast may name a tenant or a prospect ("Would open Deal D8 (Vantage Robotics)…"): none survives the mode turning on.
   useToastBoundary(state.safe);
   return (
@@ -128,10 +130,23 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
             { id: 'link', label: 'Copy link to this view', icon: 'link', onSelect: () => onExport('link') },
           ]}
         />
-        {standalone && (
-          <Button iconOnly icon={dark ? 'sun' : 'moon'} aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'} title={dark ? 'Light theme' : 'Dark theme'} onClick={() => patch({ theme: dark ? 'light' : 'dark' })} />
-        )}
       </div>
+      {/* How the plan looks, apart from what it shows: the palette and the theme. Both are state like any
+          other, written to the URL, so a link opens in the colours it was copied in. */}
+      {standalone && (
+        <div className="sp-header__look">
+          {palette && (
+            <Segmented
+              className="sp-palette"
+              aria-label="Colour palette"
+              options={PALETTES.map((p) => ({ id: p.id, label: p.label, title: `${p.label} colours`, adornment: <span className={`sp-palette__dot sp-palette__dot--${p.id}`} aria-hidden="true" /> }))}
+              value={palette}
+              onChange={(id) => patch(palettePatch(id))}
+            />
+          )}
+          <Button iconOnly icon={dark ? 'sun' : 'moon'} aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'} title={dark ? 'Light theme' : 'Dark theme'} onClick={() => patch({ theme: dark ? 'light' : 'dark' })} />
+        </div>
+      )}
     </header>
   );
 }

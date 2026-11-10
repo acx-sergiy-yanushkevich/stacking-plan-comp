@@ -14,7 +14,7 @@ import { plateAspect, usePlateSize } from '../floor/usePlateSize';
 import { KpiStrip, type KpiAction } from '../kpis/KpiStrip';
 import { FilterBar } from '../stack/FilterBar';
 import { Button } from '../ui';
-import { usePrefersReducedMotion } from '../../lib/useMedia';
+import { useMedia, usePrefersReducedMotion } from '../../lib/useMedia';
 import { factNote, floorFact, floorLabel, floorSentence, lensFact } from './floorFact';
 import { openFloorOf } from './openFloor';
 import { canShowDeals, canShowIssues } from '../../domain/safe';
@@ -167,8 +167,11 @@ export default function BuildingView({ model, state, patch, onKpi }: BuildingVie
   const [plateRef, size] = usePlateSize(aspect);
   // The shared sizing stops at 300 px tall, which makes a narrow plate tall. Beside the docked model on a
   // tablet the plate column is narrow, so there the plate is drawn at 3:1 (the widest shape the sizing
-  // allows), no shorter than 210 px: the plate and the floor's numbers then share the first screen.
-  const plateHeight = size.width < 720 ? Math.min(size.height, Math.max(210, Math.round(size.width / 3))) : size.height;
+  // allows), no shorter than 210 px. A short window (a tablet held sideways, 768 px tall) has no room for
+  // that and the floor's four figures: there the plate may be as low as 180 px, so the figures start on
+  // the first screen. Labels that no longer fit a suite move to the numbered key, never cut.
+  const shortWindow = useMedia('(max-height: 820px)');
+  const plateHeight = size.width < 720 ? Math.min(size.height, Math.max(shortWindow ? 180 : 210, Math.round(size.width / (shortWindow ? 3.7 : 3)))) : size.height;
 
   const title = state.lens === 'status' ? 'Occupancy' : state.lens === 'expiry' ? 'Expirations' : state.lens === 'deals' ? 'Deal pipeline' : 'Rents';
   const over = floors.filter((f) => f.overAllocatedBy > 0);

@@ -184,7 +184,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
                       <th>Floor · Suite</th>
                       <th className="num">RSF</th>
                       <th>Type</th>
-                      <th>Available</th>
+                      <th>Available from</th>
                       <th>Asking</th>
                     </tr>
                   </thead>

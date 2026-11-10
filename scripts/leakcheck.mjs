@@ -493,7 +493,7 @@ if (wanted('prospect-safe print layout')) {
   await page.goto(base + '?view=stack&safe=1&print=1', { waitUntil: 'networkidle' });
   const printed = (await page.evaluate(() => document.querySelector('.sp-print')?.innerText ?? '')).replace(/\u00a0/g, ' ');
   const found = findLeaks(printed);
-  for (const must of ['Rent roll', 'Available from', 'Space on offer', 'Coming supply', 'Withheld']) if (!printed.includes(must)) found.push(`the report has no "${must}": it was not read`);
+  for (const must of ['Rent roll', 'Available from', 'Space on offer', 'Coming supply', 'Withheld']) if (!printed.toLowerCase().includes(must.toLowerCase())) found.push(`the report has no "${must}": it was not read`); // table headings are drawn in capitals
   for (const h of ['Commencement', 'Expiration', 'Remaining', 'Leases', 'Period']) if (new RegExp(`(^|\\n|\\t)${h}(\\t|\\n|$)`, 'i').test(printed)) found.push(`the report has a "${h}" column`);
   report('prospect-safe print layout', found);
 }
