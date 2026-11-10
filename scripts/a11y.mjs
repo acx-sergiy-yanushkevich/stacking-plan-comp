@@ -3,7 +3,11 @@ import { chromium } from 'playwright';
 import AxeBuilder from '@axe-core/playwright';
 
 const base = process.env.BASE ?? 'http://localhost:4180/';
+// Appended to every state, e.g. EXTRA='&theme=light' or EXTRA='&skin=aurora'.
+const extra = process.env.EXTRA ?? '';
 const states = [
+  '?view=building',
+  '?view=building&floor=F6',
   '?view=stack',
   '?view=stack&lens=expiry&select=L13-U1',
   '?view=stack&req=12000',
@@ -19,7 +23,7 @@ const context = await browser.newContext({ viewport: { width: 1440, height: 1100
 const page = await context.newPage();
 let failed = 0;
 for (const qs of states) {
-  await page.goto(base + qs, { waitUntil: 'networkidle' });
+  await page.goto(base + qs + extra, { waitUntil: 'networkidle' });
   await page.waitForTimeout(qs.includes('map') ? 2000 : 300);
   const results = await new AxeBuilder({ page }).disableRules(['region']).exclude('.maplibregl-map').analyze();
   const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');

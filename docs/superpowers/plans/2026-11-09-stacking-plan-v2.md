@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Repo: `/Users/serhiiyanushkevych/Documents/Projects/Stacking Plan/stacking-plan-v2` (own git repo; commit after every task).
+- Repo: the root of this repository (own git repo; commit after every task).
 - Runtime deps: `react`, `react-dom`, `maplibre-gl` only.
 - `src/domain/**` must not import React or touch `document`/`window`.
 - Dates are ISO `YYYY-MM-DD` strings; "today" is the constant `TODAY = '2026-11-09'` from `src/data/mock/property.ts` so screenshots are reproducible.

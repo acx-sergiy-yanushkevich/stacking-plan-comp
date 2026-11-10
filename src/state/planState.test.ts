@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TODAY } from '../data/mock/property';
-import { DEFAULT_STATE, defaultState, deriveMode, parseState, serializeState, type PlanState } from './planState';
+import { DEFAULT_STATE, defaultState, deriveMode, isDark, isVice, parseState, serializeState, type PlanState } from './planState';
 
 describe('parseState', () => {
   it('reads every supported field', () => {
@@ -19,7 +19,7 @@ describe('parseState', () => {
     const s = parseState('?lens=bogus&asOf=nope&view=globe&window=7&mode=xyz&theme=sepia', TODAY);
     expect(s.lens).toBe('status');
     expect(s.asOf).toBe(TODAY);
-    expect(s.view).toBe('stack');
+    expect(s.view).toBe('building');
     expect(s.window).toBeNull();
     expect(s.mode).toBe('building');
     expect(s.theme).toBeNull();
@@ -95,5 +95,31 @@ describe('deriveMode', () => {
     expect(deriveMode({ ...d, inquiry: 'I02', window: '90' })).toBe('find');
     expect(deriveMode({ ...d, window: '90' })).toBe('worklist');
     expect(deriveMode(d)).toBe('building');
+  });
+});
+
+describe('skin and theme', () => {
+  it('reads the two opt-out skins and ignores anything else', () => {
+    expect(parseState('', TODAY).skin).toBeUndefined();
+    expect(parseState('?skin=aurora', TODAY).skin).toBe('aurora');
+    expect(parseState('?skin=classic', TODAY).skin).toBe('classic');
+    expect(parseState('?skin=neon', TODAY).skin).toBeUndefined();
+  });
+  it('round-trips a skin and omits the default', () => {
+    expect(serializeState(defaultState(TODAY), TODAY)).toBe('');
+    expect(serializeState({ ...defaultState(TODAY), skin: 'aurora' }, TODAY)).toBe('?skin=aurora');
+    expect(parseState('?skin=classic', TODAY)).toEqual({ ...defaultState(TODAY), skin: 'classic' });
+  });
+  it('the Vice City palette is the default and is dark unless a theme is named', () => {
+    const d = defaultState(TODAY);
+    expect(isVice(d)).toBe(true);
+    expect(isVice({ skin: 'aurora' })).toBe(false);
+    expect(isDark(d, false)).toBe(true);
+    expect(isDark({ ...d, theme: 'light' }, true)).toBe(false);
+  });
+  it('the other skins follow the operating system', () => {
+    expect(isDark({ skin: 'aurora', theme: null }, false)).toBe(false);
+    expect(isDark({ skin: 'classic', theme: null }, true)).toBe(true);
+    expect(isDark({ skin: 'aurora', theme: 'dark' }, false)).toBe(true);
   });
 });

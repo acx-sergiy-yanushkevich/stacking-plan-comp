@@ -2,7 +2,7 @@
 
 You are one of three independent judges scoring a from-scratch rebuild of the AscendixRE "Stacking Plan". Be rigorous and skeptical: the target is 95/100 and it must be earned. **This is a read-only review: do not modify, create or delete any file in the repository, and do not run any build that writes inside it.**
 
-Repo root: `/Users/serhiiyanushkevych/Documents/Projects/Stacking Plan/stacking-plan-v2` (the path contains a space; quote it).
+Repo root: the root of this repository (if the path contains a space, quote it).
 
 ## Scenario
 

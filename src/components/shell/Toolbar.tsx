@@ -2,20 +2,25 @@ import { LENSES, type LensId } from '../../domain/lenses';
 import type { PlanState, View } from '../../state/planState';
 import { Button, Segmented, SelectField, TextField } from '../ui';
 import { rememberTrigger } from '../../state/focusStore';
+import { useIsNarrow } from '../../lib/useMedia';
 
 export interface ToolbarProps {
   state: PlanState;
   patch: (p: Partial<PlanState>) => void;
 }
 
-const VIEWS: Array<{ id: View; label: string; icon: 'stack' | 'timeline' | 'map' }> = [
+const VIEWS: Array<{ id: View; label: string; icon: 'building' | 'stack' | 'timeline' | 'map' }> = [
+  { id: 'building', label: 'Building', icon: 'building' },
   { id: 'stack', label: 'Stack', icon: 'stack' },
   { id: 'timeline', label: 'Timeline', icon: 'timeline' },
   { id: 'map', label: 'Map', icon: 'map' },
 ];
 
 export function Toolbar({ state, patch }: ToolbarProps) {
-  const view: View = state.view === 'floor' ? 'stack' : state.view;
+  // The building model needs width: below the desktop layout the stack stands in for it.
+  const narrow = useIsNarrow();
+  const view: View = state.view === 'floor' || (narrow && state.view === 'building') ? 'stack' : state.view;
+  const views = narrow ? VIEWS.filter((v) => v.id !== 'building') : VIEWS;
   const toggleMode = (mode: 'find' | 'worklist') => {
     if (state.mode === mode) patch({ mode: 'building', req: null, max: null, by: null, inquiry: null, window: null });
     else {
@@ -25,7 +30,7 @@ export function Toolbar({ state, patch }: ToolbarProps) {
   };
   return (
     <section className="sp-card sp-toolbar sp-no-print" aria-label="Views and filters">
-      <Segmented aria-label="View" size="lg" options={VIEWS} value={view} onChange={(v) => patch({ view: v, floor: v === 'stack' ? null : state.floor })} />
+      <Segmented aria-label="View" size="lg" options={views} value={view} onChange={(v) => patch({ view: v, floor: v === 'stack' ? null : state.floor })} />
       <div className="sp-toolbar__group sp-toolbar__lens">
         <span className="sp-toolbar__label">Colour by</span>
         <Segmented aria-label="Colour lens" options={LENSES.filter((l) => !(state.safe && l.id === 'deals')).map((l) => ({ id: l.id, label: l.label, title: l.hint }))} value={state.lens} onChange={(lens) => patch({ lens })} />

@@ -16,14 +16,24 @@ export interface BuildingHeroProps {
   patch: Patch;
   /** Smaller, without the hint line (while a suite's details are open). */
   compact?: boolean;
+  /** `stage` draws the model large, as a view of its own, with every floor numbered and no caption. */
+  size?: 'panel' | 'stage';
+  /** What a click on a floor does. Default: focus the floor, then open its floor plan on a second click. */
+  onPick?: (floorId: string) => void;
 }
 
-const W = 328;
-const H = 276;
-/** Floor-to-floor height on screen. */
-const HZ = 10;
-/** How far the floors above a focused floor lift, to show its plate. */
-const LIFT = 20;
+interface Dims {
+  W: number;
+  H: number;
+  /** Floor-to-floor height on screen. */
+  HZ: number;
+  /** How far the floors above a focused floor lift, to show its plate. */
+  LIFT: number;
+  /** Gap between two slabs. */
+  GAP: number;
+}
+const PANEL: Dims = { W: 328, H: 276, HZ: 10, LIFT: 20, GAP: 1 };
+const STAGE: Dims = { W: 600, H: 640, HZ: 28, LIFT: 44, GAP: 2 };
 const COS = 0.866;
 const SIN = 0.5;
 const BOX = 200;
@@ -63,7 +73,9 @@ const fillOf = (tone: string) => (tone === 'empty' || tone === 'deal-none' ? 'va
  * round; a click focuses the floor, a second click opens its floor plan. Decorative for assistive
  * technology (the stack is the accessible equivalent), so the SVG is a labelled image.
  */
-export function BuildingHero({ model, state, patch, compact }: BuildingHeroProps) {
+export function BuildingHero({ model, state, patch, compact, size = 'panel', onPick }: BuildingHeroProps) {
+  const stage = size === 'stage';
+  const { W, H, HZ, LIFT, GAP } = stage ? STAGE : PANEL;
   const { property, floors, safe, highlight, segIndex } = model;
   const hoverId = useHoverFloor();
   const focusId = state.floor ?? (state.select ? (segIndex.get(state.select)?.floorId ?? null) : null);
@@ -100,7 +112,7 @@ export function BuildingHero({ model, state, patch, compact }: BuildingHeroProps
       ];
       const polys = parts.length === 1 ? [poly] : slicePolygon(poly, parts.map((p) => p.size));
       const z0 = level * HZ;
-      const z1 = z0 + HZ - 1;
+      const z1 = z0 + HZ - GAP;
       const slices: HeroSlice[] = parts
         .map((part, j) => {
           const pts = polys[j] ?? [];
@@ -130,7 +142,7 @@ export function BuildingHero({ model, state, patch, compact }: BuildingHeroProps
     });
     const ground = path(base.map((p) => iso(p, 0)));
     return { heroFloors: heroFloors.slice().sort((a, b) => a.level - b.level), fit: { ground } };
-  }, [property.footprint, floors, state.lens, safe]);
+  }, [property.footprint, floors, state.lens, safe, W, H, HZ, LIFT, GAP]);
 
   const focusLevel = focusId ? (heroFloors.find((f) => f.id === focusId)?.level ?? null) : null;
   const hot = heroFloors.find((f) => f.id === (hoverId ?? focusId)) ?? null;
@@ -141,7 +153,7 @@ export function BuildingHero({ model, state, patch, compact }: BuildingHeroProps
   const hint = hot ? (hot.id === focusId ? 'Click again to open the floor plan' : 'Click to focus this floor in the plan') : 'Hover a floor to trace it in the plan';
 
   return (
-    <div className={`sp-hero ${compact ? 'sp-hero--compact' : ''}`}>
+    <div className={`sp-hero ${compact ? 'sp-hero--compact' : ''} ${stage ? 'sp-hero--stage' : ''}`}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`Building model: ${floors.length} floors coloured by the active lens. The stack lists the same suites.`}>
         <path className="sp-hero__ground" d={fit.ground} aria-hidden="true" />
         {heroFloors.map((f) => {
@@ -156,7 +168,8 @@ export function BuildingHero({ model, state, patch, compact }: BuildingHeroProps
               onPointerEnter={() => setHoverFloor(f.id)}
               onPointerLeave={() => setHoverFloor(null)}
               onClick={() => {
-                if (f.id === focusId) openFloorPlate(patch, f.id);
+                if (onPick) onPick(f.id);
+                else if (f.id === focusId) openFloorPlate(patch, f.id);
                 else openFloor(patch, f.id);
               }}
             >
@@ -182,7 +195,7 @@ export function BuildingHero({ model, state, patch, compact }: BuildingHeroProps
         })}
         {/* Floor-number tags: the top and bottom floors always, plus the floor under the pointer or in focus. */}
         {heroFloors
-          .filter((f) => f.level === 0 || f.level === heroFloors.length - 1 || f.id === hot?.id)
+          .filter((f) => stage || f.level === 0 || f.level === heroFloors.length - 1 || f.id === hot?.id)
           .map((f) => {
             const lifted = focusLevel !== null && f.level > focusLevel;
             return (
@@ -192,10 +205,12 @@ export function BuildingHero({ model, state, patch, compact }: BuildingHeroProps
             );
           })}
       </svg>
-      <p className="sp-hero__cap">
-        <span className="sp-hero__cap-main">{caption}</span>
-        {!compact && <span className="sp-hero__cap-hint">{hint}</span>}
-      </p>
+      {!stage && (
+        <p className="sp-hero__cap">
+          <span className="sp-hero__cap-main">{caption}</span>
+          {!compact && <span className="sp-hero__cap-hint">{hint}</span>}
+        </p>
+      )}
     </div>
   );
 }

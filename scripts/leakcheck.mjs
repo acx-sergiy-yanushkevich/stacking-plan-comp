@@ -15,6 +15,8 @@ for (const ok of ['Lakeside Realty Partners', 'Preston Park Financial Center']) 
 const inPlaceRent = /(?<![–-])\$\d[\d.,]*\/SF\/(yr|mo)\s(FSG|MG|NNN)/;
 
 const states = [
+  '?view=building&safe=1',
+  '?view=building&safe=1&floor=F6',
   '?view=stack&safe=1',
   '?view=stack&safe=1&lens=rent',
   '?view=stack&safe=1&lens=deals',

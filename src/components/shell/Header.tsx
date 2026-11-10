@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
-import type { PlanState } from '../../state/planState';
+import { isDark, type PlanState } from '../../state/planState';
 import { daysBetween, fmtDate } from '../../domain/dates';
 import { num, pct, usd, usd0 } from '../../domain/format';
 import { Button, Chip, Icon, Menu, Switch } from '../ui';
@@ -28,7 +28,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
   // record page (classic skin) the host page names the property and sets the theme.
   const standalone = state.skin !== 'classic';
   const prefersDark = usePrefersDark();
-  const dark = state.theme ? state.theme === 'dark' : prefersDark;
+  const dark = isDark(state, prefersDark);
   return (
     <header className="sp-card sp-header sp-no-print">
       <div className="sp-header__icon" aria-hidden="true">

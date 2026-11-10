@@ -1,18 +1,14 @@
 import { useMemo, type KeyboardEvent } from 'react';
 import type { FloorView as FloorViewModel } from '../../domain/derive';
-import { fmtDate, fmtMonths } from '../../domain/dates';
 import { num, pct, sf } from '../../domain/format';
-import { levelPolygon, projectPolygon } from '../../domain/geometry';
-import { tenantLabel } from '../../domain/safe';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { backToStack, openFloorPlate } from '../plan/actions';
-import { Button, Chip } from '../ui';
-import { FloorLists } from './FloorLists';
+import { Button } from '../ui';
 import { FloorPlate } from './FloorPlate';
 import { MiniStack } from './MiniStack';
-import { nextExpiry } from './floorData';
-import { usePlateSize } from './usePlateSize';
+import { FloorSummary } from './FloorSummary';
+import { plateAspect, usePlateSize } from './usePlateSize';
 import './floor.css';
 
 export interface FloorViewProps {
@@ -25,18 +21,10 @@ const EDITABLE = /^(INPUT|SELECT|TEXTAREA)$/;
 
 /** Floor plate drill-in (DESIGN.md §2.7): breadcrumb, floor picker, sliced footprint, KPIs and lists. */
 export default function FloorView({ model, state, patch }: FloorViewProps) {
-  const { floors, property, safe } = model;
+  const { floors, property } = model;
   const floor = model.selectedFloor ?? floors[0] ?? null;
 
-  const aspect = useMemo(() => {
-    const pts = levelPolygon(projectPolygon(property.footprint, { w: 1000, h: 1000 }, 0), { w: 1000, h: 1000 }, 0);
-    if (pts.length < 3) return 4 / 3;
-    const xs = pts.map((p) => p[0]);
-    const ys = pts.map((p) => p[1]);
-    const w = Math.max(...xs) - Math.min(...xs);
-    const h = Math.max(...ys) - Math.min(...ys);
-    return h > 0 ? w / h : 4 / 3;
-  }, [property.footprint]);
+  const aspect = useMemo(() => plateAspect(property.footprint), [property.footprint]);
   const [plateRef, size] = usePlateSize(aspect);
 
   if (!floor) {
@@ -71,9 +59,6 @@ export default function FloorView({ model, state, patch }: FloorViewProps) {
   };
 
   const leasedShare = floor.leasable > 0 ? floor.leased / floor.leasable : 0;
-  const direct = floor.segments.filter((s) => s.kind === 'available' && !s.availableFrom).reduce((t, s) => t + s.size, 0);
-  const sublease = floor.segments.filter((s) => s.kind === 'sublease').reduce((t, s) => t + s.size, 0);
-  const next = nextExpiry(floor);
   const caption =
     'Schematic: suite positions are proportional to RSF along the floor plate, not surveyed. ' +
     (property.footprintSource === 'demo' ? 'Demo footprint.' : 'Footprint © OpenStreetMap contributors.');
@@ -136,57 +121,7 @@ export default function FloorView({ model, state, patch }: FloorViewProps) {
         </div>
 
         <aside className="sp-floor__side" aria-label={`${floor.floor.name} summary`}>
-          <dl className="sp-fkpis">
-            <div className="sp-fkpi sp-fkpi--wide">
-              <dt>Leased</dt>
-              <dd>
-                <span className="sp-fkpi__value">{pct(leasedShare)}</span>
-                <span className="sp-fkpi__bar" aria-hidden="true">
-                  <span className="sp-fkpi__bar-fill" style={{ width: `${Math.min(100, leasedShare * 100)}%` }} />
-                </span>
-                <span className="sp-fkpi__context">
-                  {sf(floor.leased)} of {sf(floor.leasable)}
-                </span>
-              </dd>
-            </div>
-            <div className="sp-fkpi">
-              <dt>Available</dt>
-              <dd>
-                <span className="sp-fkpi__value">{sf(floor.available)}</span>
-                <span className="sp-fkpi__context">
-                  {num(direct)}{'\u00a0'}direct · {num(sublease)}{'\u00a0'}sublease
-                </span>
-              </dd>
-            </div>
-            <div className="sp-fkpi">
-              <dt>Largest contiguous</dt>
-              <dd>
-                <span className="sp-fkpi__value">{sf(floor.maxContiguous)}</span>
-                <span className="sp-fkpi__context">{floor.maxContiguous > 0 ? 'direct, available now' : 'no direct space now'}</span>
-              </dd>
-            </div>
-            <div className="sp-fkpi">
-              <dt>Next expiry</dt>
-              <dd>
-                {next && next.lease && next.endDate && next.monthsToExpiry !== null ? (
-                  <>
-                    <span className="sp-fkpi__value">{tenantLabel(next.lease, safe)}</span>
-                    <span className="sp-fkpi__context">
-                      {fmtDate(next.endDate)} · {fmtMonths(next.monthsToExpiry).replace(/ /g, '\u00a0')}
-                    </span>
-                  </>
-                ) : (
-                  <span className="sp-fkpi__value sp-fkpi__value--muted">None dated</span>
-                )}
-              </dd>
-            </div>
-          </dl>
-          {floor.overAllocatedBy > 0 && (
-            <Chip tone="error" icon="warning" className="sp-floor__warn" title="Leases and availabilities add up to more than the leasable area; occupancy is capped at 100%.">
-              Over-allocated by {sf(floor.overAllocatedBy)}
-            </Chip>
-          )}
-          <FloorLists floor={floor} model={model} state={state} patch={patch} />
+          <FloorSummary floor={floor} model={model} state={state} patch={patch} />
         </aside>
       </div>
     </section>
