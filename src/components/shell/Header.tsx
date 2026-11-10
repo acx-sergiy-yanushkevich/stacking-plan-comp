@@ -6,6 +6,7 @@ import { num, pct, usd, usd0 } from '../../domain/format';
 import { Button, Chip, Icon, Menu, Switch } from '../ui';
 import { AsOfPopover } from './AsOfPopover';
 import { rememberTrigger } from '../../state/focusStore';
+import { usePrefersDark } from '../../lib/useMedia';
 
 export type ExportKind = 'pdf' | 'png' | 'csv' | 'link' | 'video';
 
@@ -23,6 +24,11 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
   const staleDays = daysBetween(verifiedAt, today);
   const staleRecords = model.issues.filter((i) => i.id.startsWith('stale-L') || i.id.startsWith('stale-A')).length;
   const issueTotal = model.issues.length;
+  // Standalone app (glass skin): the property is the page title and the app owns its theme. Embedded on a
+  // record page (classic skin) the host page names the property and sets the theme.
+  const standalone = state.skin !== 'classic';
+  const prefersDark = usePrefersDark();
+  const dark = state.theme ? state.theme === 'dark' : prefersDark;
   return (
     <header className="sp-card sp-header sp-no-print">
       <div className="sp-header__icon" aria-hidden="true">
@@ -30,12 +36,21 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
       </div>
       <div className="sp-header__text">
         <div className="sp-header__title">
-          <h1>Stacking plan</h1>
-          <span className="sp-header__property">
-            <a href="#property" onClick={(e) => e.preventDefault()} title="Open the Property record">
-              {property.name}
-            </a>
-          </span>
+          {standalone ? (
+            <>
+              <h1>{property.name}</h1>
+              <span className="sp-header__property">Stacking plan</span>
+            </>
+          ) : (
+            <>
+              <h1>Stacking plan</h1>
+              <span className="sp-header__property">
+                <a href="#property" onClick={(e) => e.preventDefault()} title="Open the Property record">
+                  {property.name}
+                </a>
+              </span>
+            </>
+          )}
           {state.safe && (
             <Chip tone="brand" icon="shield">
               Prospect-safe on
@@ -103,6 +118,9 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
             { id: 'link', label: 'Copy link to this view', icon: 'link', onSelect: () => onExport('link') },
           ]}
         />
+        {standalone && (
+          <Button iconOnly icon={dark ? 'sun' : 'moon'} aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'} title={dark ? 'Light theme' : 'Dark theme'} onClick={() => patch({ theme: dark ? 'light' : 'dark' })} />
+        )}
       </div>
     </header>
   );

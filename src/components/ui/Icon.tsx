@@ -6,9 +6,11 @@ export type IconName =
   | 'phone' | 'external' | 'close' | 'chevron-down' | 'chevron-left' | 'chevron-right' | 'play' | 'pause' | 'record'
   | 'map' | 'layers' | 'list' | 'info' | 'check' | 'arrow-left' | 'stack' | 'timeline' | 'floor' | 'plus' | 'file'
   | 'image' | 'table' | 'link' | 'video' | 'sparkle' | 'shield' | 'clock' | 'user' | 'compass' | 'tilt' | 'minus'
-  | 'dollar' | 'home' | 'people' | 'train' | 'coffee';
+  | 'dollar' | 'home' | 'people' | 'train' | 'coffee' | 'sun' | 'moon';
 
 const PATHS: Record<IconName, string> = {
+  sun: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
+  moon: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z',
   building: 'M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M4 21h16M8 7h2M8 11h2M8 15h2M12 7h2M12 11h2M12 15h2M16 11h2a2 2 0 0 1 2 2v8',
   calendar: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-4.3-4.3',

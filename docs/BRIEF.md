@@ -9,7 +9,9 @@ This is a **from-scratch rebuild**. Two earlier versions exist for reference onl
 - `docs/reference/legacy-stacking-plan.png`: the 2015 jQuery widget (saturated rainbow, seven lines of text per block, no analytics).
 - `docs/reference/v1-redesign-*.png`: the 2026 "redesign" prototype, which plateaued at UI 17.3/20 and UX 18.3/20. Judges' remaining deductions: five bands of controls above the plan, an overlay panel that hid the plan, wrapped or truncated names in narrow suites, and hierarchy that did not lead the eye.
 
-The prototype is React, TypeScript and Vite with mock data shaped like the xRE objects. After the design hits the target it will be ported to a Salesforce Lightning Web Component (LWC).
+The prototype is React, TypeScript and Vite with mock data shaped like the xRE objects.
+
+**Scenario (from round 9): a standalone web app.** The stacking plan is judged as its own product that reads xRE data, not as a component on a Salesforce record page. It uses the glass skin (frosted panels over a gradient backdrop, light and dark, with its own theme switch), and the property name is the page title. Record actions still open the xRE record. The flat Lightning look remains available at `?skin=classic` for the embedded scenario (a later LWC port) and is not what is being scored.
 
 ## Who uses it, and for what
 
@@ -57,7 +59,7 @@ Each judge gives two separate scores, **UI /20** and **UX /20**, plus an informa
 | U1 | **Visual hierarchy and layout.** The eye lands on what matters first. Header, KPIs, controls and plan are clearly ordered. Spacing and alignment are deliberate. Nothing competes with the plan. | 5 |
 | U2 | **Color and data encoding.** Restrained palette. Each lens has meaningful, colour-blind-safe colours; patterns, borders and labels carry meaning so colour is never the only cue. The legend is clear. | 5 |
 | U3 | **Typography and data density.** Readable type scale, tabular figures, blocks show the right amount of text for their width without crowding or truncating what matters. | 4 |
-| U4 | **Polish and platform fit.** Consistent details; hover, selected, dimmed, focused and empty states are clear. Looks native on a Salesforce Lightning (SLDS 2) record page. | 3 |
+| U4 | **Polish and platform fit.** Consistent details; hover, selected, dimmed, focused and empty states are clear. Reads as a polished, modern standalone web app with a coherent visual language of its own in light and dark (the glass skin); translucency must never cost legibility. | 3 |
 | U5 | **Visual quality on mobile and print.** Phone layout is readable; print/PDF output is presentation-grade. | 3 |
 
 ### UX score (/20): how it works

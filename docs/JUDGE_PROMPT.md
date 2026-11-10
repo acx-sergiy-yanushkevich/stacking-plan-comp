@@ -4,6 +4,10 @@ You are one of three independent judges scoring a from-scratch rebuild of the As
 
 Repo root: `/Users/serhiiyanushkevych/Documents/Projects/Stacking Plan/stacking-plan-v2` (the path contains a space; quote it).
 
+## Scenario
+
+From round 9 the app is judged as a **standalone web app** with its glass skin (the default), not as a Salesforce Lightning record-page component. Score U4 against the standalone wording in BRIEF.md. `?skin=classic` shows the older flat look for the embedded scenario; it is not being scored. `?theme=dark` / `?theme=light` force a theme; the header also has a theme switch. Print and PDF intentionally stay plain white.
+
 ## Read first
 
 1. `docs/BRIEF.md`: the product, personas, top 10 jobs, domain rules, and the **scoring rubric** you must use (UI /20, UX /20, Engineering /10).

@@ -118,7 +118,9 @@
   :root[data-skin='glass'] .sp-header { position: relative; z-index: 30; padding: 16px 20px; }
   :root[data-skin='glass'] .sp-toolbar { position: relative; z-index: 20; }
   @media (max-width: 760px) { :root[data-skin='glass'] .sp-toolbar { position: sticky; } }
-  :root[data-skin='glass'] .sp-header__title h1 { font-size: 20px; letter-spacing: -0.02em; }
+  :root[data-skin='glass'] .sp-header__title h1 { font-size: 22px; letter-spacing: -0.025em; }
+  :root[data-skin='glass'] .sp-header__property { font-size: var(--sp-text-13); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+  @media (max-width: 760px) { :root[data-skin='glass'] .sp-header__title h1 { font-size: 17px; } }
   :root[data-skin='glass'] .sp-header__icon { border-radius: 12px; background: var(--sp-brand-grad); box-shadow: var(--sp-brand-glow); }
 
   /* Floating surfaces sit over busy content: nearly opaque, still frosted. */
