@@ -53,7 +53,8 @@ export function useMapLibre(containerRef: RefObject<HTMLDivElement | null>, opts
         container: el,
         style: styleUrl,
         center: [lng, lat],
-        zoom: CAMERA.zoom,
+        // Narrow viewports start further out so the whole building (roof included) is in frame.
+        zoom: el.clientWidth < 600 ? CAMERA.zoom - 1.4 : CAMERA.zoom,
         pitch: CAMERA.pitch,
         bearing: CAMERA.bearing,
         maxPitch: CAMERA.maxPitch,

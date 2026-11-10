@@ -20,8 +20,8 @@ export interface BlockPanelProps {
   patch: Patch;
 }
 
-function Verified({ at, today }: { at: string; today: string }) {
-  const stale = daysBetween(at, today) > STALE_DAYS;
+function Verified({ at, today, safe }: { at: string; today: string; safe: boolean }) {
+  const stale = !safe && daysBetween(at, today) > STALE_DAYS;
   return (
     <span>
       {fmtDate(at)}
@@ -99,7 +99,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
               !safe && ['Tenant', <strong key="t">{tenantLabel(lease, safe)}</strong>],
               ['Contact', contactLabel(lease.tenantContact, safe)],
               !safe && ['Industry', lease.industry],
-              ['Term', safe && (seg.kind === 'holdover' || seg.kind === 'mtm') ? `Since ${fmtDate(lease.commencement)}` : `${fmtDate(lease.commencement)} – ${seg.endDate ? fmtDate(seg.endDate) : 'open (MTM)'}`],
+              ['Term', safe && (seg.kind === 'holdover' || seg.kind === 'mtm') ? `${fmtDate(lease.commencement)} – —` : `${fmtDate(lease.commencement)} – ${seg.endDate ? fmtDate(seg.endDate) : 'open (MTM)'}`],
               ['Remaining', remaining],
               ['Rent', rentText],
               !safe && ['Broker', lease.owner],
@@ -118,7 +118,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
                   })}
                 </span>,
               ],
-              ['Verified', <Verified key="v" at={lease.verifiedAt} today={today} />],
+              ['Verified', <Verified key="v" at={lease.verifiedAt} today={today} safe={safe} />],
             ]}
           />
         </Section>
@@ -142,7 +142,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
               a.sublease && a.subleaseExpiration ? ['Sublease thru', fmtDate(a.subleaseExpiration)] : null,
               ['Asking', rentVisible(a, safe) && a.rentHigh > 0 ? rateRange(a.rentLow, a.rentHigh, a.rateUnit, a.leaseType) : 'Hidden'],
               ['Divisible', a.divisible ? (a.minDivisible ? `Yes · min ${sf(a.minDivisible)}` : 'Yes') : 'No'],
-              ['Verified', <Verified key="v" at={a.verifiedAt} today={today} />],
+              ['Verified', <Verified key="v" at={a.verifiedAt} today={today} safe={safe} />],
             ]}
           />
         </Section>
@@ -157,7 +157,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
               ['Asking price', rentVisible(a, safe) && a.askingPrice ? usd0(a.askingPrice) : 'Hidden'],
               ['Per SF', rentVisible(a, safe) && a.askingPrice ? `${usd0(Math.round(a.askingPrice / seg.size))}/SF` : 'Hidden'],
               ['Size', sf(seg.size)],
-              ['Verified', <Verified key="v" at={a.verifiedAt} today={today} />],
+              ['Verified', <Verified key="v" at={a.verifiedAt} today={today} safe={safe} />],
             ]}
           />
         </Section>

@@ -127,7 +127,8 @@
 
 @media (max-width: 760px) {
   .sp-map { height: auto; display: flex; flex-direction: column; border-radius: var(--sp-radius-card); }
-  .sp-map__canvas, .sp-map .maplibregl-map { position: relative; height: clamp(320px, 55vh, 520px); order: 0; }
+  .sp-map__canvas, .sp-map .maplibregl-map { position: relative; height: 380px; order: 0; }
+  .sp-map .maplibregl-canvas { height: 100% !important; }
   .sp-map-info { display: none; }
   .sp-map-overlay.sp-map-legend { position: static; order: 1; margin: 8px; }
   .sp-map-floors { position: static; transform: none; order: 2; display: flex; flex-direction: row; flex-wrap: wrap; gap: 4px; margin: 0 8px 8px; padding: 4px; }

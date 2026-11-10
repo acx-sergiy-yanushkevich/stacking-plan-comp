@@ -4,7 +4,7 @@ import type { Issue, IssueSeverity } from '../../domain/issues';
 import { plural } from '../../domain/format';
 import { Button, Icon } from '../ui';
 import { openFloor, selectSegment, type Patch, type RecordAction } from '../plan/actions';
-import { focusSegment } from '../../state/focusStore';
+import { focusSegment, setReturnMode } from '../../state/focusStore';
 import { useRecordAction } from './Actions';
 import { Section } from './parts';
 
@@ -72,6 +72,7 @@ export function IssuesPanel({ model, patch }: IssuesPanelProps) {
   }
 
   const locate = (i: Issue) => {
+    setReturnMode('issues');
     if (i.segKey) {
       selectSegment(patch, i.segKey);
       focusSegment(i.segKey);
@@ -97,11 +98,15 @@ export function IssuesPanel({ model, patch }: IssuesPanelProps) {
                         {i.fix}
                       </Button>
                       {(i.segKey || i.floorId) && (
-                        <button type="button" className="sp-ins__link" onClick={() => locate(i)}>
+                        <button type="button" className="sp-ins__link" aria-label={`Locate ${i.title}`} onClick={() => locate(i)}>
                           <Icon name="search" size={12} />
                           Locate
                         </button>
                       )}
+                      <button type="button" className="sp-ins__link" aria-label={`Mark reviewed: ${i.title}`} onClick={() => run('mark-reviewed', i.recordLabel)}>
+                        <Icon name="check" size={12} />
+                        Mark reviewed
+                      </button>
                     </div>
                   </div>
                 </li>

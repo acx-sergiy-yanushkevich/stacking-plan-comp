@@ -144,7 +144,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
     if (state.select && segIndex.has(state.select)) setFocusKey(state.select);
   }, [state.select, segIndex]);
 
-  const over = floors.filter((f) => f.overAllocatedBy > 0);
+  const over = state.safe ? [] : floors.filter((f) => f.overAllocatedBy > 0);
   const legendNote = [
     anyEnlarged ? `Suites under ${MIN_BLOCK} px are enlarged for legibility; other suites on that floor shrink to compensate.` : '',
     over.length ? `${over.map((f) => `${f.floor.name} records exceed its leasable area by ${num(f.overAllocatedBy)} SF`).join('; ')}; legend shares use recorded SF.` : '',
@@ -229,7 +229,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                       <text className="sp-gutter__rsf" x={44} y={rowH >= 60 ? 50 : 37}>
                         {num(f.leasable)} RSF
                       </text>
-                      {f.overAllocatedBy > 0 && (
+                      {f.overAllocatedBy > 0 && !state.safe && (
                         <text className="sp-gutter__warn" x={8} y={rowH >= 60 ? 62 : 48} fontSize={10} fontWeight={600}>
                           +{num(f.overAllocatedBy)} SF over
                         </text>

@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { FloorView as FloorViewModel, Segment } from '../../domain/derive';
 import { levelPolygon, polygonArea, projectPolygon, slicePolygon, type Pt } from '../../domain/geometry';
 import { textTier } from '../../domain/layout';
-import { fits, fitWords, measure, wrapWords } from '../../lib/textFit';
+import { fitParts, fits, measure, wrapWords } from '../../lib/textFit';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { type Patch } from '../plan/actions';
@@ -113,8 +113,8 @@ function linesFor(text: SegmentText, tier: 0 | 1 | 2 | 3, fw: number, bh: number
     if (text.meta && bh >= 4 * LINE + 2 * PAD) {
       if (fits(text.meta, fw, FONT_SUB)) lines.push({ t: text.meta, cls: 'sp-seg__meta', font: FONT_SUB });
       else {
-        const short = fitWords(text.meta, fw, FONT_SUB);
-        if (short.length >= 6) lines.push({ t: short, cls: 'sp-seg__meta', font: FONT_SUB });
+        const short = fitParts(text.meta, fw, FONT_SUB);
+        if (short.length >= 4 && fits(short, fw, FONT_SUB)) lines.push({ t: short, cls: 'sp-seg__meta', font: FONT_SUB });
       }
     }
   } else if (tier === 2) {
@@ -282,7 +282,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
             ref={(el) => {
               refs.current[i] = el;
             }}
-            className={['sp-seg', selected ? 'is-selected' : '', dim ? 'is-dim' : '', p === 'dashed' ? 'sp-seg--dashed' : ''].filter(Boolean).join(' ')}
+            className={['sp-seg', selected ? 'is-selected' : '', dim ? 'is-dim' : '', p === 'dashed' ? 'sp-seg--dashed' : '', s.seg.key.endsWith('-lobby') ? 'sp-seg--lobby' : ''].filter(Boolean).join(' ')}
             role={s.seg.key.endsWith('-lobby') ? 'img' : 'button'}
             tabIndex={s.seg.key.endsWith('-lobby') ? undefined : i === tabStop ? 0 : -1}
             aria-label={`${[...s.lines.map((l) => l.t), ...s.badges.map((b) => b.text)].filter(Boolean).join(' ')}${s.lines.length || s.badges.length ? '. ' : ''}${s.text.aria}`}

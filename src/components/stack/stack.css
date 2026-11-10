@@ -44,4 +44,5 @@
   .sp-stack__head .sp-legend__num { font-size: 10px; }
   .sp-stack__head .sp-legend__note { display: none; }
   .sp-stack__title .sp-weak { display: none; }
+  .sp-stack__foot span:last-child { display: none; }
 }

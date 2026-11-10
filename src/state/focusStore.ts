@@ -1,3 +1,5 @@
+import type { PlanState } from './planState';
+
 /** Remembers the element that opened a panel so closing it can return keyboard focus there. */
 let trigger: HTMLElement | null = null;
 export function rememberTrigger(el: Element | null = document.activeElement) {
@@ -12,4 +14,15 @@ export function refocusTrigger() {
 export function focusSegment(key: string) {
   const sel = `.sp-stage [data-key="${CSS.escape(key)}"], .sp-stage [data-bar="tl-${CSS.escape(key)}"]`;
   requestAnimationFrame(() => document.querySelector<HTMLElement>(sel)?.focus());
+}
+
+/** The tool panel (Issues, Worklist) that located a block, so clearing that selection returns there. */
+let returnMode: PlanState['mode'] | null = null;
+export function setReturnMode(mode: PlanState['mode']) {
+  returnMode = mode;
+}
+export function takeReturnMode(): PlanState['mode'] | null {
+  const m = returnMode;
+  returnMode = null;
+  return m;
 }

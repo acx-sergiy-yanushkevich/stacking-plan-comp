@@ -54,7 +54,6 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
           <span>{property.floors.length} floors</span>
           {property.saleListing && (
             <>
-              <span className="sp-dot">·</span>
               <span className="sp-header__sale" title={`Listed for sale by ${property.saleListing.broker} · ${property.saleListing.status}`}>
                 <Icon name="dollar" size={12} /> For sale {usd0(property.saleListing.price)} · {usd(property.saleListing.price / kpis.leasable)}/RSF
                 {property.saleListing.capRate !== null ? ` · ${pct(property.saleListing.capRate)} cap` : ''}
@@ -65,7 +64,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
             <Icon name={staleRecords ? 'clock' : 'check'} size={12} /> Latest change {fmtDate(verifiedAt)}
             {staleRecords > 0 && !state.safe && (
               <button type="button" className="sp-header__stale" onClick={() => patch({ mode: 'issues', select: null, floor: null })}>
-                · {staleRecords} record{staleRecords === 1 ? '' : 's'} stale
+                {staleRecords} record{staleRecords === 1 ? '' : 's'} stale
               </button>
             )}
           </span>

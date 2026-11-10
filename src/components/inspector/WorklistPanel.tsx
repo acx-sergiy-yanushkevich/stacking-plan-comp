@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { WINDOW_LABEL, type PlanModel, type WorklistRow } from '../../model/usePlanModel';
 import type { PlanState, WindowKey } from '../../state/planState';
-import { daysBetween, fmtMonths, fmtMonthYearShort } from '../../domain/dates';
+import { daysBetween, fmtDate, fmtMonths, fmtMonthYearShort } from '../../domain/dates';
 import { rentRollRows, toCsv } from '../../domain/exportCsv';
 import { plural, rate, sf } from '../../domain/format';
 import { rentVisible, tenantLabel } from '../../domain/safe';
@@ -18,6 +18,12 @@ export interface WorklistPanelProps {
 }
 
 const WINDOWS: WindowKey[] = ['risk', '90', '180', '12', '24'];
+
+function endText(row: WorklistRow, safe: boolean): string | null {
+  if (!row.seg.endDate) return null;
+  if (safe && (row.kind === 'holdover' || row.kind === 'mtm')) return null;
+  return `${row.kind === 'holdover' ? 'Expired' : 'Ends'} ${fmtDate(row.seg.endDate)}`;
+}
 
 function monthsLeft(row: WorklistRow, safe = false) {
   if (safe && (row.kind === 'holdover' || row.kind === 'mtm' || row.months === null)) return <span className="sp-ins__row-value">—</span>;
@@ -93,7 +99,7 @@ export function WorklistPanel({ model, state, patch }: WorklistPanelProps) {
                         </div>
                       )}
                       <div className="sp-ins__row-meta">
-                        <span>{[row.floorName, row.suite ? `Ste ${row.suite}` : null, rent].filter(Boolean).join(' · ')}</span>
+                        <span>{[row.floorName, row.suite ? `Ste ${row.suite}` : null, endText(row, safe), rent].filter(Boolean).join(' · ')}</span>
                       </div>
                       {!safe && (
                         <div className="sp-ins__row-meta">

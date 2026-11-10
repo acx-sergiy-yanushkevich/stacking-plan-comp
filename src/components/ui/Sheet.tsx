@@ -17,6 +17,16 @@ export interface SheetProps {
 /** Non-modal bottom sheet for phones. The handle toggles between half and full height. */
 export function Sheet({ open, onClose, title, children, snap = 'half', hideHeader, modeless }: SheetProps) {
   const [full, setFull] = useState(snap === 'full');
+  const [labelId, setLabelId] = useState<string | null>(null);
+  // The dialog takes its name from the panel's own heading ("Floor 12 · Suite 1210"), when there is one.
+  useEffect(() => {
+    if (!open || !ref.current) return;
+    const h = ref.current.querySelector<HTMLElement>('h1, h2, h3');
+    if (h) {
+      if (!h.id) h.id = 'sp-sheet-title';
+      setLabelId(h.id);
+    } else setLabelId(null);
+  }, [open, children]);
   const ref = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (open) setFull(snap === 'full');
@@ -49,7 +59,7 @@ export function Sheet({ open, onClose, title, children, snap = 'half', hideHeade
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div ref={ref} role="dialog" aria-modal={modeless ? undefined : 'true'} aria-label={typeof title === 'string' ? title : 'Details'} className={`sp-sheet ${full ? 'sp-sheet--full' : ''}`}>
+    <div ref={ref} role="dialog" aria-modal={modeless ? undefined : 'true'} aria-labelledby={labelId ?? undefined} aria-label={labelId ? undefined : typeof title === 'string' ? title : 'Details'} className={`sp-sheet ${full ? 'sp-sheet--full' : ''}`}>
       <button type="button" className="sp-sheet__handle" aria-label={full ? 'Collapse panel' : 'Expand panel'} aria-expanded={full} onClick={() => setFull((f) => !f)}>
         <span />
       </button>
