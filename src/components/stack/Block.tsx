@@ -34,8 +34,6 @@ const PAD = 8;
 const LINE = 15;
 /** Compact line pitch, used only when it lets a whole name keep its SF line. */
 const CP = 12.5;
-/** Up to three initials of a name ("Preston Park Café" → "PPC"). */
-const initials = (name: string) => name.split(/\s+/).filter((w) => /^[A-Za-z0-9]/.test(w)).slice(0, 3).map((w) => w[0].toUpperCase()).join('') || null;
 /** One-letter state cue for blocks too narrow for any text. */
 const GLYPH: Partial<Record<Segment['kind'], string>> = { available: 'A', sublease: 'S', committed: 'C', forsale: '$', holdover: '!', mtm: '!', unmarketed: '?', projected: 'V' };
 const GLYPH_WORD: Partial<Record<Segment['kind'], string>> = { available: 'Avail', sublease: 'Sublet', committed: 'Signed', forsale: 'Sale', unmarketed: 'Gap', projected: 'Vacant' };
@@ -67,6 +65,9 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   const pillBottom = tier >= 2;
   const reserved = (showOther ? badgeW + 6 : 0) + (showSecond ? badge2W + 6 : 0) + (showDeal && !pillBottom ? 22 : 0);
   const inner = w - PAD * 2 - reserved;
+  // Lines below the first run the full width (the corner badges only occupy the first line); the
+  // bottom-right deal pill reserves its corner on the last line instead.
+  const innerBody = w - PAD * 2 - (showDeal && pillBottom ? 22 : 0);
 
   // Decide the lines. Rules: a name is shown whole or not at all (a fragment misleads; the tooltip and
   // the accessible name carry the full name); the SF line is never dropped in favour of a name line;
@@ -76,21 +77,33 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   const sfLens = text.lensShort ? `${sfUnit} · ${text.lensShort}` : null;
   const factsFor = (nameLineCount: number): Line[] => {
     const out: Line[] = [];
+    // Width available to the fact at index i: the first line of the block clears the corner badges.
+    const fw = (i: number) => (nameLineCount + i === 0 ? inner : innerBody);
     if (tier === 0) {
       // Full tier: suite + SF (or SF + lens value when the name took two lines), then the meta line.
-      const squeezed = nameLineCount >= 2 && sfLens && fits(sfLens, inner, FONT_SUB) ? sfLens : null;
-      const first = squeezed ?? (fits(text.sub, inner, FONT_SUB) ? text.sub : sfLens && fits(sfLens, inner, FONT_SUB) ? sfLens : sfUnit);
+      const squeezed = nameLineCount >= 2 && sfLens && fits(sfLens, fw(0), FONT_SUB) ? sfLens : null;
+      const first = squeezed ?? (fits(text.sub, fw(0), FONT_SUB) ? text.sub : sfLens && fits(sfLens, fw(0), FONT_SUB) ? sfLens : sfUnit);
       out.push({ t: first, cls: 'sp-seg__sub', font: FONT_SUB });
       if (text.meta) {
         // A rate is shown whole or not at all (dropping the lease type would mislead); other facts may lose trailing parts.
         const isRate = text.meta.includes('$');
-        const alt = fits(text.meta, inner, FONT_SUB) ? text.meta : isRate ? text.meta.replace(/^Asking /, '') : fitParts(text.meta, inner, FONT_SUB);
-        if (alt && fits(alt, inner, FONT_SUB) && (isRate || alt.length >= 4) && !first.includes(alt)) out.push({ t: alt, cls: 'sp-seg__meta', font: FONT_SUB });
+        const alt = fits(text.meta, fw(1), FONT_SUB) ? text.meta : isRate ? text.meta.replace(/^Asking /, '') : fitParts(text.meta, fw(1), FONT_SUB);
+        if (alt && fits(alt, fw(1), FONT_SUB) && (isRate || alt.length >= 4) && !first.includes(alt)) out.push({ t: alt, cls: 'sp-seg__meta', font: FONT_SUB });
       }
     } else {
-      const sfLine = sfLens && fits(sfLens, inner, FONT_SUB) ? sfLens : fits(sfUnit, inner, FONT_SUB) ? sfUnit : fits(sfUnit, inner + PAD, FONT_SUB) ? sfUnit : null;
+      const sfLine = sfLens && fits(sfLens, fw(0), FONT_SUB) ? sfLens : fits(sfUnit, fw(0), FONT_SUB) ? sfUnit : fits(sfUnit, fw(0) + PAD, FONT_SUB) ? sfUnit : null;
       if (sfLine) out.push({ t: sfLine, cls: 'sp-seg__sf', font: FONT_SUB });
-      if (text.lensShort && !(sfLine && sfLine.includes(text.lensShort)) && fits(text.lensShort, inner, FONT_SUB)) out.push({ t: text.lensShort, cls: 'sp-seg__meta', font: FONT_SUB });
+      else if (fits(sfUnit, w - 6, FONT_TINY)) out.push({ t: sfUnit, cls: 'sp-seg__tiny', font: FONT_TINY });
+      if (text.lensShort && !(sfLine && sfLine.includes(text.lensShort))) {
+        if (fits(text.lensShort, fw(out.length), FONT_SUB)) out.push({ t: text.lensShort, cls: 'sp-seg__meta', font: FONT_SUB });
+        else if (text.lensShort.includes('$') && text.lensShort.includes(' ')) {
+          // A rate that is too long for one line keeps its unit and type on a second line ("$32/SF/yr" / "FSG").
+          const cut = text.lensShort.lastIndexOf(' ');
+          const a = text.lensShort.slice(0, cut);
+          const b = text.lensShort.slice(cut + 1);
+          if (fits(a, fw(out.length), FONT_SUB) && fits(b, fw(out.length + 1), FONT_SUB)) out.push({ t: a, cls: 'sp-seg__meta', font: FONT_SUB }, { t: b, cls: 'sp-seg__meta', font: FONT_SUB });
+        }
+      }
     }
     return out;
   };
@@ -105,7 +118,11 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
       return null;
     };
     // Optional facts (never the SF line) go first when the row is short.
-    return fit(facts) ?? (facts.length > 1 ? fit(facts.slice(0, Math.max(1, cap13 - name.length))) : null);
+    if (fit(facts)) return fit(facts);
+    // Drop optional facts from the end; a split rate (two meta lines) goes as a pair.
+    let keep = Math.max(1, cap13 - name.length);
+    if (keep < facts.length && facts[keep - 1].cls === 'sp-seg__meta' && facts[keep]?.cls === 'sp-seg__meta' && facts[keep - 1].t.includes('$')) keep -= 1;
+    return facts.length > 1 ? fit(facts.slice(0, Math.max(1, keep))) : null;
   };
   const whole = (ls: string[]) => ls.length > 0 && ls.join(' ') === text.name;
   const one = fits(text.name, inner, FONT_NAME) ? [text.name] : [];
@@ -118,19 +135,8 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
     (whole(tiny) && h >= 48 ? attempt(tiny, 'sp-seg__tiny', FONT_TINY) : null) ??
     attempt([], 'sp-seg__name', FONT_NAME);
   const lines: Line[] = chosen?.lines ?? [];
-  let compactPitch = (chosen?.compact ?? false) || lines.some((l) => l.cls === 'sp-seg__tiny');
-  let maxLines = compactPitch ? cap13 : cap15;
-  // No room for the whole name: its initials say who; the tooltip and the accessible name say it in full.
-  if (lines.length > 0 && lines.length < cap13 && !lines.some((l) => l.cls === 'sp-seg__name' || l.cls === 'sp-seg__tiny') && (seg.kind === 'leased' || seg.kind === 'holdover' || seg.kind === 'mtm' || seg.kind === 'committed' || seg.kind === 'sublease')) {
-    const ini = initials(text.name);
-    if (ini && ini.length >= 2 && fits(ini, inner, FONT_NAME)) {
-      lines.unshift({ t: ini, cls: 'sp-seg__name', font: FONT_NAME });
-      if (lines.length > cap15) {
-        compactPitch = true;
-        maxLines = cap13;
-      }
-    }
-  }
+  const compactPitch = (chosen?.compact ?? false) || lines.some((l) => l.cls === 'sp-seg__tiny');
+  const maxLines = compactPitch ? cap13 : cap15;
   // SF alone says nothing about state: prefix the state word when the only line is the SF figure.
   if (lines.length === 1 && lines[0].cls === 'sp-seg__sf') {
     const word = GLYPH_WORD[seg.kind] ?? '';
@@ -139,16 +145,14 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
     else if (word && lines.length < maxLines) lines.unshift({ t: word, cls: 'sp-seg__name', font: FONT_NAME });
   }
   // Narrowest tier: a single state glyph so colour is never the only cue.
-  const glyph = lines.length === 0 && w >= 24 && h >= 40 ? ((w >= 48 && GLYPH_WORD[seg.kind] && fits(GLYPH_WORD[seg.kind]!, w - 8, FONT_SUB) ? GLYPH_WORD[seg.kind] : GLYPH[seg.kind]) ?? initials(text.name)) : null;
+  const glyph = lines.length === 0 && w >= 24 && h >= 40 ? ((w >= 48 && GLYPH_WORD[seg.kind] && fits(GLYPH_WORD[seg.kind]!, w - 8, FONT_SUB) ? GLYPH_WORD[seg.kind] : GLYPH[seg.kind]) ?? null) : null;
 
   const pattern = text.pattern;
   const patternFill = pattern === 'hatch' ? `url(#${PATTERN_IDS.hatch})` : pattern === 'dots' ? `url(#${PATTERN_IDS.dots})` : pattern === 'asking' ? `url(#${PATTERN_IDS.asking})` : null;
-  // WCAG 2.5.3: the accessible name starts with exactly what is visible, then adds context.
+  // Accessible name: the full name and facts first; the drawn label last so it is still contained (WCAG 2.5.3).
   const visible = [glyph ?? '', ...lines.map((l) => l.t), showSecond && second ? second.text : '', showOther && other ? other.text : '', showDeal && deal ? deal.text : ''].filter(Boolean).join(' ');
-  // Accessible name: what is visible first, then only the facts that are not already visible.
-  const floorName = text.aria.split(',')[0];
-  const extras = [text.name, text.sub, text.meta, ...text.badges.map((b) => (b.kind === 'deal' ? `${b.text} live deal${b.text === '1' ? '' : 's'}` : b.title ?? b.text))].filter((t) => t && !visible.includes(t));
-  const ariaLabel = `${floorName}${visible ? `, ${visible}` : ''}${extras.length ? `. ${extras.join(', ')}` : ''}`;
+  const badgeFacts = text.badges.map((b) => (b.kind === 'deal' ? `${b.text} live deal${b.text === '1' ? '' : 's'}` : b.title ?? b.text)).filter((t) => t && !text.aria.includes(t));
+  const ariaLabel = `${text.aria}${badgeFacts.length ? `, ${badgeFacts.join(', ')}` : ''}${visible && !text.aria.startsWith(visible) ? `. Label: ${visible}` : ''}`;
   const accentLeft = tone === 'expiring' || tone === 'risk';
   const accentTop = tone === 'rent-net';
 

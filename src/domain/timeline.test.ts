@@ -39,13 +39,13 @@ describe('timelineModel', () => {
     expect(sale.label).toBe('For sale');
   });
   it('flags sublease bars', () => {
+    // The sublease runs to the head lease's own end, so the suite is one dotted sublease bar, not two.
     const bars = row('F7').bars.filter((b) => b.segKey === 'L14-U2');
-    const head = bars.find((b) => !b.sublease)!;
-    const sub = bars.find((b) => b.sublease)!;
-    expect(head.label).toBe('Infinity Info Systems');
-    expect(head.kind).toBe('leased');
-    expect(sub.label).toBe('Sublease · Ste 720');
-    expect(sub.end).toBe('2030-09-30');
+    expect(bars).toHaveLength(1);
+    expect(bars[0].label).toBe('Infinity Info Systems');
+    expect(bars[0].kind).toBe('sublease');
+    expect(bars[0].sublease).toBe(true);
+    expect(bars[0].end).toBe('2030-09-30');
     // Cirrus (occupied, marketed for Apr 2027) gets a coming-supply bar from its available-from date.
     const mkt = row('F6').bars.find((b) => b.key.endsWith('-mkt'))!;
     expect(mkt.start).toBe('2027-04-01');

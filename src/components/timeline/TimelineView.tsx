@@ -37,7 +37,7 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
   const svgRef = useRef<SVGSVGElement | null>(null);
   const plotWidth = Math.max(200, width - GUTTER - 8);
   const rows = model.timeline.rows;
-  const laid = useMemo(() => layoutRows(rows, model.asOf, ROWS_TOP), [rows, model.asOf]);
+  const laid = useMemo(() => layoutRows(rows, model.asOf, ROWS_TOP, model.safe), [rows, model.asOf, model.safe]);
   const height = ROWS_TOP + rowsHeight(laid) + BOTTOM_PAD;
   const clipId = `sp-tl-plot-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
 

@@ -233,7 +233,7 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
           <p className="sp-ins__explain">No record changes in the last 30 days.</p>
         ) : (
           <ul className="sp-ins__list">
-            {changes.filter((c) => !safe || (c.recordType !== 'Deal' && c.recordType !== 'Inquiry')).slice(0, 5).map((c) => {
+            {changes.filter((c) => !safe || c.recordType === 'Availability').slice(0, 5).map((c) => {
               const who = safe ? c.recordType : c.recordLabel;
               const what = safe ? `${c.field} changed` : `${c.field}: ${c.from ?? '—'} → ${c.to ?? '—'}`;
               const body = (

@@ -129,6 +129,8 @@ function linesFor(text: SegmentText, tier: 0 | 1 | 2 | 3, fw: number, bh: number
     if (fits(unit, fw, FONT_SUB)) lines.push({ t: unit, cls: 'sp-seg__sf', font: FONT_SUB });
     else if (fits(text.sfShort, fw, FONT_SUB) && lines.length) lines.push({ t: text.sfShort, cls: 'sp-seg__sf', font: FONT_SUB });
   }
+  // No room for the name: the lens fact ("Feb '27", "$32/SF/yr FSG") says the state, so colour is never the only cue.
+  if (lines.length && !lines.some((l) => l.cls === 'sp-seg__name' || l.cls === 'sp-seg__tiny') && text.lensShort && fits(text.lensShort, fw, FONT_SUB)) lines.unshift({ t: text.lensShort, cls: 'sp-seg__meta', font: FONT_SUB });
   return lines;
 }
 

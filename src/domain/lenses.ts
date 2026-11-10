@@ -148,8 +148,8 @@ export function toneFor(seg: Segment, lens: LensId, prospectSafe: boolean): Tone
       return statusTone(seg, prospectSafe);
     case 'expiry':
       if (seg.kind === 'forsale') return 'muted';
-      // Prospect-safe: no bucket of their own (that would single them out); they join the longest one.
-      if (seg.kind === 'holdover' || seg.kind === 'mtm') return prospectSafe ? 'exp-5' : 'risk';
+      // Prospect-safe: the term is not disclosed, so these take a neutral tone off the ramp (not a risk tone).
+      if (seg.kind === 'holdover' || seg.kind === 'mtm') return prospectSafe ? 'neutral' : 'risk';
       if (seg.kind === 'leased' || seg.kind === 'sublease') return expiryTone(seg.monthsToExpiry);
       if (seg.kind === 'committed') return 'committed';
       if (seg.kind === 'projected') return 'projected';
@@ -205,8 +205,8 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
         { tone: 'exp-2', label: '1–2 yr' },
         { tone: 'exp-3', label: '2–3 yr' },
         { tone: 'exp-4', label: '3–5 yr' },
-        { tone: 'exp-5', label: prospectSafe ? '5+ yr or undisclosed' : '5+ yr' },
-        ...(prospectSafe ? [] : [{ tone: 'risk' as Tone, label: 'Holdover / MTM' }]),
+        { tone: 'exp-5', label: '5+ yr' },
+        ...(prospectSafe ? [{ tone: 'neutral' as Tone, label: 'Term not disclosed' }] : [{ tone: 'risk' as Tone, label: 'Holdover / MTM' }]),
         { tone: 'committed', label: 'Committed', pattern: 'hatch' },
         { tone: 'projected', label: 'Projected vacancy', pattern: 'dashed' },
         { tone: 'empty', label: 'Vacant', pattern: 'dashed' },
@@ -231,9 +231,9 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
     case 'rent':
       return [
         { tone: 'rent-0', label: 'FSG < $28' },
-        { tone: 'rent-1', label: '$28–31' },
-        { tone: 'rent-2', label: '$31–34' },
-        { tone: 'rent-3', label: '$34–38' },
+        { tone: 'rent-1', label: '$28–30.99' },
+        { tone: 'rent-2', label: '$31–33.99' },
+        { tone: 'rent-3', label: '$34–37.99' },
         { tone: 'rent-4', label: '$38+' },
         { tone: 'rent-net', label: 'NNN / MG, off the gross scale', pattern: 'topbar' },
         { tone: 'empty', label: 'Asking rent (vacancy)', pattern: 'asking' },

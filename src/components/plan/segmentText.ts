@@ -94,9 +94,9 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
       else if (kind === 'holdover') meta = `Expired ${seg.endDate ? fmtMonthYear(seg.endDate) : ''}`;
       else if (seg.endDate && seg.monthsToExpiry !== null) meta = `Exp ${fmtMonthYear(seg.endDate)} · ${fmtMonths(seg.monthsToExpiry)}`;
       if (kind === 'sublease' && a?.subleaseExpiration) meta = `Sublease thru ${fmtMonthYear(a.subleaseExpiration)}`;
-      if (safe && (kind === 'holdover' || kind === 'mtm')) meta = 'Leased';
+      if (safe && (kind === 'holdover' || kind === 'mtm')) meta = 'Term not disclosed';
       if (seg.marketed && !seg.marketed.sublease && seg.marketed.kind === 'Lease') {
-        badges.push({ kind: 'info', text: seg.marketed.availableFrom ? `Avail ${fmtMonthYearShort(seg.marketed.availableFrom)}` : 'Marketed', title: 'Occupied, already marketed for a later date' });
+        badges.push({ kind: 'info', text: seg.marketed.availableFrom ? `Avail ${fmtMonthYearShort(seg.marketed.availableFrom)}` : 'Marketed', title: `Occupied, already marketed for a later date${seg.marketed.published === false && !safe ? ' · quiet listing, not published' : ''}` });
       }
       if (seg.marketed?.kind === 'Sale') badges.push({ kind: 'sale', text: 'For sale' });
       if (seg.next && !safe) badges.push({ kind: 'info', text: `Next: ${tenantLabel(seg.next.lease, safe)}`, title: `Signed lease commences ${fmtDate(seg.next.lease.commencement)}` });
@@ -113,6 +113,7 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
       name = seg.availableFrom ? `Available ${fmtMonthYearShort(seg.availableFrom)}` : 'Available now';
       if (a) meta = `${a.sublease ? 'Sublease' : 'Direct'}${a.divisible && a.minDivisible ? ` · divisible to ${num(a.minDivisible)}` : ''}`;
       if (a && rentVisible(a, safe) && a.rentHigh > 0) meta = compactRate(a.rentLow, a.rentHigh, a.rateUnit, a.leaseType);
+      if (a && a.published === false && !safe) badges.push({ kind: 'info', text: 'Quiet', title: 'Listing not published to marketing channels' });
       break;
     }
     case 'projected': {

@@ -33,15 +33,17 @@ export interface LaidOutRow {
 }
 
 /** When a bar stops occupying its lane (open-ended bars hold the lane to the axis end). */
-function occupiedUntil(bar: TimelineBar, asOf: ISODate): ISODate {
+function occupiedUntil(bar: TimelineBar, asOf: ISODate, safe: boolean): ISODate {
   if (bar.end === null || bar.kind === 'available' || bar.kind === 'forsale') return '9999-12-31';
+  // Prospect-safe: a holdover's term is not disclosed, so its bar fades open-ended past the cursor.
+  if (safe && (bar.kind === 'holdover' || bar.kind === 'mtm')) return '9999-12-31';
   // Holdover and projected bars are drawn out to the cursor.
   if ((bar.kind === 'holdover' || bar.kind === 'projected') && bar.end < asOf) return asOf;
   return bar.end;
 }
 
 /** Greedy interval packing: each bar takes the first lane that is free at its start. */
-export function packLanes(bars: TimelineBar[], asOf: ISODate): TimelineBar[][] {
+export function packLanes(bars: TimelineBar[], asOf: ISODate, safe = false): TimelineBar[][] {
   const sorted = bars.slice().sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.key < b.key ? -1 : 1));
   const lanes: TimelineBar[][] = [];
   const free: ISODate[] = [];
@@ -53,16 +55,16 @@ export function packLanes(bars: TimelineBar[], asOf: ISODate): TimelineBar[][] {
       free.push('');
     }
     lanes[i].push(bar);
-    free[i] = occupiedUntil(bar, asOf);
+    free[i] = occupiedUntil(bar, asOf, safe);
   }
   return lanes;
 }
 
 /** Rows with their lanes, vertical position and height, stacked from `top`. */
-export function layoutRows(rows: TimelineRow[], asOf: ISODate, top: number): LaidOutRow[] {
+export function layoutRows(rows: TimelineRow[], asOf: ISODate, top: number, safe = false): LaidOutRow[] {
   let y = top;
   return rows.map((row) => {
-    const lanes = packLanes(row.bars, asOf);
+    const lanes = packLanes(row.bars, asOf, safe);
     const height = Math.max(MIN_ROW_HEIGHT, Math.max(1, lanes.length) * LANE_PITCH + ROW_PAD * 2 - (LANE_PITCH - BAR_HEIGHT));
     const out = { row, lanes, top: y, height };
     y += height;

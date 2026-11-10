@@ -48,8 +48,8 @@ export function rentRollRows(p: Property, floors: FloorView[], asOf: ISODate, sa
       rows.push(safe ? r.slice(0, -1) : r);
     }
   }
-  // Leases xRE holds without a floor or unit are still part of the rent roll: list them, flagged.
-  for (const l of unplacedLeases(p, asOf)) {
+  // Leases xRE holds without a floor or unit are still part of the rent roll: list them, flagged (owner outputs only).
+  for (const l of safe ? [] : unplacedLeases(p, asOf)) {
     const r = [l.floorId ? (p.floors.find((f) => f.id === l.floorId)?.name ?? '') : '', '', tenantLabel(l, safe), '', 'Not placed (data issue)', l.commencement, leaseEnd(l) ?? '', '', rentVisible(l, safe) && l.rate !== null ? String(l.rate) : '', rentVisible(l, safe) && l.rate !== null ? l.rateUnit : '', l.leaseType, '0'];
     rows.push(safe ? r.slice(0, -1) : r);
   }
@@ -73,14 +73,15 @@ function segmentRow(f: FloorView, s: Segment, safe: boolean): string[] {
   let leaseType = '';
 
   if (s.kind === 'sublease' && avail) {
-    // The sublease is the marketed record: its own dates and asking rent, not the head lease's.
+    // The head lease is the rent-roll record (its own commencement, end and in-place rent); the sublease
+    // asking rent is a marketing fact and lives in the display's State cell.
     tenant = lease ? tenantLabel(lease, safe) : '';
-    commencement = avail.availableFrom ?? '';
-    expiration = avail.subleaseExpiration ?? s.endDate ?? '';
-    leaseType = avail.leaseType;
-    if (rentVisible(avail, safe)) {
-      rate = `${avail.rentLow}–${avail.rentHigh}`;
-      unit = avail.rateUnit;
+    commencement = lease?.commencement ?? '';
+    expiration = s.endDate ?? '';
+    leaseType = lease?.leaseType ?? avail.leaseType;
+    if (lease && rentVisible(lease, safe) && lease.rate !== null) {
+      rate = String(lease.rate);
+      unit = lease.rateUnit;
     }
   } else if (lease) {
     tenant = tenantLabel(lease, safe);
@@ -132,11 +133,13 @@ export function rentRollDisplay(p: Property, floors: FloorView[], asOf: ISODate,
       let start = '—';
       let end = '—';
       let rate = '—';
+      let stateExtra = '';
       if (s.kind === 'sublease' && a) {
         tenant = lease ? `${tenantLabel(lease, safe)} (sublandlord)` : 'Sublease';
-        start = a.availableFrom ? fmtDate(a.availableFrom) : 'Now';
-        end = a.subleaseExpiration ? fmtDate(a.subleaseExpiration) : s.endDate ? fmtDate(s.endDate) : '—';
-        rate = rentVisible(a, safe) ? `Asking ${rateRange(a.rentLow, a.rentHigh, a.rateUnit, a.leaseType)}` : '—';
+        start = lease ? fmtDate(lease.commencement) : a.availableFrom ? fmtDate(a.availableFrom) : 'Now';
+        end = s.endDate ? fmtDate(s.endDate) : '—';
+        rate = lease && rentVisible(lease, safe) && lease.rate !== null ? fmtRate(lease.rate, lease.rateUnit, lease.leaseType) : safe ? 'Withheld' : lease?.confidential ? 'Confidential' : '—';
+        stateExtra = rentVisible(a, safe) ? ` · asking ${rateRange(a.rentLow, a.rentHigh, a.rateUnit, a.leaseType)}${a.subleaseExpiration ? ` thru ${fmtDate(a.subleaseExpiration)}` : ''}` : '';
       } else if (lease) {
         tenant = tenantLabel(lease, safe);
         start = fmtDate(lease.commencement);
@@ -152,11 +155,11 @@ export function rentRollDisplay(p: Property, floors: FloorView[], asOf: ISODate,
       const risk = s.kind === 'holdover' || s.kind === 'mtm';
       const remaining = risk ? (safe ? '—' : s.kind === 'holdover' ? 'Holdover' : 'MTM') : s.monthsToExpiry === null ? '—' : fmtMonths(Math.max(0, s.monthsToExpiry));
       const live = activeDeals(s.lease?.deals).length + activeDeals(s.availability?.deals).length + activeDeals(s.marketed?.deals).length;
-      const row = [f.floor.name, s.suite ?? '—', tenant, num(s.size), safe && risk ? 'Leased' : STATE_LABEL[s.kind], start, end, remaining, rate, live ? String(live) : '—'];
+      const row = [f.floor.name, s.suite ?? '—', tenant, num(s.size), (safe && risk ? 'Leased' : STATE_LABEL[s.kind]) + stateExtra, start, end, remaining, rate, live ? String(live) : '—'];
       rows.push(safe ? row.slice(0, -1) : row);
     }
   }
-  for (const l of unplacedLeases(p, asOf)) {
+  for (const l of safe ? [] : unplacedLeases(p, asOf)) {
     const end = leaseEnd(l);
     const row = [l.floorId ? (p.floors.find((f) => f.id === l.floorId)?.name ?? '—') : '—', '—', tenantLabel(l, safe), '—', 'Not placed (data issue)', fmtDate(l.commencement), end ? fmtDate(end) : 'Month-to-month', '—', rentVisible(l, safe) && l.rate !== null ? fmtRate(l.rate, l.rateUnit, l.leaseType) : safe ? 'Withheld' : '—', '—'];
     rows.push(safe ? row.slice(0, -1) : row);

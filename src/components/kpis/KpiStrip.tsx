@@ -24,12 +24,14 @@ interface Card {
 
 export function KpiStrip({ model, state, onAction }: KpiStripProps) {
   const { kpis: k, deltas: d, safe } = model;
+  // Leased is capped per floor while the parts are recorded SF: name the gap so the context reconciles.
+  const overAlloc = k.committed + k.availableSublease - (k.leased - Math.round(k.physical * k.leasable));
   const cards: Card[] = [
     {
       id: 'status',
       label: 'Leased',
       value: pct(k.occupancy),
-      context: `${pct(k.physical)} occupied${k.committed ? ` · ${num(k.committed)} SF signed, not in` : ''}${k.availableSublease ? ` · ${num(k.availableSublease)} SF sublet vacant` : ''}`,
+      context: `${pct(k.physical)} occupied${k.committed ? ` · ${num(k.committed)} SF signed, not in` : ''}${k.availableSublease ? ` · ${num(k.availableSublease)} sublet vacant` : ''}${overAlloc > 0 ? ` · ${num(overAlloc)} over-allocated` : ''}`,
       delta: d ? { text: `${d.occupancy >= 0 ? '+' : '−'}${Math.abs(d.occupancy * 100).toFixed(1)} pts`, good: d.occupancy >= 0 } : null,
       active: state.lens === 'status' && state.mode === 'building' && !state.q,
       title: 'Leased share of leasable RSF, including signed leases that have not commenced. Click for the status lens.',

@@ -225,9 +225,9 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
   let x1: number;
   if (isAvail) x1 = plotRight;
   else if (isMtm) x1 = Math.min(plotRight, Math.max(cursorX, visibleX0 + 24) + FADE_PX);
-  // Prospect-safe: holdover and MTM draw as a plain lease running to the cursor, like any lease with a
-  // withheld term, so neither the end date nor an open-ended fade can single them out.
-  else if (safeRisk) x1 = Math.max(cursorX, visibleX0 + 24);
+  // Prospect-safe: the term is not disclosed, so the bar runs past the cursor and fades like an
+  // open-ended lease (neutral tone, no tag), instead of stopping dead on the as-of line.
+  else if (safeRisk) x1 = Math.min(plotRight, Math.max(cursorX, visibleX0 + 24) + FADE_PX);
   else x1 = bar.end ? X(bar.end) : plotRight;
   const w = Math.max(2, x1 - x0);
   const visibleW = x1 - visibleX0;
@@ -239,7 +239,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
   // tooltip still say holdover / MTM) rather than leave an unnamed at-risk bar.
   {
     const labelPad0 = 8;
-    const end0 = (isMtm ? x1 - FADE_PX / 2 : x1 + (isHoldover ? extW : 0)) - labelPad0;
+    const end0 = (isMtm || safeRisk ? x1 - FADE_PX / 2 : x1 + (isHoldover ? extW : 0)) - labelPad0;
     const tagW0 = tagText ? Math.ceil(measure(tagText, TAG_FONT)) + 10 : 0;
     const roomWithTag = end0 - (visibleX0 + labelPad0 + (tagText ? tagW0 + 4 : 0));
     const roomWithout = end0 - (visibleX0 + labelPad0);
@@ -250,7 +250,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
   const tagX = tagText ? visibleX0 + 4 : 0;
   const labelPad = 8;
   const textX = visibleX0 + labelPad + (tagText ? tagW + 4 : 0);
-  const textEnd = (isMtm ? x1 - FADE_PX / 2 : x1 + (isHoldover ? extW : 0)) - labelPad;
+  const textEnd = (isMtm || safeRisk ? x1 - FADE_PX / 2 : x1 + (isHoldover ? extW : 0)) - labelPad;
   const textRoom = textEnd - textX;
 
   // Label tiers by visible width: the <title> and aria-label always carry the full text.
@@ -266,9 +266,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
           ? bar.label
           : isProjected && seg.lease
             ? `${tenantLabel(seg.lease, safe)} · vacated`
-            : seg.kind === 'sublease' && seg.lease
-              ? tenantLabel(seg.lease, safe)
-              : text.name;
+            : text.name;
   const sub = isNext && seg.next
     ? `Ste ${seg.next.unit.suite} · ${sf(seg.next.unit.size)} · moves in ${fmtDate(seg.next.lease.commencement)}`
     : isMkt && seg.marketed
@@ -300,7 +298,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
       ? `Available from ${fmtDate(bar.start)} · no end date`
       : 'Available now · no end date'
     : safeRisk
-      ? `Leased since ${fmtDate(bar.start)}`
+      ? `Leased since ${fmtDate(bar.start)} · term not disclosed`
       : `${fmtDate(bar.start)} – ${bar.end ? fmtDate(bar.end) : 'open-ended (no end date)'}${bar.end && !isHoldover && !isProjected && bar.kind !== 'committed' ? ` · ${fmtMonths(Math.max(0, monthsBetween(asOf, bar.end)))} left` : ''}`;
   const tooltip = `${text.tooltip}\n${dates}`;
   // A bar too narrow for its name spills the label into the free space to its right.
@@ -363,7 +361,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
       onBlur={() => onHover(null)}
     >
       {!hovered && <title>{tooltip}</title>}
-      {(isMtm || isAvail) && (
+      {(isMtm || isAvail || safeRisk) && (
         <defs>
           <linearGradient id={gradId} gradientUnits="userSpaceOnUse" x1={x1 - FADE_PX} x2={x1} y1={0} y2={0}>
             <stop offset="0" stopColor="#fff" stopOpacity={1} />
@@ -375,7 +373,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
         </defs>
       )}
       {selected && <rect className="sp-seg__ring" x={x0 - 2} y={y - 2} width={w + extW + 4} height={BAR_HEIGHT + 4} rx={5} />}
-      <g mask={isMtm || isAvail ? `url(#${gradId}-mask)` : undefined}>
+      <g mask={isMtm || isAvail || safeRisk ? `url(#${gradId}-mask)` : undefined}>
         <rect className="sp-seg__rect" x={x0 + 0.5} y={y + 0.5} width={rectW} height={BAR_HEIGHT - 1} rx={3} fill={fill} stroke={edge} />
         {bar.committed && <rect className="sp-seg__overlay" x={x0 + 0.5} y={y + 0.5} width={rectW} height={BAR_HEIGHT - 1} rx={3} fill={`url(#${PATTERN_IDS.hatch})`} />}
         {bar.sublease && <rect className="sp-seg__overlay" x={x0 + 0.5} y={y + 0.5} width={rectW} height={BAR_HEIGHT - 1} rx={3} fill={`url(#${PATTERN_IDS.dots})`} />}
@@ -399,7 +397,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
         </g>
       )}
       {nameText && (
-        <text className={`sp-tl-bar__text ${outside ? 'sp-tl-bar__text--outside' : ''}`} x={outside ? x1 + extW + 6 : textX} y={y + BAR_HEIGHT / 2 + 4} fill={outside ? 'var(--sp-color-text)' : ink}>
+        <text className={`sp-tl-bar__text ${outside ? 'sp-tl-bar__text--outside' : ''}`} x={outside ? x1 + extW + 6 : textX} y={y + BAR_HEIGHT / 2 + 4} fill={outside ? 'var(--sp-color-text)' : ink} style={!outside && (bar.committed || bar.sublease) ? { paintOrder: 'stroke', stroke: fill, strokeWidth: 3, strokeLinejoin: 'round' } : undefined}>
           <tspan className="sp-tl-bar__name">{nameText}</tspan>
           {subText && <tspan className="sp-tl-bar__sub"> · {subText}</tspan>}
         </text>

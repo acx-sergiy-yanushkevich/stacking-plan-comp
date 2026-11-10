@@ -101,7 +101,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
               !safe && ['Tenant', <strong key="t">{tenantLabel(lease, safe)}</strong>],
               ['Contact', contactLabel(lease.tenantContact, safe)],
               !safe && ['Industry', lease.industry],
-              ['Term', safe && (seg.kind === 'holdover' || seg.kind === 'mtm') ? `${fmtDate(lease.commencement)} – —` : `${fmtDate(lease.commencement)} – ${seg.endDate ? fmtDate(seg.endDate) : 'open (MTM)'}`],
+              ['Term', safe && (seg.kind === 'holdover' || seg.kind === 'mtm') ? `${fmtDate(lease.commencement)} – not disclosed` : `${fmtDate(lease.commencement)} – ${seg.endDate ? fmtDate(seg.endDate) : 'open (MTM)'}`],
               ['Remaining', remaining],
               ['Rent', rentText],
               !safe && ['Broker', lease.owner],

@@ -76,8 +76,12 @@ function barFor(s: FloorView['segments'][number], asOf: ISODate): TimelineBar[] 
         committed: s.kind === 'committed',
       },
     ];
-    // Sublease: its own bar from the availability date to the sublease expiration.
-    if (s.kind === 'sublease' && s.availability) {
+    // Sublease: its own bar from the availability date to the sublease expiration. When it runs to the
+    // head lease's own end, the head bar simply becomes the (dotted) sublease bar: one suite, one bar.
+    const subEnd = s.availability ? (s.availability.subleaseExpiration ?? leaseEnd(s.lease)) : null;
+    if (s.kind === 'sublease' && s.availability && subEnd === leaseEnd(s.lease)) {
+      bars[0] = { ...bars[0], kind: 'sublease', sublease: true };
+    } else if (s.kind === 'sublease' && s.availability) {
       bars.push({
         key: `tl-${s.key}-sub`,
         segKey: s.key,

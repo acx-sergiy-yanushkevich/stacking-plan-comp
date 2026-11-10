@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../data/mock/property';
 import { deriveFloors } from './derive';
-import { RENT_ROLL_HEADER, rentRollRows, toCsv, rentRollDisplay } from './exportCsv';
+import { RENT_ROLL_HEADER, rentRollRows, toCsv, rentRollDisplay, unplacedLeases } from './exportCsv';
 
 const floors = deriveFloors(property, TODAY, TODAY);
 const col = (name: string) => RENT_ROLL_HEADER.indexOf(name as (typeof RENT_ROLL_HEADER)[number]);
@@ -74,7 +74,8 @@ describe('rentRollRows', () => {
     expect(safe.slice(1).filter((r) => r[col('State')] === 'Leased' || r[col('State')] === 'Leased (term withheld)' || r[col('State')] === 'Committed').every((r) => r[col('Rate')] === '')).toBe(true);
     expect(safe.find((r) => r[col('Suite')] === '350')![col('Rate')]).toBe('30–32');
     expect(safe.find((r) => r[col('Suite')] === '600')![col('Tenant')]).toBe('Tenant');
-    expect(safe.length).toBe(open.length);
+    expect(safe.length).toBe(open.length - unplacedLeases(property, TODAY).length);
+    expect(safe.length).toBe(rentRollDisplay(property, floors, TODAY, true).length);
   });
   it('never puts a dollar sign in the open export either', () => {
     expect(toCsv(open)).not.toContain('$');
@@ -106,5 +107,16 @@ describe('toCsv', () => {
       expect(r[ri]).not.toBe('0 mo');
       if (r[ei] !== '—') expect(new Date(r[ei]).getTime()).toBeGreaterThanOrEqual(new Date(TODAY).getTime());
     }
+  });
+
+  it('keeps the head lease as the record of a subleased suite (its own commencement and in-place rent)', () => {
+    const rows = rentRollRows(property, floors, TODAY, false);
+    const row = rows.find((r) => r[col('Suite')] === '720')!;
+    expect(row[col('Commencement')]).toBe('2018-09-15');
+    expect(row[col('Rate')]).toBe('30');
+    const display = rentRollDisplay(property, floors, TODAY, false);
+    const d = display.find((r) => r[1] === '720')!;
+    expect(d[4]).toMatch(/^Sublease · asking \$24–\$26/);
+    expect(d[8]).toBe('$30/SF/yr FSG');
   });
 });

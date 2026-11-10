@@ -21,7 +21,7 @@ import { csvBlob, download } from './lib/exportFile';
 import { svgToPng } from './lib/exportPng';
 import { useIsNarrow } from './lib/useMedia';
 import { clearSelection } from './components/plan/actions';
-import { focusSegment, refocusTrigger } from './state/focusStore';
+import { focusSegment, refocusTrigger, rememberTrigger } from './state/focusStore';
 import { Patterns } from './components/plan/Patterns';
 import { fmtDate } from './domain/dates';
 import { num, pct } from './domain/format';
@@ -98,6 +98,7 @@ function Shell() {
   );
 
   const onKpi = (a: KpiAction) => {
+    rememberTrigger();
     switch (a) {
       case 'status':
         patch({ lens: 'status', mode: 'building', select: null, q: '', window: null, req: null, inquiry: null, bucket: null });
@@ -134,7 +135,7 @@ function Shell() {
       if (el && el !== document.body && el.closest('.sp-ins, .sp-pop__panel, .sp-sheet, .sp-stage, input, select, textarea')) return;
       if (state.bucket !== null || state.q || state.window || state.req !== null || state.inquiry) {
         patch({ bucket: null, q: '', window: null, req: null, max: null, by: null, inquiry: null, mode: 'building' });
-        document.querySelector<HTMLElement>('#sp-plan')?.focus();
+        refocusTrigger();
       }
     };
     document.addEventListener('keydown', onKey);

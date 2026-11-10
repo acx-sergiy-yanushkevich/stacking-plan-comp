@@ -52,6 +52,7 @@
 .sp-ins__row-meta .sp-chip { white-space: normal; height: auto; min-height: 20px; line-height: 1.25; text-align: left; max-width: 100%; }
 .sp-ins__change { padding: 4px 0; }
 .sp-ins__row-end { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex: none; text-align: right; }
+.sp-ins__row-end { align-self: flex-start; padding-top: 1px; }
 .sp-ins__row-value { font-weight: 600; font-variant-numeric: tabular-nums; }
 .sp-ins__row-sub { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }
 .sp-ins__row-side { display: flex; align-items: center; flex: none; padding: 4px 0; }

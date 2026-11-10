@@ -23,6 +23,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
   const { property: p, kpis: k, safe } = model;
   const rows = rentRollDisplay(p, model.floors, model.asOf, safe).filter((r, i) => i === 0 || !safe || r[4] !== 'Not placed (data issue)');
   const worklist: WorklistRow[] = model.worklist('12');
+  const atRisk: WorklistRow[] = safe ? [] : model.worklist('risk');
   const noop = () => {};
   return (
     <div className={`sp-print ${visible ? 'sp-print--visible' : ''}`} aria-hidden={!visible} inert={!visible}>
@@ -173,7 +174,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
             </table>
           </div>
           <div>
-            <h2>{safe ? 'Lease expirations · next 12 months' : 'Renewal worklist · next 12 months'}</h2>
+            <h2>{safe ? 'Lease expirations · next 12 months' : atRisk.length ? 'Renewal worklist · at risk and next 12 months' : 'Renewal worklist · next 12 months'}</h2>
             <table className="sp-print__table sp-print__table--tight">
               <thead>
                 <tr>
@@ -187,6 +188,19 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
                 </tr>
               </thead>
               <tbody>
+                {atRisk.map((r) => (
+                  <tr key={`risk-${r.segKey}`}>
+                    <td>{r.tenant}</td>
+                    <td>
+                      {r.floorName} · {r.suite}
+                    </td>
+                    <td className="num">{num(r.size)}</td>
+                    <td>{r.kind === 'holdover' ? `Holdover · expired ${r.endDate ? fmtDate(r.endDate) : ''}` : 'Month-to-month'}</td>
+                    <td className="num">—</td>
+                    <td>{r.seg.lease && rentVisible(r.seg.lease, safe) && r.seg.lease.rate !== null ? rate(r.seg.lease.rate, r.seg.lease.rateUnit, r.seg.lease.leaseType) : '—'}</td>
+                    <td>{r.renewal ? r.renewal.stage : '—'}</td>
+                  </tr>
+                ))}
                 {worklist.map((r) => (
                   <tr key={r.segKey}>
                     <td>{tenantLabel({ tenant: r.tenant }, safe)}</td>
