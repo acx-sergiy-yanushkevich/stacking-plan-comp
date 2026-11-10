@@ -47,3 +47,45 @@ describe('Header sale listing', () => {
     expect(html).not.toContain('Data issues');
   });
 });
+
+describe('Header palette control', () => {
+  /** The palette radiogroup and its options, as [name, checked] pairs. */
+  const palette = (query: string) => {
+    const { html } = render(query);
+    const group = /<div role="radiogroup" aria-label="Colour palette"[^>]*>(.*?)<\/div>/.exec(html)?.[1];
+    if (group === undefined) return null;
+    return [...group.matchAll(/<button[^>]*role="radio"[^>]*aria-checked="(true|false)"[^>]*tabindex="(-?\d)"[^>]*>(.*?)<\/button>/g)].map((m) => ({
+      name: /<span class="sp-segmented__label">(.*?)<\/span>/.exec(m[3])?.[1],
+      checked: m[1] === 'true',
+      tabbable: m[2] === '0',
+    }));
+  };
+
+  it('offers the two palettes by name, the company colours selected by default', () => {
+    expect(palette('')).toEqual([
+      { name: 'Ascendix', checked: true, tabbable: true },
+      { name: 'Vice City', checked: false, tabbable: false },
+    ]);
+  });
+
+  it('shows Vice City selected when the URL names it, in either theme', () => {
+    for (const q of ['?palette=vice', '?palette=vice&theme=light'])
+      expect(palette(q)).toEqual([
+        { name: 'Ascendix', checked: false, tabbable: false },
+        { name: 'Vice City', checked: true, tabbable: true },
+      ]);
+  });
+
+  it('stands beside the theme switch, and is not offered by the skins that have no palette', () => {
+    const { html } = render('');
+    const look = /<div class="sp-header__look">(.*?)<\/div><\/header>/.exec(html)?.[1] ?? '';
+    expect(look).toContain('aria-label="Colour palette"');
+    expect(look).toContain('aria-label="Switch to light theme"');
+    expect(look.indexOf('Colour palette')).toBeLessThan(look.indexOf('Switch to light theme'));
+    // The original blue glass keeps the theme switch alone; the embedded skin has neither.
+    expect(palette('?skin=aurora')).toBeNull();
+    expect(render('?skin=aurora').html).toContain('sp-header__look');
+    expect(palette('?skin=classic&palette=vice')).toBeNull();
+    expect(render('?skin=classic').html).not.toContain('sp-header__look');
+  });
+});

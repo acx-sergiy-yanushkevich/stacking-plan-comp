@@ -12,6 +12,8 @@ export type Lens = 'status' | 'expiry' | 'deals' | 'rent';
 export type InspectorMode = 'building' | 'block' | 'floor' | 'find' | 'worklist' | 'issues' | 'area';
 export type WindowKey = 'risk' | '90' | '180' | '12' | '24';
 export type Theme = 'light' | 'dark';
+/** A colour palette for the glass skin. `ascendix` (the company colours) is the default. */
+export type Palette = 'ascendix' | 'vice';
 export type FitKind = 'any' | 'direct' | 'sublease';
 
 export interface PlanState {
@@ -34,10 +36,13 @@ export interface PlanState {
   census: string | null;
   theme: Theme | null;
   /**
-   * Visual skin. Absent (the default) is frosted glass in the Vice City palette; `aurora` is the
-   * same glass in its original blue palette; `classic` is the flat Lightning look.
+   * Visual skin. Absent (the default) is frosted glass in one of the two palettes (`palette`);
+   * `aurora` is the same glass in its original blue colours and `classic` is the flat Lightning
+   * look: both opt out of the palettes.
    */
   skin?: 'aurora' | 'classic';
+  /** Colour palette of the default skin. Absent is `ascendix`, the company colours; `vice` is Vice City. */
+  palette?: 'vice';
 }
 
 const VIEWS: readonly View[] = ['building', 'stack', 'timeline', 'map', 'floor'];
@@ -45,6 +50,10 @@ const LENSES: readonly Lens[] = ['status', 'expiry', 'deals', 'rent'];
 const MODES: readonly InspectorMode[] = ['building', 'block', 'floor', 'find', 'worklist', 'issues', 'area'];
 const WINDOWS: readonly WindowKey[] = ['risk', '90', '180', '12', '24'];
 const THEMES: readonly Theme[] = ['light', 'dark'];
+export const PALETTES: ReadonlyArray<{ id: Palette; label: string }> = [
+  { id: 'ascendix', label: 'Ascendix' },
+  { id: 'vice', label: 'Vice City' },
+];
 const FITS: readonly FitKind[] = ['any', 'direct', 'sublease'];
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
@@ -165,6 +174,7 @@ export function parseState(search: string, today: ISODate): PlanState {
     census: text(p.get('census')),
     theme: oneOfOrNull(THEMES, p.get('theme')),
     ...(p.get('skin') === 'classic' ? { skin: 'classic' as const } : p.get('skin') === 'aurora' ? { skin: 'aurora' as const } : {}),
+    ...(p.get('palette') === 'vice' ? { palette: 'vice' as const } : {}),
   };
   // A link with `safe=1` is a crossing into the mode: `q` and `asOf` are dropped with everything else it never holds.
   return enterSafe(parsed, today);
@@ -192,21 +202,31 @@ export function serializeState(s: PlanState, today: ISODate): string {
   if (s.census) p.set('census', s.census);
   if (s.theme) p.set('theme', s.theme);
   if (s.skin) p.set('skin', s.skin);
+  if (s.palette) p.set('palette', s.palette);
   const qs = p.toString();
   return qs ? `?${qs}` : '';
 }
 
-/** The Vice City palette is the default look; `aurora` and `classic` opt out of it. */
-export function isVice(s: Pick<PlanState, 'skin'>): boolean {
-  return s.skin === undefined;
+/**
+ * The palette the plan is drawn in: the company colours unless the URL names Vice City. The two
+ * opt-out skins (`aurora`, `classic`) have colours of their own and no palette.
+ */
+export function paletteOf(s: Pick<PlanState, 'skin' | 'palette'>): Palette | null {
+  if (s.skin !== undefined) return null;
+  return s.palette === 'vice' ? 'vice' : 'ascendix';
+}
+
+/** What the palette control writes: the default palette is left out of the URL. */
+export function palettePatch(palette: Palette): Pick<PlanState, 'palette'> {
+  return { palette: palette === 'vice' ? 'vice' : undefined };
 }
 
 /**
- * Effective theme. An explicit `theme` wins; the Vice City palette is dark unless told otherwise;
+ * Effective theme. An explicit `theme` wins; both palettes are dark unless told otherwise;
  * the other skins follow the operating system.
  */
-export function isDark(s: Pick<PlanState, 'skin' | 'theme'>, prefersDark: boolean): boolean {
-  return s.theme ? s.theme === 'dark' : isVice(s) || prefersDark;
+export function isDark(s: Pick<PlanState, 'skin' | 'palette' | 'theme'>, prefersDark: boolean): boolean {
+  return s.theme ? s.theme === 'dark' : paletteOf(s) !== null || prefersDark;
 }
 
 /**

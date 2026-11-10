@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent } from 'react';
+import { useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { Icon, type IconName } from './Icon';
 
 export interface SegmentedOption<T extends string> {
@@ -6,6 +6,8 @@ export interface SegmentedOption<T extends string> {
   label: string;
   icon?: IconName;
   title?: string;
+  /** Decoration drawn before the label (a colour swatch). The label is then its own element, so a narrow layout can keep it for screen readers only. */
+  adornment?: ReactNode;
 }
 
 export interface SegmentedProps<T extends string> {
@@ -56,7 +58,8 @@ export function Segmented<T extends string>({ options, value, onChange, size = '
             onKeyDown={(e) => onKey(e, i)}
           >
             {o.icon && <Icon name={o.icon} size={14} />}
-            {!iconsOnly && o.label}
+            {o.adornment}
+            {!iconsOnly && (o.adornment ? <span className="sp-segmented__label">{o.label}</span> : o.label)}
           </button>
         );
       })}

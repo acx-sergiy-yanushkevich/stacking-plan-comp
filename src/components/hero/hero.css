@@ -5,12 +5,15 @@
 .sp-hero__floor { cursor: pointer; transition: transform var(--sp-ease-slow), opacity var(--sp-ease-slow), filter var(--sp-ease); }
 .sp-hero__face { stroke: var(--sp-color-card); stroke-width: 0.6; stroke-linejoin: round; stroke-opacity: 0.85; }
 .sp-hero__shade { fill: #0b1020; pointer-events: none; }
-/* Vice by day: the slabs are pale, like the legend's swatches. Each face is outlined in its tone's edge
-   colour (the swatch's own border) instead of the card's white, so the building keeps a firm silhouette
-   and every state is the same fill-and-edge pair it is in the legend, the stack and the plate.
-   `:where` keeps this as weak as the rule above, so the hover, focus, lifted and dimmed states below still win. */
-:where(:root[data-palette='vice'][data-theme='light']) .sp-hero__face { stroke: currentColor; stroke-opacity: 0.7; }
+/* A palette by day (Ascendix, Vice City): the slabs are pale, like the legend's swatches. Each face is
+   outlined in its tone's edge colour (the swatch's own border) instead of the card's white, so the building
+   keeps a firm silhouette and every state is the same fill-and-edge pair it is in the legend, the stack and
+   the plate. `:where` keeps this as weak as the rule above, so the hover, focus, lifted and dimmed states
+   below still win. The shade on the side walls is tinted to the palette: indigo in Vice City, navy
+   (Secondary Blue 3) in the company colours. */
+:where(:root[data-palette][data-theme='light']) .sp-hero__face { stroke: currentColor; stroke-opacity: 0.7; }
 :where(:root[data-palette='vice'][data-theme='light']) .sp-hero__shade { fill: #2a2f55; }
+:where(:root[data-palette='ascendix'][data-theme='light']) .sp-hero__shade { fill: #1e2d3c; }
 .sp-hero__floor.is-hot { filter: brightness(1.07) saturate(1.15); }
 .sp-hero__floor.is-hot .sp-hero__face, .sp-hero__floor.is-focus .sp-hero__face { stroke: var(--sp-color-brand); stroke-opacity: 1; stroke-width: 1.8; }
 .sp-hero__floor.is-hot .sp-hero__shade { fill: var(--sp-color-brand); fill-opacity: 0.3; }

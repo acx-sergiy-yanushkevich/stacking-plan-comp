@@ -37,7 +37,7 @@
 .sp-badge--warn rect { fill: #a04d00; } .sp-badge--warn text { fill: #fff; }
 .sp-badge--info rect { fill: var(--sp-color-card); stroke: var(--sp-color-border-strong); } .sp-badge--info text { fill: var(--sp-color-text); }
 .sp-badge--deal rect { fill: var(--sp-color-pill-deal, var(--sp-color-brand-strong)); } .sp-badge--deal text { fill: #fff; }
-.sp-badge--sale rect { fill: #4b2c87; } .sp-badge--sale text { fill: #fff; }
+.sp-badge--sale rect { fill: var(--sp-color-pill-sale, #4b2c87); } .sp-badge--sale text { fill: #fff; }
 .sp-badge--lock rect { fill: #3b3f46; } .sp-badge--lock text { fill: #fff; }
 .sp-badge--match rect { fill: #0b7a66; } .sp-badge--match text { fill: #fff; }
 :root[data-theme='dark'] .sp-badge--info rect { fill: var(--sp-color-card-2); }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TODAY } from '../data/mock/property';
-import { DEFAULT_STATE, applyPatch, defaultState, deriveMode, enterSafe, isDark, isVice, parseState, safeState, serializeState, type PlanState } from './planState';
+import { DEFAULT_STATE, applyPatch, defaultState, deriveMode, enterSafe, isDark, palettePatch, paletteOf, parseState, safeState, serializeState, type PlanState } from './planState';
 
 describe('parseState', () => {
   it('reads every supported field', () => {
@@ -211,16 +211,43 @@ describe('skin and theme', () => {
     expect(serializeState({ ...defaultState(TODAY), skin: 'aurora' }, TODAY)).toBe('?skin=aurora');
     expect(parseState('?skin=classic', TODAY)).toEqual({ ...defaultState(TODAY), skin: 'classic' });
   });
-  it('the Vice City palette is the default and is dark unless a theme is named', () => {
+  it('the company palette is the default and is dark unless a theme is named', () => {
     const d = defaultState(TODAY);
-    expect(isVice(d)).toBe(true);
-    expect(isVice({ skin: 'aurora' })).toBe(false);
+    expect(paletteOf(d)).toBe('ascendix');
     expect(isDark(d, false)).toBe(true);
     expect(isDark({ ...d, theme: 'light' }, true)).toBe(false);
+  });
+  it('reads `palette=vice` and ignores anything else', () => {
+    expect(parseState('', TODAY).palette).toBeUndefined();
+    expect(parseState('?palette=vice', TODAY).palette).toBe('vice');
+    expect(parseState('?palette=ascendix', TODAY).palette).toBeUndefined();
+    expect(parseState('?palette=neon', TODAY).palette).toBeUndefined();
+    expect(paletteOf(parseState('?palette=vice', TODAY))).toBe('vice');
+    expect(paletteOf(parseState('?palette=neon', TODAY))).toBe('ascendix');
+  });
+  it('round-trips the palette and omits the default', () => {
+    const d = defaultState(TODAY);
+    expect(serializeState({ ...d, ...palettePatch('vice') }, TODAY)).toBe('?palette=vice');
+    expect(serializeState({ ...d, palette: 'vice', ...palettePatch('ascendix') }, TODAY)).toBe('');
+    expect(parseState('?palette=vice&theme=light', TODAY)).toEqual({ ...d, palette: 'vice', theme: 'light' });
+    // A patch is applied like every other change of state.
+    expect(applyPatch(d, palettePatch('vice'), TODAY).palette).toBe('vice');
+    expect(applyPatch({ ...d, palette: 'vice' }, palettePatch('ascendix'), TODAY).palette).toBeUndefined();
+  });
+  it('Vice City is dark unless a theme is named, like the default palette', () => {
+    expect(isDark({ palette: 'vice', theme: null }, false)).toBe(true);
+    expect(isDark({ palette: 'vice', theme: 'light' }, true)).toBe(false);
+  });
+  it('the opt-out skins have no palette, whatever the URL says', () => {
+    expect(paletteOf({ skin: 'aurora' })).toBeNull();
+    expect(paletteOf({ skin: 'classic' })).toBeNull();
+    expect(paletteOf(parseState('?skin=aurora&palette=vice', TODAY))).toBeNull();
+    expect(paletteOf(parseState('?skin=classic&palette=vice', TODAY))).toBeNull();
   });
   it('the other skins follow the operating system', () => {
     expect(isDark({ skin: 'aurora', theme: null }, false)).toBe(false);
     expect(isDark({ skin: 'classic', theme: null }, true)).toBe(true);
     expect(isDark({ skin: 'aurora', theme: 'dark' }, false)).toBe(true);
+    expect(isDark({ skin: 'aurora', palette: 'vice', theme: null }, false)).toBe(false);
   });
 });

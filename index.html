@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-skin="glass" data-palette="vice" data-theme="dark">
+<html lang="en" data-skin="glass" data-palette="ascendix" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,6 +9,20 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <title>Stacking plan</title>
+    <script>
+      // The first paint is in the colours the link asks for (App keeps these attributes in step afterwards).
+      (function () {
+        try {
+          var p = new URLSearchParams(location.search), r = document.documentElement, skin = p.get('skin'), theme = p.get('theme');
+          if (skin === 'classic' || skin === 'aurora') {
+            r.dataset.skin = skin === 'classic' ? 'classic' : 'glass';
+            delete r.dataset.palette;
+            delete r.dataset.theme;
+          } else if (p.get('palette') === 'vice') r.dataset.palette = 'vice';
+          if (theme === 'light' || theme === 'dark') r.dataset.theme = theme;
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

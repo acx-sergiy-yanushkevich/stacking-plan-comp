@@ -5,7 +5,8 @@ import { property, TODAY } from './data/mock/property';
 import { usePlanModel } from './model/usePlanModel';
 import { usePlanState, useDocumentTitle } from './state/usePlanState';
 import { useAnnouncement } from './state/useAnnouncement';
-import { deriveMode, isVice, shownView } from './state/planState';
+import { canShowRollover } from './domain/safe';
+import { deriveMode, paletteOf, shownView } from './state/planState';
 import { rentRollRows, toCsv } from './domain/exportCsv';
 import { Header, type ExportKind } from './components/shell/Header';
 import { Toolbar } from './components/shell/Toolbar';
@@ -85,7 +86,7 @@ function Shell() {
       const k = model.kpis;
       const d = model.deltas;
       setAnnounce(
-        `As of ${fmtDate(state.asOf)}${model.isProjected ? ' (projected)' : ''}: leased ${pct(k.occupancy)}${d ? `, ${d.occupancy >= 0 ? 'up' : 'down'} ${Math.abs(d.occupancy * 100).toFixed(1)} points` : ''}; available ${num(k.availableDirect + k.availableSublease)} SF; expiring in 12 months ${num(k.expiring12)} SF.`,
+        `As of ${fmtDate(state.asOf)}${model.isProjected ? ' (projected)' : ''}: leased ${pct(k.occupancy)}${d ? `, ${d.occupancy >= 0 ? 'up' : 'down'} ${Math.abs(d.occupancy * 100).toFixed(1)} points` : ''}; available ${num(k.availableDirect + k.availableSublease)} SF${canShowRollover(state.safe) ? `; expiring in 12 months ${num(k.expiring12)} SF` : ''}.`,
       );
     }, 400);
     return () => window.clearTimeout(t);
@@ -107,9 +108,9 @@ function Shell() {
   // Labels are fitted by measuring text: fit them again once the web font has loaded.
   const fontTick = useSyncExternalStore(subscribeFonts, getFontEpoch, () => 0);
 
-  // The Vice City palette is dark unless the URL names a theme; the print preview keeps the white report.
-  const vice = isVice(state);
-  const theme = state.theme ?? (vice && !PRINT_PREVIEW ? 'dark' : null);
+  // Both palettes are dark unless the URL names a theme; the print preview keeps the white report.
+  const palette = paletteOf(state);
+  const theme = state.theme ?? (palette && !PRINT_PREVIEW ? 'dark' : null);
   useEffect(() => {
     const root = document.documentElement;
     const apply = (t: string | null) => {
@@ -130,9 +131,9 @@ function Shell() {
   useEffect(() => {
     const root = document.documentElement;
     root.dataset.skin = state.skin === 'classic' ? 'classic' : 'glass';
-    if (vice) root.dataset.palette = 'vice';
+    if (palette) root.dataset.palette = palette;
     else delete root.dataset.palette;
-  }, [state.skin, vice]);
+  }, [state.skin, palette]);
 
   const onExport = useCallback(
     async (kind: ExportKind) => {
