@@ -212,7 +212,7 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
   } else if (activeWorklist && effectiveWindow) {
     highlight = new Set(activeWorklist.map((r) => r.segKey));
     const total = activeWorklist.reduce((s, r) => s + r.size, 0);
-    filterLabel = `${effectiveWindow === 'risk' ? 'Leases at risk (holdover, month-to-month)' : `Leases ending within ${WINDOW_LABEL[effectiveWindow]}`} · ${activeWorklist.length} lease${activeWorklist.length === 1 ? '' : 's'} · ${sf(total)}`;
+    filterLabel = `${effectiveWindow === 'risk' ? 'Leases at risk (holdover, month-to-month)' : `Leases ending within ${WINDOW_LABEL[effectiveWindow]}`} · ${activeWorklist.length}\u00a0lease${activeWorklist.length === 1 ? '' : 's'} · ${sf(total).replace(' ', '\u00a0')}`;
   } else if (bucketKeys && state.bucket !== null) {
     highlight = bucketKeys;
     const b: RolloverBucket | undefined = roll.buckets.find((x) => x.key === state.bucket);

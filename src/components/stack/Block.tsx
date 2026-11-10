@@ -159,6 +159,9 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
     if (two.length && two.join(' ') === text.name) nameSets.push(two.map(nameLine));
     const tiny = h >= 48 ? wrapWords(text.name, room(0, FONT_TINY, true), FONT_TINY, 3) : [];
     if (tiny.length && tiny.join(' ') === text.name) nameSets.push(tiny.map((t) => ({ t, cls: 'sp-seg__tiny', font: FONT_TINY })));
+    // Narrow tiles: the whole name at 10 px before giving it up.
+    const micro = tier >= 2 && h >= 48 && seg.kind !== 'unmarketed' ? wrapWords(text.name, room(0, FONT_MICRO, true), FONT_MICRO, 2) : [];
+    if (micro.length && micro.join(' ') === text.name && !(tiny.length && tiny.join(' ') === text.name)) nameSets.push(micro.map((t) => ({ t, cls: 'sp-seg__micro', font: FONT_MICRO })));
   }
   /** The state in a word, for a block that cannot hold its name. */
   const wordLine = (): Line[] => {
@@ -179,6 +182,8 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
         for (const compact of [false, true]) {
           const fs = sets[compact ? 1 : 0][i];
           if (!fs || fs.length === 0 || lead.length + fs.length > maxLines) continue;
+          // A wrapped 13 px name needs the regular pitch; at the tight pitch the 11 px name is used instead.
+          if (compact && lead.length > 1 && lead[0].font === FONT_NAME) continue;
           const r = fit([...lead, ...fs], named);
           if (r && r.compact === compact) return r;
         }
@@ -207,11 +212,14 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   const patternFill = pattern === 'hatch' ? `url(#${PATTERN_IDS.hatch})` : pattern === 'dots' ? `url(#${PATTERN_IDS.dots})` : pattern === 'asking' ? `url(#${PATTERN_IDS.asking})` : null;
   // Accessible name: floor, the full name when it is not drawn, exactly what is drawn (WCAG 2.5.3), then
   // the facts that are not drawn. Nothing is said twice.
-  const visible = [glyph ?? '', ...lines.map((l) => l.t), showSecond && second ? second.text : '', showOther && other ? other.text : '', showDeal && deal ? deal.text : ''].filter(Boolean).join(' ');
+  const drawn = [...lines.map((l) => l.t), showSecond && second ? second.text : '', showOther && other ? other.text : ''].filter(Boolean);
+  const visible = [...drawn, showDeal && deal ? deal.text : ''].filter(Boolean).join(' ');
   const dealTail = showDeal && deal ? ` live deal${deal.text === '1' ? '' : 's'}` : '';
   const floorName = text.aria.split(',')[0];
-  const extras = [text.sub, text.meta, ...text.badges.filter((bd) => !(bd.kind === 'deal' && dealTail)).map((bd) => (bd.kind === 'deal' ? `${bd.text} live deal${bd.text === '1' ? '' : 's'}` : bd.title ?? bd.text))].filter((t, i, all) => t && !visible.includes(t) && all.indexOf(t) === i);
-  const ariaLabel = `${[floorName, picked?.named ? null : text.name, visible ? `${visible}${dealTail}` : null].filter(Boolean).join(', ')}${extras.length ? `. ${extras.join(', ')}` : ''}`;
+  const extras = [text.sub, text.meta, ...text.badges.filter((bd) => !(bd.kind === 'deal' && dealTail) && !visible.includes(bd.text)).map((bd) => (bd.kind === 'deal' ? `${bd.text} live deal${bd.text === '1' ? '' : 's'}` : bd.title ?? bd.text))].filter((t, i, all) => t && !visible.includes(t) && all.indexOf(t) === i);
+  // The drawn label is kept contiguous (WCAG 2.5.3) but read with pauses: the lines are joined by line breaks.
+  const spoken = [...drawn, showDeal && deal ? `${deal.text}${dealTail}` : ''].filter(Boolean).join('\n');
+  const ariaLabel = `${[floorName, picked?.named ? null : text.name, spoken || null].filter(Boolean).join(', ')}${extras.length ? `. ${extras.join(', ')}` : ''}`;
   const accentTop = tone === 'rent-net';
 
   return (

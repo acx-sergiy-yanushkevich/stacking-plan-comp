@@ -99,7 +99,7 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
         </p>
         {roll.overAllocated.length > 0 && !safe && (
           <p className="sp-ins__note sp-ins__warn">
-            {roll.overAllocated.map((o) => `${o.floor} is over-allocated by ${sf(o.sf)}`).join('; ')}: lease SF is shown as recorded, so the periods can exceed the leasable area. Leased is capped at {num(model.kpis.leased)} SF: {num(Math.round(model.kpis.physical * model.kpis.leasable))} occupied + {num(model.kpis.committed)} signed, not in + {num(model.kpis.availableSublease)} sublet vacant − {num(roll.overAllocated.reduce((t, o) => t + o.sf, 0))} over-allocated.
+            {roll.overAllocated.map((o) => `${o.floor} is over-allocated by ${sf(o.sf)}`).join('; ')}: periods use recorded SF, so they can exceed the leasable area; leased is capped at {num(model.kpis.leased)} SF.
           </p>
         )}
       </Section>

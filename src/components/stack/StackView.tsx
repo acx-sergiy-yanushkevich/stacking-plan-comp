@@ -71,10 +71,12 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
       const s = segIndex.get(key);
       const a = s?.availability ?? s?.marketed;
       if (!s || !a || (s.kind !== 'available' && s.kind !== 'sublease' && !s.marketed)) return undefined;
-      const n = matchingInquiries(model.property.inquiries, { size: a.size, divisible: a.divisible, minDivisible: a.minDivisible, from: a.availableFrom }, model.asOf).length;
+      // While one inquiry is being matched, only its own fits are marked.
+      const pool = state.inquiry ? model.property.inquiries.filter((i) => i.id === state.inquiry) : model.property.inquiries;
+      const n = matchingInquiries(pool, { size: a.size, divisible: a.divisible, minDivisible: a.minDivisible, from: a.availableFrom }, model.asOf).length;
       return n || undefined;
     },
-    [model.req, model.property.inquiries, model.asOf, segIndex, state.safe],
+    [model.req, model.property.inquiries, model.asOf, segIndex, state.safe, state.inquiry],
   );
 
   // Roving tabindex across the grid
@@ -130,6 +132,9 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
         if (state.select) {
           e.preventDefault();
           clearSelection(patch);
+        } else if (state.floor) {
+          e.preventDefault();
+          patch({ floor: null, mode: 'building' });
         }
         return;
       default:
@@ -222,9 +227,14 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                   }}
                 >
                   <rect x={0} y={0} width={gutter - 8} height={rowH} rx={4} fill="transparent" />
-                  <text className="sp-gutter__name" x={8} y={phone ? rowH / 2 + 5 : rowH >= 60 ? 22 : 15}>
+                  <text className="sp-gutter__name" x={8} y={phone ? rowH / 2 - 1 : rowH >= 60 ? 22 : 15}>
                     {floorNum}
                   </text>
+                  {phone && (
+                    <text className="sp-gutter__pct" x={2} y={rowH / 2 + 12} fontSize={10}>
+                      {pct(leasedPct)}
+                    </text>
+                  )}
                   {phone && f.overAllocatedBy > 0 && !state.safe && (
                     <text className="sp-gutter__warn" x={2} y={rowH - 3} fontSize={9} fontWeight={600}>
                       +{num(f.overAllocatedBy)} SF
@@ -264,7 +274,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                 {r.boxes.map((b, bi) => {
                   const seg = segIndex.get(b.key)!;
                   const reason = model.searchReasons?.get(b.key);
-                  const text = segmentText(seg, { safe: state.safe, asOf: model.asOf, today: model.today, lens: state.lens, floorName: f.floor.name, matches: matchCount(b.key), matchReason: reason && reason !== 'Tenant' && !reason.startsWith('Suite') && !reason.startsWith('Floor') ? reason : undefined });
+                  const text = segmentText(seg, { safe: state.safe, asOf: model.asOf, today: model.today, lens: state.lens, floorName: f.floor.name, matches: matchCount(b.key), matchLabel: state.inquiry ? 'Fits this inquiry' : undefined, matchReason: reason && reason !== 'Tenant' && !reason.startsWith('Suite') && !reason.startsWith('Floor') ? reason : undefined });
                   return (
                     <Block
                       key={b.key}

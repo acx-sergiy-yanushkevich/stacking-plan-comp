@@ -275,7 +275,9 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
         ? `${bar.end ? `thru ${fmtDate(bar.end)}` : 'open-ended'}`
         : isAvail
           ? `${sf(seg.size)}${text.meta ? ` · ${text.meta}` : ''}`
-          : text.sub;
+          : safeRisk
+            ? `${text.sub} · term not disclosed`
+            : text.sub;
   // Names with digits ("Vacates Apr '27", "Available · Ste 1250") are shown whole or not at all.
   // Whole name or nothing: a partial tenant name misleads (the <title> carries the full text).
   const fitName = (room: number) => (measure(name, NAME_FONT) <= room ? name : fitParts(name, room, NAME_FONT));
@@ -400,6 +402,9 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
             {`${tagText} `}
           </text>
         </g>
+      )}
+      {nameText && !outside && (bar.committed || bar.sublease) && (
+        <rect x={textX - 4} y={y + 3} width={Math.ceil(measure(nameText, NAME_FONT) + (subText ? measure(` · ${subText}`, SUB_FONT) : 0)) + 8} height={BAR_HEIGHT - 6} rx={3} fill="var(--sp-color-card)" fillOpacity={0.92} pointerEvents="none" />
       )}
       {nameText && (
         <text className={`sp-tl-bar__text ${outside ? 'sp-tl-bar__text--outside' : ''}`} x={outside ? x1 + extW + 6 + (trailingTag ? trailingW + 6 : 0) : textX} y={y + BAR_HEIGHT / 2 + 4} fill={outside ? 'var(--sp-color-text)' : ink} style={{ paintOrder: 'stroke', stroke: outside ? 'var(--sp-color-card)' : fill, strokeWidth: 3, strokeLinejoin: 'round' }}>

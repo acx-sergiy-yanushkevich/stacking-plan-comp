@@ -14,13 +14,15 @@
     --sp-color-brand: #2563eb; --sp-color-brand-strong: #1d3fae; --sp-color-pill-deal: #1d3fae;
     --sp-color-brand-soft: rgba(59, 107, 255, 0.13); --sp-color-on-brand: #ffffff; --sp-color-focus: #2563eb;
     --sp-shadow-pop: 0 18px 50px rgba(30, 41, 90, 0.22), 0 2px 6px rgba(30, 41, 90, 0.12);
-    --tone-leased-fill: rgba(255, 255, 255, 0.52); --tone-leased-text: #111827; --tone-leased-edge: rgba(71, 85, 125, 0.3);
-    --tone-neutral-fill: rgba(255, 255, 255, 0.52); --tone-neutral-text: #111827; --tone-neutral-edge: rgba(71, 85, 125, 0.3);
-    --tone-muted-fill: rgba(255, 255, 255, 0.36); --tone-muted-text: #4b5470; --tone-muted-edge: rgba(71, 85, 125, 0.22);
+    --tone-leased-fill: rgba(255, 255, 255, 0.84); --tone-leased-text: #111827; --tone-leased-edge: rgba(71, 85, 125, 0.3);
+    --tone-neutral-fill: rgba(255, 255, 255, 0.84); --tone-neutral-text: #111827; --tone-neutral-edge: rgba(71, 85, 125, 0.3);
+    --tone-muted-fill: rgba(255, 255, 255, 0.5); --tone-muted-text: #4b5470; --tone-muted-edge: rgba(71, 85, 125, 0.22);
+    /* Opaque equivalents for surfaces that cannot be translucent (the 3D map extrusions). */
+    --tone-leased-solid: #e7edf3; --tone-neutral-solid: #e7edf3; --tone-muted-solid: #f1f3f5;
 
     --sp-glass-blur: blur(22px) saturate(170%);
     --sp-glass-edge: rgba(255, 255, 255, 0.82);
-    --sp-glass-float: rgba(255, 255, 255, 0.93);
+    --sp-glass-float: rgba(255, 255, 255, 0.985);
     --sp-glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 12px 32px rgba(40, 54, 120, 0.12), 0 1px 2px rgba(40, 54, 120, 0.08);
     --sp-glass-lift: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 18px 40px rgba(40, 54, 120, 0.18), 0 2px 4px rgba(40, 54, 120, 0.1);
     --sp-glass-active: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(224, 234, 255, 0.78));
@@ -51,11 +53,12 @@
       --sp-color-brand: #7aa7ff; --sp-color-brand-strong: #a9c4ff; --sp-color-pill-deal: #1b5fa8;
       --sp-color-brand-soft: rgba(122, 167, 255, 0.16); --sp-color-on-brand: #0b1533; --sp-color-focus: #a9c4ff;
       --sp-shadow-pop: 0 20px 56px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4);
-      --tone-leased-fill: rgba(255, 255, 255, 0.09); --tone-leased-text: #e9edf2; --tone-leased-edge: rgba(255, 255, 255, 0.18);
-      --tone-neutral-fill: rgba(255, 255, 255, 0.09); --tone-neutral-text: #e9edf2; --tone-neutral-edge: rgba(255, 255, 255, 0.18);
-      --tone-muted-fill: rgba(255, 255, 255, 0.045); --tone-muted-text: #a2abbf; --tone-muted-edge: rgba(255, 255, 255, 0.12);
+      --tone-leased-fill: rgba(44, 52, 84, 0.86); --tone-leased-text: #e9edf2; --tone-leased-edge: rgba(255, 255, 255, 0.18);
+      --tone-neutral-fill: rgba(44, 52, 84, 0.86); --tone-neutral-text: #e9edf2; --tone-neutral-edge: rgba(255, 255, 255, 0.18);
+      --tone-muted-fill: rgba(34, 40, 66, 0.7); --tone-muted-text: #a2abbf; --tone-muted-edge: rgba(255, 255, 255, 0.12);
+      --tone-leased-solid: #2b3139; --tone-neutral-solid: #2b3139; --tone-muted-solid: #24272b;
       --sp-glass-edge: rgba(255, 255, 255, 0.13);
-      --sp-glass-float: rgba(20, 26, 46, 0.95);
+      --sp-glass-float: rgba(20, 26, 46, 0.985);
       --sp-glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 16px 40px rgba(0, 0, 0, 0.45);
       --sp-glass-lift: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 22px 48px rgba(0, 0, 0, 0.55);
       --sp-glass-active: linear-gradient(180deg, rgba(122, 167, 255, 0.2), rgba(122, 167, 255, 0.1));
@@ -83,11 +86,12 @@
     --sp-color-brand: #7aa7ff; --sp-color-brand-strong: #a9c4ff; --sp-color-pill-deal: #1b5fa8;
     --sp-color-brand-soft: rgba(122, 167, 255, 0.16); --sp-color-on-brand: #0b1533; --sp-color-focus: #a9c4ff;
     --sp-shadow-pop: 0 20px 56px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4);
-    --tone-leased-fill: rgba(255, 255, 255, 0.09); --tone-leased-text: #e9edf2; --tone-leased-edge: rgba(255, 255, 255, 0.18);
-    --tone-neutral-fill: rgba(255, 255, 255, 0.09); --tone-neutral-text: #e9edf2; --tone-neutral-edge: rgba(255, 255, 255, 0.18);
-    --tone-muted-fill: rgba(255, 255, 255, 0.045); --tone-muted-text: #a2abbf; --tone-muted-edge: rgba(255, 255, 255, 0.12);
+    --tone-leased-fill: rgba(44, 52, 84, 0.86); --tone-leased-text: #e9edf2; --tone-leased-edge: rgba(255, 255, 255, 0.18);
+    --tone-neutral-fill: rgba(44, 52, 84, 0.86); --tone-neutral-text: #e9edf2; --tone-neutral-edge: rgba(255, 255, 255, 0.18);
+    --tone-muted-fill: rgba(34, 40, 66, 0.7); --tone-muted-text: #a2abbf; --tone-muted-edge: rgba(255, 255, 255, 0.12);
+      --tone-leased-solid: #2b3139; --tone-neutral-solid: #2b3139; --tone-muted-solid: #24272b;
     --sp-glass-edge: rgba(255, 255, 255, 0.13);
-    --sp-glass-float: rgba(20, 26, 46, 0.95);
+    --sp-glass-float: rgba(20, 26, 46, 0.985);
     --sp-glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 16px 40px rgba(0, 0, 0, 0.45);
     --sp-glass-lift: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 22px 48px rgba(0, 0, 0, 0.55);
     --sp-glass-active: linear-gradient(180deg, rgba(122, 167, 255, 0.2), rgba(122, 167, 255, 0.1));
@@ -159,7 +163,8 @@
 
   /* ── The plan: tenants are clear panes, states are tinted glass ── */
   :root[data-skin='glass'] .sp-stack .sp-seg__rect { rx: 7px; filter: var(--sp-glass-pane-shadow); }
-  :root[data-skin='glass'] .sp-stack .sp-seg:hover .sp-seg__rect { filter: var(--sp-glass-pane-shadow) brightness(0.97); }
+  :root[data-skin='glass'] .sp-seg:hover .sp-seg__rect { stroke: var(--sp-color-brand); stroke-opacity: 0.7; }
+  :root[data-skin='glass'] .sp-stack .sp-seg:hover .sp-seg__rect { filter: drop-shadow(0 3px 6px rgba(30, 41, 90, 0.26)); }
   :root[data-skin='glass'] .sp-stack .sp-seg__ring { rx: 10px; }
   :root[data-skin='glass'] .sp-seg__gloss { display: block; fill: var(--sp-glass-gloss); pointer-events: none; }
   :root[data-skin='glass'] .sp-seg--dashed .sp-seg__gloss, :root[data-skin='glass'] .sp-seg.is-dim .sp-seg__gloss { display: none; }
@@ -174,4 +179,29 @@
     -webkit-backdrop-filter: var(--sp-glass-blur); backdrop-filter: var(--sp-glass-blur);
     box-shadow: var(--sp-glass-shadow);
   }
+
+  /* Less transparency / more contrast / forced colours: solid panels, no blur, no backdrop. */
+  @media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
+    :root[data-skin='glass'] {
+      --sp-glass-blur: none; --sp-aurora: none;
+      --sp-color-card: #ffffff; --sp-color-card-2: #f3f5fa; --sp-glass-float: #ffffff; --sp-glass-control: #f3f5fa; --sp-glass-control-on: #ffffff;
+      --sp-color-border: #d5dae6; --sp-glass-edge: #c3cadb;
+      --tone-leased-fill: #eef1f7; --tone-neutral-fill: #eef1f7; --tone-muted-fill: #f3f5fa;
+    }
+    :root[data-skin='glass'][data-theme='dark'] {
+      --sp-color-card: #141a2e; --sp-color-card-2: #1b2238; --sp-glass-float: #141a2e; --sp-glass-control: #1b2238; --sp-glass-control-on: #2a3350;
+      --sp-color-border: #2c3552; --sp-glass-edge: #3a4566;
+      --tone-leased-fill: #2a3250; --tone-neutral-fill: #2a3250; --tone-muted-fill: #1f2640;
+    }
+  }
+  @media (prefers-color-scheme: dark) and (prefers-reduced-transparency: reduce), (prefers-color-scheme: dark) and (prefers-contrast: more) {
+    :root[data-skin='glass']:not([data-theme='light']) {
+      --sp-color-card: #141a2e; --sp-color-card-2: #1b2238; --sp-glass-float: #141a2e; --sp-glass-control: #1b2238; --sp-glass-control-on: #2a3350;
+      --sp-color-border: #2c3552; --sp-glass-edge: #3a4566;
+      --tone-leased-fill: #2a3250; --tone-neutral-fill: #2a3250; --tone-muted-fill: #1f2640;
+    }
+  }
+  /* Phone sheet: the focus ring sits on the grab bar, not across the whole top edge. */
+  :root[data-skin='glass'] .sp-sheet__handle:focus-visible { outline: none; }
+  :root[data-skin='glass'] .sp-sheet__handle:focus-visible span { outline: 2px solid var(--sp-color-focus); outline-offset: 3px; }
 }

@@ -57,7 +57,8 @@ const readCssVar: ReadVar = (name) => (typeof document === 'undefined' ? '' : ge
 
 /** The `--tone-<tone>-fill` token as a hex; `transparent`/unset tones fall back to a neutral grey. */
 export function resolveToneHex(tone: string, read: ReadVar = readCssVar): string {
-  return normalizeHex(read(`--tone-${tone}-fill`)) ?? FALLBACK_HEX;
+  // A skin may make a tone translucent on screen; extrusions need its opaque equivalent.
+  return normalizeHex(read(`--tone-${tone}-solid`)) ?? normalizeHex(read(`--tone-${tone}-fill`)) ?? FALLBACK_HEX;
 }
 
 /** Any token (e.g. `--sp-color-brand`) as a hex, with a fallback. */

@@ -40,6 +40,8 @@ export interface SegmentTextOptions {
   floorName: string;
   /** Inquiry matches to show as a badge when the finder is active. */
   matches?: number;
+  /** Badge wording when the matches refer to one specific inquiry. */
+  matchLabel?: string;
   /** Real today (activity ages are measured from today, never from a projected date). */
   today?: ISODate;
   /** Why a search matched this block (shown as a badge). */
@@ -156,7 +158,7 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
 
   const deals = safe ? 0 : dealCount(seg);
   if (deals > 0) badges.push({ kind: 'deal', text: String(deals), title: `${deals} live deal${deals === 1 ? '' : 's'}` });
-  if (o.matches) badges.push({ kind: 'match', text: o.matches === 1 ? '1 inquiry fits' : `${o.matches} inquiries fit`, title: 'Open inquiries this space could satisfy' });
+  if (o.matches) badges.push({ kind: 'match', text: o.matchLabel ?? (o.matches === 1 ? '1 inquiry fits' : `${o.matches} inquiries fit`), title: o.matchLabel ? 'This space satisfies the inquiry being matched' : 'Open inquiries this space could satisfy' });
   // CRM on the canvas: how recently the tenant relationship was touched, for leases inside the renewal window.
   const projected = !!o.today && o.today !== o.asOf;
   if (!safe && !projected && lease?.lastTouch && (kind === 'leased' || kind === 'holdover' || kind === 'mtm') && (seg.monthsToExpiry === null || seg.monthsToExpiry <= 24)) {
@@ -187,6 +189,7 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
     const d = topDeal(seg);
     if (d) lensShort = d.stage === 'Lease Out' ? 'Lease out' : d.stage;
   }
+  if (kind === 'committed' && lens === 'status' && lease) lensShort = `In ${fmtMonthYearShort(lease.commencement)}`;
   if (safe && (kind === 'holdover' || kind === 'mtm')) lensShort = '';
   const lines = [name, sub, meta].filter(Boolean);
   const badgeText = badges.map((b) => (b.kind === 'deal' ? `${b.text} live deal${b.text === '1' ? '' : 's'}` : b.text)).join(', ');

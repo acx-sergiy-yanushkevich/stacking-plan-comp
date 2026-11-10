@@ -180,7 +180,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
               <thead>
                 <tr>
                   <th>Tenant</th>
-                  <th>Floor · Suite</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>Floor · Suite</th>
                   <th className="num">RSF</th>
                   <th>Ends</th>
                   <th className="num">Left</th>
@@ -192,8 +192,8 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
                 {atRisk.map((r) => (
                   <tr key={`risk-${r.segKey}`}>
                     <td>{r.tenant}</td>
-                    <td>
-                      {r.floorName} · {r.suite}
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      {r.floorName.replace(/^Floor /, 'Fl ')} · {r.suite}
                     </td>
                     <td className="num">{num(r.size)}</td>
                     <td>{r.kind === 'holdover' ? `Holdover · expired ${r.endDate ? fmtDate(r.endDate) : ''}` : 'Month-to-month'}</td>
@@ -205,8 +205,8 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
                 {worklist.map((r) => (
                   <tr key={r.segKey}>
                     <td>{tenantLabel({ tenant: r.tenant }, safe)}</td>
-                    <td>
-                      {r.floorName} · {r.suite}
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      {r.floorName.replace(/^Floor /, 'Fl ')} · {r.suite}
                     </td>
                     <td className="num">{num(r.size)}</td>
                     <td>{r.endDate ? fmtDate(r.endDate) : 'MTM'}</td>

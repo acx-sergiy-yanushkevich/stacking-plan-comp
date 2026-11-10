@@ -98,7 +98,7 @@ button.sp-chip[aria-pressed='true'] { background: var(--sp-color-brand-strong); 
 .sp-pop__panel--start { left: 0; }
 .sp-pop__panel--end { right: 0; }
 @keyframes sp-pop-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
-.sp-menu { list-style: none; margin: 0; padding: 4px; min-width: 220px; }
+.sp-menu { list-style: none; margin: 0; padding: 4px; min-width: 290px; }
 .sp-menu__item {
   display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border-radius: 4px; text-align: left;
   font-size: var(--sp-text-13); color: var(--sp-color-text);

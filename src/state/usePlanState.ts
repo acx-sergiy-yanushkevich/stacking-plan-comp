@@ -34,8 +34,9 @@ export function usePlanState(today: ISODate): [PlanState, (patch: Partial<PlanSt
 }
 
 /** `document.title` must never leak the mode: prospect-safe gets its own title. */
-export function useDocumentTitle(safe: boolean): void {
+export function useDocumentTitle(safe: boolean, propertyName?: string): void {
   useEffect(() => {
-    document.title = safe ? SAFE_TITLE : TITLE;
-  }, [safe]);
+    const base = safe ? SAFE_TITLE : TITLE;
+    document.title = propertyName ? `${propertyName} · ${base}` : base;
+  }, [safe, propertyName]);
 }

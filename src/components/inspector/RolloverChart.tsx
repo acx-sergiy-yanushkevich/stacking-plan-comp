@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { RolloverBucket } from '../../domain/rollover';
 import { num, plural } from '../../domain/format';
@@ -42,10 +43,19 @@ export function RolloverChart({ buckets, atRisk, atRiskLeases, activeBucket, onB
   const rows = buckets.length + (safe ? 0 : 1);
   const H = PAD_TOP * 2 + rows * ROW;
   const anyActive = activeBucket !== null;
+  const [focusIdx, setFocusIdx] = useState(0);
   const scale = (sf: number) => (sf <= 0 ? 0 : Math.max(2, (sf / max) * plotW));
 
   const onKey = (e: KeyboardEvent<SVGGElement>, fn: () => void) => {
-    if (e.key === 'Enter' || e.key === ' ') {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Home' || e.key === 'End') {
+      // One tab stop for the whole chart: arrows move between periods.
+      const bars = Array.from(e.currentTarget.parentElement?.querySelectorAll<SVGGElement>('[data-roll]') ?? []);
+      const i = bars.indexOf(e.currentTarget);
+      const next = e.key === 'Home' ? 0 : e.key === 'End' ? bars.length - 1 : Math.min(bars.length - 1, Math.max(0, i + (e.key === 'ArrowDown' ? 1 : -1)));
+      e.preventDefault();
+      setFocusIdx(next);
+      bars[next]?.focus();
+    } else if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       fn();
     } else if (e.key === 'Escape' && activeBucket !== null) {
@@ -69,7 +79,9 @@ export function RolloverChart({ buckets, atRisk, atRiskLeases, activeBucket, onB
             key={b.key}
             className={cls}
             role="button"
-            tabIndex={0}
+            data-roll
+            tabIndex={i === Math.min(focusIdx, rows - 1) ? 0 : -1}
+            onFocus={() => setFocusIdx(i)}
             aria-pressed={active}
             aria-label={label}
             onClick={() => onBucket(b.key)}
@@ -97,7 +109,9 @@ export function RolloverChart({ buckets, atRisk, atRiskLeases, activeBucket, onB
           <g
             className={`sp-roll__bar sp-roll__bar--risk ${anyActive ? 'is-dim' : ''}`}
             role={clickable ? 'button' : undefined}
-            tabIndex={clickable ? 0 : undefined}
+            data-roll={clickable ? '' : undefined}
+            tabIndex={clickable ? (focusIdx >= buckets.length ? 0 : -1) : undefined}
+            onFocus={clickable ? () => setFocusIdx(buckets.length) : undefined}
             aria-label={label}
             onClick={clickable ? onAtRisk : undefined}
             onKeyDown={clickable ? (e) => onKey(e, onAtRisk) : undefined}

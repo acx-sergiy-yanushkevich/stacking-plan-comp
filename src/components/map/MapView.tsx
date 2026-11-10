@@ -220,7 +220,14 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
   const mapProperty = useMemo(() => (live ? { ...property, footprint: live.polygon, footprintSource: live.source } : property), [property, live]);
 
   const toneOf = useCallback((f: FloorView) => dominantTone(f, state.lens, state.safe), [state.lens, state.safe]);
-  const shortOf = useCallback((f: FloorView) => toneShort(dominantTone(f, state.lens, state.safe), state.lens, state.safe), [state.lens, state.safe]);
+  const shortOf = useCallback(
+    (f: FloorView) => {
+      const share = f.leasable > 0 ? f.available / f.leasable : 0;
+      if (state.lens === 'status' && share >= 0.5) return share === 0.5 ? 'Half available' : 'Mostly available';
+      return toneShort(dominantTone(f, state.lens, state.safe), state.lens, state.safe);
+    },
+    [state.lens, state.safe],
+  );
   const stateOf = useCallback((f: FloorView) => toneLabel(dominantTone(f, state.lens, state.safe), state.lens, state.safe), [state.lens, state.safe]);
   const toneOfSeg = useCallback((s: FloorView['segments'][number]) => toneFor(s, state.lens, state.safe), [state.lens, state.safe]);
   const features = useMemo(() => toFloorFeatures(suiteExtrusionFeatures(mapProperty, floors, toneOfSeg, property.floorHeightFt), INFLATE), [mapProperty, floors, toneOfSeg, property.floorHeightFt]);

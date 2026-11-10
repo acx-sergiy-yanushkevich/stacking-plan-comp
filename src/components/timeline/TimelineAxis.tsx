@@ -100,7 +100,7 @@ export function TimelineAxis({ start, end, asOf, today, plotLeft, plotWidth, str
           // Never rounded: drop the unit, then the point size, before dropping the number (the title keeps it).
           const fitsIn = (t: string, font: string) => measure(t, font) + 6 <= w;
           const [valueText, small] = fitsIn(value, VALUE_FONT) ? [value, false] : fitsIn(num(b.sf), VALUE_FONT) ? [num(b.sf), false] : fitsIn(num(b.sf), VALUE_FONT_SM) ? [num(b.sf), true] : ['', false];
-          const compactLabel = b.label === '< 12 mo' ? '<1 yr' : b.label.replace(/ yr$/, '');
+          const compactLabel = b.label === '< 12 mo' ? '<12 mo' : b.label.replace(/ yr$/, '');
           const labelText = fitsIn(b.label, LABEL_FONT) ? b.label : fitsIn(compactLabel, LABEL_FONT) ? compactLabel : '';
           const title = `${b.leases ? `${sf(b.sf)} in ${plural(b.leases, 'lease')}` : 'No leases'} ending ${b.label.startsWith('<') ? 'in the next 12 months' : b.label.endsWith('+ yr') ? `${periods}+ years out` : `${b.label} out`} from ${fmtDate(asOf)}. ${active ? 'Click to clear the filter.' : 'Click to highlight them.'}`;
           return (

@@ -154,7 +154,7 @@ export default function FloorView({ model, state, patch }: FloorViewProps) {
               <dd>
                 <span className="sp-fkpi__value">{sf(floor.available)}</span>
                 <span className="sp-fkpi__context">
-                  {num(direct)} direct · {num(sublease)} sublease
+                  {num(direct)}{'\u00a0'}direct · {num(sublease)}{'\u00a0'}sublease
                 </span>
               </dd>
             </div>

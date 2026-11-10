@@ -40,7 +40,7 @@ function Shell() {
   const model = usePlanModel(property, state, TODAY);
   const toast = useToast();
   const narrow = useIsNarrow();
-  useDocumentTitle(state.safe);
+  useDocumentTitle(state.safe, state.skin === 'classic' ? undefined : property.name);
   const mode = deriveMode(state);
   const [announce, setAnnounce] = useState('');
   useEffect(() => {
