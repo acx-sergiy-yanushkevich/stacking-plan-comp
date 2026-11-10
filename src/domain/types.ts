@@ -83,6 +83,8 @@ export interface Availability {
   inquiries: number; // count of Inquiry__c matched to this space
   deals: Deal[];
   verifiedAt: ISODate; // LastModifiedDate
+  /** Published to marketing channels (listing feed / website); false = quiet listing. */
+  published?: boolean;
 }
 
 /** Inquiry__c: an open tenant requirement (LoopNet/Crexi emails, referrals, calls). */

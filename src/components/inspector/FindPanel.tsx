@@ -175,7 +175,7 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
                       </div>
                       <div className="sp-ins__row-meta">
                         <span>{o.type}</span>
-                        <span>· {when}</span>
+                        <span>{when}</span>
                         {o.late && (
                           <Chip tone="warn" icon="clock">
                             late
@@ -230,10 +230,10 @@ function NearMisses({ misses, patch, max }: { misses: ReturnType<typeof nearMiss
               </div>
               <div className="sp-ins__row-meta">
                 <span>{m.type}</span>
-                <span>· {m.from ? fmtMonthYear(m.from) : 'Now'}</span>
-                {m.shortfall > 0 && <span>· {num(m.shortfall)} SF short</span>}
-                {max !== null && m.size > max && <span>· {num(m.size - max)} SF over max</span>}
-                {m.kind === 'stack' && <span>· two floors</span>}
+                <span>{m.from ? fmtMonthYear(m.from) : 'Now'}</span>
+                {m.shortfall > 0 && <span>{num(m.shortfall)} SF short</span>}
+                {max !== null && m.size > max && <span>{num(m.size - max)} SF over max</span>}
+                {m.kind === 'stack' && <span>two floors</span>}
               </div>
             </div>
             <div className="sp-ins__row-end">

@@ -21,14 +21,14 @@ export function MiniStack({ floors, currentId, onPick }: MiniStackProps) {
               <button
                 type="button"
                 className={`sp-mini__row ${current ? 'is-current' : ''} ${share > 0.6 ? 'is-strong' : ''}`}
-                aria-label={`${f.floor.sequence} ${Math.round(share * 100)}% leased, ${f.floor.name}`}
+                aria-label={`${f.floor.sequence} ${pct(share)} leased, ${f.floor.name}`}
                 aria-current={current ? 'true' : undefined}
                 title={`${f.floor.name} · ${pct(share)} leased`}
                 onClick={() => onPick(f.floor.id)}
               >
                 <span className="sp-mini__fill" style={{ height: `${Math.max(8, Math.round(share * 100))}%`, top: "auto" }} aria-hidden="true" />
                 <span className="sp-mini__num">{`${f.floor.sequence} `}</span>
-                <span className="sp-mini__pct">{`${Math.round(share * 100)}% `}</span>
+                <span className="sp-mini__pct">{`${pct(share)} `}</span>
               </button>
             </li>
           );

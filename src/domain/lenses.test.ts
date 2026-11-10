@@ -86,7 +86,7 @@ describe('rent lens', () => {
     expect(rentValue(seg(today, 'L01-U1'))).toBe(39); // $3.25/mo
   });
   it('for sale and unaccounted area have no rent', () => {
-    expect(tone('A10', 'rent')).toBe('muted');
+    expect(tone('A10', 'rent')).toBe('forsale');
     expect(tone('F2-gap', 'rent')).toBe('muted');
     expect(rentValue(seg(today, 'F2-gap'))).toBeNull();
   });
@@ -112,7 +112,7 @@ describe('deals lens', () => {
     expect(tone('A06', 'deals')).toBe('deal-none');
     expect(tone('A02', 'deals')).toBe('deal-1');
     expect(tone('L03-U1', 'deals')).toBe('muted');
-    expect(tone('A10', 'deals')).toBe('muted');
+    expect(tone('A10', 'deals')).toBe('forsale');
   });
   it('renewal deals count on the lease while it is in place', () => {
     expect(tone('L06-U1', 'deals')).toBe('deal-2');

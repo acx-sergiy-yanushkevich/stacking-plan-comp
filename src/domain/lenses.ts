@@ -155,14 +155,14 @@ export function toneFor(seg: Segment, lens: LensId, prospectSafe: boolean): Tone
       if (seg.kind === 'projected') return 'projected';
       return 'empty';
     case 'deals': {
-      if (seg.kind === 'forsale') return 'muted';
+      if (seg.kind === 'forsale') return 'forsale';
       if (prospectSafe) return seg.kind === 'available' || seg.kind === 'sublease' ? 'empty' : 'muted';
       const d = topDeal(seg);
       if (d) return `deal-${stageRank(d.stage)}` as Tone;
       return isVacantKind(seg) && seg.kind !== 'committed' ? 'deal-none' : 'muted';
     }
     case 'rent':
-      if (seg.kind === 'forsale') return 'muted';
+      if (seg.kind === 'forsale') return 'forsale';
       // Confidential wins over everything that carries the lease (in place or committed).
       if (seg.lease?.confidential && (!isVacantKind(seg) || seg.kind === 'committed')) return 'confidential';
       if (prospectSafe && !isVacantKind(seg)) return 'muted';
@@ -217,6 +217,7 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
         ? [
             { tone: 'empty', label: 'Available', pattern: 'dashed' },
             { tone: 'muted', label: 'Not available' },
+            { tone: 'forsale', label: 'For sale' },
           ]
         : [
             { tone: 'deal-3', label: 'Lease out' },
@@ -225,6 +226,7 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
             { tone: 'deal-0', label: 'Tour' },
             { tone: 'deal-none', label: 'Vacant, no deal', pattern: 'dashed' },
             { tone: 'muted', label: 'Leased, no deal' },
+            { tone: 'forsale', label: 'For sale' },
           ];
     case 'rent':
       return [
@@ -237,6 +239,7 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
         { tone: 'empty', label: 'Asking rent (vacancy)', pattern: 'asking' },
         { tone: 'confidential', label: 'Confidential' },
         { tone: 'muted', label: prospectSafe ? 'Rent withheld' : 'No rent on record' },
+        { tone: 'forsale', label: 'For sale' },
       ];
   }
 }

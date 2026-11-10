@@ -4,7 +4,7 @@ import type { PlanState, WindowKey } from '../../state/planState';
 import { daysBetween, fmtDate, fmtMonths, fmtMonthYearShort } from '../../domain/dates';
 import { rentRollRows, toCsv } from '../../domain/exportCsv';
 import { plural, rate, sf } from '../../domain/format';
-import { rentVisible, tenantLabel } from '../../domain/safe';
+import { rentVisible, tenantLabel, termHidden } from '../../domain/safe';
 import { download } from '../../lib/download';
 import { Button, Chip, Icon } from '../ui';
 import { selectSegment, type Patch } from '../plan/actions';
@@ -21,7 +21,7 @@ const WINDOWS: WindowKey[] = ['risk', '90', '180', '12', '24'];
 
 function endText(row: WorklistRow, safe: boolean): string | null {
   if (!row.seg.endDate) return null;
-  if (safe && (row.kind === 'holdover' || row.kind === 'mtm')) return null;
+  if (termHidden(row.kind, safe)) return null;
   return `${row.kind === 'holdover' ? 'Expired' : 'Ends'} ${fmtDate(row.seg.endDate)}`;
 }
 
@@ -74,13 +74,13 @@ export function WorklistPanel({ model, state, patch }: WorklistPanelProps) {
           <div className="sp-empty">
             <Icon name="check" size={24} />
             <div className="sp-empty__title">Nothing ending in this window</div>
-            <p>Try a longer window or check At risk.</p>
+            <p>{safe ? 'Try a longer window.' : 'Try a longer window or check At risk.'}</p>
           </div>
         ) : (
           <ul className="sp-ins__list" aria-label={`${WINDOW_LABEL[window]} worklist`}>
             {rows.map((row) => {
               const lease = row.seg.lease!;
-              const rent = rentVisible(lease, safe) && lease.rate !== null ? rate(lease.rate, lease.rateUnit, lease.leaseType) : lease.confidential ? 'Confidential' : 'Rent hidden';
+              const rent = rentVisible(lease, safe) && lease.rate !== null ? rate(lease.rate, lease.rateUnit, lease.leaseType) : safe ? 'Rent hidden' : lease.confidential ? 'Confidential' : 'Rent hidden';
               const touch = row.lastTouch ? `${daysBetween(row.lastTouch.date, today)} d ago · ${row.lastTouch.type}` : 'No touch logged';
               const selected = state.select === row.segKey;
               return (
@@ -94,17 +94,19 @@ export function WorklistPanel({ model, state, patch }: WorklistPanelProps) {
                       {row.seg.marketed && !row.seg.marketed.sublease && (
                         <div className="sp-ins__row-meta">
                           <Chip tone="warn" icon="warning" title="The suite is already on the market for a later date: the tenant is expected to leave">
-                            {row.seg.marketed.availableFrom ? `Marketed from ${fmtMonthYearShort(row.seg.marketed.availableFrom)} · likely vacating` : 'Marketed · likely vacating'}
+                            {row.seg.marketed.availableFrom ? `Marketed from ${fmtMonthYearShort(row.seg.marketed.availableFrom)}` : 'Marketed'}
                           </Chip>
                         </div>
                       )}
                       <div className="sp-ins__row-meta">
-                        <span>{[row.floorName, row.suite ? `Ste ${row.suite}` : null, endText(row, safe), rent].filter(Boolean).join(' · ')}</span>
+                        {[row.floorName, row.suite ? `Ste ${row.suite}` : null, endText(row, safe), rent].filter(Boolean).map((part, i) => (
+                          <span key={i}>{part}</span>
+                        ))}
                       </div>
                       {!safe && (
                         <div className="sp-ins__row-meta">
                           {row.broker && <span>{row.broker}</span>}
-                          <span>{row.broker ? '· ' : ''}{touch}</span>
+                          <span>{touch}</span>
                         </div>
                       )}
                     </div>

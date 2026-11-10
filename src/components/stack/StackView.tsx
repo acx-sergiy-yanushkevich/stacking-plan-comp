@@ -242,9 +242,9 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                     <title>{`${f.floor.name}: ${num(f.floor.nonLeasable)} SF non-leasable (lobby, loading, building use). Not counted in occupancy.`}</title>
                     <rect width={r.nonLeasablePx} height={rowH} rx={4} />
                     <rect width={r.nonLeasablePx} height={rowH} rx={4} fill="url(#sp-hatch)" style={{ color: 'var(--sp-color-border-strong)' }} />
-                    {r.nonLeasablePx >= 120 && (
+                    {r.nonLeasablePx >= 44 && (
                       <text x={r.nonLeasablePx / 2} y={rowH / 2 + 4} textAnchor="middle">
-                        Lobby · building use · {num(f.floor.nonLeasable)} SF
+                        {r.nonLeasablePx >= 200 ? `Lobby · building use · ${num(f.floor.nonLeasable)} SF` : r.nonLeasablePx >= 96 ? `Lobby · ${num(f.floor.nonLeasable)} SF` : 'Lobby'}
                       </text>
                     )}
                   </g>

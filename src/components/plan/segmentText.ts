@@ -174,8 +174,12 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
     if (v !== null && t && !(seg.lease?.confidential && kind !== 'available') && !(safe && kind !== 'available' && kind !== 'sublease')) {
       // Exact figure with its unit, never rounded: "$29.75/yr FSG" (the lease's own unit, as recorded).
       const unit = seg.lease ? seg.lease.rateUnit : seg.availability?.rateUnit ?? 'yr';
-      const raw = seg.lease && seg.lease.rate !== null && kind !== 'available' && kind !== 'sublease' ? seg.lease.rate : v;
-      lensShort = `$${Number.isInteger(raw) ? raw : raw.toFixed(2)}/${unit} ${t}`;
+      const asking = (kind === 'available' || kind === 'sublease') && seg.availability;
+      if (asking) lensShort = compactRate(asking.rentLow, asking.rentHigh, asking.rateUnit, t);
+      else {
+        const raw = seg.lease && seg.lease.rate !== null ? seg.lease.rate : v;
+        lensShort = `$${Number.isInteger(raw) ? raw : raw.toFixed(2)}/SF/${unit} ${t}`;
+      }
     }
   }
   if (lens === 'deals' && !safe) {

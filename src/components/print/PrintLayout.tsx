@@ -52,7 +52,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
         </div>
         <Legend items={model.legend} compact />
         <div className="sp-print__plan">
-          <StackView model={model} state={state} patch={noop} bare rowHeight={44} />
+          <StackView model={model} state={state} patch={noop} bare rowHeight={48} />
         </div>
         <footer className="sp-print__foot">
           Floor width is proportional to gross floor area; suite width to RSF. Figures are exact RSF from AscendixRE records. {safe ? 'Tenant names, contacts and in-place rents are withheld.' : ''}
@@ -109,7 +109,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
                   <th>Period</th>
                   <th className="num">SF</th>
                   <th className="num">Leases</th>
-                  <th className="num">Share of leased</th>
+                  <th className="num">{safe ? 'Share of listed SF' : 'Share of leased'}</th>
                 </tr>
               </thead>
               <tbody>

@@ -164,7 +164,7 @@ const availabilities: Availability[] = [
   avail({ id: 'A03', floorId: 'F4', suite: '450', size: 8000, order: 2, status: 'Closed', isVacant: true, availableFrom: null,
     rentLow: 32, rentHigh: 34, leaseType: 'FSG',
     deals: [deal('Lumen Analytics', 'Lease Out', 8000, 'Dana Whitfield', '2026-09-12')] }),
-  avail({ id: 'A04', floorId: 'F6', suite: '600', size: 21400, order: 1, isVacant: false, availableFrom: '2027-04-01',
+  avail({ id: 'A04', floorId: 'F6', suite: '600', size: 21400, order: 1, isVacant: false, availableFrom: '2027-04-01', published: false,
     rentLow: 32, rentHigh: 34, leaseType: 'FSG', divisible: true, minDivisible: 7000, inquiries: 9, verifiedAt: '2026-11-05',
     deals: [
       deal('Vantage Robotics', 'LOI', 21400, 'Dana Whitfield', '2026-11-05'),

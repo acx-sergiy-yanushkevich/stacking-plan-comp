@@ -1,11 +1,16 @@
 /* Map view and the Area panel (DESIGN.md §2.6). Tokens only. */
 .sp-map {
   position: relative;
+  display: flex;
+  flex-direction: column;
   height: clamp(480px, 70vh, 820px);
   border-radius: var(--sp-radius-card);
   overflow: hidden;
   background: var(--sp-color-card-2);
 }
+/* The key is card chrome above the canvas, never an overlay on the building. */
+.sp-map-legend { flex: none; padding: 8px 12px; background: var(--sp-color-card); border-bottom: 1px solid var(--sp-color-border); }
+.sp-map__stage { position: relative; flex: 1; min-height: 0; }
 .sp-map__canvas, .sp-map .maplibregl-map { position: absolute; inset: 0; }
 .sp-map .maplibregl-canvas { outline: none; }
 .sp-map .maplibregl-canvas:focus-visible { outline: 2px solid var(--sp-color-focus); outline-offset: -2px; }
@@ -26,7 +31,6 @@
 .sp-map-info__name { font-size: var(--sp-text-15); font-weight: 600; margin-bottom: 2px; }
 .sp-map-info__meta { display: flex; flex-wrap: wrap; gap: var(--sp-space-1) var(--sp-space-3); margin-top: var(--sp-space-2); color: var(--sp-color-text-weak); align-items: center; }
 .sp-map-info__meta > span { display: inline-flex; align-items: center; gap: 6px; }
-.sp-map-legend { top: var(--sp-space-3); right: var(--sp-space-3); max-width: 300px; }
 .sp-map-legend .sp-legend { gap: 4px 10px; }
 .sp-map-legend .sp-legend__num { font-size: 11px; }
 .sp-map-present { bottom: var(--sp-space-3); left: 50%; transform: translateX(-50%); padding: 6px 12px; font-variant-numeric: tabular-nums; }
@@ -126,18 +130,19 @@
 @keyframes sp-skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
 @media (max-width: 760px) {
-  .sp-map { height: auto; display: flex; flex-direction: column; border-radius: var(--sp-radius-card); }
-  .sp-map__canvas, .sp-map .maplibregl-map { position: relative; height: 380px; order: 0; }
+  .sp-map { height: auto; border-radius: var(--sp-radius-card); }
+  .sp-map__stage { flex: none; height: auto; display: flex; flex-direction: column; }
+  .sp-map__canvas, .sp-map .maplibregl-map { position: relative; height: 380px; }
   .sp-map .maplibregl-canvas { height: 100% !important; }
   .sp-map-info { display: none; }
-  .sp-map-overlay.sp-map-legend { position: static; order: -1; margin: 0 0 6px; max-width: none; padding: 6px 8px; }
-  .sp-map-legend .sp-legend { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; }
-  .sp-map-legend .sp-legend__item { white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-  .sp-map-legend .sp-legend__num { display: none; }
-  .sp-map-floors { position: static; transform: none; order: 2; display: flex; flex-direction: row; flex-wrap: wrap; gap: 4px; margin: 0 8px 8px; padding: 4px; }
+  .sp-map-legend { padding: 6px 10px; }
+  .sp-map-legend .sp-legend { display: grid; grid-template-columns: 1fr; gap: 1px 8px; }
+  .sp-map-legend .sp-legend__item { display: grid; grid-template-columns: 14px 1fr auto; gap: 6px; align-items: center; white-space: nowrap; min-width: 0; }
+  .sp-map-legend .sp-legend__num { font-size: 10px; }
+  .sp-map-floors { position: static; transform: none; display: flex; flex-direction: row; flex-wrap: wrap; gap: 4px; margin: 6px 8px 8px; padding: 4px; }
   .sp-map-floor { min-height: 28px; min-width: 32px; }
   .sp-map-controls { top: 8px; bottom: auto; right: 8px; }
-  .sp-map .maplibregl-ctrl-bottom-right { right: 8px; bottom: calc(100% - clamp(320px, 55vh, 520px) + 4px); }
+  .sp-map .maplibregl-ctrl-bottom-right { right: 8px; bottom: 4px; }
 }
 
 .sp-area li, .sp-area__row { white-space: normal; }

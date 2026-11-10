@@ -45,8 +45,12 @@
 .sp-ins__row[aria-pressed='true'], .sp-ins__row.is-selected { background: var(--sp-color-brand-soft); }
 .sp-ins__row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .sp-ins__row-title { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-weight: 600; min-width: 0; }
-.sp-ins__row-title > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-.sp-ins__row-meta { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); display: flex; gap: 6px; flex-wrap: wrap; }
+.sp-ins__row-title > span:first-child { overflow-wrap: anywhere; min-width: 0; }
+.sp-ins__row-meta { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); display: flex; gap: 2px 10px; flex-wrap: wrap; }
+/* Parts are separated by space, not glyphs, so a wrapped line never starts with a stray separator; chips wrap inside the column. */
+.sp-ins__row-meta > span { white-space: nowrap; }
+.sp-ins__row-meta .sp-chip { white-space: normal; height: auto; min-height: 20px; line-height: 1.25; text-align: left; max-width: 100%; }
+.sp-ins__change { padding: 4px 0; }
 .sp-ins__row-end { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex: none; text-align: right; }
 .sp-ins__row-value { font-weight: 600; font-variant-numeric: tabular-nums; }
 .sp-ins__row-sub { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }

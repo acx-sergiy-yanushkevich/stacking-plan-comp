@@ -29,7 +29,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
       id: 'status',
       label: 'Leased',
       value: pct(k.occupancy),
-      context: `${pct(k.physical)} occupied${k.committed ? ` · ${num(k.committed)} SF signed, not in` : ''}${k.availableSublease ? ` · ${num(Math.max(0, k.leased - Math.round(k.physical * k.leasable) - k.committed))} SF sublet vacant` : ''}`,
+      context: `${pct(k.physical)} occupied${k.committed ? ` · ${num(k.committed)} SF signed, not in` : ''}${k.availableSublease ? ` · ${num(k.availableSublease)} SF sublet vacant` : ''}`,
       delta: d ? { text: `${d.occupancy >= 0 ? '+' : '−'}${Math.abs(d.occupancy * 100).toFixed(1)} pts`, good: d.occupancy >= 0 } : null,
       active: state.lens === 'status' && state.mode === 'building' && !state.q,
       title: 'Leased share of leasable RSF, including signed leases that have not commenced. Click for the status lens.',
@@ -61,7 +61,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
       unit: 'SF',
       context: `${k.leased ? pct(k.expiring12 / k.leased) : '0%'} of leased · ${plural(k.expiring12Leases, 'lease')}`,
       delta: d ? { text: sfDelta(d.expiring12), good: d.expiring12 <= 0 } : null,
-      active: state.window === '12' || (state.lens === 'expiry' && state.mode === 'building'),
+      active: state.window === '12' || (state.lens === 'expiry' && state.mode === 'building' && state.bucket === null),
       title: 'Lease SF ending within 12 months of the as-of date. Click for the expiration lens and the 12-month worklist.',
     },
     {
@@ -71,7 +71,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
       unit: 'yr',
       context: 'In-place, SF-weighted',
       delta: d ? (() => { const dw = Number(k.walt.toFixed(1)) - Number(model.kpisToday.walt.toFixed(1)); return { text: `${dw >= 0 ? '+' : '−'}${Math.abs(dw).toFixed(1)} yr`, good: dw >= 0 }; })() : null,
-      active: state.view === 'timeline',
+      active: false,
       title: 'Weighted average lease term remaining. Click for the lease timeline.',
     },
     safe

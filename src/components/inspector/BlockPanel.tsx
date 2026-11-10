@@ -48,6 +48,8 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
   const floorName = model.floors.find((f) => f.floor.id === seg.floorId)?.floor.name ?? seg.floorId;
   const carriesLease = lease && (isLeaseKind(seg.kind) || seg.kind === 'committed' || seg.kind === 'projected');
   const leaseRecord = lease ? `Lease ${lease.id}` : '';
+  // Field history for this suite's own records (lease, availability), newest first.
+  const changesFor = property.history.filter((c) => c.segKey === seg.key || (lease && c.recordType === 'Lease' && c.recordLabel.includes(lease.tenant)) || (a && c.recordType === 'Availability' && c.recordLabel.includes(a.suite))).sort((x, y) => (x.at < y.at ? 1 : -1));
 
   // Lease facts
   const rentText = lease ? (rentVisible(lease, safe) && lease.rate !== null ? rate(lease.rate, lease.rateUnit, lease.leaseType) : safe ? 'Hidden' : lease.confidential ? 'Confidential' : 'Not on record') : undefined;
@@ -138,6 +140,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
             items={[
               ['Type', availabilityType(a)],
               ['Status', a.status],
+              safe ? null : ['Listing', a.published === false ? 'Quiet · not published' : 'Published'],
               ['Available', seg.availableFrom ? fmtDate(seg.availableFrom) : a.availableFrom && a.availableFrom > asOf ? fmtDate(a.availableFrom) : 'Now'],
               a.sublease && a.subleaseExpiration ? ['Sublease thru', fmtDate(a.subleaseExpiration)] : null,
               ['Asking', rentVisible(a, safe) && a.rentHigh > 0 ? rateRange(a.rentLow, a.rentHigh, a.rateUnit, a.leaseType) : 'Hidden'],
@@ -160,6 +163,30 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
               ['Verified', <Verified key="v" at={a.verifiedAt} today={today} safe={safe} />],
             ]}
           />
+        </Section>
+      )}
+
+      {!safe && changesFor.length > 0 && (
+        <Section title="Changes">
+          <ul className="sp-ins__list">
+            {changesFor.slice(0, 5).map((c) => (
+              <li key={c.id} className="sp-ins__change">
+                <div className="sp-ins__row-main">
+                  <div className="sp-ins__row-title">
+                    <span>{c.field}</span>
+                    {c.recordType !== 'Lease' && <span className="sp-ins__tag">{c.recordType}</span>}
+                  </div>
+                  <div className="sp-ins__row-meta">
+                    <span>{c.from ?? '—'} → {c.to ?? '—'}</span>
+                  </div>
+                  <div className="sp-ins__row-meta">
+                    <span>{fmtDate(c.at)}</span>
+                    <span>{c.by}</span>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
         </Section>
       )}
 
@@ -197,6 +224,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
               items={[
                 ['Type', availabilityType(seg.marketed)],
                 seg.marketed.kind === 'Lease' && ['Available from', seg.marketed.availableFrom ? fmtDate(seg.marketed.availableFrom) : 'Now'],
+                !safe && ['Listing', seg.marketed.published === false ? 'Quiet · not published' : 'Published'],
                 seg.marketed.kind === 'Lease' && ['Asking', rentVisible(seg.marketed, safe) && seg.marketed.rentHigh > 0 ? rateRange(seg.marketed.rentLow, seg.marketed.rentHigh, seg.marketed.rateUnit, seg.marketed.leaseType) : 'Hidden'],
                 seg.marketed.kind === 'Sale' && ['Asking price', rentVisible(seg.marketed, safe) && seg.marketed.askingPrice ? usd0(seg.marketed.askingPrice) : 'Hidden'],
                 ['Size', sf(seg.marketed.size)],
@@ -236,7 +264,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
                       <span>
                         {num(i.minSize)}–{num(i.maxSize)} SF · by {fmtDate(i.neededBy)}
                       </span>
-                      {!safe && <span>· {i.broker}</span>}
+                      {!safe && <span>{i.broker}</span>}
                     </div>
                   </div>
                 </div>

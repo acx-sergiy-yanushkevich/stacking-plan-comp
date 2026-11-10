@@ -24,3 +24,6 @@ export const rentVisible = (x: { confidential?: boolean } | Availability, safe: 
   if ('rentLow' in x) return true;
   return !safe && !x.confidential;
 };
+
+/** Prospect-safe: a holdover or month-to-month term is withheld entirely (no end date, no months left), so neither stands out. */
+export const termHidden = (kind: string, safe: boolean): boolean => safe && (kind === 'holdover' || kind === 'mtm');

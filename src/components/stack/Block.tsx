@@ -1,7 +1,7 @@
 import type { KeyboardEvent } from 'react';
 import type { Segment } from '../../domain/derive';
 import { textTier } from '../../domain/layout';
-import { fitParts, fitWords, wrapWords, fits, measure } from '../../lib/textFit';
+import { fitParts, wrapWords, fits, measure } from '../../lib/textFit';
 import { PATTERN_IDS } from '../plan/Patterns';
 import type { SegmentText } from '../plan/segmentText';
 
@@ -32,6 +32,8 @@ export interface BlockProps {
 
 const PAD = 8;
 const LINE = 15;
+/** Compact line pitch, used only when it lets a whole name keep its SF line. */
+const CP = 12.5;
 /** Up to three initials of a name ("Preston Park Café" → "PPC"). */
 const initials = (name: string) => name.split(/\s+/).filter((w) => /^[A-Za-z0-9]/.test(w)).slice(0, 3).map((w) => w[0].toUpperCase()).join('') || null;
 /** One-letter state cue for blocks too narrow for any text. */
@@ -45,7 +47,10 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   const edge = `var(--tone-${tone}-edge)`;
   const color = `var(--tone-${tone}-text)`;
   const tier = textTier(w);
-  const maxLines = Math.max(1, Math.floor((h - PAD * 2 + 3) / LINE));
+  // Line budgets: the regular 15 px pitch, and a compact 13 px pitch used only when it lets a whole
+  // name keep its SF line (a wrapped name + SF + lens fact needs four lines in a 66 px row).
+  const cap15 = Math.max(1, Math.floor((h - PAD * 2 + 3) / LINE));
+  const cap13 = h >= 3 * CP + 10 ? Math.max(cap15, Math.floor((h - 12 + 3) / CP)) : cap15;
 
   // Badges: deal count pill always (if room); first text badge when wide enough.
   const deal = text.badges.find((b) => b.kind === 'deal');
@@ -63,68 +68,74 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   const reserved = (showOther ? badgeW + 6 : 0) + (showSecond ? badge2W + 6 : 0) + (showDeal && !pillBottom ? 22 : 0);
   const inner = w - PAD * 2 - reserved;
 
-  // Decide the lines (never truncate a word; drop lines instead).
-  const lines: Array<{ t: string; cls: string; font: string }> = [];
-  if (tier <= 1) {
-    const nameLines = wrapWords(text.name, inner, FONT_NAME, 2);
-    for (const l of nameLines) lines.push({ t: l, cls: 'sp-seg__name', font: FONT_NAME });
-    const sub = tier === 0 ? text.sub : `${text.sfShort} SF`;
-    // When the name took two lines there is room for one more: keep the lens value, not the suite number.
-    const nameTookTwo = nameLines.length === 2;
-    const squeezed = text.lensShort ? `${text.sfShort} SF · ${text.lensShort}` : null;
-    if (lines.length < maxLines) {
-      const t = nameTookTwo && squeezed && fits(squeezed, inner, FONT_SUB) ? squeezed : fits(sub, inner, FONT_SUB) ? sub : `${text.sfShort} SF`;
-      if (fits(t, inner, FONT_SUB) || t === `${text.sfShort} SF`) lines.push({ t, cls: 'sp-seg__sub', font: FONT_SUB });
+  // Decide the lines. Rules: a name is shown whole or not at all (a fragment misleads; the tooltip and
+  // the accessible name carry the full name); the SF line is never dropped in favour of a name line;
+  // facts beyond SF (suite, lens value, meta) fill whatever room is left.
+  type Line = { t: string; cls: string; font: string };
+  const sfUnit = `${text.sfShort} SF`;
+  const sfLens = text.lensShort ? `${sfUnit} · ${text.lensShort}` : null;
+  const factsFor = (nameLineCount: number): Line[] => {
+    const out: Line[] = [];
+    if (tier === 0) {
+      // Full tier: suite + SF (or SF + lens value when the name took two lines), then the meta line.
+      const squeezed = nameLineCount >= 2 && sfLens && fits(sfLens, inner, FONT_SUB) ? sfLens : null;
+      const first = squeezed ?? (fits(text.sub, inner, FONT_SUB) ? text.sub : sfLens && fits(sfLens, inner, FONT_SUB) ? sfLens : sfUnit);
+      out.push({ t: first, cls: 'sp-seg__sub', font: FONT_SUB });
+      if (text.meta) {
+        // A rate is shown whole or not at all (dropping the lease type would mislead); other facts may lose trailing parts.
+        const isRate = text.meta.includes('$');
+        const alt = fits(text.meta, inner, FONT_SUB) ? text.meta : isRate ? text.meta.replace(/^Asking /, '') : fitParts(text.meta, inner, FONT_SUB);
+        if (alt && fits(alt, inner, FONT_SUB) && (isRate || alt.length >= 4) && !first.includes(alt)) out.push({ t: alt, cls: 'sp-seg__meta', font: FONT_SUB });
+      }
+    } else {
+      const sfLine = sfLens && fits(sfLens, inner, FONT_SUB) ? sfLens : fits(sfUnit, inner, FONT_SUB) ? sfUnit : fits(sfUnit, inner + PAD, FONT_SUB) ? sfUnit : null;
+      if (sfLine) out.push({ t: sfLine, cls: 'sp-seg__sf', font: FONT_SUB });
+      if (text.lensShort && !(sfLine && sfLine.includes(text.lensShort)) && fits(text.lensShort, inner, FONT_SUB)) out.push({ t: text.lensShort, cls: 'sp-seg__meta', font: FONT_SUB });
     }
-    if (lines.length < maxLines && text.meta && fits(text.meta, inner, FONT_SUB)) lines.push({ t: text.meta, cls: 'sp-seg__meta', font: FONT_SUB });
-    else if (lines.length < maxLines && text.meta) {
-      // A rate is shown whole or not at all (dropping the lease type would mislead); other facts may lose trailing parts.
-      const isRate = text.meta.includes('$');
-      const alt = isRate ? text.meta.replace(/^Asking /, '') : fitParts(text.meta, inner, FONT_SUB);
-      if (alt && (isRate ? fits(alt, inner, FONT_SUB) : alt.length >= 4)) lines.push({ t: alt, cls: 'sp-seg__meta', font: FONT_SUB });
+    return out;
+  };
+  const attempt = (nameLines: string[], cls: string, font: string): { lines: Line[]; compact: boolean } | null => {
+    const facts = factsFor(nameLines.length);
+    if (nameLines.length === 0 && facts.length === 0) return null;
+    const name: Line[] = nameLines.map((t) => ({ t, cls, font }));
+    const fit = (facts2: Line[]) => {
+      const need = name.length + facts2.length;
+      if (need <= cap15) return { lines: [...name, ...facts2], compact: false };
+      if (need <= cap13) return { lines: [...name, ...facts2], compact: true };
+      return null;
+    };
+    // Optional facts (never the SF line) go first when the row is short.
+    return fit(facts) ?? (facts.length > 1 ? fit(facts.slice(0, Math.max(1, cap13 - name.length))) : null);
+  };
+  const whole = (ls: string[]) => ls.length > 0 && ls.join(' ') === text.name;
+  const one = fits(text.name, inner, FONT_NAME) ? [text.name] : [];
+  const two = one.length ? [] : wrapWords(text.name, inner, FONT_NAME, 2);
+  const tiny = one.length ? [] : wrapWords(text.name, Math.max(inner, w - 8), FONT_TINY, 3);
+  const chosen =
+    (one.length ? attempt(one, 'sp-seg__name', FONT_NAME) : null) ??
+    (whole(two) ? attempt(two, 'sp-seg__name', FONT_NAME) : null) ??
+    (whole(tiny) && h >= 48 ? attempt(tiny, 'sp-seg__tiny', FONT_TINY) : null) ??
+    attempt([], 'sp-seg__name', FONT_NAME);
+  const lines: Line[] = chosen?.lines ?? [];
+  let compactPitch = (chosen?.compact ?? false) || lines.some((l) => l.cls === 'sp-seg__tiny');
+  let maxLines = compactPitch ? cap13 : cap15;
+  // No room for the whole name: its initials say who; the tooltip and the accessible name say it in full.
+  if (lines.length > 0 && lines.length < cap13 && !lines.some((l) => l.cls === 'sp-seg__name' || l.cls === 'sp-seg__tiny') && (seg.kind === 'leased' || seg.kind === 'holdover' || seg.kind === 'mtm' || seg.kind === 'committed' || seg.kind === 'sublease')) {
+    const ini = initials(text.name);
+    if (ini && ini.length >= 2 && fits(ini, inner, FONT_NAME)) {
+      lines.unshift({ t: ini, cls: 'sp-seg__name', font: FONT_NAME });
+      if (lines.length > cap15) {
+        compactPitch = true;
+        maxLines = cap13;
+      }
     }
-  } else if (tier === 2) {
-    // Narrow: the whole name (on one or two lines) or nothing; a partial name misleads more than it helps.
-    if (fits(text.name, inner, FONT_NAME)) lines.push({ t: text.name, cls: 'sp-seg__name', font: FONT_NAME });
-    else if (maxLines >= 2) {
-      const two = wrapWords(text.name, inner, FONT_NAME, 2);
-      if (two.length === 2 && two.join(' ') === text.name) for (const l of two) lines.push({ t: l, cls: 'sp-seg__name', font: FONT_NAME });
-    }
-    const withUnit = `${text.sfShort} SF`;
-    const withLens = text.lensShort ? `${text.sfShort} SF · ${text.lensShort}` : null;
-    const sfText = withLens && fits(withLens, inner, FONT_SUB) ? withLens : fits(withUnit, inner, FONT_SUB) ? withUnit : null;
-    if (sfText) lines.push({ t: sfText, cls: 'sp-seg__sf', font: FONT_SUB });
-    else if (lines.length === 0 && fits(withUnit, inner + PAD, FONT_SUB)) lines.push({ t: withUnit, cls: 'sp-seg__sf', font: FONT_SUB });
-    if (text.lensShort && lines.length < maxLines && !lines.some((l) => l.t.includes(text.lensShort)) && fits(text.lensShort, inner, FONT_SUB)) lines.push({ t: text.lensShort, cls: 'sp-seg__meta', font: FONT_SUB });
-    // A wrapped name plus SF plus the lens fact needs four lines: use the compact 13 px pitch when the row allows it.
-    if (text.lensShort && !lines.some((l) => l.t.includes(text.lensShort)) && lines.length === maxLines && h >= 4 * 13 + 14 && fits(text.lensShort, inner, FONT_TINY)) {
-      lines.push({ t: text.lensShort, cls: 'sp-seg__tiny-meta', font: FONT_TINY });
-    }
-  }
-  // Too many lines: drop the second name line before any SF / lens line (the tooltip keeps the full name).
-  while (lines.length > maxLines) {
-    const nameIdx = lines.map((l) => l.cls).lastIndexOf('sp-seg__name');
-    if (nameIdx > 0 && lines.filter((l) => l.cls === 'sp-seg__name').length > 1) {
-      lines.splice(nameIdx, 1);
-      // The surviving line is a fragment: mark it so (the tooltip and accessible name keep the full name).
-      const first = lines[nameIdx - 1];
-      const marked = `${first.t}…`;
-      const cut = fits(marked, inner, first.font) ? marked : fitWords(first.t, inner - measure('…', first.font), first.font);
-      if (cut && cut !== '…') first.t = cut.endsWith('…') ? cut : `${cut}…`;
-      else lines.splice(nameIdx - 1, 1);
-    } else lines.length = maxLines;
   }
   // SF alone says nothing about state: prefix the state word when the only line is the SF figure.
   if (lines.length === 1 && lines[0].cls === 'sp-seg__sf') {
-    const word = GLYPH_WORD[seg.kind] ?? (seg.kind === 'leased' || seg.kind === 'holdover' || seg.kind === 'mtm' ? '' : '');
+    const word = GLYPH_WORD[seg.kind] ?? '';
     const withWord = word ? `${word} ${lines[0].t}` : '';
     if (withWord && fits(withWord, inner, FONT_SUB)) lines[0] = { ...lines[0], t: withWord };
     else if (word && lines.length < maxLines) lines.unshift({ t: word, cls: 'sp-seg__name', font: FONT_NAME });
-  }
-  // Very narrow blocks: the whole name in up to three short lines before any glyph.
-  if (lines.length === 0 && w >= 40 && h >= 48) {
-    const small = wrapWords(text.name, w - 8, FONT_TINY, 3);
-    if (small.length && small.join(' ') === text.name) for (const l of small) lines.push({ t: l, cls: 'sp-seg__tiny', font: FONT_TINY });
   }
   // Narrowest tier: a single state glyph so colour is never the only cue.
   const glyph = lines.length === 0 && w >= 24 && h >= 40 ? ((w >= 48 && GLYPH_WORD[seg.kind] && fits(GLYPH_WORD[seg.kind]!, w - 8, FONT_SUB) ? GLYPH_WORD[seg.kind] : GLYPH[seg.kind]) ?? initials(text.name)) : null;
@@ -164,7 +175,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
           x={PAD - 4 + (accentLeft ? 3 : 0)}
           y={PAD - 3}
           width={Math.min(w - PAD * 2 + 8, Math.ceil(Math.max(...lines.map((l) => measure(l.t, l.font)))) + 8)}
-          height={lines.length * LINE + 4}
+          height={lines.length * (compactPitch ? CP : LINE) + 4}
           rx={3}
           fill={fill}
           fillOpacity={0.9}
@@ -179,9 +190,8 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
         </text>
       )}
       {lines.map((l, i) => {
-        const compactPitch = lines.some((x) => x.cls === 'sp-seg__tiny-meta');
-        const pitch = l.cls === 'sp-seg__tiny' ? 13 : compactPitch ? 13 : LINE;
-        const top = l.cls === 'sp-seg__tiny' ? 16 : compactPitch ? 7 + 11 : PAD + 11;
+        const pitch = compactPitch ? CP : LINE;
+        const top = compactPitch ? 6 + 11 : PAD + 11;
         return (
         <text key={i} className={l.cls} x={l.cls === 'sp-seg__tiny' ? 4 : PAD + (accentLeft ? 3 : 0)} y={top + i * pitch} fill={color}>
           {`${l.t} `}

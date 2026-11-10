@@ -72,7 +72,7 @@ export function FloorPanel({ floor, model, state, patch }: FloorPanelProps) {
                     </div>
                     <div className="sp-ins__row-meta">
                       <span>{s.suite ? `Ste ${s.suite}` : 'No suite'}</span>
-                      {t.meta && <span>· {t.meta}</span>}
+                      {t.meta && <span>{t.meta}</span>}
                     </div>
                   </div>
                   <div className="sp-ins__row-end">

@@ -21,6 +21,7 @@ export interface FloorPlateProps {
 }
 
 const FONT_NAME = "600 13px Inter, 'Salesforce Sans', system-ui, sans-serif";
+const FONT_TINY = "600 11px Inter, 'Salesforce Sans', system-ui, sans-serif";
 const FONT_SUB = "400 12px Inter, 'Salesforce Sans', system-ui, sans-serif";
 const FONT_BADGE = "600 11px Inter, 'Salesforce Sans', system-ui, sans-serif";
 const PAD = 16;
@@ -107,7 +108,11 @@ function chord(pts: Pt[], y: number): [number, number] | null {
 function linesFor(text: SegmentText, tier: 0 | 1 | 2 | 3, fw: number, bh: number): Line[] {
   const lines: Line[] = [];
   if (tier <= 1) {
-    for (const l of wrapWords(text.name, fw, FONT_NAME, 2)) lines.push({ t: l, cls: 'sp-seg__name', font: FONT_NAME });
+    // Whole name or no name: a fragment ("Café") misleads more than it helps.
+    const two = wrapWords(text.name, fw, FONT_NAME, 2);
+    const tiny = two.join(' ') === text.name ? [] : wrapWords(text.name, fw, FONT_TINY, 3);
+    if (two.length && two.join(' ') === text.name) for (const l of two) lines.push({ t: l, cls: 'sp-seg__name', font: FONT_NAME });
+    else if (tiny.length && tiny.join(' ') === text.name) for (const l of tiny) lines.push({ t: l, cls: 'sp-seg__tiny', font: FONT_TINY });
     if (fits(text.sub, fw, FONT_SUB)) lines.push({ t: text.sub, cls: 'sp-seg__sub', font: FONT_SUB });
     else if (fits(`${text.sfShort} SF`, fw, FONT_SUB)) lines.push({ t: `${text.sfShort} SF`, cls: 'sp-seg__sub', font: FONT_SUB });
     if (text.meta && bh >= 4 * LINE + 2 * PAD) {
@@ -140,7 +145,11 @@ function placeLines(poly: Pt[], cy: number, lines: Line[]): PlacedLine[] {
       return { ...l, x: c ? (c[0] + c[1]) / 2 : NaN, y: top + i * LINE + 11, fitsHere: !!c && c[1] - c[0] - 2 * SIDE >= measure(l.t, l.font) };
     });
   };
-  const first = layout(lines).filter((l) => l.fitsHere);
+  const placed = layout(lines);
+  // A name line that does not fit its chord takes every name line with it: never a fragment.
+  const isName = (cls: string) => cls === 'sp-seg__name' || cls === 'sp-seg__tiny';
+  const nameFailed = placed.some((l) => isName(l.cls) && !l.fitsHere);
+  const first = placed.filter((l) => l.fitsHere && !(nameFailed && isName(l.cls)));
   return layout(first.map(({ t, cls, font }) => ({ t, cls, font }))).map(({ t, cls, font, x, y }) => ({ t, cls, font, x, y }));
 }
 

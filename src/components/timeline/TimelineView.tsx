@@ -1,3 +1,4 @@
+import { Legend } from '../plan/Legend';
 import { dateToX } from '../../domain/timeline';
 import { useCallback, useId, useMemo, useRef, useState } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
@@ -70,6 +71,9 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
 
   return (
     <div className="sp-timeline" ref={hostRef}>
+      <div className="sp-timeline__legend">
+        <Legend items={model.legend} compact />
+      </div>
       <svg ref={svgRef} className="sp-timeline__svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="group" aria-label={`Lease timeline, ${rows.length} floors`}>
         <defs>
           <clipPath id={clipId}>

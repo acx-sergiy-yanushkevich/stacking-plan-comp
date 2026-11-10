@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../data/mock/property';
 import { deriveFloors } from './derive';
-import { RENT_ROLL_HEADER, rentRollRows, toCsv } from './exportCsv';
+import { RENT_ROLL_HEADER, rentRollRows, toCsv, rentRollDisplay } from './exportCsv';
 
 const floors = deriveFloors(property, TODAY, TODAY);
 const col = (name: string) => RENT_ROLL_HEADER.indexOf(name as (typeof RENT_ROLL_HEADER)[number]);
@@ -92,5 +92,19 @@ describe('toCsv', () => {
   });
   it('leaves plain cells unquoted', () => {
     expect(toCsv([['Floor 6', '600', '21400']])).toBe('Floor 6,600,21400');
+  });
+
+  it('withholds the term of holdover and MTM leases in safe mode: no past expiration, no "0 mo"', () => {
+    const safeRows = rentRollRows(property, floors, TODAY, true);
+    for (const r of safeRows.slice(1)) if (r[col('State')] === 'Leased' && r[col('Expiration')]) expect(r[col('Expiration')] >= TODAY).toBe(true);
+    const display = rentRollDisplay(property, floors, TODAY, true);
+    const ei = display[0].indexOf('Expiration');
+    const ri = display[0].indexOf('Remaining');
+    const si = display[0].indexOf('State');
+    for (const r of display.slice(1)) {
+      if (r[si] !== 'Leased') continue;
+      expect(r[ri]).not.toBe('0 mo');
+      if (r[ei] !== '—') expect(new Date(r[ei]).getTime()).toBeGreaterThanOrEqual(new Date(TODAY).getTime());
+    }
   });
 });

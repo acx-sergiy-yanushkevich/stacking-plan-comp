@@ -330,6 +330,10 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
 
   return (
     <div className={`sp-map ${status === 'failed' ? 'is-fallback' : ''}`.trim()} data-status={status}>
+      <div className="sp-map-legend">
+        <Legend items={model.legend} compact />
+      </div>
+      <div className="sp-map__stage">
       <div ref={containerRef} className="sp-map__canvas" aria-label="3D map of the property" role="application" />
       {status === 'failed' && <FootprintFallback footprint={mapProperty.footprint} floors={floors} toneOf={toneOf} selectedFloorId={state.floor} onSelect={selectFloor} />}
 
@@ -346,10 +350,6 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
             {floorCount} floors · {property.floorHeightFt} ft each
           </span>
         </p>
-      </div>
-
-      <div className="sp-map-overlay sp-map-legend">
-        <Legend items={model.legend} compact />
       </div>
 
       <FloorList floors={floors} selected={state.floor} onSelect={selectFloor} toneOf={toneOf} />
@@ -379,6 +379,7 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
           Presenting · as of {model.asOf}
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -206,7 +206,9 @@ interface BarProps {
 
 function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf, today, lens, safe, freeRight, focusable, onFocusBar, onNavigate, dim, selected, hovered, onSelect, onHover }: BarProps) {
   const text = segmentText(seg, { safe, asOf, lens, floorName, today });
-  const tone = text.tone;
+  const isMkt = bar.key.endsWith('-mkt');
+  // Coming supply is availability, so it takes the available-later tone in every lens, never the lease's.
+  const tone = isMkt ? 'available-later' : text.tone;
   const fill = `var(--tone-${tone}-fill)`;
   const edge = `var(--tone-${tone}-edge)`;
   const ink = `var(--tone-${tone}-text)`;
@@ -252,7 +254,6 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
   const textRoom = textEnd - textX;
 
   // Label tiers by visible width: the <title> and aria-label always carry the full text.
-  const isMkt = bar.key.endsWith('-mkt');
   const isNext = bar.key.endsWith('-next');
   const isSubBar = bar.key.endsWith('-sub');
   const name = isNext && seg.next
@@ -273,7 +274,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
     : isMkt && seg.marketed
       ? `${sf(seg.marketed.size)} · from ${fmtDate(bar.start)}`
       : isSubBar && seg.availability
-        ? `${sf(seg.availability.size)}${bar.end ? ` · thru ${fmtDate(bar.end)}` : ''}`
+        ? `${bar.end ? `thru ${fmtDate(bar.end)}` : 'open-ended'}`
         : isAvail
           ? `${sf(seg.size)}${text.meta ? ` · ${text.meta}` : ''}`
           : text.sub;
@@ -283,12 +284,10 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
   const sfOnly = measure(`${text.sfShort} SF`, NAME_FONT) <= textRoom ? `${text.sfShort} SF` : measure(text.sfShort, NAME_FONT) <= textRoom ? text.sfShort : '';
   let nameText = '';
   let subText = '';
-  if (visibleW >= 180 && textRoom > 0) {
+  if (visibleW >= 90 && textRoom > 0) {
     nameText = fitName(textRoom) || sfOnly;
     const rest = textRoom - measure(nameText, NAME_FONT) - measure(' · ', SUB_FONT);
-    subText = nameText && rest > 24 ? fitParts(sub, rest, SUB_FONT) : '';
-  } else if (visibleW >= 90 && textRoom > 0) {
-    nameText = fitName(textRoom) || sfOnly;
+    subText = nameText && nameText !== sfOnly && rest > 24 ? fitParts(sub, rest, SUB_FONT) : '';
   } else if (visibleW >= 48 && textRoom > 0) {
     nameText = sfOnly;
   }
@@ -315,13 +314,16 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
       subText = rest > 24 ? fitParts(sub, rest, SUB_FONT) : '';
     }
   }
-  const trailingTag = !tagText && !safe && (isHoldover || isMtm) ? (isMtm ? 'MTM' : 'Holdover') : null;
+  // The trailing tag needs free lane to its right; otherwise the rose extension and the tooltip carry the state.
+  const trailingWord = isMtm ? 'MTM' : 'Holdover';
+  const trailingW = Math.ceil(measure(trailingWord, TAG_FONT)) + 10;
+  const trailingTag = !tagText && !safe && (isHoldover || isMtm) && freeRight - (x1 + extW) >= trailingW + 8 ? trailingWord : null;
   // DOM order: the (trailing) tag group is rendered before the label text, so the accessible name must match that order.
   const visibleText = [tagText ?? trailingTag, [nameText, subText].filter(Boolean).join(' · ')].filter(Boolean).join(' ');
   const aria = `${visibleText ? `${visibleText}. ` : ''}${text.aria}. ${dates}`;
 
   const gradId = `sp-tl-fade-${bar.key}`;
-  const classes = ['sp-seg', 'sp-tl-bar', `sp-tl-bar--${bar.kind}`, text.pattern === 'dashed' ? 'sp-seg--dashed' : '', clippedStart ? 'is-clipped' : '', dim ? 'is-dim' : '', selected ? 'is-selected' : ''].filter(Boolean).join(' ');
+  const classes = ['sp-seg', 'sp-tl-bar', `sp-tl-bar--${bar.kind}`, text.pattern === 'dashed' || isMkt ? 'sp-seg--dashed' : '', clippedStart ? 'is-clipped' : '', dim ? 'is-dim' : '', selected ? 'is-selected' : ''].filter(Boolean).join(' ');
 
   const hover = (e: PointerEvent<SVGGElement>) => onHover({ key: bar.key, text: tooltip, clientX: e.clientX, clientY: e.clientY });
   const onKeyDown = (e: KeyboardEvent<SVGGElement>) => {
@@ -380,11 +382,11 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
       </g>
       {extW > 0 && isHoldover && <rect className="sp-tl-bar__ext sp-tl-bar__ext--risk" x={x1 - 0.5} y={y + 0.5} width={extW} height={BAR_HEIGHT - 1} rx={3} />}
       {extW > 0 && isProjected && <rect className="sp-tl-bar__ext sp-tl-bar__ext--projected" x={x1 - 0.5} y={y + 0.5} width={extW} height={BAR_HEIGHT - 1} rx={3} stroke={edge} />}
-      {!tagText && !safe && (isHoldover || isMtm) && (
+      {trailingTag && (
         <g className="sp-tl-tag sp-tl-tag--risk" aria-hidden="true">
-          <rect x={x1 + extW + 4} y={y + 3} width={Math.ceil(measure(isMtm ? 'MTM' : 'Holdover', TAG_FONT)) + 10} height={16} rx={3} />
-          <text x={x1 + extW + 4 + (Math.ceil(measure(isMtm ? 'MTM' : 'Holdover', TAG_FONT)) + 10) / 2} y={y + 15} textAnchor="middle">
-            {`${isMtm ? 'MTM' : 'Holdover'} `}
+          <rect x={x1 + extW + 4} y={y + 3} width={trailingW} height={16} rx={3} />
+          <text x={x1 + extW + 4 + trailingW / 2} y={y + 15} textAnchor="middle">
+            {`${trailingTag} `}
           </text>
         </g>
       )}
