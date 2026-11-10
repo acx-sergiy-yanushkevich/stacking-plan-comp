@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { daysBetween, fmtDate } from '../../domain/dates';
-import { num } from '../../domain/format';
+import { num, pct, usd0 } from '../../domain/format';
 import { Button, Chip, Icon, Menu, Switch } from '../ui';
 import { AsOfPopover } from './AsOfPopover';
 import { rememberTrigger } from '../../state/focusStore';
@@ -52,9 +52,18 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
           <span>{num(kpis.leasable)} RSF leasable</span>
           <span className="sp-dot">·</span>
           <span>{property.floors.length} floors</span>
+          {property.saleListing && (
+            <>
+              <span className="sp-dot">·</span>
+              <span className="sp-header__sale" title={`Listed for sale by ${property.saleListing.broker} · ${property.saleListing.status}`}>
+                <Icon name="dollar" size={12} /> For sale {usd0(property.saleListing.price)} · {usd0(Math.round(property.saleListing.price / kpis.leasable))}/RSF
+                {property.saleListing.capRate !== null ? ` · ${pct(property.saleListing.capRate)} cap` : ''}
+              </span>
+            </>
+          )}
           <span className={`sp-header__verified ${staleDays > 30 || staleRecords ? 'sp-header__verified--stale' : ''}`} title="Most recent change to a lease or availability on this plan; records not re-confirmed in 120 days are listed under Data issues">
             <Icon name={staleRecords ? 'clock' : 'check'} size={12} /> Latest change {fmtDate(verifiedAt)}
-            {staleRecords > 0 && (
+            {staleRecords > 0 && !state.safe && (
               <button type="button" className="sp-header__stale" onClick={() => patch({ mode: 'issues', select: null, floor: null })}>
                 · {staleRecords} record{staleRecords === 1 ? '' : 's'} stale
               </button>
@@ -65,6 +74,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
       <div className="sp-header__actions">
         <AsOfPopover asOf={state.asOf} today={today} onChange={(asOf) => patch({ asOf })} miniTimeline={miniTimeline} />
         <Switch checked={state.safe} onChange={(safe) => patch({ safe })} label="Prospect-safe" title="Hide tenant names, contacts, rents and prospects" />
+        {!state.safe && (
         <Button
           icon="warning"
           count={issueTotal}
@@ -77,6 +87,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
         >
           Data issues
         </Button>
+        )}
         <Menu
           label="Export"
           trigger={(p) => (

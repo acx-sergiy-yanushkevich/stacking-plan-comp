@@ -21,7 +21,7 @@ export interface PrintLayoutProps {
  */
 export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
   const { property: p, kpis: k, safe } = model;
-  const rows = rentRollDisplay(p, model.floors, model.asOf, safe);
+  const rows = rentRollDisplay(p, model.floors, model.asOf, safe).filter((r, i) => i === 0 || !safe || r[4] !== 'Not placed (data issue)');
   const worklist: WorklistRow[] = model.worklist('12');
   const noop = () => {};
   return (
@@ -82,11 +82,14 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
             <tr className="sp-print__total">
               <td colSpan={3}>Total · {num(k.leasable)} RSF leasable</td>
               <td className="num">{num(k.leased)} leased</td>
-              <td colSpan={rows[0].length - 4}>{pct(k.occupancy)} leased · {num(k.availableDirect + k.availableSublease)} SF available · {num(k.committed)} SF signed, not in</td>
+              <td colSpan={rows[0].length - 4}>
+                {pct(k.occupancy)} leased · {num(k.availableDirect + k.availableSublease)} SF available · {num(k.committed)} SF signed, not in
+                {model.roll.overAllocated.length > 0 && ` · rows sum to ${num(k.leased + model.roll.overAllocated.reduce((t, o) => t + o.sf, 0))} SF; ${model.roll.overAllocated.map((o) => `${o.floor} records exceed its leasable area by ${num(o.sf)} SF`).join(', ')}, so leased is capped at ${num(k.leased)} SF`}
+              </td>
             </tr>
           </tbody>
         </table>
-        {unplacedLeases(p, model.asOf).length > 0 && (
+        {!safe && unplacedLeases(p, model.asOf).length > 0 && (
           <p className="sp-print__note" style={{ marginTop: 6 }}>
             {unplacedLeases(p, model.asOf).length} lease{unplacedLeases(p, model.asOf).length === 1 ? ' is' : 's are'} not placed on the plan (no floor or unit records) and {unplacedLeases(p, model.asOf).length === 1 ? 'is' : 'are'} listed above as “Not placed”; see Data issues.
           </p>
@@ -169,7 +172,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
             </table>
           </div>
           <div>
-            <h2>Renewal worklist · next 12 months</h2>
+            <h2>{safe ? 'Lease expirations · next 12 months' : 'Renewal worklist · next 12 months'}</h2>
             <table className="sp-print__table sp-print__table--tight">
               <thead>
                 <tr>
@@ -178,7 +181,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
                   <th className="num">RSF</th>
                   <th>Ends</th>
                   <th className="num">Left</th>
-                  <th>Rent</th>
+                  {!safe && <th>Rent</th>}
                   {!safe && <th>Renewal</th>}
                 </tr>
               </thead>
@@ -192,7 +195,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
                     <td className="num">{num(r.size)}</td>
                     <td>{r.endDate ? fmtDate(r.endDate) : 'MTM'}</td>
                     <td className="num">{r.months === null ? '—' : fmtMonths(r.months)}</td>
-                    <td>{r.seg.lease && rentVisible(r.seg.lease, safe) && r.seg.lease.rate !== null ? rate(r.seg.lease.rate, r.seg.lease.rateUnit, r.seg.lease.leaseType) : '—'}</td>
+                    {!safe && <td>{r.seg.lease && rentVisible(r.seg.lease, safe) && r.seg.lease.rate !== null ? rate(r.seg.lease.rate, r.seg.lease.rateUnit, r.seg.lease.leaseType) : '—'}</td>}
                     {!safe && <td>{r.renewal ? r.renewal.stage : '—'}</td>}
                   </tr>
                 ))}

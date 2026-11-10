@@ -281,7 +281,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
             }}
             className={['sp-seg', selected ? 'is-selected' : '', dim ? 'is-dim' : '', p === 'dashed' ? 'sp-seg--dashed' : ''].filter(Boolean).join(' ')}
             role={s.seg.key.endsWith('-lobby') ? 'img' : 'button'}
-            tabIndex={s.seg.key.endsWith('-lobby') ? -1 : i === tabStop ? 0 : -1}
+            tabIndex={s.seg.key.endsWith('-lobby') ? undefined : i === tabStop ? 0 : -1}
             aria-label={`${[...s.lines.map((l) => l.t), ...s.badges.map((b) => b.text)].filter(Boolean).join(' ')}${s.lines.length || s.badges.length ? '. ' : ''}${s.text.aria}`}
             aria-pressed={s.seg.key.endsWith('-lobby') ? undefined : selected}
             data-key={s.seg.key}
@@ -312,6 +312,13 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
         );
       })}
       <path className="sp-plate__outline" d={outline} fill="none" stroke="var(--sp-color-border-strong)" pointerEvents="none" />
+      {selectedIdx >= 0 && slices[selectedIdx] && (
+        // Drawn last so neighbouring slices never paint over the selection ring.
+        <g className="sp-plate__selection" pointerEvents="none" aria-hidden="true">
+          <path d={pathD(slices[selectedIdx].poly)} fill="none" stroke="var(--sp-color-brand)" strokeOpacity={0.25} strokeWidth={10} strokeLinejoin="round" />
+          <path d={pathD(slices[selectedIdx].poly)} fill="none" stroke="var(--sp-color-brand)" strokeWidth={3} strokeLinejoin="round" />
+        </g>
+      )}
     </svg>
   );
 }

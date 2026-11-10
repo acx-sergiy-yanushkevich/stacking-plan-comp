@@ -10,10 +10,12 @@ export interface SheetProps {
   snap?: 'half' | 'full';
   /** The content brings its own title row and close button. */
   hideHeader?: boolean;
+  /** Non-modal: the page behind stays reachable (tool panels on phones). */
+  modeless?: boolean;
 }
 
 /** Non-modal bottom sheet for phones. The handle toggles between half and full height. */
-export function Sheet({ open, onClose, title, children, snap = 'half', hideHeader }: SheetProps) {
+export function Sheet({ open, onClose, title, children, snap = 'half', hideHeader, modeless }: SheetProps) {
   const [full, setFull] = useState(snap === 'full');
   const ref = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -28,7 +30,7 @@ export function Sheet({ open, onClose, title, children, snap = 'half', hideHeade
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
-      if (e.key === 'Tab' && ref.current) {
+      if (e.key === 'Tab' && ref.current && !modeless) {
         const items = Array.from(ref.current.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'));
         if (!items.length) return;
         const first = items[0];
@@ -47,7 +49,7 @@ export function Sheet({ open, onClose, title, children, snap = 'half', hideHeade
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div ref={ref} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : 'Details'} className={`sp-sheet ${full ? 'sp-sheet--full' : ''}`}>
+    <div ref={ref} role="dialog" aria-modal={modeless ? undefined : 'true'} aria-label={typeof title === 'string' ? title : 'Details'} className={`sp-sheet ${full ? 'sp-sheet--full' : ''}`}>
       <button type="button" className="sp-sheet__handle" aria-label={full ? 'Collapse panel' : 'Expand panel'} aria-expanded={full} onClick={() => setFull((f) => !f)}>
         <span />
       </button>

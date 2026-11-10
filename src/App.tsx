@@ -5,7 +5,6 @@ import { usePlanState, useDocumentTitle } from './state/usePlanState';
 import { deriveMode } from './state/planState';
 import { rentRollRows, toCsv } from './domain/exportCsv';
 import { Header, type ExportKind } from './components/shell/Header';
-import { SaleBanner } from './components/shell/SaleBanner';
 import { Toolbar } from './components/shell/Toolbar';
 import { KpiStrip, type KpiAction } from './components/kpis/KpiStrip';
 import { ToastProvider, useToast, Sheet } from './components/ui';
@@ -127,6 +126,21 @@ function Shell() {
       <AreaPanel model={model} state={state} dataSource={dataSource} />
     </Suspense>
   );
+  // Escape on the page itself (no panel, popover or block focused) clears the active filter and returns to the plan.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      const el = document.activeElement as HTMLElement | null;
+      if (el && el !== document.body && el.closest('.sp-ins, .sp-pop__panel, .sp-sheet, .sp-stage, input, select, textarea')) return;
+      if (state.bucket !== null || state.q || state.window || state.req !== null || state.inquiry) {
+        patch({ bucket: null, q: '', window: null, req: null, max: null, by: null, inquiry: null, mode: 'building' });
+        document.querySelector<HTMLElement>('#sp-plan')?.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [state.bucket, state.q, state.window, state.req, state.inquiry, patch]);
+
   const inspector = useMemo(
     () => <Inspector model={model} state={state} patch={patch} mode={mode} areaPanel={areaPanel} />,
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -147,7 +161,6 @@ function Shell() {
         {announce}
       </div>
       <Header model={model} state={state} patch={patch} onExport={onExport} miniTimeline={<MiniTimeline model={model} asOf={state.asOf} onChange={(asOf) => patch({ asOf })} width={312} height={64} />} />
-      <SaleBanner property={property} leasable={model.kpis.leasable} />
       <KpiStrip model={model} state={state} onAction={onKpi} />
       <Toolbar state={state} patch={patch} />
       <main className={`sp-main sp-no-print ${state.view === 'floor' && mode !== 'block' ? 'sp-main--wide' : ''}`} id="sp-plan" tabIndex={-1}>
@@ -183,6 +196,7 @@ function Shell() {
           }}
           title={sheetTitle}
           hideHeader
+          modeless={mode === 'find' || mode === 'worklist' || mode === 'issues'}
         >
           {inspector}
         </Sheet>

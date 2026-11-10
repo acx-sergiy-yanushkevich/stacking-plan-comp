@@ -96,7 +96,7 @@ export function TimelineAxis({ start, end, asOf, today, plotLeft, plotWidth, str
           const w = x1 - x0;
           if (w <= 0) return null;
           const active = activeBucket === b.key;
-          const value = `${num(b.sf)} SF`;
+          const value = b.sf > 0 ? `${num(b.sf)} SF` : '—';
           // Never rounded: drop the unit, then the point size, before dropping the number (the title keeps it).
           const fitsIn = (t: string, font: string) => measure(t, font) + 6 <= w;
           const [valueText, small] = fitsIn(value, VALUE_FONT) ? [value, false] : fitsIn(num(b.sf), VALUE_FONT) ? [num(b.sf), false] : fitsIn(num(b.sf), VALUE_FONT_SM) ? [num(b.sf), true] : ['', false];

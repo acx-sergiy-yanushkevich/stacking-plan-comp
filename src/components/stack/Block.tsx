@@ -96,7 +96,12 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
     if (fits(sfText, inner, FONT_SUB)) lines.push({ t: sfText, cls: 'sp-seg__sf', font: FONT_SUB });
     if (text.lensShort && lines.length < maxLines && !lines.some((l) => l.t.includes(text.lensShort)) && fits(text.lensShort, inner, FONT_SUB)) lines.push({ t: text.lensShort, cls: 'sp-seg__meta', font: FONT_SUB });
   }
-  if (lines.length > maxLines) lines.length = maxLines;
+  // Too many lines: drop the second name line before any SF / lens line (the tooltip keeps the full name).
+  while (lines.length > maxLines) {
+    const nameIdx = lines.map((l) => l.cls).lastIndexOf('sp-seg__name');
+    if (nameIdx > 0 && lines.filter((l) => l.cls === 'sp-seg__name').length > 1) lines.splice(nameIdx, 1);
+    else lines.length = maxLines;
+  }
   // Very narrow blocks: the whole name in up to three short lines before any glyph.
   if (lines.length === 0 && w >= 40 && h >= 48) {
     const small = wrapWords(text.name, w - 8, FONT_TINY, 3);
