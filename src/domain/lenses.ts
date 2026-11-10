@@ -274,3 +274,8 @@ export function legendFor(lens: LensId, prospectSafe: boolean, floors: FloorView
     return { ...item, sf, share: item.pattern === 'asking' || leasable <= 0 ? 0 : sf / leasable };
   });
 }
+
+/** Legend wording for a tone in a lens ("Expires < 12 mo"), for tooltips and accessible names. */
+export function toneLabel(tone: Tone, lens: LensId, prospectSafe: boolean): string {
+  return legendSpecs(lens, prospectSafe).find((i) => i.tone === tone)?.label ?? '';
+}

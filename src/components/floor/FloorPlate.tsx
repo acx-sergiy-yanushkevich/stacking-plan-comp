@@ -151,8 +151,11 @@ function placeLines(poly: Pt[], cy: number, lines: Line[]): PlacedLine[] {
   // A name line that does not fit its chord takes every name line with it: never a fragment.
   const isName = (cls: string) => cls === 'sp-seg__name' || cls === 'sp-seg__tiny';
   const nameFailed = placed.some((l) => isName(l.cls) && !l.fitsHere);
-  const first = placed.filter((l) => l.fitsHere && !(nameFailed && isName(l.cls)));
-  return layout(first.map(({ t, cls, font }) => ({ t, cls, font }))).map(({ t, cls, font, x, y }) => ({ t, cls, font, x, y }));
+  // A lens fact or SF line that misses its chord at 12 px gets a second chance at 11 px (it says the state).
+  const first = placed.map((l) => (!l.fitsHere && !isName(l.cls) && l.font !== FONT_TINY ? { ...l, font: FONT_TINY, cls: 'sp-seg__tiny', fitsHere: false } : l));
+  const second = layout(first.map(({ t, cls, font }) => ({ t, cls, font })));
+  const kept = second.filter((l) => l.fitsHere && !(nameFailed && isName(l.cls)));
+  return layout(kept.map(({ t, cls, font }) => ({ t, cls, font }))).map(({ t, cls, font, x, y }) => ({ t, cls, font, x, y }));
 }
 
 function placeBadges(poly: Pt[], text: SegmentText, blockTop: number, cy: number): PlacedBadge[] {
@@ -296,7 +299,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
             className={['sp-seg', selected ? 'is-selected' : '', dim ? 'is-dim' : '', p === 'dashed' ? 'sp-seg--dashed' : '', s.seg.key.endsWith('-lobby') ? 'sp-seg--lobby' : ''].filter(Boolean).join(' ')}
             role={s.seg.key.endsWith('-lobby') ? 'img' : 'button'}
             tabIndex={s.seg.key.endsWith('-lobby') ? undefined : i === tabStop ? 0 : -1}
-            aria-label={`${[...s.lines.map((l) => l.t), ...s.badges.map((b) => b.text)].filter(Boolean).join(' ')}${s.lines.length || s.badges.length ? '. ' : ''}${s.text.aria}`}
+            aria-label={`${s.text.aria}${s.lines.length || s.badges.length ? `. Label: ${[...s.lines.map((l) => l.t), ...s.badges.map((b) => b.text)].filter(Boolean).join(' ')}` : ''}`}
             aria-pressed={s.seg.key.endsWith('-lobby') ? undefined : selected}
             data-key={s.seg.key}
             style={{ color: edge }}

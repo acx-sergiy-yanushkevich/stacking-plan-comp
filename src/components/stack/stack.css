@@ -46,3 +46,5 @@
   .sp-stack__title .sp-weak { display: none; }
   .sp-stack__foot span:last-child { display: none; }
 }
+
+@media (max-width: 1099px) { .sp-stage .sp-seg { scroll-margin-bottom: 50vh; } }

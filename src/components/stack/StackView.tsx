@@ -141,7 +141,11 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
 
   // Keep focus on the selected block when selection changes from elsewhere (worklist, finder)
   useEffect(() => {
-    if (state.select && segIndex.has(state.select)) setFocusKey(state.select);
+    if (state.select && segIndex.has(state.select)) {
+      setFocusKey(state.select);
+      // With the bottom sheet open (narrow layouts), keep the chosen block in view above it.
+      if (typeof window !== 'undefined' && window.innerWidth < 1100) document.querySelector<SVGGElement>(`.sp-stage [data-key="${CSS.escape(state.select)}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
   }, [state.select, segIndex]);
 
   const over = state.safe ? [] : floors.filter((f) => f.overAllocatedBy > 0);

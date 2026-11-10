@@ -9,6 +9,7 @@ export const FONT_NAME = "600 13px Inter, 'Salesforce Sans', system-ui, sans-ser
 export const FONT_SUB = "400 12px Inter, 'Salesforce Sans', system-ui, sans-serif";
 export const FONT_BADGE = "600 11px Inter, 'Salesforce Sans', system-ui, sans-serif";
 export const FONT_TINY = "600 11px Inter, 'Salesforce Sans', system-ui, sans-serif";
+export const FONT_MICRO = "600 10px Inter, 'Salesforce Sans', system-ui, sans-serif";
 
 export interface BlockProps {
   seg: Segment;
@@ -36,7 +37,7 @@ const LINE = 15;
 const CP = 12.5;
 /** One-letter state cue for blocks too narrow for any text. */
 const GLYPH: Partial<Record<Segment['kind'], string>> = { available: 'A', sublease: 'S', committed: 'C', forsale: '$', holdover: '!', mtm: '!', unmarketed: '?', projected: 'V' };
-const GLYPH_WORD: Partial<Record<Segment['kind'], string>> = { available: 'Avail', sublease: 'Sublet', committed: 'Signed', forsale: 'Sale', unmarketed: 'Gap', projected: 'Vacant' };
+const GLYPH_WORD: Partial<Record<Segment['kind'], string>> = { available: 'Available', sublease: 'Sublease', committed: 'Signed', forsale: 'For sale', unmarketed: 'Gap', projected: 'Vacant' };
 
 /** One suite on the plan: tone fill, pattern, accent bar, adaptive text, badges. */
 export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelect, onFocus, onKeyDown, enlarged, compact, related }: BlockProps) {
@@ -94,8 +95,12 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
       const sfLine = sfLens && fits(sfLens, fw(0), FONT_SUB) ? sfLens : fits(sfUnit, fw(0), FONT_SUB) ? sfUnit : fits(sfUnit, fw(0) + PAD, FONT_SUB) ? sfUnit : null;
       if (sfLine) out.push({ t: sfLine, cls: 'sp-seg__sf', font: FONT_SUB });
       else if (fits(sfUnit, w - 6, FONT_TINY)) out.push({ t: sfUnit, cls: 'sp-seg__tiny', font: FONT_TINY });
+      else if (fits(sfUnit, w - 2, FONT_MICRO)) out.push({ t: sfUnit, cls: 'sp-seg__micro', font: FONT_MICRO });
+      const micro = out.length > 0 && out[0].cls === 'sp-seg__micro';
       if (text.lensShort && !(sfLine && sfLine.includes(text.lensShort))) {
-        if (fits(text.lensShort, fw(out.length), FONT_SUB)) out.push({ t: text.lensShort, cls: 'sp-seg__meta', font: FONT_SUB });
+        if (micro) {
+          if (fits(text.lensShort, w - 2, FONT_MICRO)) out.push({ t: text.lensShort, cls: 'sp-seg__micro', font: FONT_MICRO });
+        } else if (fits(text.lensShort, fw(out.length), FONT_SUB)) out.push({ t: text.lensShort, cls: 'sp-seg__meta', font: FONT_SUB });
         else if (text.lensShort.includes('$') && text.lensShort.includes(' ')) {
           // A rate that is too long for one line keeps its unit and type on a second line ("$32/SF/yr" / "FSG").
           const cut = text.lensShort.lastIndexOf(' ');
@@ -110,6 +115,8 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   const attempt = (nameLines: string[], cls: string, font: string): { lines: Line[]; compact: boolean } | null => {
     const facts = factsFor(nameLines.length);
     if (nameLines.length === 0 && facts.length === 0) return null;
+    // A name is never worth more than the SF figure: when the SF line cannot sit under the name, try without the name.
+    if (nameLines.length > 0 && !facts.some((f) => f.t.includes(text.sfShort))) return null;
     const name: Line[] = nameLines.map((t) => ({ t, cls, font }));
     const fit = (facts2: Line[]) => {
       const need = name.length + facts2.length;
@@ -135,7 +142,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
     (whole(tiny) && h >= 48 ? attempt(tiny, 'sp-seg__tiny', FONT_TINY) : null) ??
     attempt([], 'sp-seg__name', FONT_NAME);
   const lines: Line[] = chosen?.lines ?? [];
-  const compactPitch = (chosen?.compact ?? false) || lines.some((l) => l.cls === 'sp-seg__tiny');
+  const compactPitch = (chosen?.compact ?? false) || lines.some((l) => l.cls === 'sp-seg__tiny' || l.cls === 'sp-seg__micro');
   const maxLines = compactPitch ? cap13 : cap15;
   // SF alone says nothing about state: prefix the state word when the only line is the SF figure.
   if (lines.length === 1 && lines[0].cls === 'sp-seg__sf') {
@@ -198,7 +205,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
         const pitch = compactPitch ? CP : LINE;
         const top = compactPitch ? 6 + 11 : PAD + 11;
         return (
-        <text key={i} className={l.cls} x={l.cls === 'sp-seg__tiny' ? 4 : PAD + (accentLeft ? 3 : 0)} y={top + i * pitch} fill={color}>
+        <text key={i} className={l.cls} x={l.cls === 'sp-seg__micro' ? 1 : l.cls === 'sp-seg__tiny' ? 3 : PAD + (accentLeft ? 3 : 0)} y={top + i * pitch} fill={color}>
           {`${l.t} `}
         </text>
         );

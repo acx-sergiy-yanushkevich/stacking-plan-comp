@@ -20,6 +20,8 @@ interface Card {
   delta?: { text: string; good: boolean | null } | null;
   active: boolean;
   title: string;
+  /** Informational card with no action (prospect-safe Pipeline). */
+  static?: boolean;
 }
 
 export function KpiStrip({ model, state, onAction }: KpiStripProps) {
@@ -31,7 +33,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
       id: 'status',
       label: 'Leased',
       value: pct(k.occupancy),
-      context: `${pct(k.physical)} occupied${k.committed ? ` · ${num(k.committed)} SF signed, not in` : ''}${k.availableSublease ? ` · ${num(k.availableSublease)} sublet vacant` : ''}${overAlloc > 0 ? ` · ${num(overAlloc)} over-allocated` : ''}`,
+      context: `${pct(k.physical)} occupied${k.committed ? ` · ${num(k.committed)} SF signed, not in` : ''}${k.availableSublease ? ` · ${num(k.availableSublease)} sublet vacant` : ''}${overAlloc > 0 && !safe ? ` − ${num(overAlloc)} over-allocated (capped)` : ''}`,
       delta: d ? { text: `${d.occupancy >= 0 ? '+' : '−'}${Math.abs(d.occupancy * 100).toFixed(1)} pts`, good: d.occupancy >= 0 } : null,
       active: state.lens === 'status' && state.mode === 'building' && !state.q,
       title: 'Leased share of leasable RSF, including signed leases that have not commenced. Click for the status lens.',
@@ -82,8 +84,9 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
           label: 'Pipeline',
           value: 'Withheld',
           context: 'Deal activity is not shown in prospect-safe mode',
-          active: state.lens === 'deals',
-          title: 'Live deals on this building. Click for the deals lens.',
+          active: false,
+          title: 'Deal activity is withheld in prospect-safe mode',
+          static: true,
         }
       : {
           id: 'deals',
@@ -98,7 +101,15 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
   ];
   return (
     <section className="sp-card sp-kpis sp-no-print" aria-label="Key figures">
-      {cards.map((c) => (
+      {cards.map((c) => c.static ? (
+        <div key={c.id} className="sp-kpi sp-kpi--static" title={c.title}>
+          <span className="sp-kpi__label sp-label">{c.label}</span>
+          <span className="sp-kpi__value">
+            <span>{c.value}</span>
+          </span>
+          <span className="sp-kpi__context">{c.context}</span>
+        </div>
+      ) : (
         <button key={c.id} type="button" className={`sp-kpi ${c.active ? 'is-active' : ''}`} onClick={() => onAction(c.id)} title={c.title} aria-pressed={c.active}>
           <span className="sp-kpi__label sp-label">{c.label}</span>
           <span className="sp-kpi__value">

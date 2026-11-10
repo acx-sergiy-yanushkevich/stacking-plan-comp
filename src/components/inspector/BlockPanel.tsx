@@ -173,11 +173,11 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
               <li key={c.id} className="sp-ins__change">
                 <div className="sp-ins__row-main">
                   <div className="sp-ins__row-title">
-                    <span>{c.field}</span>
+                    <span>{c.recordType === 'Lease' || c.recordType === 'Availability' ? c.field : `${c.recordLabel} · ${c.field}`}</span>
                     {c.recordType !== 'Lease' && <span className="sp-ins__tag">{c.recordType}</span>}
                   </div>
                   <div className="sp-ins__row-meta">
-                    <span>{c.from ?? '—'} → {c.to ?? '—'}</span>
+                    <span>{c.field === 'Record created' ? 'Record created' : `${c.from ?? '—'} → ${c.to ?? '—'}`}</span>
                   </div>
                   <div className="sp-ins__row-meta">
                     <span>{fmtDate(c.at)}</span>

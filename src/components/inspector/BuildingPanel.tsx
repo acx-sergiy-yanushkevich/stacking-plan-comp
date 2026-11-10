@@ -18,6 +18,23 @@ export interface BuildingPanelProps {
 
 const STAGES: DealStage[] = ['Tour', 'Proposal', 'LOI', 'Lease Out'];
 
+/** Prospect-safe wording for a changed field: what happened, never the values. */
+function safeChangeText(field: string): string {
+  switch (field) {
+    case 'Record created':
+      return 'New availability listed';
+    case 'Rent High':
+    case 'Rent Low':
+      return 'Asking rent updated';
+    case 'Status':
+      return 'Listing status updated';
+    case 'Available From':
+      return 'Availability date updated';
+    default:
+      return `${field} updated`;
+  }
+}
+
 export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
   const { floors, roll, kpis, counts, changes, safe, asOf } = model;
   const segments = floors.flatMap((f) => f.segments);
@@ -187,7 +204,7 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
         ) : (
         <>
         <p className="sp-ins__explain">
-          {plural(model.kpis.pipeline.deals, 'live deal')} · {num(model.kpis.pipeline.sf)} SF in play · {model.kpis.pipeline.onVacancy} on vacancies
+          {plural(model.kpis.pipeline.deals, 'live deal')} · {num(model.kpis.pipeline.sf)} SF in play · {model.kpis.pipeline.onVacancy} on vacancies. SF counts each space once, at its most advanced stage.
         </p>
         <ul className="sp-ins__list">
           {byStage.map((row) => (
@@ -235,7 +252,7 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
           <ul className="sp-ins__list">
             {changes.filter((c) => !safe || c.recordType === 'Availability').slice(0, 5).map((c) => {
               const who = safe ? c.recordType : c.recordLabel;
-              const what = safe ? `${c.field} changed` : `${c.field}: ${c.from ?? '—'} → ${c.to ?? '—'}`;
+              const what = safe ? safeChangeText(c.field) : c.field === 'Record created' ? 'Record created' : `${c.field}: ${c.from ?? '—'} → ${c.to ?? '—'}`;
               const body = (
                 <>
                   <div className="sp-ins__row-main">

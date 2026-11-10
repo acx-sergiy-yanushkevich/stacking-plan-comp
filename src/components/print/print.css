@@ -21,8 +21,8 @@
 .sp-print__table th { text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: .04em; color: #5c5c5c; border-bottom: 1px solid #181818; padding: 4px 6px; }
 .sp-print__table td { padding: 2px 6px; border-bottom: 1px solid #e5e5e5; vertical-align: top; }
 .sp-print__table .num, .sp-print__table th.num { text-align: right; }
-.sp-print__table--tight td, .sp-print__table--tight th { padding: 3px 5px; white-space: nowrap; }
-.sp-print__table--tight td:first-child { white-space: normal; }
+.sp-print__table--tight td, .sp-print__table--tight th { padding: 3px 5px; white-space: normal; }
+.sp-print__table--tight td.num, .sp-print__table--tight th.num { white-space: nowrap; }
 .sp-print__table tr { break-inside: avoid; }
 .sp-print, .sp-print * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 .sp-print__two { display: grid; grid-template-columns: 1fr 1.4fr; gap: 24px; }

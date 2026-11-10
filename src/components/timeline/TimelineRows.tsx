@@ -303,8 +303,10 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
   const tooltip = `${text.tooltip}\n${dates}`;
   // A bar too narrow for its name spills the label into the free space to its right.
   let outside = false;
+  // Room to the right must also hold the trailing Holdover / MTM tag, which is drawn there first.
+  const trailingNeed = !tagText && !safe && (isHoldover || isMtm) ? Math.ceil(measure(isMtm ? 'MTM' : 'Holdover', TAG_FONT)) + 16 : 0;
   if (!isAvail && (!nameText || nameText === sfOnly) && name) {
-    const room = freeRight - (x1 + extW) - 10;
+    const room = freeRight - (x1 + extW) - 10 - trailingNeed;
     if (room > 0 && measure(name, NAME_FONT) <= room) {
       nameText = name;
       outside = true;
@@ -397,7 +399,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
         </g>
       )}
       {nameText && (
-        <text className={`sp-tl-bar__text ${outside ? 'sp-tl-bar__text--outside' : ''}`} x={outside ? x1 + extW + 6 : textX} y={y + BAR_HEIGHT / 2 + 4} fill={outside ? 'var(--sp-color-text)' : ink} style={!outside && (bar.committed || bar.sublease) ? { paintOrder: 'stroke', stroke: fill, strokeWidth: 3, strokeLinejoin: 'round' } : undefined}>
+        <text className={`sp-tl-bar__text ${outside ? 'sp-tl-bar__text--outside' : ''}`} x={outside ? x1 + extW + 6 + (trailingTag ? trailingW + 6 : 0) : textX} y={y + BAR_HEIGHT / 2 + 4} fill={outside ? 'var(--sp-color-text)' : ink} style={!outside && (bar.committed || bar.sublease) ? { paintOrder: 'stroke', stroke: fill, strokeWidth: 3, strokeLinejoin: 'round' } : undefined}>
           <tspan className="sp-tl-bar__name">{nameText}</tspan>
           {subText && <tspan className="sp-tl-bar__sub"> · {subText}</tspan>}
         </text>
