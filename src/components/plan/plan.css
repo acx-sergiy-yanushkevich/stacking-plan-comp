@@ -2,6 +2,7 @@
    a bar in the timeline, a slice in the floor plate. Tone colours come from tokens. */
 .sp-seg { cursor: pointer; }
 .sp-seg__ring { fill: none; stroke: none; }
+.sp-seg__gloss { display: none; }
 .sp-seg__rect { stroke-width: 1; transition: filter var(--sp-ease), opacity var(--sp-ease); }
 .sp-seg:hover .sp-seg__rect { filter: brightness(0.96); }
 .sp-seg.is-selected .sp-seg__rect { stroke: var(--sp-color-brand); stroke-width: 2; }

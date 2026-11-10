@@ -32,6 +32,8 @@ export interface PlanState {
   live: boolean;
   census: string | null;
   theme: Theme | null;
+  /** Visual skin: frosted glass (default) or the flat Lightning look. */
+  skin?: 'glass' | 'classic';
 }
 
 const VIEWS: readonly View[] = ['stack', 'timeline', 'map', 'floor'];
@@ -122,6 +124,7 @@ export function parseState(search: string, today: ISODate): PlanState {
     live: p.get('live') === '1',
     census: text(p.get('census')),
     theme: oneOfOrNull(THEMES, p.get('theme')),
+    ...(p.get('skin') === 'classic' ? { skin: 'classic' as const } : {}),
   };
 }
 
@@ -146,6 +149,7 @@ export function serializeState(s: PlanState, today: ISODate): string {
   if (s.live) p.set('live', '1');
   if (s.census) p.set('census', s.census);
   if (s.theme) p.set('theme', s.theme);
+  if (s.skin === 'classic') p.set('skin', 'classic');
   const qs = p.toString();
   return qs ? `?${qs}` : '';
 }

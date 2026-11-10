@@ -1,0 +1,175 @@
+/* Glass skin (default; `?skin=classic` returns to the flat Lightning look).
+   Frosted panels over an aurora backdrop. Everything is token-driven: the light block sets the
+   tokens, the two dark blocks re-set the same tokens, and the rules below only read them.
+   Screen only: print and PDF keep the plain white report. */
+@media screen {
+  :root[data-skin='glass'] {
+    --sp-radius-card: 16px; --sp-radius-block: 7px;
+    --sp-color-page: #e9eefb;
+    --sp-color-card: rgba(255, 255, 255, 0.5);
+    --sp-color-card-2: rgba(255, 255, 255, 0.42);
+    --sp-color-border: rgba(30, 41, 90, 0.1);
+    --sp-color-border-strong: rgba(30, 41, 90, 0.28);
+    --sp-color-text: #111827; --sp-color-text-weak: #47506a; --sp-color-text-faint: #4f5874;
+    --sp-color-brand: #2563eb; --sp-color-brand-strong: #1d3fae; --sp-color-pill-deal: #1d3fae;
+    --sp-color-brand-soft: rgba(59, 107, 255, 0.13); --sp-color-on-brand: #ffffff; --sp-color-focus: #2563eb;
+    --sp-shadow-pop: 0 18px 50px rgba(30, 41, 90, 0.22), 0 2px 6px rgba(30, 41, 90, 0.12);
+    --tone-leased-fill: rgba(255, 255, 255, 0.52); --tone-leased-text: #111827; --tone-leased-edge: rgba(71, 85, 125, 0.3);
+    --tone-neutral-fill: rgba(255, 255, 255, 0.52); --tone-neutral-text: #111827; --tone-neutral-edge: rgba(71, 85, 125, 0.3);
+    --tone-muted-fill: rgba(255, 255, 255, 0.36); --tone-muted-text: #4b5470; --tone-muted-edge: rgba(71, 85, 125, 0.22);
+
+    --sp-glass-blur: blur(22px) saturate(170%);
+    --sp-glass-edge: rgba(255, 255, 255, 0.82);
+    --sp-glass-float: rgba(255, 255, 255, 0.93);
+    --sp-glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 12px 32px rgba(40, 54, 120, 0.12), 0 1px 2px rgba(40, 54, 120, 0.08);
+    --sp-glass-lift: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 18px 40px rgba(40, 54, 120, 0.18), 0 2px 4px rgba(40, 54, 120, 0.1);
+    --sp-glass-active: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(224, 234, 255, 0.78));
+    --sp-glass-active-ring: inset 0 0 0 1.5px #2563eb, 0 14px 34px rgba(37, 99, 235, 0.24);
+    --sp-glass-control: rgba(255, 255, 255, 0.58);
+    --sp-glass-control-on: rgba(255, 255, 255, 0.95);
+    --sp-glass-gloss: rgba(255, 255, 255, 0.75);
+    --sp-glass-pane-shadow: drop-shadow(0 1px 1.5px rgba(30, 41, 90, 0.16));
+    --sp-brand-grad: linear-gradient(135deg, #2563eb, #4f46e5);
+    --sp-brand-glow: 0 8px 20px rgba(67, 80, 235, 0.36);
+    --sp-aurora:
+      radial-gradient(1200px 780px at 4% -6%, rgba(86, 140, 255, 0.6), transparent 62%),
+      radial-gradient(1000px 700px at 100% 0%, rgba(160, 118, 255, 0.52), transparent 64%),
+      radial-gradient(900px 620px at 46% 46%, rgba(120, 200, 255, 0.22), transparent 66%),
+      radial-gradient(1100px 820px at 84% 102%, rgba(45, 212, 191, 0.44), transparent 62%),
+      radial-gradient(900px 660px at -2% 100%, rgba(255, 158, 128, 0.38), transparent 62%);
+  }
+
+  /* Dark glass: the same tokens, re-set (keep this block and the [data-theme='dark'] copy below in sync). */
+  @media (prefers-color-scheme: dark) {
+    :root[data-skin='glass']:not([data-theme='light']) {
+      --sp-color-page: #090d1c;
+      --sp-color-card: rgba(24, 30, 52, 0.56);
+      --sp-color-card-2: rgba(255, 255, 255, 0.06);
+      --sp-color-border: rgba(255, 255, 255, 0.09);
+      --sp-color-border-strong: rgba(255, 255, 255, 0.24);
+      --sp-color-text: #f3f5fa; --sp-color-text-weak: #bcc3d6; --sp-color-text-faint: #9aa3ba;
+      --sp-color-brand: #7aa7ff; --sp-color-brand-strong: #a9c4ff; --sp-color-pill-deal: #1b5fa8;
+      --sp-color-brand-soft: rgba(122, 167, 255, 0.16); --sp-color-on-brand: #0b1533; --sp-color-focus: #a9c4ff;
+      --sp-shadow-pop: 0 20px 56px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4);
+      --tone-leased-fill: rgba(255, 255, 255, 0.09); --tone-leased-text: #e9edf2; --tone-leased-edge: rgba(255, 255, 255, 0.18);
+      --tone-neutral-fill: rgba(255, 255, 255, 0.09); --tone-neutral-text: #e9edf2; --tone-neutral-edge: rgba(255, 255, 255, 0.18);
+      --tone-muted-fill: rgba(255, 255, 255, 0.045); --tone-muted-text: #a2abbf; --tone-muted-edge: rgba(255, 255, 255, 0.12);
+      --sp-glass-edge: rgba(255, 255, 255, 0.13);
+      --sp-glass-float: rgba(20, 26, 46, 0.95);
+      --sp-glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 16px 40px rgba(0, 0, 0, 0.45);
+      --sp-glass-lift: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 22px 48px rgba(0, 0, 0, 0.55);
+      --sp-glass-active: linear-gradient(180deg, rgba(122, 167, 255, 0.2), rgba(122, 167, 255, 0.1));
+      --sp-glass-active-ring: inset 0 0 0 1.5px #7aa7ff, 0 14px 34px rgba(64, 110, 255, 0.3);
+      --sp-glass-control: rgba(255, 255, 255, 0.07);
+      --sp-glass-control-on: rgba(255, 255, 255, 0.18);
+      --sp-glass-gloss: rgba(255, 255, 255, 0.24);
+      --sp-glass-pane-shadow: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+      --sp-brand-grad: linear-gradient(135deg, #7aa7ff, #9d8cff);
+      --sp-brand-glow: 0 8px 22px rgba(98, 120, 255, 0.4);
+      --sp-aurora:
+        radial-gradient(1100px 700px at 6% -8%, rgba(64, 96, 255, 0.42), transparent 60%),
+        radial-gradient(900px 640px at 98% 2%, rgba(150, 80, 255, 0.32), transparent 62%),
+        radial-gradient(1000px 760px at 80% 104%, rgba(20, 184, 166, 0.26), transparent 60%),
+        radial-gradient(820px 600px at -2% 100%, rgba(236, 72, 153, 0.18), transparent 60%);
+    }
+  }
+  :root[data-skin='glass'][data-theme='dark'] {
+    --sp-color-page: #090d1c;
+    --sp-color-card: rgba(24, 30, 52, 0.56);
+    --sp-color-card-2: rgba(255, 255, 255, 0.06);
+    --sp-color-border: rgba(255, 255, 255, 0.09);
+    --sp-color-border-strong: rgba(255, 255, 255, 0.24);
+    --sp-color-text: #f3f5fa; --sp-color-text-weak: #bcc3d6; --sp-color-text-faint: #9aa3ba;
+    --sp-color-brand: #7aa7ff; --sp-color-brand-strong: #a9c4ff; --sp-color-pill-deal: #1b5fa8;
+    --sp-color-brand-soft: rgba(122, 167, 255, 0.16); --sp-color-on-brand: #0b1533; --sp-color-focus: #a9c4ff;
+    --sp-shadow-pop: 0 20px 56px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4);
+    --tone-leased-fill: rgba(255, 255, 255, 0.09); --tone-leased-text: #e9edf2; --tone-leased-edge: rgba(255, 255, 255, 0.18);
+    --tone-neutral-fill: rgba(255, 255, 255, 0.09); --tone-neutral-text: #e9edf2; --tone-neutral-edge: rgba(255, 255, 255, 0.18);
+    --tone-muted-fill: rgba(255, 255, 255, 0.045); --tone-muted-text: #a2abbf; --tone-muted-edge: rgba(255, 255, 255, 0.12);
+    --sp-glass-edge: rgba(255, 255, 255, 0.13);
+    --sp-glass-float: rgba(20, 26, 46, 0.95);
+    --sp-glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 16px 40px rgba(0, 0, 0, 0.45);
+    --sp-glass-lift: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 22px 48px rgba(0, 0, 0, 0.55);
+    --sp-glass-active: linear-gradient(180deg, rgba(122, 167, 255, 0.2), rgba(122, 167, 255, 0.1));
+    --sp-glass-active-ring: inset 0 0 0 1.5px #7aa7ff, 0 14px 34px rgba(64, 110, 255, 0.3);
+    --sp-glass-control: rgba(255, 255, 255, 0.07);
+    --sp-glass-control-on: rgba(255, 255, 255, 0.18);
+    --sp-glass-gloss: rgba(255, 255, 255, 0.24);
+    --sp-glass-pane-shadow: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+    --sp-brand-grad: linear-gradient(135deg, #7aa7ff, #9d8cff);
+    --sp-brand-glow: 0 8px 22px rgba(98, 120, 255, 0.4);
+    --sp-aurora:
+      radial-gradient(1100px 700px at 6% -8%, rgba(64, 96, 255, 0.42), transparent 60%),
+      radial-gradient(900px 640px at 98% 2%, rgba(150, 80, 255, 0.32), transparent 62%),
+      radial-gradient(1000px 760px at 80% 104%, rgba(20, 184, 166, 0.26), transparent 60%),
+      radial-gradient(820px 600px at -2% 100%, rgba(236, 72, 153, 0.18), transparent 60%);
+  }
+
+  /* ── Backdrop ─────────────────────────────────────────── */
+  :root[data-skin='glass'] body { background: var(--sp-aurora), var(--sp-color-page); }
+
+  /* ── Panels ───────────────────────────────────────────── */
+  :root[data-skin='glass'] .sp-card {
+    border-color: var(--sp-glass-edge);
+    -webkit-backdrop-filter: var(--sp-glass-blur); backdrop-filter: var(--sp-glass-blur);
+    box-shadow: var(--sp-glass-shadow);
+  }
+  /* A frosted panel is its own stacking context: the bands that own dropdowns sit above the ones below. */
+  :root[data-skin='glass'] .sp-header { position: relative; z-index: 30; padding: 16px 20px; }
+  :root[data-skin='glass'] .sp-toolbar { position: relative; z-index: 20; }
+  @media (max-width: 760px) { :root[data-skin='glass'] .sp-toolbar { position: sticky; } }
+  :root[data-skin='glass'] .sp-header__title h1 { font-size: 20px; letter-spacing: -0.02em; }
+  :root[data-skin='glass'] .sp-header__icon { border-radius: 12px; background: var(--sp-brand-grad); box-shadow: var(--sp-brand-glow); }
+
+  /* Floating surfaces sit over busy content: nearly opaque, still frosted. */
+  :root[data-skin='glass'] .sp-pop__panel,
+  :root[data-skin='glass'] .sp-sheet {
+    background: var(--sp-glass-float); border-color: var(--sp-glass-edge);
+    -webkit-backdrop-filter: var(--sp-glass-blur); backdrop-filter: var(--sp-glass-blur);
+  }
+
+  /* ── KPI tiles: six separate panes ────────────────────── */
+  :root[data-skin='glass'] .sp-kpis { background: transparent; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; gap: 10px; }
+  @media (min-width: 761px) { :root[data-skin='glass'] .sp-kpis { overflow: visible; } }
+  :root[data-skin='glass'] .sp-kpi,
+  :root[data-skin='glass'] .sp-kpi:last-child {
+    background: var(--sp-color-card); border: 1px solid var(--sp-glass-edge); border-radius: 14px;
+    -webkit-backdrop-filter: var(--sp-glass-blur); backdrop-filter: var(--sp-glass-blur);
+    box-shadow: var(--sp-glass-shadow); transition: transform var(--sp-ease), box-shadow var(--sp-ease), background var(--sp-ease);
+  }
+  :root[data-skin='glass'] button.sp-kpi:hover { transform: translateY(-2px); box-shadow: var(--sp-glass-lift); background: var(--sp-color-card); }
+  :root[data-skin='glass'] .sp-kpi.is-active { background: var(--sp-glass-active); box-shadow: var(--sp-glass-active-ring); }
+  :root[data-skin='glass'] .sp-kpi--static:hover { background: var(--sp-color-card); }
+  @media (min-width: 761px) {
+    :root[data-skin='glass'] .sp-kpi { padding: 14px 16px; }
+    :root[data-skin='glass'] .sp-kpi__value { font-size: 26px; letter-spacing: -0.03em; }
+  }
+
+  /* ── Controls ─────────────────────────────────────────── */
+  :root[data-skin='glass'] .sp-btn { border-radius: 10px; }
+  :root[data-skin='glass'] .sp-btn--neutral, :root[data-skin='glass'] .sp-btn--danger { background: var(--sp-glass-control); border-color: var(--sp-color-border-strong); }
+  :root[data-skin='glass'] .sp-btn--neutral:hover { background: var(--sp-glass-control-on); }
+  :root[data-skin='glass'] .sp-btn--brand, :root[data-skin='glass'] .sp-btn--brand:hover { background: var(--sp-brand-grad); border-color: transparent; box-shadow: var(--sp-brand-glow); }
+  :root[data-skin='glass'] .sp-segmented { border-radius: 999px; padding: 3px; background: var(--sp-glass-control); border-color: var(--sp-color-border); }
+  :root[data-skin='glass'] .sp-segmented__opt { border-radius: 999px; }
+  :root[data-skin='glass'] .sp-segmented__opt[aria-checked='true'] { background: var(--sp-glass-control-on); box-shadow: 0 2px 8px rgba(40, 54, 120, 0.18); }
+  :root[data-skin='glass'] .sp-filterbar { background: var(--sp-color-brand-soft); }
+
+  /* ── The plan: tenants are clear panes, states are tinted glass ── */
+  :root[data-skin='glass'] .sp-stack .sp-seg__rect { rx: 7px; filter: var(--sp-glass-pane-shadow); }
+  :root[data-skin='glass'] .sp-stack .sp-seg:hover .sp-seg__rect { filter: var(--sp-glass-pane-shadow) brightness(0.97); }
+  :root[data-skin='glass'] .sp-stack .sp-seg__ring { rx: 10px; }
+  :root[data-skin='glass'] .sp-seg__gloss { display: block; fill: var(--sp-glass-gloss); pointer-events: none; }
+  :root[data-skin='glass'] .sp-seg--dashed .sp-seg__gloss, :root[data-skin='glass'] .sp-seg.is-dim .sp-seg__gloss { display: none; }
+
+  /* ── Map: the natural home of glass ───────────────────── */
+  :root[data-skin='glass'] .sp-map { border: 1px solid var(--sp-glass-edge); box-shadow: var(--sp-glass-shadow); }
+  :root[data-skin='glass'] .sp-map-legend { background: var(--sp-color-card); -webkit-backdrop-filter: var(--sp-glass-blur); backdrop-filter: var(--sp-glass-blur); }
+  :root[data-skin='glass'] .sp-map-overlay,
+  :root[data-skin='glass'] .sp-map-floors,
+  :root[data-skin='glass'] .sp-map-ctl-group {
+    background: var(--sp-color-card); border-color: var(--sp-glass-edge);
+    -webkit-backdrop-filter: var(--sp-glass-blur); backdrop-filter: var(--sp-glass-blur);
+    box-shadow: var(--sp-glass-shadow);
+  }
+}

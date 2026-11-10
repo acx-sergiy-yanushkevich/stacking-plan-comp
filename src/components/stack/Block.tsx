@@ -231,6 +231,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
       <title>{text.tooltip + (enlarged ? '\nDrawn at minimum width for legibility' : '')}</title>
       <rect className="sp-seg__ring" x={-3} y={-3} width={w + 6} height={h + 6} rx={7} />
       <rect className="sp-seg__rect" width={w} height={h} rx={4} fill={fill} stroke={edge} />
+      {w > 16 && <rect className="sp-seg__gloss" x={5} y={1.2} width={w - 10} height={1} rx={0.5} />}
       {patternFill && <rect width={w} height={h} rx={4} fill={patternFill} pointerEvents="none" />}
       {patternFill && lines.length > 0 &&
         (tone === 'empty' || tone === 'deal-none' ? [{ f: 'var(--sp-color-card)', o: 0.9 }] : [{ f: fill, o: 0.9 }]).map((layer, i) => (

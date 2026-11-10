@@ -74,6 +74,9 @@ function Shell() {
     if (state.theme) document.documentElement.dataset.theme = state.theme;
     else delete document.documentElement.dataset.theme;
   }, [state.theme]);
+  useEffect(() => {
+    document.documentElement.dataset.skin = state.skin === 'classic' ? 'classic' : 'glass';
+  }, [state.skin]);
 
   const onExport = useCallback(
     async (kind: ExportKind) => {
