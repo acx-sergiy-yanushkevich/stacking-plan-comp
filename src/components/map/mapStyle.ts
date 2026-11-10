@@ -2,11 +2,11 @@ import type { ExpressionSpecification } from 'maplibre-gl';
 import type { FloorView } from '../../domain/derive';
 import type { ExtrusionCollection, ExtrusionProperties } from '../../domain/geometry';
 import { num } from '../../domain/format';
-import { toneFor, toneShort, type Tone } from '../../domain/lenses';
+import { toneFor, type Tone } from '../../domain/lenses';
 import { canShowIssues } from '../../domain/safe';
 import type { GeoPolygon } from '../../domain/types';
 import type { Lens } from '../../state/planState';
-import { lensFact } from '../building/floorFact';
+import { floorFact } from '../building/floorFact';
 
 /** Pure helpers behind the map: tone selection, colour resolution, geometry tweaks, expressions. */
 
@@ -46,36 +46,31 @@ export function dominantTone(f: FloorView, lens: Lens, safe: boolean): Tone {
 }
 
 /**
- * What the floor list writes after a floor's leased share.
- *
- * It says of a floor what the Building view says of it, in the same words from the same function
- * (`lensFact`, building/floorFact.ts): in the status lens holdover, month-to-month or an expiry within 12
- * months, whatever share of the floor they are; the next expiry in the expiration lens; the live deals;
- * the rents. One word for the dominant state hid them: Floor 2's month-to-month tenant and Floor 1's
- * café expiring in February were not on this list while the Building view flagged both. Prospect-safe
- * follows with it: `lensFact` says nothing a prospect may not be told.
- *
- * Beside that, in exact SF: the space on offer (said to be a sublease when it all is), a unit for sale,
- * an area with no record ("not on the market" for a prospect). Where the Building view has nothing to
- * add, the state that colours most of the floor keeps its word when it is anything but plain leased,
- * because that word explains the swatch.
+ * What the floor list writes after a floor's leased share: the Building view's own fact for that floor
+ * (`floorFact`, building/floorFact.ts), word for word. The two views show one building, so a floor reads
+ * the same in both: "7,000 SF available" on Floor 7 here as on the model, "Month-to-month" on Floor 2,
+ * the next expiry in the expiration lens, the live deals, the rents. Nothing is added to it and nothing
+ * reworded; prospect-safe follows with it, since `floorFact` says nothing a prospect may not be told.
  */
 export function floorState(f: FloorView, lens: Lens, safe: boolean): string {
+  return floorFact(f, lens, safe);
+}
+
+/**
+ * What a row's tooltip and accessible name add to that fact, in exact SF: how much of the space on
+ * offer is a sublease, a unit for sale, an area with no record ("not on the market" for a prospect).
+ * These are kept off the row itself so that the row and the Building view say the same thing.
+ */
+export function floorAlso(f: FloorView, safe: boolean): string {
   const sum = (kind: FloorView['segments'][number]['kind']) => f.segments.filter((s) => s.kind === kind).reduce((t, s) => t + s.size, 0);
-  const space = f.available > 0 ? `${num(f.available)} SF ${sum('sublease') === f.available ? 'sublease ' : ''}available` : '';
+  const sublet = Math.min(sum('sublease'), f.available);
   const forSale = sum('forsale');
   const gap = sum('unmarketed');
-  const said = lensFact(f, lens, safe);
-  const dominant = dominantTone(f, lens, safe);
-  // In the status lens these states are already on the row in SF; "Leased" needs no word at all.
-  const inSf: Tone[] = ['leased', 'neutral', 'available', 'sublease', 'forsale', 'empty'];
-  const word = said || (lens === 'status' && inSf.includes(dominant)) ? '' : toneShort(dominant, lens, safe);
-  // Status reads as on the model ("5,500 SF available · holdover"); the other lenses lead with what they colour by.
-  const facts = (lens === 'status' ? [space, said || word] : [said || word, space]).filter(Boolean);
-  if (forSale > 0) facts.push(`${num(forSale)} SF for sale`);
-  if (gap > 0) facts.push(`${num(gap)} SF ${canShowIssues(safe) ? 'unaccounted' : 'not on the market'}`);
-  const text = facts.join(' · ');
-  return text.charAt(0).toUpperCase() + text.slice(1);
+  const also: string[] = [];
+  if (sublet > 0) also.push(sublet === f.available ? 'the space on offer is a sublease' : `${num(sublet)} SF of the space on offer is a sublease`);
+  if (forSale > 0) also.push(`${num(forSale)} SF for sale`);
+  if (gap > 0) also.push(`${num(gap)} SF ${canShowIssues(safe) ? 'unaccounted' : 'not on the market'}`);
+  return also.join(', ');
 }
 
 /**

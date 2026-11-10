@@ -1,5 +1,6 @@
 import type { Deal, Inquiry, ISODate } from './types';
 import { activeDeals, segmentIndex, type FloorView, type Segment } from './derive';
+import { num, plural } from './format';
 
 // ── Requirement fit ────────────────────────────────────────
 
@@ -8,6 +9,8 @@ export interface FitOption {
   floorName: string;
   size: number;
   keys: string[];
+  /** The suites in the option, by name: "Ste 850 + Ste 860" (`suitesLabel`). Every finder row shows it. */
+  suites: string;
   /** null = available on as-of date */
   from: ISODate | null;
   type: 'Direct' | 'Sublease';
@@ -85,7 +88,8 @@ export function findFits(
     return [...out];
   };
   const anyDivisible = (segs: Segment[]) => segs.some((x) => x.availability?.divisible);
-  const options: FitOption[] = [];
+  // Options are collected without their suite names; every one is named once, below.
+  const options: Array<Omit<FitOption, 'suites'> & { suites?: string }> = [];
   let largestNow = { size: 0, floorName: '' };
   for (const f of floors) {
     if (f.maxContiguous > largestNow.size) largestNow = { size: f.maxContiguous, floorName: f.floor.name };
@@ -210,6 +214,19 @@ export function findFits(
     }
   }
   const segs = segmentIndex(floors);
+  const named: FitOption[] = options.map((o) => ({ ...o, suites: suitesLabel(floors, o.keys) }));
+  return rankFits(named, segs, req, neededBy, maxSize, largestNow);
+}
+
+/** The second half of `findFits`: deals, lateness, the maximum, and the order the options are listed in. */
+function rankFits(
+  options: FitOption[],
+  segs: Map<string, Segment>,
+  req: number,
+  neededBy: ISODate | null | undefined,
+  maxSize: number | null | undefined,
+  largestNow: { size: number; floorName: string },
+): { options: FitOption[]; keys: Set<string>; largestNow: { size: number; floorName: string } } {
   for (const o of options)
     o.dealList = o.keys.flatMap((k) => {
       const sg = segs.get(k);
@@ -254,8 +271,25 @@ export interface NearMiss {
   /** SF short of the requirement (0 for a stack that meets it). */
   shortfall: number;
   keys: string[];
+  /** The suites in the alternative, by name: "Ste 850 + Ste 860" (`suitesLabel`). */
+  suites: string;
   from: ISODate | null;
   type: 'Direct' | 'Sublease' | 'Direct + sublease';
+}
+
+/**
+ * The suites behind a finder row, by name, in plan order (top floor first, left to right): "Ste 850 +
+ * Ste 860" on one floor, "Ste 850 + Ste 860 on Floor 8, Ste 720 on Floor 7" across floors. A row that
+ * says "Floor 8 · 7,400 SF" does not say which space it means; this does. Space with no suite number
+ * is named by its floor.
+ */
+export function suitesLabel(floors: FloorView[], keys: readonly string[]): string {
+  const wanted = new Set(keys);
+  const groups = floors
+    .map((f) => ({ floorName: f.floor.name, suites: f.segments.filter((s) => wanted.has(s.key)).map((s) => (s.suite ? `Ste ${s.suite}` : f.floor.name)) }))
+    .filter((g) => g.suites.length > 0);
+  if (groups.length <= 1) return groups[0]?.suites.join(' + ') ?? '';
+  return groups.map((g) => `${g.suites.join(' + ')} on ${g.floorName}`).join(', ');
 }
 
 /** One space a tenant could take: a vacant or sublet suite, or an occupied one marketed for later. */
@@ -285,11 +319,16 @@ const latest = (spaces: Space[]): ISODate | null => spaces.map((x) => x.from).fi
  * requirement's space type and is applied before anything is combined or counted, so a sublease-only
  * search is offered sublease space only (never a direct or mixed alternative) and the `limit` is
  * spent on rows the tenant can use. Never offers for-sale units. Sorted by smallest shortfall first.
+ *
+ * One floor is one alternative. A floor with several suites is offered as their total; a suite of it
+ * alone is the same space with a larger shortfall, so it is not listed again beside the total (it
+ * used to be: "Floor 8 · 7,400 SF" and then "Floor 8 · 4,200 SF", Ste 850 by itself). The same goes
+ * for a suite that is part of an exact option already listed (`covered`: the keys of each option).
  */
-export function nearMisses(floors: FloorView[], req: number, asOf: ISODate, type: FitType = 'any', limit = 4): NearMiss[] {
+export function nearMisses(floors: FloorView[], req: number, asOf: ISODate, type: FitType = 'any', limit = 4, covered: ReadonlyArray<readonly string[]> = []): NearMiss[] {
   const want = type === 'any' ? null : type === 'direct' ? 'Direct' : 'Sublease';
   const spaces = (f: FloorView) => spacesOn(f).filter((x) => !want || x.type === want);
-  const out: NearMiss[] = [];
+  const out: Array<Omit<NearMiss, 'suites'>> = [];
   for (const f of floors) {
     const sp = spaces(f);
     // whole-floor available total as one candidate when several suites exist
@@ -307,6 +346,8 @@ export function nearMisses(floors: FloorView[], req: number, asOf: ISODate, type
     out.push({ kind: 'stack', floorName: `Floors ${floors[i + 1].floor.sequence}–${floors[i].floor.sequence}`, size, shortfall: 0, keys: all.map((x) => x.key), from: latest(all), type: mixOf(all) });
   }
   const seen = new Set<string>();
+  const within = (inner: readonly string[], outer: readonly string[]) => inner.length < outer.length && inner.every((k) => outer.includes(k));
+  const inside = (inner: readonly string[], outer: readonly string[]) => inner.every((k) => outer.includes(k));
   return out
     .filter((m) => {
       const k = m.keys.join('+');
@@ -314,9 +355,93 @@ export function nearMisses(floors: FloorView[], req: number, asOf: ISODate, type
       seen.add(k);
       return true;
     })
+    // A smaller space that is part of a larger one on the same floor, or of an exact option, is not a second alternative.
+    .filter((m, _, all) => m.kind !== 'short' || !(all.some((n) => n.kind === 'short' && n.floorName === m.floorName && within(m.keys, n.keys)) || covered.some((keys) => inside(m.keys, keys))))
     .sort((x, y) => x.shortfall - y.shortfall || (x.from ?? '').localeCompare(y.from ?? '') || y.size - x.size)
     .slice(0, limit)
-    .map((m) => ({ ...m, from: m.from && m.from > asOf ? m.from : null }));
+    .map((m) => ({ ...m, suites: suitesLabel(floors, m.keys), from: m.from && m.from > asOf ? m.from : null }));
+}
+
+/** What a tenant is looking for: at least `size` SF, at most `max`, by a date, of a space type. */
+export interface Requirement {
+  size: number;
+  max: number | null;
+  by: ISODate | null;
+  type: FitType;
+}
+
+/**
+ * What would turn a search with no option into one with some, counted by running the search again
+ * without each limit: the maximum, the space type, or both. The needed-by date is not here on purpose:
+ * it never removes an option (a space that comes later is listed and marked late), so moving it cannot
+ * add one.
+ */
+export interface NoFit {
+  /** Options there would be without the maximum (0 when there is no maximum, or it is not what is in the way). */
+  withoutMax: number;
+  /** Options there would be with the type set to Any (0 when it already is). */
+  anyType: number;
+  /** Options there would be with both changed, when neither change alone is enough. */
+  withoutBoth: number;
+  /** The largest block of direct space available on the as-of date. */
+  largestNow: { size: number; floorName: string };
+  /** One or two sentences for the empty state: only what applies to this requirement. */
+  message: string;
+}
+
+const optionCount = (n: number) => plural(n, 'option');
+
+/** The advice for a search that found nothing (see `NoFit`). `hasAlternatives`: near misses are listed below it. */
+export function noFit(floors: FloorView[], req: Requirement, inquiries: Inquiry[], asOf: ISODate, hasAlternatives = false): NoFit {
+  const count = (max: number | null, type: FitType) => filterFits(findFits(floors, req.size, req.by, max, inquiries, asOf).options, type).length;
+  const withoutMax = req.max !== null ? count(null, req.type) : 0;
+  const anyType = req.type !== 'any' ? count(req.max, 'any') : 0;
+  const withoutBoth = req.max !== null && req.type !== 'any' && withoutMax === 0 && anyType === 0 ? count(null, 'any') : 0;
+  const { largestNow } = findFits(floors, req.size, req.by, req.max, inquiries, asOf);
+  const typeName = req.type === 'direct' ? 'Direct' : 'Sublease';
+  const tips: string[] = [];
+  if (withoutMax > 0) tips.push(`Without the ${num(req.max ?? 0)} SF maximum, ${optionCount(withoutMax)} ${withoutMax === 1 ? 'fits' : 'fit'}.`);
+  if (anyType > 0) tips.push(`With the type set to Any instead of ${typeName}, ${optionCount(anyType)} ${anyType === 1 ? 'fits' : 'fit'}.`);
+  if (withoutBoth > 0) tips.push(`Without the ${num(req.max ?? 0)} SF maximum and with the type set to Any, ${optionCount(withoutBoth)} ${withoutBoth === 1 ? 'fits' : 'fit'}.`);
+  if (tips.length === 0) {
+    // Nothing to relax: say how much space there is, so the reader knows how far off the requirement is.
+    tips.push(largestNow.size > 0 ? `The largest block available now is ${num(largestNow.size)} SF${largestNow.floorName ? ` on ${largestNow.floorName}` : ''}.` : 'No direct space is available now.');
+    if (hasAlternatives) tips.push('The closest spaces and floor combinations are listed below.');
+  }
+  return { withoutMax, anyType, withoutBoth, largestNow, message: tips.join(' ') };
+}
+
+/** Everything the space finder shows for a requirement. */
+export interface FinderResult {
+  options: FitOption[];
+  /** Every suite of every option: what the plan lights up. */
+  keys: Set<string>;
+  /**
+   * Near misses, listed when exact options are few (smaller spaces, stacked floors), already narrowed
+   * to the requirement's space type and never a part of an option or of another alternative.
+   */
+  alternatives: NearMiss[];
+  /** The alternatives' suites that are not in an option: the plan keeps them readable instead of dimming them. */
+  partial: Set<string>;
+  largestNow: { size: number; floorName: string };
+  /** Set when there is no option: what would produce one, or how much space there is. */
+  noFit: NoFit | null;
+}
+
+/** Run the finder for a requirement: options of the right type, alternatives when they are few, advice when there are none. */
+export function searchSpace(floors: FloorView[], req: Requirement, inquiries: Inquiry[], asOf: ISODate): FinderResult {
+  const r = findFits(floors, req.size, req.by, req.max, inquiries, asOf);
+  const options = filterFits(r.options, req.type);
+  const keys = new Set(options.flatMap((o) => o.keys));
+  const alternatives = options.length < 3 ? nearMisses(floors, req.size, asOf, req.type, 4, options.map((o) => o.keys)) : [];
+  return {
+    options,
+    keys,
+    alternatives,
+    partial: new Set(alternatives.flatMap((m) => m.keys).filter((k) => !keys.has(k))),
+    largestNow: r.largestNow,
+    noFit: options.length === 0 ? noFit(floors, req, inquiries, asOf, alternatives.length > 0) : null,
+  };
 }
 
 /** One suite of a finder option, as the option summary lists it. */
@@ -368,4 +493,26 @@ export function neededByDate(value: string): ISODate | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
   const t = new Date(`${value}T00:00:00Z`);
   return !Number.isNaN(t.getTime()) && t.toISOString().slice(0, 10) === value ? value : null;
+}
+
+/**
+ * What the finder makes of a "Needed by" value (the ISO value of a date control, or the `by` of a link).
+ *  - `date`: the date the requirement uses, or null when there is none to use.
+ *  - `problem`: null when the value is empty or usable; `incomplete` while it is not a whole calendar
+ *    date yet (a date control reports the year as it is typed: 0002, 0020, 0202, 2027); `before` when
+ *    it is a real date earlier than the as-of date.
+ * A date before the as-of date is refused, not moved: the finder measures "late" from the as-of date,
+ * so an earlier date would mark space that is free on the as-of date as late. It is never corrected to
+ * another date either; the caller shows what was entered and says why it is not used.
+ */
+export interface NeededBy {
+  date: ISODate | null;
+  problem: 'incomplete' | 'before' | null;
+}
+
+export function checkNeededBy(value: string | null | undefined, asOf: ISODate): NeededBy {
+  if (!value) return { date: null, problem: null };
+  const date = neededByDate(value);
+  if (!date || date < '1000-01-01') return { date: null, problem: 'incomplete' };
+  return date < asOf ? { date: null, problem: 'before' } : { date, problem: null };
 }

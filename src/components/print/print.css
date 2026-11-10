@@ -1,3 +1,8 @@
+/* The plan drawn for an image export (ExportStage): laid out at a fixed width, off-screen and unseen. */
+.sp-export-stage { position: fixed; left: -20000px; top: 0; visibility: hidden; pointer-events: none; }
+.sp-export-stage .sp-card { border: 0; }
+.sp-export-stage .sp-stack__body { padding: 0; overflow: visible; }
+
 .sp-print { display: none; color: #181818; background: #fff; font-size: 11px; }
 .sp-print--visible { display: block; }
 .sp-print__page { padding: 10mm 12mm; page-break-after: always; break-after: page; background: #fff; }

@@ -3,7 +3,7 @@ import { property, TODAY } from '../../data/mock/property';
 import { deriveFloors } from '../../domain/derive';
 import { toneFor } from '../../domain/lenses';
 import { floorFact } from '../building/floorFact';
-import { accentTone, dominantTone, floorState, floorColorExpression, inflatePolygon, mixHex, normalizeHex, resolveToneHex, toneColorExpression } from './mapStyle';
+import { accentTone, dominantTone, floorAlso, floorState, floorColorExpression, inflatePolygon, mixHex, normalizeHex, resolveToneHex, toneColorExpression } from './mapStyle';
 
 describe('dominantTone', () => {
   const floors = deriveFloors(property, TODAY, TODAY);
@@ -71,62 +71,48 @@ describe('inflatePolygon', () => {
 
 describe('floorState: what the map floor list says after the leased share', () => {
   const floors = deriveFloors(property, TODAY, TODAY);
-  const say = (id: string, lens: 'status' | 'expiry' | 'rent' = 'status', safe = false) => floorState(floors.find((f) => f.floor.id === id)!, lens, safe);
+  const floor = (id: string) => floors.find((f) => f.floor.id === id)!;
+  const say = (id: string, lens: 'status' | 'expiry' | 'rent' = 'status', safe = false) => floorState(floor(id), lens, safe);
 
-  it('names the vacancy in exact SF where one word used to hide it (Floors 8 and 1)', () => {
-    expect(say('F8')).toBe('7,400 SF available');
-    expect(say('F1')).toBe('4,000 SF available · expires < 12 mo · 2,600 SF for sale');
-    expect(say('F12')).toBe('9,300 SF available');
+  it('is the Building view\'s fact for the floor, word for word, in every lens, prospect-safe or not', () => {
+    for (const lens of ['status', 'expiry', 'deals', 'rent'] as const)
+      for (const safe of [false, true])
+        for (const f of floors) expect(floorState(f, lens, safe), `${f.floor.name}, ${lens}${safe ? ', safe' : ''}`).toBe(floorFact(f, lens, safe));
   });
 
-  it('says what the Building view says of a floor at risk, whatever share of the floor it is', () => {
-    // Floor 2: 6,200 SF month-to-month on a floor that is mostly plain leased. Floor 1: the café, expiring Feb '27.
-    expect(say('F2')).toBe('Month-to-month · 5,400 SF unaccounted');
-    expect(say('F1')).toContain('expires < 12 mo');
+  it('reads as the model does on the three floors that used to differ (round 14)', () => {
+    // Floor 7 said "7,000 SF sublease available"; Floors 1 and 2 added a unit for sale and an unaccounted area.
+    expect(say('F7')).toBe('7,000 SF available');
+    expect(say('F1')).toBe('4,000 SF available · expires < 12 mo');
+    expect(say('F2')).toBe('Month-to-month');
+    expect(say('F8')).toBe('7,400 SF available');
     expect(say('F3')).toBe('5,500 SF available · holdover');
     expect(say('F6')).toBe('Expires < 12 mo');
     expect(say('F10')).toBe('');
   });
 
-  it('agrees with the Building view on every floor, in every lens, prospect-safe or not', () => {
-    for (const lens of ['status', 'expiry', 'deals', 'rent'] as const)
-      for (const safe of [false, true])
-        for (const f of floors) {
-          const building = floorFact(f, lens, safe);
-          const map = floorState(f, lens, safe);
-          // Every part of the Building view's fact is on the map's row, word for word. A sublease-only
-          // floor's space is the one difference: the map says "sublease available" where the model says "available".
-          for (const part of building.split(' · ').filter(Boolean)) {
-            const there = map.toLowerCase().includes(part.toLowerCase()) || (/ SF available$/.test(part) && map.includes(part.replace(' SF available', ' SF sublease available')));
-            expect(there, `${f.floor.name}, ${lens}${safe ? ', safe' : ''}: "${part}" is not in "${map}"`).toBe(true);
-          }
-        }
+  it('keeps what the row no longer says in the tooltip and the accessible name, in exact SF', () => {
+    expect(floorAlso(floor('F7'), false)).toBe('the space on offer is a sublease');
+    expect(floorAlso(floor('F1'), false)).toBe('2,600 SF for sale');
+    expect(floorAlso(floor('F2'), false)).toBe('5,400 SF unaccounted');
+    expect(floorAlso(floor('F10'), false)).toBe('');
+    // A prospect is told the space is not on the market, never that the records have a gap.
+    expect(floorAlso(floor('F2'), true)).toBe('5,400 SF not on the market');
   });
 
-  it('says a sublease is a sublease, and names an area with no record', () => {
-    expect(say('F7')).toBe('7,000 SF sublease available');
-    expect(say('F2')).toContain('5,400 SF unaccounted');
-  });
-
-  it('prospect-safe: no risk or expiry word, and a gap is space that is not on the market', () => {
+  it('prospect-safe: no risk, expiry, deal or data-gap word on a row or in what is added to it', () => {
     expect(say('F3', 'status', true)).toBe('5,500 SF available');
     expect(say('F6', 'status', true)).toBe('');
-    expect(say('F2', 'status', true)).toBe('5,400 SF not on the market');
     for (const lens of ['status', 'expiry', 'rent'] as const)
-      for (const f of floors) expect(floorState(f, lens, true), `${f.floor.name}, ${lens}`).not.toMatch(/risk|expir|holdover|month-to-month|MTM|unaccounted|live deal/i);
+      for (const f of floors) expect(`${floorState(f, lens, true)} ${floorAlso(f, true)}`, `${f.floor.name}, ${lens}`).not.toMatch(/risk|expir|holdover|month-to-month|MTM|unaccounted|live deal/i);
   });
 
   it('gives the swatch a second colour for a holdover, month-to-month or soon-expiring lease, never in prospect-safe mode', () => {
-    const tone = (id: string, lens: 'status' | 'expiry' = 'status', safe = false) => accentTone(floors.find((f) => f.floor.id === id)!, lens, safe);
+    const tone = (id: string, lens: 'status' | 'expiry' = 'status', safe = false) => accentTone(floor(id), lens, safe);
     expect(tone('F2')).toBe('risk');
     expect(tone('F1')).toBe('expiring');
     expect(tone('F10')).toBeNull();
     expect(tone('F2', 'expiry')).toBe('risk');
     for (const f of floors) for (const lens of ['status', 'expiry'] as const) expect(accentTone(f, lens, true), `${f.floor.name}, ${lens}`).toBeNull();
-  });
-
-  it('in the other lenses the band that colours the floor leads, then the space on offer', () => {
-    expect(say('F8', 'expiry')).toMatch(/ · 7,400 SF available$/);
-    expect(say('F8', 'expiry').split(' · ')[0].length).toBeGreaterThan(0);
   });
 });

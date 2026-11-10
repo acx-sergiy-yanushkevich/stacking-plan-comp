@@ -53,8 +53,11 @@ export function KpiReveal({ open, children }: KpiRevealProps) {
     for (let s = el.nextElementSibling; s; s = s.nextElementSibling) below.push(s);
     const opts = { duration: MS, easing: EASE };
     // The clip leaves room for the tiles' shadows at the sides and opens (or closes) from the bottom edge.
+    // Fully open it ends on the gap under the strip and no lower, so at every frame its bottom edge is
+    // exactly where the top of what slides beneath it is (both have travelled the same share of
+    // `shift`): the strip is never drawn over the toolbar it is pushing down, nor the toolbar over it.
     const shut = 'inset(-24px -40px 100% -40px)';
-    const clear = `inset(-24px -40px -${Math.ceil(gap + 40)}px -40px)`;
+    const clear = `inset(-24px -40px -${gap}px -40px)`;
     if (entering) {
       running.current.push(el.animate([{ opacity: 0, clipPath: shut }, { opacity: 1, clipPath: clear }], opts));
       for (const s of below) running.current.push(s.animate([{ transform: `translateY(${-shift}px)` }, { transform: 'none' }], opts));

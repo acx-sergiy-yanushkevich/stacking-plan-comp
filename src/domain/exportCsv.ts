@@ -38,8 +38,9 @@ const STATE_LABEL: Record<SegmentKind, string> = {
  * CSV opens as numbers; the Unit column says `yr`/`mo`. In prospect-safe mode the Live deals column
  * is dropped (deal activity is not for prospects), no lease has a commencement, an expiration or
  * months remaining, whether it is in place ("Leased") or signed and not yet in ("Committed"), and a
- * sublet suite is written as the space on offer: its asking rent and the sublease's own end, the same
- * facts the prospect-safe PDF prints for it.
+ * sublet suite is written as the space on offer: its asking rent with unit and lease type, and no end
+ * date (a sublease ends with its sublandlord's lease), the same facts the prospect-safe PDF prints
+ * for it. The file is a rent roll: it carries no building-wide figure (no WALT, no rollover) in any mode.
  */
 export function rentRollRows(p: Property, floors: FloorView[], asOf: ISODate, safe: boolean): string[][] {
   const rows: string[][] = [dealColumn([...RENT_ROLL_HEADER], safe)];
@@ -92,7 +93,7 @@ function segmentRow(f: FloorView, s: Segment, safe: boolean): string[] {
     } else if (!canShowInPlaceRent(safe) && rentVisible(avail, safe) && avail.rentHigh > 0) {
       // Prospect-safe: the head lease's rent and term are withheld, which would leave the suite's asking
       // rent out of the file while the PDF prints it. Asking rents are marketing information: the row
-      // carries the offer instead (asking range, its unit and type, the sublease's own end).
+      // carries the offer instead (asking range, its unit and type).
       rate = `${avail.rentLow}–${avail.rentHigh}`;
       unit = avail.rateUnit;
       leaseType = avail.leaseType;
@@ -123,8 +124,8 @@ function segmentRow(f: FloorView, s: Segment, safe: boolean): string[] {
   const hidden = leaseDatesHidden(s.kind, safe);
   const risk = s.kind === 'holdover' || s.kind === 'mtm';
   const months = hidden ? '' : risk ? (s.kind === 'holdover' ? 'Holdover' : 'MTM') : s.monthsToExpiry === null ? '' : String(Math.max(0, s.monthsToExpiry));
-  // A sublet suite in prospect-safe mode: the sublease's own end (part of the offer), never the head lease's.
-  const expirationOut = hidden ? (s.kind === 'sublease' ? (avail?.subleaseExpiration ?? '') : '') : expiration;
+  // A sublet suite included: a sublease's end is its sublandlord's lease end (`domain/safe.ts`, rule 2).
+  const expirationOut = hidden ? '' : expiration;
   const live = activeDeals(s.lease?.deals).length + activeDeals(s.availability?.deals).length + activeDeals(s.marketed?.deals).length;
 
   const state = stateLabel(s, safe);
@@ -141,7 +142,9 @@ export const RENT_ROLL_DISPLAY_HEADER = ['Floor', 'Suite', 'Tenant', 'RSF', 'Sta
  * long dates, "Holdover" / "MTM" instead of month counts, rates with unit and type,
  * asking prices for sale units. In prospect-safe mode the Live deals column is dropped and so are the
  * three lease-date columns (Commencement, Expiration, Remaining): what is left of them is one
- * "Available from" column, filled only for space on offer.
+ * "Available from" column, filled only for space on offer. A sublet suite is space on offer there: it
+ * reads "Sublease", available now (or from its date), with its asking rent in the rate column and no
+ * end date and no word about whose lease it is cut from.
  */
 export function rentRollDisplay(p: Property, floors: FloorView[], asOf: ISODate, safe: boolean): string[][] {
   const rows: string[][] = [displayColumns([...RENT_ROLL_DISPLAY_HEADER], safe, true)];
@@ -156,12 +159,17 @@ export function rentRollDisplay(p: Property, floors: FloorView[], asOf: ISODate,
       let end = '—';
       let rate = '—';
       let stateExtra = '';
-      if (s.kind === 'sublease' && a) {
+      if (s.kind === 'sublease' && a && hidden) {
+        // Prospect-safe: the row is the offer. The start column is "Available from", the rate column the asking rent.
+        tenant = lease ? tenantLabel(lease, safe) : 'Sublease';
+        start = a.availableFrom && a.availableFrom > asOf ? fmtDate(a.availableFrom) : 'Now';
+        rate = rentVisible(a, safe) && a.rentHigh > 0 ? `Asking ${rateRange(a.rentLow, a.rentHigh, a.rateUnit, a.leaseType)}` : '—';
+      } else if (s.kind === 'sublease' && a) {
         tenant = lease ? `${tenantLabel(lease, safe)} (sublandlord)` : 'Sublease';
-        start = hidden ? '—' : lease ? fmtDate(lease.commencement) : a.availableFrom ? fmtDate(a.availableFrom) : 'Now';
+        start = lease ? fmtDate(lease.commencement) : a.availableFrom ? fmtDate(a.availableFrom) : 'Now';
         // The Expiration column is the head lease's; the sublease's own end is in the State cell.
-        end = hidden ? '—' : s.endDate ? fmtDate(s.endDate) : '—';
-        rate = lease && rentVisible(lease, safe) && lease.rate !== null ? fmtRate(lease.rate, lease.rateUnit, lease.leaseType) : !canShowInPlaceRent(safe) ? 'Withheld' : lease?.confidential ? 'Confidential' : '—';
+        end = s.endDate ? fmtDate(s.endDate) : '—';
+        rate = lease && rentVisible(lease, safe) && lease.rate !== null ? fmtRate(lease.rate, lease.rateUnit, lease.leaseType) : lease?.confidential ? 'Confidential' : '—';
         stateExtra = rentVisible(a, safe) ? ` · asking ${rateRange(a.rentLow, a.rentHigh, a.rateUnit, a.leaseType)}${a.subleaseExpiration ? ` thru ${fmtDate(a.subleaseExpiration)}` : ''}` : '';
       } else if (lease) {
         tenant = tenantLabel(lease, safe);

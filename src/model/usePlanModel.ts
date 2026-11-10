@@ -1,11 +1,11 @@
 import { useEffect, useMemo } from 'react';
 import type { Deal, ISODate, Property, Touch } from '../domain/types';
-import { canShowLeaseTerm, planDate, publishedFloors, safeFloors, safeKpis, safeRollover } from '../domain/safe';
+import { canShowInquiries, canShowLeaseTerm, planDate, publishedFloors, safeFloors, safeKpis, safeRollover } from '../domain/safe';
 import { deriveFloors, isLeaseKind, segmentIndex, activeDeals, type FloorView, type Segment } from '../domain/derive';
 import { computeKpis, kpiDeltas, type Kpis } from '../domain/kpis';
 import { rollover, bucketOf, type RolloverBucket } from '../domain/rollover';
 import { legendFor, type LegendItem } from '../domain/lenses';
-import { findFits, filterFits, nearMisses, type ChosenOption, type FitOption, type FitType, type NearMiss } from '../domain/finder';
+import { checkNeededBy, searchSpace, type ChosenOption, type FinderResult, type FitType, type Requirement } from '../domain/finder';
 import { setPinnedOption, usePinnedOption } from '../state/hoverStore';
 import { findIssues, issueCounts, recentChanges, type Issue } from '../domain/issues';
 import { timelineModel } from '../domain/timeline';
@@ -46,14 +46,18 @@ export interface PlanModel {
   counts: ReturnType<typeof issueCounts>;
   changes: ReturnType<typeof recentChanges>;
   legend: LegendItem[];
-  /** Active requirement (from state or the matched inquiry). */
-  req: { size: number; max: number | null; by: ISODate | null; type: FitType } | null;
   /**
-   * Finder results for `req`. `alternatives` are the near misses the Find panel lists when exact options
-   * are few (smaller spaces, stacked floors), already narrowed to the requirement's space type; `partial`
-   * is their suites, which the plan keeps readable instead of dimming.
+   * Active requirement (from state or the matched inquiry). A typed needed-by date earlier than the
+   * as-of date is not part of it (`checkNeededBy`); the Find panel says so.
    */
-  fits: { options: FitOption[]; keys: Set<string>; alternatives: NearMiss[]; partial: Set<string>; largestNow: { size: number; floorName: string } } | null;
+  req: Requirement | null;
+  /**
+   * Finder results for `req` (`searchSpace`). `alternatives` are the near misses the Find panel lists
+   * when exact options are few (smaller spaces, stacked floors), already narrowed to the requirement's
+   * space type; `partial` is their suites, which the plan keeps readable instead of dimming; `noFit`
+   * is the advice when there is no option at all.
+   */
+  fits: FinderResult | null;
   worklist: (window: WindowKey) => WorklistRow[];
   activeWorklist: WorklistRow[] | null;
   searchMatches: Set<string> | null;
@@ -174,23 +178,19 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
   const legend = useMemo(() => legendFor(lens, safe, floors), [lens, safe, floors]);
   const timeline = useMemo(() => timelineModel(property, floors, asOf, today, safe), [property, floors, asOf, today, safe]);
 
-  const inquiry = state.inquiry ? property.inquiries.find((i) => i.id === state.inquiry) ?? null : null;
+  // An inquiry is another prospect's requirement: in prospect-safe mode it is not read at all, so neither
+  // its name nor its size and date can become the requirement on screen. (The state layer has already
+  // dropped it; like the as-of date, the model does not rely on that.)
+  const inquiry = state.inquiry && canShowInquiries(safe) ? property.inquiries.find((i) => i.id === state.inquiry) ?? null : null;
   const req = useMemo(() => {
     // An inquiry carries no space type (Inquiry has none), so the Direct / Sublease control applies to it too.
     if (inquiry) return { size: inquiry.minSize, max: inquiry.maxSize, by: inquiry.neededBy, type: state.fit as FitType };
-    if (state.req) return { size: state.req, max: state.max, by: state.by, type: state.fit as FitType };
+    // A needed-by date before the as-of date (an old link, or the as-of date moved past it) is not applied.
+    if (state.req) return { size: state.req, max: state.max, by: checkNeededBy(state.by, asOf).date, type: state.fit as FitType };
     return null;
-  }, [inquiry, state.req, state.max, state.by, state.fit]);
+  }, [inquiry, state.req, state.max, state.by, state.fit, asOf]);
 
-  const fits = useMemo(() => {
-    if (!req) return null;
-    const r = findFits(floors, req.size, req.by, req.max, property.inquiries, asOf);
-    const options = filterFits(r.options, req.type);
-    const keys = new Set(options.flatMap((o) => o.keys));
-    // Alternatives (smaller spaces and stacked floors) when exact options are few, held to the same space type.
-    const alternatives = options.length < 3 ? nearMisses(floors, req.size, asOf, req.type) : [];
-    return { options, keys, alternatives, partial: new Set(alternatives.flatMap((m) => m.keys).filter((k) => !keys.has(k))), largestNow: r.largestNow };
-  }, [floors, req, property.inquiries, asOf]);
+  const fits = useMemo(() => (req ? searchSpace(floors, req, property.inquiries, asOf) : null), [floors, req, property.inquiries, asOf]);
 
   const worklist = useMemo(() => {
     const cache = new Map<WindowKey, WorklistRow[]>();
@@ -232,8 +232,7 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
   if (fits && req) {
     // Every suite of the chosen option is lit, whether it is an exact match or an alternative.
     highlight = option ? new Set([...fits.keys, ...option.keys]) : fits.keys;
-    const who = inquiry ? (safe ? 'an open inquiry' : inquiry.prospect) : null;
-    filterLabel = `${who ? `Space for ${who}: ` : 'Space that fits '}${num(req.size)}${req.max ? `–${num(req.max)}` : '+'} SF${req.by ? ` by ${fmtDate(req.by)}` : ''} · ${fits.options.length} option${fits.options.length === 1 ? '' : 's'}`;
+    filterLabel = `${inquiry ? `Space for ${inquiry.prospect}: ` : 'Space that fits '}${num(req.size)}${req.max ? `–${num(req.max)}` : '+'} SF${req.by ? ` by ${fmtDate(req.by)}` : ''} · ${fits.options.length} option${fits.options.length === 1 ? '' : 's'}`;
   } else if (searchMatches && searchMatches.size === 0) {
     highlight = null;
     // Prospect-safe search skips tenants and prospects, and never repeats the query: it may be a tenant name.

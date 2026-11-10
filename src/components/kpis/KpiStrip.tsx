@@ -3,7 +3,7 @@ import type { PlanState } from '../../state/planState';
 import { fmtMonthYearShort } from '../../domain/dates';
 import { num, pct, plural, sfDelta } from '../../domain/format';
 import { waltCard, waltTitle } from './walt';
-import { canShowRollover } from '../../domain/safe';
+import { canShowRollover, canShowWalt } from '../../domain/safe';
 
 export type KpiAction = 'status' | 'find' | 'find-largest' | 'expiry-worklist' | 'timeline' | 'deals';
 
@@ -13,7 +13,8 @@ export interface KpiStripProps {
   onAction: (a: KpiAction) => void;
   /**
    * `strip` (default) is the row of six tiles above the plan. `column` is the same six figures as a
-   * compact list, one row each (label, figure, note), for the Building view while the model stands alone.
+   * compact list, one row each (label, figure, note): the Building view's column beside the model, which
+   * stays where it is whether a floor is open or not.
    */
   variant?: 'strip' | 'column';
 }
@@ -86,17 +87,31 @@ export function KpiStrip({ model, state, onAction, variant = 'strip' }: KpiStrip
           title: 'When leases end is withheld in prospect-safe mode',
           static: true,
         },
-    {
-      id: 'timeline',
-      label: 'WALT',
-      value: waltCard(k.walt),
-      unit: 'yr',
-      context: 'In-place, SF-weighted',
-      // The chip is the difference of the two figures as shown, so the card reconciles with today's card.
-      delta: d ? (() => { const dw = Number(waltCard(k.walt)) - Number(waltCard(model.kpisToday.walt)); return { text: `${dw >= 0 ? '+' : '−'}${Math.abs(dw).toFixed(2)} yr`, good: dw >= 0 }; })() : null,
-      active: false,
-      title: waltTitle(k.walt, model.safe),
-    },
+    // WALT is made of nothing but lease terms: it shows only where the terms themselves may be shown
+    // (`canShowWalt` is `canShowLeaseTerm`, domain/safe.ts).
+    canShowWalt(safe)
+      ? {
+          id: 'timeline',
+          label: 'WALT',
+          value: waltCard(k.walt),
+          unit: 'yr',
+          context: 'In-place, SF-weighted',
+          // The chip is the difference of the two figures as shown, so the card reconciles with today's card.
+          delta: d ? (() => { const dw = Number(waltCard(k.walt)) - Number(waltCard(model.kpisToday.walt)); return { text: `${dw >= 0 ? '+' : '−'}${Math.abs(dw).toFixed(2)} yr`, good: dw >= 0 }; })() : null,
+          active: false,
+          title: waltTitle(k.walt, model.safe),
+        }
+      : {
+          // The weighted average of the lease terms is a lease-term figure: it is withheld with the terms it averages,
+          // in the same words as "Expiring 12 mo" beside it.
+          id: 'timeline',
+          label: 'WALT',
+          value: 'Withheld',
+          context: 'Lease terms are not shown in prospect-safe mode',
+          active: false,
+          title: 'The weighted average lease term is withheld in prospect-safe mode',
+          static: true,
+        },
     safe
       ? {
           id: 'deals',
@@ -121,7 +136,7 @@ export function KpiStrip({ model, state, onAction, variant = 'strip' }: KpiStrip
   return (
     <section className={variant === 'column' ? 'sp-kpis sp-kpis--col sp-no-print' : 'sp-card sp-kpis sp-no-print'} aria-label="Key figures">
       {cards.map((c) => c.static ? (
-        <div key={c.id} className="sp-kpi sp-kpi--static" title={c.title}>
+        <div key={c.id} className="sp-kpi sp-kpi--static" data-kpi={c.id} title={c.title}>
           <span className="sp-kpi__label sp-label">{c.label}</span>
           <span className="sp-kpi__value">
             <span>{c.value}</span>
@@ -129,7 +144,7 @@ export function KpiStrip({ model, state, onAction, variant = 'strip' }: KpiStrip
           <span className="sp-kpi__context">{c.context}</span>
         </div>
       ) : (
-        <button key={c.id} type="button" className={`sp-kpi ${c.active ? 'is-active' : ''}`} onClick={() => onAction(c.id)} title={c.title} aria-pressed={c.active}>
+        <button key={c.id} type="button" className={`sp-kpi ${c.active ? 'is-active' : ''}`} data-kpi={c.id} onClick={() => onAction(c.id)} title={c.title} aria-pressed={c.active}>
           <span className="sp-kpi__label sp-label">{c.label}</span>
           <span className="sp-kpi__value">
             <span>

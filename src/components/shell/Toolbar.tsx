@@ -1,5 +1,5 @@
 import { LENSES, type LensId } from '../../domain/lenses';
-import { canShowLeaseTerm } from '../../domain/safe';
+import { canShowLeaseTerm, canUseLens } from '../../domain/safe';
 import { shownView, type PlanState, type View } from '../../state/planState';
 import { Button, Segmented, SelectField, TextField } from '../ui';
 import { rememberTrigger } from '../../state/focusStore';
@@ -22,6 +22,10 @@ export function Toolbar({ state, patch }: ToolbarProps) {
   const view: View = state.view === 'floor' ? 'stack' : shownView(state.view, phone);
   // A phone has no room for the model, and its tabs are words alone: without their icons the lens picker fits beside them.
   const views = phone ? VIEWS.filter((v) => v.id !== 'building').map(({ id, label }) => ({ id, label })) : VIEWS;
+  // Prospect-safe offers no lens that colours by something withheld: Deals (deal stage) and Expiration
+  // (months to lease end, which could only repeat the Status lens). A link that names one draws Status.
+  const lenses = LENSES.filter((l) => canUseLens(l.id, state.safe));
+  const lens: LensId = canUseLens(state.lens, state.safe) ? state.lens : 'status';
   const toggleMode = (mode: 'find' | 'worklist') => {
     if (state.mode === mode) patch({ mode: 'building', req: null, max: null, by: null, inquiry: null, window: null });
     else {
@@ -34,11 +38,11 @@ export function Toolbar({ state, patch }: ToolbarProps) {
       <Segmented aria-label="View" size="lg" options={views} value={view} onChange={(v) => patch({ view: v, floor: v === 'stack' ? null : state.floor })} />
       <div className="sp-toolbar__group sp-toolbar__lens">
         <span className="sp-toolbar__label">Colour by</span>
-        <Segmented aria-label="Colour lens" options={LENSES.filter((l) => !(state.safe && l.id === 'deals')).map((l) => ({ id: l.id, label: l.label, title: l.hint }))} value={state.lens} onChange={(lens) => patch({ lens })} />
+        <Segmented aria-label="Colour lens" options={lenses.map((l) => ({ id: l.id, label: l.label, title: l.hint }))} value={lens} onChange={(next) => patch({ lens: next })} />
       </div>
       <div className="sp-toolbar__lens-select">
-        <SelectField label="Colour by" hideLabel value={state.lens} onChange={(e) => patch({ lens: e.target.value as LensId })}>
-          {LENSES.filter((l) => !(state.safe && l.id === 'deals')).map((l) => (
+        <SelectField label="Colour by" hideLabel value={lens} onChange={(e) => patch({ lens: e.target.value as LensId })}>
+          {lenses.map((l) => (
             <option key={l.id} value={l.id}>
               Colour by {l.label}
             </option>

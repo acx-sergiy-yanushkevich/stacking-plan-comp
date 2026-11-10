@@ -61,6 +61,35 @@ export const hueApart = (a: string, b: string) => {
  * more) or a clear step in lightness (12 L* or more). Two pale pinks 13° and 8 L* apart are neither.
  */
 export const clearlyApart = (a: string, b: string) => hueApart(a, b) >= 60 || Math.abs(lightness(a) - lightness(b)) >= 12;
+/**
+ * A colour as a viewer with deuteranopia (no green cones, the most common colour blindness) sees it:
+ * Machado, Oliveira and Fernandes (2009), severity 1, applied in linear RGB.
+ */
+export const deuteranopia = (hex: string): string => {
+  const [r, g, b] = rgb(hex).map(lin);
+  const sim = [
+    0.367322 * r + 0.860646 * g - 0.227968 * b,
+    0.280085 * r + 0.672501 * g + 0.047413 * b,
+    -0.01182 * r + 0.04294 * g + 0.968881 * b,
+  ];
+  const srgb = (v: number) => Math.round(255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * Math.max(0, v) ** (1 / 2.4) - 0.055));
+  return `#${sim.map((v) => Math.min(255, Math.max(0, srgb(v))).toString(16).padStart(2, '0')).join('')}`;
+};
+/** CIE L*a*b* (D65). */
+const lab = (hex: string): [number, number, number] => {
+  const [r, g, b] = rgb(hex).map(lin);
+  const f = (t: number) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+  const x = f((0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047);
+  const y = f(0.2126 * r + 0.7152 * g + 0.0722 * b);
+  const z = f((0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883);
+  return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+};
+/** How far apart two colours look (CIE76 ΔE): about 2 is just noticeable, 10 and more is plainly two colours. */
+export const deltaE = (a: string, b: string): number => {
+  const p = lab(a);
+  const q = lab(b);
+  return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+};
 export const mix = (a: string, b: string, t: number) => `#${rgb(a).map((x, i) => Math.round(x + (rgb(b)[i] - x) * t).toString(16).padStart(2, '0')).join('')}`;
 
 export const tonesOf = (t: Tokens) => [...t.keys()].filter((k) => k.startsWith('--tone-') && k.endsWith('-fill')).map((k) => k.slice('--tone-'.length, -'-fill'.length));
@@ -146,6 +175,12 @@ export function describePalette(p: LoadedPalette): void {
       const steps = [0, 1, 2, 3, 4].map((i) => lightness(fill(`rent-${i}`)));
       for (let i = 1; i < steps.length; i += 1) expect(steps[i] - steps[i - 1], `rent-${i - 1} to rent-${i}`).toBeGreaterThanOrEqual(12);
       expect(steps[4] - steps[0]).toBeGreaterThanOrEqual(35);
+    });
+
+    // The lowest rent step is a fill a reader can see: a rent of its own, not the card showing through
+    // (in round 14 one palette's "< $28" was 2 L* from its card and read as a block with no rent).
+    it('lifts the lowest rent step off the card: 8 L* or more above it where the block is drawn', () => {
+      expect(lightness(fill('rent-0')) - lightness(p.nightCards[0]), `rent-0 ${fill('rent-0')} on ${p.nightCards[0]}`).toBeGreaterThanOrEqual(8);
     });
 
     it('orders the expiration ramp from soonest (brightest) to latest', () => {

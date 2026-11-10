@@ -56,11 +56,15 @@ function buildModel(state: PlanState): PlanModel {
   };
 }
 
-const render = (search: string, over: Partial<PlanModel> = {}) => {
+const render = (search: string, over: Partial<PlanModel> = {}, kpiColumn?: boolean) => {
   const state = parseState(search, TODAY);
   const model = { ...buildModel(state), ...over };
-  return renderToString(<BuildingView model={model} state={state} patch={() => {}} />);
+  return renderToString(<BuildingView model={model} state={state} patch={() => {}} kpiColumn={kpiColumn} />);
 };
+/** The KPI column as rendered: the `<section>` of six cards. */
+const kpiColumnOf = (html: string) => /<section class="sp-kpis sp-kpis--col[^"]*".*?<\/section>/.exec(html)?.[0] ?? '';
+/** The quick starts, as their buttons' text. */
+const startsOf = (html: string) => [...(/aria-label="Floors with the most space">(.*?)<\/div>/.exec(html)?.[1] ?? '').matchAll(/<button[^>]*>(.*?)<\/button>/g)].map((m) => m[1].replace(/<!-- -->/g, ''));
 
 /** The floor named in the floor column's heading; undefined while the building stands alone. */
 const shownFloor = (html: string) => html.match(/<h3 class="sp-floor__h">([^<]+)<\/h3>/)?.[1];
@@ -81,6 +85,7 @@ describe('BuildingView', () => {
     expect(html).toContain('9,300 SF available');
     // The six KPIs stand in the column beside the model (the strip above the plan is hidden by the app).
     expect(html).toContain('sp-kpis--col');
+    expect(html).toContain('has-kpis');
     expect(html.match(/class="sp-kpi__label sp-label"/g)?.length).toBe(6);
     expect(html).toContain('aria-label="Floors with the most space"');
     expect(html).toContain('aria-label="Floors"');
@@ -95,8 +100,9 @@ describe('BuildingView', () => {
     expect(html).toContain('is-docked');
     expect(html).not.toContain('is-alone');
     expect(html).not.toContain('sp-hero--facts');
-    // Docked, the KPIs are the strip above the plan again, not a column in this view.
-    expect(html).not.toContain('sp-kpis--col');
+    // Docked, the KPIs are still the column on the left: three columns, the floor's pane on the right.
+    expect(html).toContain('sp-kpis--col');
+    expect(html).toContain('has-kpis');
     expect(html).toContain('Cirrus Energy');
     expect(html).toContain('Floor 6 plate, schematic');
     expect(html).toContain('Largest contiguous');
@@ -107,6 +113,43 @@ describe('BuildingView', () => {
     expect(html).toContain('21,400 SF marketed from Apr &#x27;27');
     // The listing is unpublished, so a prospect sees the floor as leased.
     expect(render('?floor=F6&safe=1')).not.toContain('marketed from');
+  });
+
+  it('keeps the KPI column and the quick starts exactly as they are when a floor opens or closes', () => {
+    const alone = render('');
+    const docked = render('?floor=F8');
+    // The same six cards, byte for byte: nothing in the column depends on whether a floor is open.
+    expect(kpiColumnOf(alone).length).toBeGreaterThan(500);
+    expect(kpiColumnOf(docked)).toBe(kpiColumnOf(alone));
+    // The quick starts stay under them and now switch floors; the open floor's button is pressed.
+    expect(startsOf(alone)).toEqual(['Floor 12 · 9,300 SF', 'Floor 8 · 7,400 SF', 'Floor 7 · 7,000 SF']);
+    expect(startsOf(docked)).toEqual(startsOf(alone));
+    expect(alone.match(/<button[^>]*aria-pressed="true"[^>]*>Floor/g)).toBeNull();
+    expect(docked).toMatch(/<button[^>]*aria-pressed="true"[^>]*>Floor 8<!-- --> · <!-- -->7,400 SF<\/button>/);
+    // The column is the first thing in the grid in both states (the same place in the tree, so React keeps the element).
+    for (const html of [alone, docked]) expect(html).toMatch(/<div class="sp-bview__grid [^"]*"><div class="sp-bview__side"><section class="sp-kpis sp-kpis--col/);
+  });
+
+  it('has no KPI column where the app shows the KPIs above the plan, in either state', () => {
+    const alone = render('', {}, false);
+    const docked = render('?floor=F8', {}, false);
+    for (const html of [alone, docked]) {
+      expect(html).not.toContain('sp-kpis--col');
+      expect(html).not.toContain('has-kpis');
+      expect(html).not.toContain('sp-kpi__label');
+    }
+    // Alone, the quick starts are a line above the model; with a floor open the picker is the way between floors.
+    expect(startsOf(alone)).toEqual(['Floor 12 · 9,300 SF', 'Floor 8 · 7,400 SF', 'Floor 7 · 7,000 SF']);
+    expect(docked).not.toContain('Floors with the most space');
+    expect(shownFloor(docked)).toBe('Floor 8');
+  });
+
+  it('says how to read the colour ramp in the legend, where the lens has one', () => {
+    expect(render('?lens=expiry')).toContain('Stronger colour = sooner expiry.');
+    expect(render('?lens=rent')).toContain('Stronger blue = higher rent.');
+    expect(render('')).not.toContain('Stronger');
+    // Prospect-safe withholds lease terms: there is no ramp to explain.
+    expect(render('?lens=expiry&safe=1')).not.toContain('Stronger colour');
   });
 
   it('explains an over-allocated floor beside the legend', () => {

@@ -11,11 +11,13 @@ import type { FloorView, Segment } from '../../domain/derive';
 import { PhoneStack } from './PhoneStack';
 import { focusFacts } from '../plan/focusFacts';
 import { useWidth } from '../../lib/useWidth';
+import { wrapWords } from '../../lib/textFit';
 import { clearSelection, openFloor, selectSegment } from '../plan/actions';
 import { Legend } from '../plan/Legend';
 import { segmentText } from '../plan/segmentText';
 import { availabilityFact } from '../floor/floorData';
 import { Block } from './Block';
+import { rampNote } from './rampNote';
 import { FilterBar } from './FilterBar';
 import '../plan/plan.css';
 import './stack.css';
@@ -33,8 +35,15 @@ export interface StackViewProps {
 const ROW_GAP = 6;
 const MIN_BLOCK = 56;
 const MIN_BLOCK_PHONE = 64;
-/** Desktop and print: no suite is drawn narrower than this, so every block can carry its name, SF and lens fact. */
-const MIN_BLOCK_DESKTOP = 124;
+/**
+ * Desktop and print: no suite is drawn narrower than this, so every block can carry its name, SF and lens
+ * fact. 132 px is what an asking rent needs to stand whole on one line at 12 px with its unit and lease
+ * type ("$34–$36/SF/yr NNN" is 118 px, plus the block's padding): at 124 px the lease type fell to a line
+ * of its own.
+ */
+const MIN_BLOCK_DESKTOP = 132;
+/** The gutter's small type (stack.css, `.sp-gutter__rsf`), for fitting a line to the gutter. */
+const GUTTER_FONT = "400 11px Inter, 'Salesforce Sans', system-ui, sans-serif";
 /** A focused floor: taller row at full width, with a wider minimum per suite. */
 const FOCUS_H = 132;
 const MIN_BLOCK_FOCUS = 156;
@@ -207,6 +216,8 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
 
   const over = state.safe ? [] : floors.filter((f) => f.overAllocatedBy > 0);
   const legendNote = [
+    // Which end of the lens's colour ramp is which: the same sentence by night and by day.
+    rampNote(state.lens, state.safe) ?? '',
     anyEnlarged ? `Small suites are drawn at a minimum width for legibility; other suites on that floor shrink to compensate.` : '',
     rows.some((r) => r.focused && r.f.segments.length > 1) ? 'The focused floor is drawn at full width.' : '',
     over.length ? `${over.map((f) => `${f.floor.name} records exceed its leasable area by ${num(f.overAllocatedBy)} SF`).join('; ')}; legend shares use recorded SF.` : '',
@@ -306,11 +317,24 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                       <text className="sp-gutter__rsf" x={44} y={r.h >= 60 ? 50 : 37}>
                         {num(f.leasable)} RSF
                       </text>
-                      {r.focused && r.h >= 100 && (
-                        <text className="sp-gutter__rsf" x={8} y={84}>
-                          {f.available > 0 ? `${num(f.available)} SF available` : availabilityFact(f, model.asOf, state.safe)}
-                        </text>
-                      )}
+                      {r.focused &&
+                        r.h >= 100 &&
+                        (() => {
+                          // What the floor offers, whole: wrapped to the gutter's width on up to three lines
+                          // that end at the foot of the row ("21,400 SF marketed" / "from Apr '27"). Never cut.
+                          const fact = f.available > 0 ? `${num(f.available)} SF available` : availabilityFact(f, model.asOf, state.safe);
+                          const lines = wrapWords(fact, gutter - 20, GUTTER_FONT, 3);
+                          if (lines.join(' ') !== fact) return null;
+                          return (
+                            <text className="sp-gutter__rsf sp-gutter__fact">
+                              {lines.map((line, i) => (
+                                <tspan key={i} x={8} y={r.h - 8 - (lines.length - 1 - i) * 13}>
+                                  {`${line} `}
+                                </tspan>
+                              ))}
+                            </text>
+                          );
+                        })()}
                       {f.overAllocatedBy > 0 && !state.safe && (
                         <text className="sp-gutter__warn" x={8} y={r.h >= 60 ? 62 : 48} fontSize={10} fontWeight={600}>
                           +{num(f.overAllocatedBy)} SF over

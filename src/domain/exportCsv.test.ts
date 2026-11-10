@@ -139,8 +139,11 @@ describe('toCsv', () => {
 
   it('no lease date of the mock appears anywhere in the prospect-safe CSV or printed roll', () => {
     const dates = new Set(property.leases.flatMap((l) => [l.commencement, l.expiration, l.termination]).filter((d): d is string => !!d));
-    // A date that is also a date of the offer (available from, sublease thru) is the offer's to show.
-    for (const a of property.availabilities) for (const d of [a.availableFrom, a.subleaseExpiration]) if (d) dates.delete(d);
+    // A sublease's end is a lease date too: it is its sublandlord's lease end (safe.ts, rule 2).
+    for (const a of property.availabilities) if (a.subleaseExpiration) dates.add(a.subleaseExpiration);
+    // A date that is also the available-from date of an offer is the offer's to show.
+    for (const a of property.availabilities) if (a.availableFrom) dates.delete(a.availableFrom);
+    expect(dates.has('2030-09-30')).toBe(true);
     expect(dates.size).toBeGreaterThan(20);
     for (const input of [floors, safeFloors(floors, true)]) {
       const csv = toCsv(rentRollRows(property, input, TODAY, true));
@@ -152,21 +155,30 @@ describe('toCsv', () => {
     }
   });
 
-  it('the prospect-safe CSV carries the sublease asking rent the prospect-safe PDF prints (Ste 720)', () => {
+  it('the prospect-safe CSV and PDF write a sublet suite as space on offer: asking rent, available now, and no end date (Ste 720)', () => {
     for (const input of [floors, safeFloors(floors, true)]) {
       const row = rentRollRows(property, input, TODAY, true).find((r) => r[col('Suite')] === '720')!;
       expect(row[col('State')]).toBe('Sublease');
       expect([row[col('Rate')], row[col('Unit')], row[col('Lease type')]]).toEqual(['24–26', 'yr', 'FSG']);
-      // The sublease's own end, never the head lease's; no tenant, no in-place rent, no commencement.
-      expect(row[col('Expiration')]).toBe('2030-09-30');
+      // No end date: the sublease's is its sublandlord's lease end. No tenant, no in-place rent, no commencement.
+      expect(row[col('Expiration')]).toBe('');
       expect(row[col('Months remaining')]).toBe('');
       expect(row[col('Commencement')]).toBe('');
       expect(row[col('Tenant')]).toBe('Tenant');
+      expect(row.join(',')).not.toMatch(/2030|2018/);
+      // The printed roll: "Sublease", available now, asking rent with unit and type in the rate column, and nothing about a sublandlord.
       const pdf = rentRollDisplay(property, input, TODAY, true).find((r) => r[1] === '720')!;
-      expect(pdf[4]).toBe('Sublease · asking $24–$26/SF/yr FSG thru Sep 30, 2030');
-      expect(pdf[5]).toBe('—');
-      expect(pdf[6]).toBe('Withheld');
+      expect(pdf).toEqual(['Floor 7', '720', 'Tenant', '7,000', 'Sublease', 'Now', 'Asking $24–$26/SF/yr FSG']);
     }
+    // The broker's roll keeps the head lease's term and the sublease's own end.
+    const open = rentRollDisplay(property, floors, TODAY, false).find((r) => r[1] === '720')!;
+    expect(open[2]).toMatch(/\(sublandlord\)$/);
+    expect(open[4]).toBe('Sublease · asking $24–$26/SF/yr FSG thru Sep 30, 2030');
+    expect(rentRollRows(property, floors, TODAY, false).find((r) => r[col('Suite')] === '720')![col('Expiration')]).toBe('2030-09-30');
+  });
+
+  it('the CSV is a rent roll: no WALT and no building-wide figure in either mode', () => {
+    for (const safe of [false, true]) expect(toCsv(rentRollRows(property, safeFloors(floors, safe), TODAY, safe))).not.toMatch(/WALT|weighted/i);
   });
 
   it('keeps the head lease as the record of a subleased suite (its own commencement and in-place rent)', () => {

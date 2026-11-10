@@ -221,15 +221,19 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
     const vy = Math.floor(box.y0 - LIFT - 8);
     const frame = { x: vx, y: vy, w: Math.ceil(box.x1 + 6 - vx), h: Math.ceil(box.y1 + 20 - vy) };
     const band = { mid: (corner[1] - (n * HZ) / 2 - vy) / frame.h, height: (n * HZ) / frame.h };
-    return { heroFloors: heroFloors.slice().sort((a, b) => a.level - b.level), fit: { ground, frame, band } };
+    return { heroFloors: heroFloors.slice().sort((a, b) => a.level - b.level), fit: { ground, frame, band, left: box.x0 } };
   }, [property.footprint, floors, state.lens, safe, W, H, HZ, LIFT, GAP]);
   // The frame (viewBox) belongs to the angle being turned to, so the model does not pulse while it turns.
+  // A building is wider seen from a corner than from the front, so while it turns it is wider than the
+  // frame it is turning into. Its left edge is held on the frame's left edge the whole way: the drawing
+  // then only ever reaches out to its right, never over what stands to its left (the floor picker).
   const shown = useTween(stage ? angle : 0);
   const rest = useMemo(() => build(stage ? angle : 0), [build, stage, angle]);
   const turning = useMemo(() => (shown === (stage ? angle : 0) ? null : build(shown)), [build, shown, stage, angle]);
   const { heroFloors } = turning ?? rest;
   const frame = stage ? rest.fit.frame : { x: 0, y: 0, w: W, h: H };
   const ground = (turning ?? rest).fit.ground;
+  const slide = turning ? rest.fit.left - turning.fit.left : 0;
 
   const focusLevel = focusId ? (heroFloors.find((f) => f.id === focusId)?.level ?? null) : null;
   const hot = heroFloors.find((f) => f.id === (hoverId ?? focusId)) ?? null;
@@ -273,6 +277,7 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
       {stage && beside && <div className="sp-hero__beside">{beside}</div>}
       <div className="sp-hero__canvas">
         <svg ref={svgRef} viewBox={`${frame.x} ${frame.y} ${frame.w} ${frame.h}`} role="img" aria-label={label}>
+          <g transform={slide ? `translate(${slide.toFixed(1)} 0)` : undefined}>
           <path className="sp-hero__ground" d={ground} aria-hidden="true" />
           {heroFloors.map((f) => {
             const above = focusLevel !== null && f.level > focusLevel;
@@ -312,6 +317,7 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
               </g>
             );
           })}
+          </g>
         </svg>
         {/* Floor numbers: on the stage every floor (only the open one and the one pointed at while a floor is open);
             in a panel the top and bottom floors, plus the floor under the pointer or in focus. */}
@@ -323,7 +329,7 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
               <span
                 key={f.id}
                 className={`sp-hero__tag ${f.id === hot?.id ? 'is-hot' : ''} ${f.id === openId ? 'is-open' : ''}`}
-                style={{ left: `${(((f.tag[0] - frame.x) / frame.w) * 100).toFixed(2)}%`, top: `${(((f.tag[1] - (lifted ? LIFT : 0) - frame.y) / frame.h) * 100).toFixed(2)}%` }}
+                style={{ left: `${(((f.tag[0] + slide - frame.x) / frame.w) * 100).toFixed(2)}%`, top: `${(((f.tag[1] - (lifted ? LIFT : 0) - frame.y) / frame.h) * 100).toFixed(2)}%` }}
               >
                 {f.name.replace(/^Floor\s+/i, '')}
                 {fact ? <span className="sp-hero__fact">{` · ${fact}`}</span> : null}

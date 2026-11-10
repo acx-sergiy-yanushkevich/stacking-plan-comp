@@ -71,9 +71,37 @@ describe('KpiStrip', () => {
       expect(card).toContain('<span>Withheld</span>');
       expect(html).not.toContain(figure);
       expect(html).not.toMatch(/\d+ leases?\b|of leased/);
-      // A figure, not a button: there is nothing to open.
-      expect(html.match(/<button type="button" class="sp-kpi/g)?.length).toBe(4);
+      // A figure, not a button: there is nothing to open. Expiring, WALT and Pipeline are all withheld.
+      expect(html.match(/<button type="button" class="sp-kpi/g)?.length).toBe(3);
     }
+  });
+
+  it('withholds WALT in prospect-safe mode, in the same words as Expiring 12 mo, in the strip and the column', () => {
+    const open = render(TODAY);
+    const figure = waltCard(open.kpis.walt);
+    expect(open.html).toContain(`>${figure}<span class="sp-kpi__unit">`);
+    for (const variant of ['strip', 'column'] as const) {
+      const { html } = render(TODAY, true, variant);
+      const card = (label: string) => new RegExp(`<div class="sp-kpi sp-kpi--static"[^>]*><span class="sp-kpi__label sp-label">${label}</span>.*?</div>`).exec(html)?.[0] ?? '';
+      const walt = card('WALT');
+      expect(walt).toContain('<span>Withheld</span>');
+      expect(walt).toContain('Lease terms are not shown in prospect-safe mode');
+      // The same value and the same reason as the card beside it: one style, one sentence.
+      const strip = (c: string) => c.replace(/data-kpi="[^"]*"/, '').replace(/title="[^"]*"/, '').replace(/>(WALT|Expiring 12 mo)</, '><');
+      expect(strip(walt)).toBe(strip(card('Expiring 12 mo')));
+      // The average itself is nowhere: not on the card, not in a tooltip, not with a unit.
+      expect(html).not.toContain(figure);
+      expect(html).not.toContain(open.kpis.walt.toFixed(4));
+      expect(html).not.toMatch(/\d yr\b|> <!-- -->yr</);
+    }
+  });
+
+  it('names each card for the action it stands for, so focus can find it again wherever the six are drawn', () => {
+    for (const variant of ['strip', 'column'] as const) {
+      const { html } = render(TODAY, false, variant);
+      expect([...html.matchAll(/data-kpi="([^"]+)"/g)].map((m) => m[1])).toEqual(['status', 'find', 'find-largest', 'expiry-worklist', 'timeline', 'deals']);
+    }
+    expect([...render(TODAY, true).html.matchAll(/data-kpi="([^"]+)"/g)].length).toBe(6);
   });
 });
 

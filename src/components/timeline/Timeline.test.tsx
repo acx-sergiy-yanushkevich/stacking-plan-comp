@@ -101,15 +101,18 @@ describe('TimelineView', () => {
     expect(html).toContain('the date cannot be moved');
     // No lease date in any tooltip or accessible name: no "Leased since", no "moves in", no year of a commencement.
     expect(html).not.toMatch(/Leased since|[Mm]oves in|Vacated/);
-    // "… left" is said of the sublease on offer (its own term) and of nothing else.
+    // No bar says how long anything has left. A sublease's end is its sublandlord's lease end, so it is
+    // withheld like every other lease date (domain/safe.ts, rule 2): the sublet suite is space on offer.
     const left = [...html.matchAll(/aria-label="([^"]*\d+ (?:mo|yr)[^"]* left)"/g)].map((m) => m[1]);
-    expect(left).toHaveLength(1);
-    expect(left[0]).toContain('Sublease thru Sep 2030');
+    expect(left).toHaveLength(0);
+    expect(html).not.toContain('Sublease thru');
     const leaseDates = new Set(property.leases.flatMap((l) => [l.commencement, l.expiration, l.termination]).filter((d): d is string => !!d));
-    for (const a of property.availabilities) for (const d of [a.availableFrom, a.subleaseExpiration]) if (d) leaseDates.delete(d);
+    for (const a of property.availabilities) {
+      // Space on offer keeps the date it is offered from, and only that one.
+      if (a.availableFrom) leaseDates.delete(a.availableFrom);
+      if (a.subleaseExpiration) leaseDates.add(a.subleaseExpiration);
+    }
     for (const d of leaseDates) expect(html, d).not.toContain(fmtDate(d));
-    // Space on offer keeps its dates.
-    expect(html).toContain('– Sep 30, 2030');
     // A link that asks for a later date draws the same chart.
     const later = parseState('?safe=1&view=timeline&asOf=2028-01-01', TODAY);
     expect(renderToString(<TimelineView model={planModel(later)} state={later} patch={() => {}} />).replace(/<!-- -->/g, '')).toBe(html);
@@ -248,6 +251,31 @@ describe('stacked timeline (narrow hosts)', () => {
     expect(html).toContain(`At risk ${model.roll.atRisk.toLocaleString('en-US')} SF`);
     // Prospect-safe passes 0: the at-risk line is gone.
     expect(renderToString(<RolloverChips buckets={model.roll.buckets} atRisk={0} asOf={TODAY} activeBucket={null} onBucket={() => {}} />)).not.toContain('At risk');
+  });
+
+  it('folds the buckets behind one row that states the next 12 months and the SF at risk, exactly', () => {
+    const model = buildModel(TODAY, false);
+    const html = renderToString(<RolloverChips buckets={model.roll.buckets} atRisk={model.roll.atRisk} asOf={TODAY} activeBucket={null} onBucket={() => {}} />).replace(/<!-- -->/g, '');
+    // Closed until it is opened: the nine periods cost one row, so the leases start in the top half of a phone.
+    expect(html).toMatch(/^<details class="sp-tl-roll">/);
+    expect(html).not.toMatch(/^<details[^>]* open/);
+    const summary = /<summary[^>]*>(.*?)<\/summary>/.exec(html)![1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const next = model.roll.buckets[0];
+    expect(summary).toContain(`${next.label.replace('<', '&lt;')} ${next.sf.toLocaleString('en-US')} SF`);
+    expect(summary).toContain(`At risk ${model.roll.atRisk.toLocaleString('en-US')} SF`);
+    // Every figure is still in the page, whole, for when the row is opened.
+    for (const b of model.roll.buckets) if (b.sf > 0) expect(html).toContain(`${b.sf.toLocaleString('en-US')} SF`);
+  });
+
+  it('names the period that is highlighting leases on the folded row, so the filter is never out of sight', () => {
+    const model = buildModel(TODAY, false);
+    const active = model.roll.buckets.find((b, i) => i > 0 && b.sf > 0)!;
+    const html = renderToString(<RolloverChips buckets={model.roll.buckets} atRisk={model.roll.atRisk} asOf={TODAY} activeBucket={active.key} onBucket={() => {}} />).replace(/<!-- -->/g, '');
+    const summary = /<summary[^>]*>(.*?)<\/summary>/.exec(html)![1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    expect(summary).toContain(`Showing ${active.label} ${active.sf.toLocaleString('en-US')} SF`);
+    // The row is named by the text on it (no separate label to drift from it), then says the date and the count.
+    expect(html).not.toMatch(/<summary[^>]*aria-label/);
+    expect(summary).toContain('Rollover from Nov 9, 2026, 9 periods');
   });
 
   it('leaves the band out of the axis when the buckets are drawn as buttons', () => {

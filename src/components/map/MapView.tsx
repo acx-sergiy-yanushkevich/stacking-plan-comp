@@ -8,10 +8,11 @@ import { num, pct } from '../../domain/format';
 import { suiteExtrusionFeatures } from '../../domain/geometry';
 import { toneFor } from '../../domain/lenses';
 import type { PlanModel } from '../../model/usePlanModel';
-import { isDark, type PlanState } from '../../state/planState';
+import { isDark, paletteOf, type PlanState } from '../../state/planState';
 import { useIsPhone, usePrefersDark, usePrefersReducedMotion } from '../../lib/useMedia';
 import { openFloor, openFloorPlate } from '../plan/actions';
 import { Legend } from '../plan/Legend';
+import { rampNote } from '../stack/rampNote';
 import { Chip, Icon, useToast } from '../ui';
 import { FootprintFallback } from './FootprintFallback';
 import { MapControls } from './MapControls';
@@ -25,6 +26,7 @@ import {
   SOURCE_FLOORS,
   accentTone,
   dominantTone,
+  floorAlso,
   floorState,
   floorColorExpression,
   resolveToneHex,
@@ -151,7 +153,7 @@ interface Tip {
 const floorTip = (f: FloorView) => `${f.floor.name} · ${pct(f.leasable > 0 ? f.leased / f.leasable : 0)} leased · ${num(f.leasable)} RSF`;
 
 /** Keyboard-reachable equivalent of clicking a 3D floor (DESIGN.md §6). */
-function FloorList({ floors, selected, onSelect, toneOf, accentOf, stateOf, shortOf }: { floors: FloorView[]; selected: string | null; onSelect: (id: string) => void; toneOf: (f: FloorView) => string; accentOf: (f: FloorView) => string | null; stateOf: (f: FloorView) => string; shortOf: (f: FloorView) => string }) {
+function FloorList({ floors, selected, onSelect, toneOf, accentOf, stateOf, shortOf, alsoOf }: { floors: FloorView[]; selected: string | null; onSelect: (id: string) => void; toneOf: (f: FloorView) => string; accentOf: (f: FloorView) => string | null; stateOf: (f: FloorView) => string; shortOf: (f: FloorView) => string; alsoOf: (f: FloorView) => string }) {
   const ordered = useMemo(() => [...floors].sort((a, b) => b.floor.sequence - a.floor.sequence), [floors]);
   const ref = useRef<HTMLDivElement>(null);
   const focusIndex = Math.max(
@@ -174,9 +176,11 @@ function FloorList({ floors, selected, onSelect, toneOf, accentOf, stateOf, shor
   };
   return (
     <div ref={ref} className="sp-map-floors" role="group" aria-label="Floors" onKeyDown={onKey}>
-      {/* Each row's accessible name starts with the text on the row, then adds the floor's size and its dominant state.
-          The swatch is the colour of most of the floor; a floor that also holds an at-risk or expiring lease
-          shows that colour in its lower half. The words on the row say the same, so it is never colour alone. */}
+      {/* Each row's accessible name starts with the text on the row (the Building view's fact for the floor, word
+          for word), then adds the floor's size, its dominant state and what else is on it (a sublease, a unit
+          for sale, an area with no record). The swatch is the colour of most of the floor; a floor that also
+          holds an at-risk or expiring lease shows that colour in its lower half. The words on the row say the
+          same, so it is never colour alone. */}
       {ordered.map((f, i) => (
         <button
           key={f.floor.id}
@@ -184,8 +188,8 @@ function FloorList({ floors, selected, onSelect, toneOf, accentOf, stateOf, shor
           data-floor={f.floor.id}
           className="sp-map-floor"
           aria-pressed={f.floor.id === selected}
-          aria-label={`${f.floor.sequence} ${pct(f.leasable > 0 ? f.leased / f.leasable : 0)} leased${shortOf(f) ? ` ${shortOf(f)}` : ''}. ${f.floor.name}, ${num(f.leasable)} RSF${stateOf(f) ? `, mostly ${stateOf(f)}` : ''}`}
-          title={`${floorTip(f)}${shortOf(f) ? ` · ${shortOf(f)}` : ''}${stateOf(f) ? ` · mostly ${stateOf(f)}` : ''}`}
+          aria-label={`${f.floor.sequence} ${pct(f.leasable > 0 ? f.leased / f.leasable : 0)} leased${shortOf(f) ? ` ${shortOf(f)}` : ''}. ${f.floor.name}, ${num(f.leasable)} RSF${stateOf(f) ? `, mostly ${stateOf(f)}` : ''}${alsoOf(f) ? `; also: ${alsoOf(f)}` : ''}`}
+          title={`${floorTip(f)}${shortOf(f) ? ` · ${shortOf(f)}` : ''}${stateOf(f) ? ` · mostly ${stateOf(f)}` : ''}${alsoOf(f) ? ` · also: ${alsoOf(f)}` : ''}`}
           tabIndex={i === focusIndex ? 0 : -1}
           onClick={() => onSelect(f.floor.id)}
           onDoubleClick={() => undefined}
@@ -237,18 +241,25 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
 
   const toneOf = useCallback((f: FloorView) => dominantTone(f, state.lens, state.safe), [state.lens, state.safe]);
   const accentOf = useCallback((f: FloorView) => accentTone(f, state.lens, state.safe), [state.lens, state.safe]);
-  // What the Building view says of the floor in this lens, and its space in exact SF ("7,400 SF available"), not only its dominant state.
+  // What the Building view says of the floor in this lens, in the same words ("7,400 SF available", "Month-to-month").
   const shortOf = useCallback((f: FloorView) => floorState(f, state.lens, state.safe), [state.lens, state.safe]);
+  const alsoOf = useCallback((f: FloorView) => floorAlso(f, state.safe), [state.safe]);
   const stateOf = useCallback((f: FloorView) => toneLabel(dominantTone(f, state.lens, state.safe), state.lens, state.safe), [state.lens, state.safe]);
   const toneOfSeg = useCallback((s: FloorView['segments'][number]) => toneFor(s, state.lens, state.safe), [state.lens, state.safe]);
   const features = useMemo(() => toFloorFeatures(suiteExtrusionFeatures(mapProperty, floors, toneOfSeg, property.floorHeightFt), INFLATE), [mapProperty, floors, toneOfSeg, property.floorHeightFt]);
   const toneKey = useMemo(() => [...new Set(features.features.map((f) => f.properties.tone))].sort().join(','), [features]);
 
-  // Tone → hex from the CSS tokens, re-read after a theme change has reached the DOM.
+  // Tone → hex from the CSS tokens, re-read after a change of theme, palette or skin has reached the DOM.
+  // All three change what the tokens resolve to; the palette and the skin do so without touching the theme
+  // or the lens, so they are named here (switching to Vice City on the map used to leave the building in
+  // the Ascendix colours until something else changed).
+  const palette = paletteOf(state);
+  const skin = state.skin ?? null;
   const [hexByTone, setHexByTone] = useState<Record<string, string>>({});
   const [brandHex, setBrandHex] = useState('#0176d3');
   useEffect(() => {
-    const id = requestAnimationFrame(() => {
+    let second = 0;
+    const read = () => {
       const out: Record<string, string> = {};
       // Night tokens sit a little dark for a wall against the dark basemap: lift them slightly.
       // Daytime fills are pastels made to carry text; as a wall on a pale basemap they vanish, so each is
@@ -259,9 +270,18 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
       }
       setHexByTone(out);
       setBrandHex(resolveVarHex('--sp-color-brand', '#0176d3'));
+    };
+    // The app writes the palette and the theme to the root element in its own effects, which run after
+    // this one: read on the next frame, and once more on the frame after, when they are certain to be there.
+    const first = requestAnimationFrame(() => {
+      read();
+      second = requestAnimationFrame(read);
     });
-    return () => cancelAnimationFrame(id);
-  }, [toneKey, dark]);
+    return () => {
+      cancelAnimationFrame(first);
+      cancelAnimationFrame(second);
+    };
+  }, [toneKey, dark, palette, skin]);
 
   const inputsRef = useRef<LayerInputs>({ features, hexByTone, brandHex, dark, selected: state.floor });
   inputsRef.current = { features, hexByTone, brandHex, dark, selected: state.floor };
@@ -365,11 +385,11 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
             Legend · {legendStates} states
             <Icon name="chevron-down" size={14} />
           </summary>
-          <Legend items={model.legend} compact />
+          <Legend items={model.legend} compact note={rampNote(state.lens, state.safe)} />
         </details>
       ) : (
         <div className="sp-map-legend">
-          <Legend items={model.legend} compact />
+          <Legend items={model.legend} compact note={rampNote(state.lens, state.safe)} />
         </div>
       )}
       <div className="sp-map__stage">
@@ -391,7 +411,7 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
         </p>
       </div>
 
-      <FloorList floors={floors} selected={state.floor} onSelect={selectFloor} toneOf={toneOf} accentOf={accentOf} stateOf={stateOf} shortOf={shortOf} />
+      <FloorList floors={floors} selected={state.floor} onSelect={selectFloor} toneOf={toneOf} accentOf={accentOf} stateOf={stateOf} shortOf={shortOf} alsoOf={alsoOf} />
 
       {status === 'ready' && (
         <MapControls

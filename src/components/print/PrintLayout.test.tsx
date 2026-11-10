@@ -63,7 +63,7 @@ describe('PrintLayout', () => {
     // No lease shows its term, so the report has no expirations table at all (and so no rent or renewal column).
     expect(html).not.toMatch(/Lease expirations|Renewal worklist|No leases end in the next 12 months/);
     expect(html).not.toMatch(/<th>Rent<\/th>|<th>Renewal<\/th>|<th>Ends<\/th>/);
-    expect(html).toContain('lease dates and rollover are withheld');
+    expect(html).toContain('lease and sublease dates, WALT and rollover are withheld');
     // The rent roll: every lease in place is "Leased", and the table has no lease-date column at all.
     const roll = pages.slice(0, pages.indexOf('<h2>Space on offer</h2>'));
     expect(roll).not.toMatch(/<th>(Commencement|Expiration|Remaining)<\/th>/);
@@ -89,16 +89,31 @@ describe('PrintLayout', () => {
     expect(html).toMatch(/Expiring 12 mo<\/div><div class="sp-print__kpi-value">Withheld/);
   });
 
+  it('prospect-safe report prints no WALT figure: the card reads "Withheld", as on screen', () => {
+    const open = render('?print=1');
+    expect(open.model.kpis.walt).toBeGreaterThan(0);
+    expect(open.html).toContain(`WALT</div><div class="sp-print__kpi-value">${open.model.kpis.walt.toFixed(2)} yr`);
+    const { html, model } = render('?print=1&safe=1');
+    expect(html).toMatch(/WALT<\/div><div class="sp-print__kpi-value">Withheld<\/div><div class="sp-print__kpi-note">Prospect-safe/);
+    expect(html).not.toMatch(/\d(\.\d+)? yr\b|SF-weighted/);
+    expect(html).not.toContain(open.model.kpis.walt.toFixed(2));
+    // The model itself hands the report no figure to print.
+    expect(model.kpis.walt).toBe(0);
+  });
+
   it('prospect-safe report prints no date of any lease, signed leases included, at any as-of date asked for', () => {
     const leaseDates = new Set(property.leases.flatMap((l) => [l.commencement, l.expiration, l.termination]).filter((d): d is string => !!d));
-    for (const a of property.availabilities) for (const d of [a.availableFrom, a.subleaseExpiration]) if (d) leaseDates.delete(d);
+    // A sublease's end is its sublandlord's lease end: withheld like the rest. An offer's available-from date is the offer's.
+    for (const a of property.availabilities) if (a.subleaseExpiration) leaseDates.add(a.subleaseExpiration);
+    for (const a of property.availabilities) if (a.availableFrom) leaseDates.delete(a.availableFrom);
+    expect(leaseDates.has('2030-09-30')).toBe(true);
     const today = render('?print=1&safe=1').html;
     for (const d of leaseDates) {
       const [y, m, day] = d.split('-').map(Number);
       const long = `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][m - 1]} ${day}, ${y}`;
       expect(today, long).not.toContain(long);
     }
-    expect(today).not.toMatch(/Moves in|Vacated|Projected vacancy/);
+    expect(today).not.toMatch(/Moves in|Vacated|Projected vacancy|thru |sublandlord/);
     // A link that asks for another date is drawn as of today: the report is the same, character for character.
     for (const asOf of ['2027-02-10', '2027-04-15', '2028-11-10', '2031-01-01']) expect(render(`?print=1&safe=1&asOf=${asOf}`).html, asOf).toBe(today);
   });
@@ -109,7 +124,9 @@ describe('PrintLayout', () => {
     expect(offer.length).toBeGreaterThan(500);
     expect(offer).toContain('Fl 3 · 350');
     expect(offer).toMatch(/\$\d+–\$\d+\/SF\/yr (FSG|MG|NNN)/);
-    expect(offer).toContain('thru Sep 30, 2030');
+    // The sublease is on offer like any other space: from when and at what rent, with no end date.
+    expect(offer).toContain('<td style="white-space:nowrap">Fl 7 · 720</td><td class="num">7,000</td><td>Sublease</td><td>Now</td><td>$24–$26/SF/yr FSG</td>');
+    expect(offer).not.toMatch(/thru|2030/);
     // Suite 600 is occupied and listed quietly for April 2027: it is not on offer to a prospect.
     expect(offer).not.toMatch(/Fl 6 · 600|Apr 1, 2027/);
     expect(render('?print=1').html).not.toContain('<h2>Space on offer</h2>');

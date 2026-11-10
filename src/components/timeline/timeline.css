@@ -100,9 +100,23 @@
 /* A sideways drag on the cursor moves the date; an up-down drag still scrolls the page. */
 .sp-cursor { touch-action: pan-y; }
 
-/* Rollover buckets as buttons: every figure whole, three or more to a row. */
-.sp-tl-roll { padding: var(--sp-space-2) 0 var(--sp-space-3); }
+/* Rollover buckets as buttons: every figure whole, three or more to a row. Folded behind one row that
+   states the next 12 months and the SF at risk (or the period being shown), so the leases start in the
+   top half of a phone's screen. */
+.sp-tl-roll { padding: 6px 0 4px; }
+.sp-tl-roll__summary {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 2px 10px; min-height: 36px; padding: 4px 10px;
+  border: 1px solid var(--sp-color-border); border-radius: 8px; font-size: var(--sp-text-12); color: var(--sp-color-text-weak); cursor: pointer; list-style: none;
+}
+.sp-tl-roll__summary::-webkit-details-marker { display: none; }
+.sp-tl-roll__summary .sp-icon { margin-left: auto; flex: none; }
+.sp-tl-roll[open] .sp-tl-roll__summary .sp-icon { transform: rotate(180deg); }
+.sp-tl-roll__lead { white-space: nowrap; color: var(--sp-color-text); }
+.sp-tl-roll__lead strong { font-weight: 600; }
+.sp-tl-roll__lead.is-active { color: var(--sp-color-brand-strong); font-weight: 600; }
+.sp-tl-roll__body { padding-top: var(--sp-space-2); }
 .sp-tl-roll__head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 2px 12px; margin-bottom: 6px; }
+.sp-tl-roll__hint { font-size: var(--sp-text-11); color: var(--sp-color-text-weak); }
 .sp-tl-roll__risk { font-size: var(--sp-text-12); font-weight: 600; color: var(--tone-risk-edge); white-space: nowrap; }
 .sp-tl-roll__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; }
 .sp-tl-roll__col {
@@ -120,10 +134,15 @@
 .sp-tl-legend summary::-webkit-details-marker { display: none; }
 .sp-tl-legend[open] summary { margin-bottom: 8px; }
 .sp-tl-legend[open] summary .sp-icon { transform: rotate(180deg); }
-.sp-tl-card .sp-stack__head:has(.sp-tl-legend) { flex-direction: column; align-items: stretch; gap: 6px; }
-.sp-tl-card .sp-stack__head:has(.sp-tl-legend) .sp-stack__title { justify-content: space-between; }
-.sp-tl-card .sp-stack__head:has(.sp-tl-legend) .sp-stack__title .sp-weak { display: inline; white-space: nowrap; }
+/* The narrow chart's head is one row: the title, and the folded legend as a button at its end. Opened,
+   the legend takes a row of its own under the title. The as-of date is not repeated here: it is on the
+   header's date button and on the cursor's handle, a few rows away. */
+.sp-tl-card .sp-stack__head:has(.sp-tl-legend) { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding-top: 6px; padding-bottom: 6px; }
+.sp-tl-card .sp-stack__head:has(.sp-tl-legend) .sp-stack__title { flex: 1 1 auto; min-width: 0; }
+.sp-tl-card .sp-stack__head:has(.sp-tl-legend) .sp-stack__title .sp-weak { display: none; }
 .sp-tl-card .sp-stack__head:has(.sp-tl-legend) .sp-stack__title h2 { white-space: nowrap; }
+.sp-tl-legend { flex: 0 1 auto; }
+.sp-tl-legend[open] { flex: 1 1 100%; }
 
 .sp-tl-bar__text--outside .sp-tl-bar__sub { fill: var(--sp-color-text-weak); }
 .sp-cursor line { stroke-opacity: 0.55; }

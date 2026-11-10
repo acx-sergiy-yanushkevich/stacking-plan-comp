@@ -9,7 +9,8 @@ import { buildModel } from './testModel';
 function render(search: string) {
   const state = parseState(search, TODAY);
   const model = buildModel(state);
-  const html = renderToString(<Inspector model={model} state={state} patch={() => {}} mode={deriveMode(state)} />);
+  // React separates adjacent text nodes with an empty comment; the text is what is asserted.
+  const html = renderToString(<Inspector model={model} state={state} patch={() => {}} mode={deriveMode(state)} />).replace(/<!-- -->/g, '');
   return { html, model, state };
 }
 
@@ -83,9 +84,71 @@ describe('Inspector', () => {
     expect(r.model.fits!.options.length).toBeGreaterThan(0);
     const e = render('?req=90000');
     expect(e.html).toContain('No space fits 90,000 SF');
-    expect(e.html).toContain('Try 12 months later');
+    // Nothing is set that could be relaxed, so the advice is how much space there is: no "raise the maximum", no "move the date".
+    expect(e.html).toContain('The largest block available now is 9,300 SF on Floor 12.');
+    expect(e.html).not.toMatch(/Raise the maximum|drop the type filter|move the date|Try 12 months later|Remove the maximum|Search any type/);
     const i = render('?inquiry=I02');
     expect(i.html).toContain('Options');
+  });
+
+  it('Find: every row names its suites, and a floor is not listed twice in the alternatives', () => {
+    const { html, model } = render('?req=12000&fit=direct&mode=find');
+    const rows = [...html.matchAll(/<div class="sp-ins__row-suites">(.*?)<\/div>/g)].map((m) => m[1]);
+    expect(rows).toHaveLength(model.fits!.options.length + model.fits!.alternatives.length);
+    for (const r of rows) expect(r).toMatch(/^Ste \d+/);
+    expect(rows).toContain('Ste 850 + Ste 860');
+    const near = html.slice(html.indexOf('aria-label="Near misses"'));
+    expect(near.match(/<span>Floor 8<\/span>/g)).toHaveLength(1);
+    expect(near).toContain('4,600 SF short');
+    expect(near).not.toContain('7,800 SF short');
+  });
+
+  it('Find: the empty state suggests only what would help, with a button that does it', () => {
+    const max = render('?req=1000&max=1200&mode=find').html;
+    expect(max).toContain('No space fits 1,000–1,200 SF');
+    expect(max).toMatch(/Without the 1,200 SF maximum, \d+ options? fits?\./);
+    expect(max).toContain('Remove the maximum');
+    expect(max).not.toMatch(/Search any type|move the date|Try 12 months later/);
+    const type = render('?req=8000&fit=sublease&mode=find').html;
+    expect(type).toContain('No sublease space fits 8,000 SF');
+    expect(type).toMatch(/With the type set to Any instead of Sublease, \d+ options? fits?\./);
+    expect(type).toContain('Search any type');
+    expect(type).not.toMatch(/Remove the maximum|maximum/);
+  });
+
+  it('Find: a needed-by date before the as-of date is refused with a message, shown as entered and not applied', () => {
+    // An old link, or a date typed day-first in a month-first browser: 11 September 2026 against 9 November 2026.
+    const { html, model, state } = render('?req=5000&by=2026-09-11&mode=find');
+    expect(state.by).toBe('2026-09-11');
+    expect(model.req!.by).toBeNull();
+    expect(html).toContain('role="alert"');
+    expect(html).toContain('Sep 11, 2026 is before the as-of date, Nov 9, 2026, so it is not applied. Enter today or a later date. The search has no needed-by date.');
+    // The field is a date control and still holds what was entered; it is marked invalid.
+    expect(html).toMatch(/<input[^>]*type="date"[^>]*value="2026-09-11"/);
+    expect(html).toMatch(/<input[^>]*aria-invalid="true"/);
+    // Nothing is marked late by a date that was refused.
+    expect(html).not.toContain('>late<');
+    // A date on or after the as-of date is applied and read back with the month in words.
+    const ok = render('?req=5000&by=2027-09-11&mode=find');
+    expect(ok.model.req!.by).toBe('2027-09-11');
+    expect(ok.html).toContain('Needed by Sep 11, 2027.');
+    expect(ok.html).not.toContain('role="alert"');
+    expect(render(`?req=5000&by=${TODAY}&mode=find`).html).not.toContain('role="alert"');
+  });
+
+  it('Find: prospect-safe never shows an inquiry, matched before or by a link', () => {
+    const open = render('?inquiry=I02&mode=find');
+    expect(open.html).toContain('Based on');
+    expect(open.model.req).toMatchObject({ size: 15000, max: 22000, by: '2027-06-30' });
+    const safe = render('?safe=1&inquiry=I02&mode=find');
+    expect(safe.state.inquiry).toBeNull();
+    expect(safe.model.req).toBeNull();
+    expect(safe.html).not.toMatch(/inquir|15,000|22,000|Jun 30, 2027/i);
+    // Even a state built by hand, past the state layer, gives the panel nothing to say.
+    const forced = { ...safe.state, inquiry: 'I02' };
+    const model = buildModel(forced);
+    expect(model.req).toBeNull();
+    expect(renderToString(<Inspector model={model} state={forced} patch={() => {}} mode="find" />)).not.toMatch(/inquir|15,000|22,000|Jun 30, 2027/i);
   });
 
   it('Worklist: window chips, rows, export', () => {

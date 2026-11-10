@@ -38,7 +38,9 @@ export interface TimelineModel {
  *
  * Prospect-safe (`safe`, with floors from `safeFloors`): no bar is placed by a lease's dates. Every
  * lease in place is the same bar, in from the left edge and open-ended; a signed lease runs on from
- * the as-of date; leases that have already ended are not drawn. Space on offer keeps its own dates.
+ * the as-of date; leases that have already ended are not drawn. Space on offer keeps its own dates,
+ * and a sublease is drawn as exactly that: on offer from its available-from date, with no end (its end
+ * is its sublandlord's lease end, withheld like every other; `domain/safe.ts`, rule 2).
  */
 export function timelineModel(p: Property, floors: FloorView[], asOf: ISODate, today: ISODate, safe = false): TimelineModel {
   const views = new Map(floors.map((f) => [f.floor.id, f]));
@@ -103,9 +105,21 @@ function barFor(s: FloorView['segments'][number], asOf: ISODate): TimelineBar[] 
     ];
     // Sublease: its own bar from the availability date to the sublease expiration. When it runs to the
     // head lease's own end, the head bar simply becomes the (dotted) sublease bar: one suite, one bar.
-    // With the head lease's dates withheld there is no end to compare: the sublease always has its own bar.
+    // With the head lease's dates withheld there is no end to compare and none to draw: the sublease is
+    // a bar of its own, drawn like any space on offer (from its available-from date, no end) and dotted.
     const subEnd = s.availability ? (s.availability.subleaseExpiration ?? headEnd) : null;
-    if (s.kind === 'sublease' && s.availability && !withheld && subEnd === leaseEnd(s.lease)) {
+    if (s.kind === 'sublease' && s.availability && withheld) {
+      bars.push({
+        key: `tl-${s.key}-offer`,
+        segKey: s.key,
+        label: `Sublease · Ste ${s.suite ?? '—'}`,
+        start: s.availability.availableFrom ?? asOf,
+        end: null,
+        kind: 'available',
+        sublease: true,
+        committed: false,
+      });
+    } else if (s.kind === 'sublease' && s.availability && subEnd === leaseEnd(s.lease)) {
       bars[0] = { ...bars[0], end: subEnd, kind: 'sublease', sublease: true };
     } else if (s.kind === 'sublease' && s.availability) {
       bars.push({

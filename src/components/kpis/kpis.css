@@ -69,19 +69,20 @@
 }
 
 /*
- * Column variant (Building view, the model standing alone): the same six figures as a list, one row
- * each: label and figure on a line, the note under them. Rows are quiet panels inside the plan card,
+ * Column variant (the Building view's KPI column, beside the model): the same six figures as a list, one
+ * row each: label and figure on a line, the note under them. Rows are quiet panels inside the plan card,
  * not six cards of their own. The selectors carry `:root[data-skin] section` to outrank the skin's
  * tile rules, which are written for the strip.
  */
-:root[data-skin] section.sp-kpis--col { display: flex; flex-direction: column; gap: 6px; overflow: visible; flex: 1 1 auto; }
-/* Given a column taller than the list (the model beside it sets the height), the six rows share it evenly,
-   each keeping its two lines together in the middle of its row; they stop growing at 88 px, so on a very
-   tall window the list keeps its rhythm and the spare room falls between the rows. */
+:root[data-skin] section.sp-kpis--col { display: flex; flex-direction: column; gap: 6px; overflow: visible; flex: 1 0 auto; }
+/* The column is given a height by the view (the room below the plan's head, the same whether a floor is
+   open or not). The six rows share it evenly, each keeping its two lines together in the middle of its
+   row; they stop growing at 88 px, so on a very tall window the list keeps its rhythm and the spare room
+   falls between the rows. */
 :root[data-skin] section.sp-kpis--col { justify-content: space-between; }
 :root[data-skin] section.sp-kpis--col .sp-kpi,
 :root[data-skin] section.sp-kpis--col .sp-kpi:last-child {
-  flex: 1 1 auto; max-height: 88px; align-content: center;
+  flex: 1 0 auto; max-height: 88px; align-content: center;
   display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'label value' 'context context';
   align-items: baseline; gap: 1px var(--sp-space-3); padding: 7px 12px 8px;
   background: var(--sp-color-card-2); border: 1px solid var(--sp-color-border); border-radius: 10px;
@@ -101,15 +102,4 @@
   :root[data-skin] section.sp-kpis--col { gap: 4px; }
   :root[data-skin] section.sp-kpis--col .sp-kpi,
   :root[data-skin] section.sp-kpis--col .sp-kpi:last-child { padding: 5px 12px 6px; }
-}
-
-/* Given a wide box instead of a column (the Building view in one column), the list becomes one row of six
-   tiles: label over figure, the note in the tooltip. It asks its own container, not the window. */
-@container (min-width: 600px) {
-  :root[data-skin] section.sp-kpis--col { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
-  :root[data-skin] section.sp-kpis--col .sp-kpi,
-  :root[data-skin] section.sp-kpis--col .sp-kpi:last-child { display: flex; flex-direction: column; gap: 1px; padding: 6px 8px 7px; max-height: none; }
-  :root[data-skin] section.sp-kpis--col .sp-kpi__value { flex-direction: row; justify-content: flex-start; font-size: var(--sp-text-15); }
-  .sp-kpis--col .sp-kpi__context { display: none; }
-  .sp-kpis--col .sp-kpi__label { font-size: 10px; letter-spacing: 0.02em; }
 }

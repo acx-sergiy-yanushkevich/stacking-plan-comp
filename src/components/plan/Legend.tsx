@@ -16,7 +16,7 @@ export function Legend({ items, note, id, compact }: LegendProps) {
       {items
         .filter((i) => i.sf > 0 || !compact)
         .map((i) => (
-          <span key={i.tone + i.label} className="sp-legend__item" title={i.share > 0 ? `${i.label}: ${num(i.sf)} SF, ${pct(i.share)} of leasable` : `${i.label}: ${num(i.sf)} SF`}>
+          <span key={i.tone + i.label} className="sp-legend__item" title={`${i.label}: ${num(i.sf)} SF${i.share > 0 ? `, ${pct(i.share)} of leasable` : ''}${i.overlay ? '; also counted in its rent band' : ''}`}>
             <span
               className={`sp-legend__swatch ${i.pattern ? `sp-legend__swatch--${i.pattern}` : ''}`}
               style={{ backgroundColor: i.pattern === 'dashed' ? 'transparent' : `var(--tone-${i.tone}-fill)`, borderColor: `var(--tone-${i.tone}-edge)`, color: `var(--tone-${i.tone}-edge)` }}

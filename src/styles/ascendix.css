@@ -50,20 +50,26 @@
     --tone-projected-fill: #173a2a; --tone-projected-text: #aef0d0; --tone-projected-edge: #3fcf8f;
     --tone-confidential-fill: #3b4756; --tone-confidential-text: #d7dfe8; --tone-confidential-edge: #94a1b0;
 
-    /* Expiration lens: from the orange toward the blues, lightness ordered (soonest is brightest) and
-       stepping in hue (light orange, Primary Orange, red-orange, mauve, violet, steel blue) so neighbours
-       stay apart. Holdover / MTM is a dark maroon, far below every step. */
-    --tone-exp-0-fill: #ffc56e; --tone-exp-0-text: #2a1500; --tone-exp-0-edge: #ffe2b5;
+    /* Expiration lens: from the orange toward the blues. Read it as "the stronger the colour, the sooner":
+       the soonest step is the brightest against the navy card and the latest is a deep blue close to it
+       (the legend says so). Every step is 9 L* or more below the one before, so the order survives a
+       colour-blind eye and the 3D model and the map, which have only the colour; and every step changes
+       hue as well: light orange, Primary Orange, red-orange, mauve, then two company-side blues (a steel
+       blue and a deeper indigo slate) instead of violets. Holdover / MTM is a dark maroon, far below every step. */
+    --tone-exp-0-fill: #ffd08a; --tone-exp-0-text: #2a1500; --tone-exp-0-edge: #ffe6bf;
     --tone-exp-1-fill: #ff9c00; --tone-exp-1-text: #2a1500; --tone-exp-1-edge: #ffc774;
-    --tone-exp-2-fill: #e2603a; --tone-exp-2-text: #1f0a04; --tone-exp-2-edge: #f6a68c;
-    --tone-exp-3-fill: #ab5683; --tone-exp-3-text: #ffffff; --tone-exp-3-edge: #e0a0bf;
-    --tone-exp-4-fill: #6d5a9e; --tone-exp-4-text: #ffffff; --tone-exp-4-edge: #b9a8e0;
-    --tone-exp-5-fill: #34568a; --tone-exp-5-text: #ffffff; --tone-exp-5-edge: #8fb0e0;
+    --tone-exp-2-fill: #ec7450; --tone-exp-2-text: #1f0a04; --tone-exp-2-edge: #f8b29b;
+    --tone-exp-3-fill: #bb6191; --tone-exp-3-text: #1c0a14; --tone-exp-3-edge: #e6abc8;
+    --tone-exp-4-fill: #3a6a8e; --tone-exp-4-text: #ffffff; --tone-exp-4-edge: #9cc3e0;
+    --tone-exp-5-fill: #2e4883; --tone-exp-5-text: #ffffff; --tone-exp-5-edge: #8fa8e0;
 
-    /* Rent lens: the company blues, darkest to lightest (gross scale). Five lightness steps 13 L* or more
-       apart; the text flips from light to dark between steps 1 and 2 (Secondary Blue 1 carries dark text). */
-    --tone-rent-0-fill: #1b3a5c; --tone-rent-0-text: #d9e9f8; --tone-rent-0-edge: #7f9dbd;
-    --tone-rent-1-fill: #1f5c8c; --tone-rent-1-text: #ffffff; --tone-rent-1-edge: #7fb0d8;
+    /* Rent lens: the company blues, darkest to lightest (gross scale): the stronger the blue, the higher
+       the rent. Five lightness steps 12 L* or more apart; the text flips from light to dark between steps
+       1 and 2 (Secondary Blue 1 carries dark text). The lowest step is a blue in its own right, 9 L* or
+       more above the card wherever the glow puts it and far more saturated than the confidential grey: a
+       $27 lease is a rent, not a blank. */
+    --tone-rent-0-fill: #1b5182; --tone-rent-0-text: #e3eff9; --tone-rent-0-edge: #86a8cc;
+    --tone-rent-1-fill: #1f70af; --tone-rent-1-text: #ffffff; --tone-rent-1-edge: #8cbde3;
     --tone-rent-2-fill: #2491dd; --tone-rent-2-text: #04182a; --tone-rent-2-edge: #86c6f2;
     --tone-rent-3-fill: #5cc3f2; --tone-rent-3-text: #04202e; --tone-rent-3-edge: #b0e2f9;
     --tone-rent-4-fill: #bdebff; --tone-rent-4-text: #04202e; --tone-rent-4-edge: #e6f7ff;
@@ -137,9 +143,10 @@
     --tone-projected-fill: #e8f5ee; --tone-projected-text: #14573a; --tone-projected-edge: #1a7f4f;
     --tone-confidential-fill: #e4e6ea; --tone-confidential-text: #3b3f46; --tone-confidential-edge: #757a86;
 
-    /* Daytime expiration lens: lightness ordered the other way (soonest is darkest) and stepping in hue
-       as the night ramp does: red-orange, deep orange, Primary Orange for the three steps that need
-       attention, then lavender, periwinkle and pale steel blue. Holdover / MTM (a pale pink) stands beside
+    /* Daytime expiration lens: the same rule as at night, "the stronger the colour, the sooner". On a
+       white card strong means dark, so the lightness runs the other way (soonest is darkest) while the
+       steps keep the night ramp's order and hues: red-orange, deep orange, Primary Orange for the three
+       steps that need attention, then lavender, periwinkle and pale steel blue. Holdover / MTM (a pale pink) stands beside
        the ramp: every warm step is 12 L* or more below it, every cool step a different hue family. */
     --tone-exp-0-fill: #b03a16; --tone-exp-0-text: #ffffff; --tone-exp-0-edge: #7d260c;
     --tone-exp-1-fill: #e07400; --tone-exp-1-text: #1f0e00; --tone-exp-1-edge: #9a4c00;

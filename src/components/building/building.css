@@ -1,15 +1,38 @@
 /* Building view: the model is the plan.
-   Alone (no floor open): the building's KPIs and quick starts in a column, the model beside it with
-   its floor picker and a fact after each floor number.
-   Docked (a floor open): picker and model on the left, the floor's plate, numbers and lists beside it.
+   Alone (no floor open): the model with its floor picker and a fact after each floor number.
+   Docked (a floor open): picker and model, then the floor's plate, numbers and lists beside them.
+   Where the card has room (`.has-kpis`, decided by BuildingView's `kpiColumn`), the building's KPIs and
+   quick starts are a column on the left in BOTH states, the same size in the same place: opening or
+   closing a floor never moves them. Without that room the KPIs are the strip above the plan.
 
-   The layout follows the width of the card (container queries), not of the window: the inspector
-   opening beside the view, a tablet and a narrow desktop are then one case, decided by the room there is.
-   Tokens only. */
+   The rest of the layout follows the width of the card (container queries), not of the window: the
+   inspector opening beside the view, a tablet and a narrow desktop are then one case, decided by the room
+   there is. Tokens only. */
 .sp-bview { display: flex; flex-direction: column; min-width: 0; container: sp-bview / inline-size; }
 .sp-bview__grid {
   display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp-space-6);
   align-items: start; padding: var(--sp-space-4);
+}
+
+/* ── The KPI column ─────────────────────────────────────────────────────────────────── */
+/* Its width follows the card and its height follows the window (the room below the grid's top edge, as
+   the model's does), and neither depends on whether a floor is open. The six rows share that height
+   (kpis.css) and the quick starts close it. It stays in view while an open floor's lists are scrolled. */
+.sp-bview__grid.has-kpis { --sp-bview-kpis: clamp(264px, 21cqw, 340px); gap: var(--sp-space-5); }
+.sp-bview__grid.has-kpis.is-alone { grid-template-columns: var(--sp-bview-kpis) minmax(0, 1fr); }
+.sp-bview__grid.has-kpis.is-docked { grid-template-columns: var(--sp-bview-kpis) auto minmax(0, 1fr); }
+.sp-bview__side { display: flex; flex-direction: column; gap: var(--sp-space-3); min-width: 0; }
+.sp-bview__grid.has-kpis .sp-bview__side {
+  position: sticky; top: var(--sp-space-3);
+  /* At least the room below the grid's top edge; never less than its own rows need (a short window). */
+  min-height: clamp(456px, calc(100vh - var(--sp-bview-grid-top, 290px) - 60px), 664px);
+}
+.sp-bview__starts { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-space-2); }
+.sp-bview__starts-label { flex: 1 0 100%; }
+/* The quick start of the floor that is open is pressed: the same outline the open floor has in the picker. */
+:root[data-skin] .sp-bview__starts .sp-btn[aria-pressed='true'] {
+  background: var(--sp-color-brand-soft); border-color: var(--sp-color-brand); color: var(--sp-color-brand-strong);
+  box-shadow: inset 0 0 0 1px var(--sp-color-brand);
 }
 
 /* ── The model group: the picker and the model, always side by side ────────────────── */
@@ -19,10 +42,11 @@
   /* Docked: it stays put while the floor column beside it changes height from floor to floor. */
   position: sticky; top: var(--sp-space-3);
 }
-.sp-bview__stage { min-width: 0; will-change: transform; }
+.sp-bview__stage { min-width: 0; }
 /* While the model docks or undocks its floor labels are hidden (they would be drawn, at the size the model
    starts from, over the floor column coming in); hero.css fades them back in once it has settled. */
 .sp-bview__stage.is-moving .sp-hero__tags { opacity: 0; transition: none; }
+.sp-bview__stage .sp-hero__canvas { will-change: transform; }
 .sp-bview__stage .sp-mini { width: var(--sp-bview-pick); }
 /* The model is sized by height, from the room below it on first load; `--sp-hero-ratio` (width over
    height of the drawing) turns a width limit into a height limit, so the drawing is never letterboxed and
@@ -32,15 +56,14 @@
   height: min(clamp(300px, calc(100vh - var(--sp-bview-top, 430px) - 28px), 640px), calc(var(--sp-bview-max, 420px) / var(--sp-hero-ratio, 1)));
 }
 .sp-bview__grid.is-docked .sp-bview__model .sp-hero svg { --sp-bview-max: min(30cqw, 440px); }
+/* Beside the KPI column the docked model is a compact figure: the floor's pane takes the width. */
+.sp-bview__grid.has-kpis.is-docked .sp-bview__model { --sp-hero-gap: var(--sp-space-3); }
+.sp-bview__grid.has-kpis.is-docked .sp-bview__model .sp-hero svg { --sp-bview-max: min(14cqw, 236px); }
 
 /* ── Alone ──────────────────────────────────────────────────────────────────────────── */
-/* The two columns are one height: the KPI rows share the height of the model beside them (kpis.css), so
-   the column ends where the model does and the quick starts close it. */
-.sp-bview__grid.is-alone { grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); align-items: stretch; }
-/* The KPI list lays itself out by the width it is given (kpis.css): a list in a column, six tiles in a row. */
-.sp-bview__alone { display: flex; flex-direction: column; gap: var(--sp-space-3); min-width: 0; container-type: inline-size; }
-.sp-bview__starts { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-space-2); }
-.sp-bview__starts-label { flex: 1 0 100%; }
+.sp-bview__grid.is-alone:not(.has-kpis) { grid-template-columns: minmax(0, 1fr); gap: var(--sp-space-3); }
+/* Without the KPI column the quick starts are one line above the model. */
+.sp-bview__grid:not(.has-kpis) .sp-bview__starts-label { flex: none; }
 /* The model column measures itself (container units), so the model takes the width that is really left
    after the picker and the labels, whatever stands beside the view. */
 .sp-bview__grid.is-alone .sp-bview__model { position: static; container-type: inline-size; gap: var(--sp-space-2); }
@@ -76,12 +99,20 @@
 @container (max-width: 899px) { .sp-bview__caption-more { display: none; } }
 
 /* ── Docked ─────────────────────────────────────────────────────────────────────────── */
-/* The floor column comes in from the right as the model docks; the KPI column fades back in as it undocks. */
-@keyframes sp-bview-in { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+/* What comes in with a dock or an undock, and when. The model glides and turns for 760 ms (BuildingView)
+   and until it has settled into its own column it reaches into the room beside it. So what belongs in
+   that room waits for it: the floor's pane as the model docks, the caption lines (and, without the KPI
+   column, the quick starts) as it undocks. Each starts at 420 ms, when the model is inside its column,
+   and is in place as the model stops. `.is-moving` is set only for a dock or an undock in progress: a
+   page that loads with a floor open shows it at once, and nothing moves under reduced motion. */
+@keyframes sp-bview-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
 @keyframes sp-bview-fade { from { opacity: 0; } to { opacity: 1; } }
-.sp-bview__floor { animation: sp-bview-in 520ms cubic-bezier(0.22, 0.8, 0.2, 1) 140ms both; }
-.sp-bview__alone, .sp-bview__caption, .sp-bview__note { animation: sp-bview-fade 420ms ease 120ms both; }
-@media (prefers-reduced-motion: reduce) { .sp-bview__floor, .sp-bview__alone, .sp-bview__caption, .sp-bview__note { animation: none; } }
+.sp-bview__grid.is-moving .sp-bview__floor { animation: sp-bview-in 320ms cubic-bezier(0.22, 0.8, 0.2, 1) 420ms both; }
+.sp-bview__grid.is-moving .sp-bview__lead,
+.sp-bview__grid.is-moving:not(.has-kpis) .sp-bview__side { animation: sp-bview-fade 300ms ease 420ms both; }
+@media (prefers-reduced-motion: reduce) {
+  .sp-bview__grid.is-moving .sp-bview__floor, .sp-bview__grid.is-moving .sp-bview__lead, .sp-bview__grid.is-moving .sp-bview__side { animation: none; }
+}
 /* The floor column also measures itself: its head and its four numbers arrange by the room they have. */
 .sp-bview__floor { display: flex; flex-direction: column; gap: var(--sp-space-2); min-width: 0; container-type: inline-size; }
 .sp-bview__floor-head { display: flex; align-items: baseline; gap: var(--sp-space-2) var(--sp-space-3); flex-wrap: wrap; }
@@ -140,14 +171,6 @@
     }
   }
 }
-/* ── A card under 1100 px ───────────────────────────────────────────────────────────── */
-/* Alone: one column, so the model keeps the width its floor facts need. The six KPIs in a row, the quick
-   starts on a line, then the model with its picker. */
-@container sp-bview (max-width: 1099px) {
-  .sp-bview__grid.is-alone { grid-template-columns: minmax(0, 1fr); gap: var(--sp-space-3); }
-  .sp-bview__starts-label { flex: none; }
-}
-
 /* ── The card's head ────────────────────────────────────────────────────────────────── */
 /* The note about a floor whose records exceed its area shares the title's line (it wraps under it where
    there is no room), then the legend: one band less above the model and the plate at every width. */
@@ -155,3 +178,5 @@
 .sp-bview > .sp-stack__head .sp-stack__title { order: 0; }
 .sp-bview > .sp-stack__head .sp-legend__note { order: 1; width: auto; flex: 1 1 320px; text-align: right; }
 .sp-bview > .sp-stack__head .sp-legend { order: 2; flex: 1 1 100%; }
+/* The legend's own note (how to read the lens's colour ramp) closes the legend's line, as its last item. */
+.sp-bview > .sp-stack__head .sp-legend .sp-legend__note { order: 0; flex: 0 1 auto; width: auto; text-align: left; font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }

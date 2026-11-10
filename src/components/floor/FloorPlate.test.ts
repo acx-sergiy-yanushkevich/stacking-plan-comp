@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import type { SegmentText } from '../plan/segmentText';
-import { keyText, linesFor } from './FloorPlate';
+import { keyEntry, keyText, linesFor, rentOf } from './FloorPlate';
 
 // Without a canvas the text measure is the average-glyph estimate: 0.55 × font size per character
 // (13 px name 7.15, 12 px fact 6.6, 11 px 6.05). The widths below are chosen against that.
@@ -22,21 +22,39 @@ const drawn = (ls: ReturnType<typeof linesFor>) => ls.map((l) => l.t);
 const px = (ls: ReturnType<typeof linesFor>) => ls.map((l) => Number(/(\d+)px/.exec(l.font)![1]));
 
 describe('floor plate label lines', () => {
-  it('wraps a rate that is too wide onto a second line instead of dropping it', () => {
-    const ls = linesFor(text(), 1, 100, 200, 'name');
-    expect(drawn(ls)).toEqual(['Available now', 'Ste 860', '3,200 SF', '$31–$33/SF/yr', 'FSG']);
-    // The two halves are drawn together or not at all, and at the standard sizes.
-    expect(ls.map((l) => !!l.pair)).toEqual([false, false, false, true, true]);
-    expect(px(ls)).toEqual([13, 12, 12, 12, 12]);
+  it('never breaks a rate: one that is too wide at 12 px takes its line whole at 11 px', () => {
+    // 17 characters: 112 px at 12 px, 103 px at 11 px.
+    const ls = linesFor(text(), 1, 104, 200, 'name');
+    expect(drawn(ls)).toEqual(['Available now', 'Ste 860', '3,200 SF', '$31–$33/SF/yr FSG']);
+    expect(px(ls)).toEqual([13, 12, 12, 11]);
   });
 
-  it('drops "Asking" before it splits a rate', () => {
+  it('leaves a rate off a slice that cannot hold it whole (the key under the plate writes it), and never a lone lease type', () => {
+    const ls = linesFor(text(), 1, 100, 200, 'name');
+    expect(drawn(ls)).toEqual(['Available now', 'Ste 860', '3,200 SF']);
+    for (let fw = 40; fw <= 240; fw += 4)
+      for (const tier of [0, 1, 2] as const)
+        for (const l of linesFor(text({ lensShort: tier === 2 ? '$31–$33/SF/yr FSG' : '' }), tier, fw, 200, 'name')) {
+          expect(l.t, `${fw} px`).not.toMatch(/^(FSG|MG|NNN)$/);
+          if (l.t.includes('/SF/')) expect(l.t, `${fw} px`).toBe('$31–$33/SF/yr FSG');
+        }
+  });
+
+  it('names the rent a slice has to show, without "Asking"; a date or a price is not one', () => {
+    expect(rentOf(text())).toBe('$31–$33/SF/yr FSG');
+    expect(rentOf(text({ meta: 'Asking $31–$33/SF/yr FSG' }))).toBe('$31–$33/SF/yr FSG');
+    expect(rentOf(text({ meta: 'Exp Jun 2029 · 2 yr 7 mo' }))).toBe('');
+    expect(rentOf(text({ meta: '$1,027,000 · $395.00/SF' }))).toBe('');
+    expect(rentOf(text({ meta: 'Rent confidential' }))).toBe('');
+  });
+
+  it('drops "Asking" before it shrinks or leaves out a rate', () => {
     expect(drawn(linesFor(text({ meta: 'Asking $31–$33/SF/yr FSG' }), 1, 122, 200, 'name'))).toEqual(['Available now', 'Ste 860 · 3,200 SF', '$31–$33/SF/yr FSG']);
   });
 
-  it('keeps the rate on a narrow slice too, when the slice is tall enough', () => {
-    const ls = linesFor(text({ lensShort: '$31–$33/SF/yr FSG' }), 2, 96, 200, 'name');
-    expect(drawn(ls)).toEqual(['Available now', 'Ste 860', '3,200 SF', '$31–$33/SF/yr', 'FSG']);
+  it('keeps the rate on a narrow slice too, whole, when it fits at 11 px', () => {
+    const ls = linesFor(text({ lensShort: '$31–$33/SF/yr FSG' }), 2, 104, 200, 'name');
+    expect(drawn(ls)).toEqual(['Available now', 'Ste 860', '3,200 SF', '$31–$33/SF/yr FSG']);
   });
 
   it('never leaves half a rate on a short slice', () => {
@@ -66,6 +84,20 @@ describe('floor plate label lines', () => {
     // 70 px holds it at 11 px: still the whole name.
     expect(drawn(linesFor(t, 2, 70, 180, 'tiny'))).toEqual(['S&P', 'Enterprises', 'Ste 325', '4,900 SF', "Jun '29"]);
     expect(keyText(t)).toBe('S&P Enterprises · Ste 325 · 4,900 SF');
+    // A rent that found no room on its slice is written in the key, whole.
+    expect(keyText(text(), '$31–$33/SF/yr FSG')).toBe('Available now · Ste 860 · 3,200 SF · $31–$33/SF/yr FSG');
+  });
+
+  it('writes in the key only what the slice does not show: the whole entry, or the suite and the rent', () => {
+    const rent = '$31–$33/SF/yr FSG';
+    // Nothing but the marker on the slice: everything is in the key.
+    expect(keyEntry(text(), rent, [])).toBe('Available now · Ste 860 · 3,200 SF · $31–$33/SF/yr FSG');
+    // Name and SF are on the slice (the name wrapped over two lines): the key adds the rent, under the suite number.
+    expect(keyEntry(text(), rent, ['Available', 'now', 'Ste 860', '3,200 SF'])).toBe('Ste 860 · $31–$33/SF/yr FSG');
+    // The SF is not on the slice: the whole entry again, so the figure is on screen.
+    expect(keyEntry(text(), rent, ['Available now', 'Ste 860'])).toBe('Available now · Ste 860 · 3,200 SF · $31–$33/SF/yr FSG');
+    // No rent to add: the name's entry, as before.
+    expect(keyEntry(text(), '', [])).toBe('Available now · Ste 860 · 3,200 SF');
   });
 
   it('breaks "Tenant · sublease" at its separator, never leaving the dot at the end or start of a line', () => {
