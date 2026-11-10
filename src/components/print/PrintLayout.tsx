@@ -27,6 +27,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
   return (
     <div className={`sp-print ${visible ? 'sp-print--visible' : ''}`} aria-hidden={!visible} inert={!visible}>
       <section className="sp-print__page">
+        <RunningHead p={p} asOf={model.asOf} safe={safe} page={1} />
         <header className="sp-print__head">
           <div>
             <div className="sp-print__eyebrow">Stacking plan{safe ? ' · Prospect-safe' : ''}</div>
@@ -101,7 +102,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
         <div className="sp-print__two">
           <div>
             <h2>Lease rollover</h2>
-            <p className="sp-print__note">SF of leases ending in each 12-month period from {fmtDate(model.asOf)}.</p>
+            <p className="sp-print__note">SF of leases ending in each 12-month period from {fmtDate(model.asOf)}.{safe ? ' Shares are of the SF listed here.' : ''}</p>
             <table className="sp-print__table sp-print__table--tight">
               <thead>
                 <tr>
@@ -117,7 +118,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
                     <td>{b.label}</td>
                     <td className="num">{b.sf ? num(b.sf) : '—'}</td>
                     <td className="num">{b.leases || '—'}</td>
-                    <td className="num">{k.leased && b.sf ? pct(b.sf / k.leased) : '—'}</td>
+                    <td className="num">{b.sf ? pct(b.sf / (safe ? model.roll.buckets.reduce((t, x) => t + x.sf, 0) : k.leased)) : '—'}</td>
                   </tr>
                 ))}
                 {!safe && (
@@ -213,14 +214,15 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
   );
 }
 
-function RunningHead({ p, asOf, safe, page }: { p: PlanModel['property']; asOf: string; safe: boolean; page: number }) {
+const SECTIONS = 3;
+function RunningHead({ p, asOf, safe, page, total = SECTIONS }: { p: PlanModel['property']; asOf: string; safe: boolean; page: number; total?: number }) {
   return (
     <div className="sp-print__running">
       <span>
         {p.name} · Stacking plan as of {fmtDate(asOf)}
         {safe ? ' · Prospect-safe' : ''}
       </span>
-      <span className="sp-print__pageno">Section {page} of 3</span>
+      <span className="sp-print__pageno">Section {page} of {total}</span>
     </div>
   );
 }

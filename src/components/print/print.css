@@ -43,7 +43,6 @@
 .sp-print__table td:first-child, .sp-print__table th:first-child { white-space: nowrap; }
 .sp-print__note, .sp-print__total { break-inside: avoid; }
 @media print {
-  .sp-print__pageno::after { content: ' · page ' counter(page) ' of ' counter(pages); }
 }
 
 .sp-print__table { table-layout: auto; }

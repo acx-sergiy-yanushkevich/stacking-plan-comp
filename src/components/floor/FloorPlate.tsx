@@ -118,8 +118,11 @@ function linesFor(text: SegmentText, tier: 0 | 1 | 2 | 3, fw: number, bh: number
       }
     }
   } else if (tier === 2) {
-    if (fitWords(text.name, fw, FONT_NAME) === text.name) lines.push({ t: text.name, cls: 'sp-seg__name', font: FONT_NAME });
-    if (fits(text.sfShort, fw, FONT_SUB)) lines.push({ t: text.sfShort, cls: 'sp-seg__sf', font: FONT_SUB });
+    const nameLines = wrapWords(text.name, fw, FONT_NAME, 2);
+    if (nameLines.join(' ') === text.name) for (const l of nameLines) lines.push({ t: l, cls: 'sp-seg__name', font: FONT_NAME });
+    const unit = `${text.sfShort} SF`;
+    if (fits(unit, fw, FONT_SUB)) lines.push({ t: unit, cls: 'sp-seg__sf', font: FONT_SUB });
+    else if (fits(text.sfShort, fw, FONT_SUB) && lines.length) lines.push({ t: text.sfShort, cls: 'sp-seg__sf', font: FONT_SUB });
   }
   return lines;
 }

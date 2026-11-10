@@ -94,6 +94,11 @@ export function useMapLibre(containerRef: RefObject<HTMLDivElement | null>, opts
       clearTimeout(timer);
       setStatus('ready');
       setMap(m);
+      if (typeof ResizeObserver !== 'undefined') {
+        const ro = new ResizeObserver(() => m.resize());
+        ro.observe(el);
+        m.once('remove', () => ro.disconnect());
+      }
     });
     return () => {
       settled = true;

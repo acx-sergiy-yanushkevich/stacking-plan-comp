@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { WINDOW_LABEL, type PlanModel, type WorklistRow } from '../../model/usePlanModel';
 import type { PlanState, WindowKey } from '../../state/planState';
-import { daysBetween, fmtMonths } from '../../domain/dates';
+import { daysBetween, fmtMonths, fmtMonthYearShort } from '../../domain/dates';
 import { rentRollRows, toCsv } from '../../domain/exportCsv';
 import { plural, rate, sf } from '../../domain/format';
 import { rentVisible, tenantLabel } from '../../domain/safe';
@@ -85,6 +85,13 @@ export function WorklistPanel({ model, state, patch }: WorklistPanelProps) {
                         <span>{tenantLabel(lease, safe)}</span>
                         {row.renewal && !safe && <StageChip stage={row.renewal.stage} />}
                       </div>
+                      {row.seg.marketed && !row.seg.marketed.sublease && (
+                        <div className="sp-ins__row-meta">
+                          <Chip tone="warn" icon="warning" title="The suite is already on the market for a later date: the tenant is expected to leave">
+                            {row.seg.marketed.availableFrom ? `Marketed from ${fmtMonthYearShort(row.seg.marketed.availableFrom)} · likely vacating` : 'Marketed · likely vacating'}
+                          </Chip>
+                        </div>
+                      )}
                       <div className="sp-ins__row-meta">
                         <span>{[row.floorName, row.suite ? `Ste ${row.suite}` : null, rent].filter(Boolean).join(' · ')}</span>
                       </div>
@@ -100,9 +107,16 @@ export function WorklistPanel({ model, state, patch }: WorklistPanelProps) {
                       {monthsLeft(row, safe)}
                     </div>
                   </button>
-                  {!row.renewal && !safe && (
-                    <div className="sp-ins__row-side">
-                      <Button size="sm" variant="ghost" icon="plus" iconOnly aria-label={`Start renewal for ${tenantLabel(lease, safe)}`} title="Start renewal" onClick={() => run('start-renewal', `Lease ${lease.id}`)} />
+                  {!safe && (
+                    <div className="sp-ins__row-actions">
+                      <Button size="sm" variant="ghost" icon="phone" onClick={() => run('log-call', `Lease ${lease.id}`)}>
+                        Log call
+                      </Button>
+                      {!row.renewal && (
+                        <Button size="sm" variant="ghost" icon="plus" onClick={() => run('start-renewal', `Lease ${lease.id}`)}>
+                          Start renewal
+                        </Button>
+                      )}
                     </div>
                   )}
                 </li>

@@ -96,7 +96,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
         <Section title={seg.kind === 'committed' ? 'Signed lease' : seg.kind === 'projected' ? 'Previous lease' : 'Lease'}>
           <Facts
             items={[
-              ['Tenant', <strong key="t">{tenantLabel(lease, safe)}</strong>],
+              !safe && ['Tenant', <strong key="t">{tenantLabel(lease, safe)}</strong>],
               ['Contact', contactLabel(lease.tenantContact, safe)],
               !safe && ['Industry', lease.industry],
               ['Term', safe && (seg.kind === 'holdover' || seg.kind === 'mtm') ? `Since ${fmtDate(lease.commencement)}` : `${fmtDate(lease.commencement)} – ${seg.endDate ? fmtDate(seg.endDate) : 'open (MTM)'}`],

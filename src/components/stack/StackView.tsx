@@ -199,6 +199,9 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
                       openFloor(patch, f.floor.id);
+                    } else if ((e.key === 'Home' || e.key === 'End') && r.boxes.length) {
+                      e.preventDefault();
+                      focusBlock(e.key === 'Home' ? r.boxes[0].key : r.boxes[r.boxes.length - 1].key);
                     } else if (e.key === 'ArrowRight' && r.boxes[0]) {
                       e.preventDefault();
                       focusBlock(r.boxes[0].key);

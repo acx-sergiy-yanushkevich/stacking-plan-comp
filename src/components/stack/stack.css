@@ -39,8 +39,8 @@
 
 @media (max-width: 760px) {
   .sp-stack__head { padding: 6px 10px; }
-  .sp-stack__head .sp-legend { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 10px; }
-  .sp-stack__head .sp-legend__item { white-space: normal; min-width: 0; }
+  .sp-stack__head .sp-legend { display: grid; grid-template-columns: 1fr; gap: 2px 10px; }
+  .sp-stack__head .sp-legend__item { display: grid; grid-template-columns: 14px 1fr auto; gap: 6px; align-items: center; white-space: nowrap; min-width: 0; }
   .sp-stack__head .sp-legend__num { font-size: 10px; }
   .sp-stack__head .sp-legend__note { display: none; }
   .sp-stack__title .sp-weak { display: none; }

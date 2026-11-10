@@ -96,12 +96,23 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
     if (sfText) lines.push({ t: sfText, cls: 'sp-seg__sf', font: FONT_SUB });
     else if (lines.length === 0 && fits(withUnit, inner + PAD, FONT_SUB)) lines.push({ t: withUnit, cls: 'sp-seg__sf', font: FONT_SUB });
     if (text.lensShort && lines.length < maxLines && !lines.some((l) => l.t.includes(text.lensShort)) && fits(text.lensShort, inner, FONT_SUB)) lines.push({ t: text.lensShort, cls: 'sp-seg__meta', font: FONT_SUB });
+    // A wrapped name plus SF plus the lens fact needs four lines: use the compact 13 px pitch when the row allows it.
+    if (text.lensShort && !lines.some((l) => l.t.includes(text.lensShort)) && lines.length === maxLines && h >= 4 * 13 + 14 && fits(text.lensShort, inner, FONT_TINY)) {
+      lines.push({ t: text.lensShort, cls: 'sp-seg__tiny-meta', font: FONT_TINY });
+    }
   }
   // Too many lines: drop the second name line before any SF / lens line (the tooltip keeps the full name).
   while (lines.length > maxLines) {
     const nameIdx = lines.map((l) => l.cls).lastIndexOf('sp-seg__name');
     if (nameIdx > 0 && lines.filter((l) => l.cls === 'sp-seg__name').length > 1) lines.splice(nameIdx, 1);
     else lines.length = maxLines;
+  }
+  // SF alone says nothing about state: prefix the state word when the only line is the SF figure.
+  if (lines.length === 1 && lines[0].cls === 'sp-seg__sf') {
+    const word = GLYPH_WORD[seg.kind] ?? (seg.kind === 'leased' || seg.kind === 'holdover' || seg.kind === 'mtm' ? '' : '');
+    const withWord = word ? `${word} ${lines[0].t}` : '';
+    if (withWord && fits(withWord, inner, FONT_SUB)) lines[0] = { ...lines[0], t: withWord };
+    else if (word && lines.length < maxLines) lines.unshift({ t: word, cls: 'sp-seg__name', font: FONT_NAME });
   }
   // Very narrow blocks: the whole name in up to three short lines before any glyph.
   if (lines.length === 0 && w >= 40 && h >= 48) {
@@ -160,11 +171,16 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
           {`${glyph} `}
         </text>
       )}
-      {lines.map((l, i) => (
-        <text key={i} className={l.cls} x={l.cls === 'sp-seg__tiny' ? 4 : PAD + (accentLeft ? 3 : 0)} y={l.cls === 'sp-seg__tiny' ? 6 + 10 + i * 13 : PAD + 11 + i * LINE} fill={color}>
+      {lines.map((l, i) => {
+        const compactPitch = lines.some((x) => x.cls === 'sp-seg__tiny-meta');
+        const pitch = l.cls === 'sp-seg__tiny' ? 13 : compactPitch ? 13 : LINE;
+        const top = l.cls === 'sp-seg__tiny' ? 16 : compactPitch ? 7 + 11 : PAD + 11;
+        return (
+        <text key={i} className={l.cls} x={l.cls === 'sp-seg__tiny' ? 4 : PAD + (accentLeft ? 3 : 0)} y={top + i * pitch} fill={color}>
           {`${l.t} `}
         </text>
-      ))}
+        );
+      })}
       {showSecond && second && (
         <g className={`sp-badge sp-badge--${second.kind}`} transform={`translate(${w - badgeW - 6 - (showDeal && !pillBottom ? 22 : 0) - badge2W - 6} 6)`}>
           <title>{second.title ?? second.text}</title>

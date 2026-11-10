@@ -55,7 +55,7 @@ function headFor(mode: InspectorMode, model: PlanModel, state: PlanState, patch:
     case 'find':
       return { title: 'Find space', subtitle: model.filterLabel ?? 'Rank every space that fits a requirement', close: () => { patch({ mode: 'building', req: null, max: null, by: null, inquiry: null }); refocusTrigger(); } };
     case 'worklist':
-      return { title: 'Renewal worklist', subtitle: model.filterLabel ?? 'Leases ending in a window', close: () => { patch({ mode: 'building', window: null }); refocusTrigger(); } };
+      return { title: model.safe ? 'Lease expirations' : 'Renewal worklist', subtitle: model.filterLabel ?? 'Leases ending in a window', close: () => { patch({ mode: 'building', window: null }); refocusTrigger(); } };
     case 'issues':
       return { title: 'Data issues', subtitle: `${model.counts.error} errors · ${model.counts.warning} warnings · ${model.counts.info} info`, close: () => { patch({ mode: 'building' }); refocusTrigger(); } };
     case 'area':

@@ -117,3 +117,7 @@
 .sp-ins .sp-segmented { max-width: 100%; }
 .sp-ins .sp-segmented__opt { padding: 0 8px; }
 .sp-ins__kpi-sub { white-space: normal; }
+
+.sp-ins__list > li { display: flex; flex-direction: column; }
+.sp-ins__row-actions { display: flex; gap: 4px; padding: 0 10px 6px 42px; flex-wrap: wrap; }
+.sp-ins__row-actions .sp-btn { height: 24px; padding: 0 8px; font-size: var(--sp-text-11); }

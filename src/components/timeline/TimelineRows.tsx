@@ -242,7 +242,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
     const roomWithTag = end0 - (visibleX0 + labelPad0 + (tagText ? tagW0 + 4 : 0));
     const roomWithout = end0 - (visibleX0 + labelPad0);
     const nm = isAvail ? bar.label : text.name;
-    if (tagText && measure(nm, NAME_FONT) > roomWithTag && measure(nm, NAME_FONT) <= roomWithout) tagText = null;
+    if (tagText && measure(nm, NAME_FONT) > roomWithTag && measure(nm, NAME_FONT) <= roomWithout) tagText = null; // the trailing tag below keeps the state visible
   }
   const tagW = tagText ? Math.ceil(measure(tagText, TAG_FONT)) + 10 : 0;
   const tagX = tagText ? visibleX0 + 4 : 0;
@@ -315,7 +315,9 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
       subText = rest > 24 ? fitParts(sub, rest, SUB_FONT) : '';
     }
   }
-  const visibleText = [tagText, [nameText, subText].filter(Boolean).join(' · ')].filter(Boolean).join(' ');
+  const trailingTag = !tagText && !safe && (isHoldover || isMtm) ? (isMtm ? 'MTM' : 'Holdover') : null;
+  // DOM order: the (trailing) tag group is rendered before the label text, so the accessible name must match that order.
+  const visibleText = [tagText ?? trailingTag, [nameText, subText].filter(Boolean).join(' · ')].filter(Boolean).join(' ');
   const aria = `${visibleText ? `${visibleText}. ` : ''}${text.aria}. ${dates}`;
 
   const gradId = `sp-tl-fade-${bar.key}`;
@@ -378,6 +380,14 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
       </g>
       {extW > 0 && isHoldover && <rect className="sp-tl-bar__ext sp-tl-bar__ext--risk" x={x1 - 0.5} y={y + 0.5} width={extW} height={BAR_HEIGHT - 1} rx={3} />}
       {extW > 0 && isProjected && <rect className="sp-tl-bar__ext sp-tl-bar__ext--projected" x={x1 - 0.5} y={y + 0.5} width={extW} height={BAR_HEIGHT - 1} rx={3} stroke={edge} />}
+      {!tagText && !safe && (isHoldover || isMtm) && (
+        <g className="sp-tl-tag sp-tl-tag--risk" aria-hidden="true">
+          <rect x={x1 + extW + 4} y={y + 3} width={Math.ceil(measure(isMtm ? 'MTM' : 'Holdover', TAG_FONT)) + 10} height={16} rx={3} />
+          <text x={x1 + extW + 4 + (Math.ceil(measure(isMtm ? 'MTM' : 'Holdover', TAG_FONT)) + 10) / 2} y={y + 15} textAnchor="middle">
+            {`${isMtm ? 'MTM' : 'Holdover'} `}
+          </text>
+        </g>
+      )}
       {tagText && (
         <g className="sp-tl-tag sp-tl-tag--risk" aria-hidden="true">
           <rect x={tagX} y={y + 3} width={tagW} height={16} rx={3} />

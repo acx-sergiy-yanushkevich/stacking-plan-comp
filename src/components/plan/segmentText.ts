@@ -117,7 +117,7 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
     }
     case 'projected': {
       name = seg.endDate ? `Vacated\u00a0${fmtMonthYearShort(seg.endDate)}` : 'Projected vacancy';
-      meta = lease && !safe ? `${tenantLabel(lease, safe)} leaves` : 'No availability yet';
+      meta = lease && !safe ? `${tenantLabel(lease, safe)} ${seg.endDate && seg.endDate < o.asOf ? 'left' : 'leaves'}${seg.endDate && seg.endDate < o.asOf ? ` ${fmtMonthYearShort(seg.endDate)}` : ''}` : 'No availability yet';
       break;
     }
     case 'unmarketed': {
