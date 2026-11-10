@@ -38,7 +38,9 @@ function occupiedUntil(bar: TimelineBar, asOf: ISODate, safe: boolean): ISODate 
   // Prospect-safe: a holdover's term is not disclosed, so its bar fades open-ended past the cursor.
   if (safe && (bar.kind === 'holdover' || bar.kind === 'mtm')) return '9999-12-31';
   // Holdover and projected bars are drawn out to the cursor.
-  if ((bar.kind === 'holdover' || bar.kind === 'projected') && bar.end < asOf) return asOf;
+  // A holdover keeps the rest of its lane: its tag and full label are written to the right of the bar.
+  if (bar.kind === 'holdover') return '9999-12-31';
+  if (bar.kind === 'projected' && bar.end < asOf) return asOf;
   return bar.end;
 }
 

@@ -1,4 +1,6 @@
 import { Legend } from '../plan/Legend';
+import { fmtDate } from '../../domain/dates';
+import { num } from '../../domain/format';
 import { dateToX } from '../../domain/timeline';
 import { useCallback, useId, useMemo, useRef, useState } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
@@ -70,10 +72,17 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
   }
 
   return (
-    <div className="sp-timeline" ref={hostRef}>
-      <div className="sp-timeline__legend">
+    <section className="sp-card sp-tl-card" aria-label="Lease timeline">
+      <div className="sp-stack__head">
+        <div className="sp-stack__title">
+          <h2>Lease timeline</h2>
+          <span className="sp-weak">
+            as of {fmtDate(model.asOf)} · {num(model.kpis.leasable)} RSF leasable
+          </span>
+        </div>
         <Legend items={model.legend} compact />
       </div>
+    <div className="sp-timeline" ref={hostRef}>
       <svg ref={svgRef} className="sp-timeline__svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="group" aria-label={`Lease timeline, ${rows.length} floors`}>
         <defs>
           <clipPath id={clipId}>
@@ -138,5 +147,6 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
       )}
       <p className="sp-timeline__note">Drag the cursor or use ← → to move the as-of date; the whole plan recomputes.</p>
     </div>
+    </section>
   );
 }

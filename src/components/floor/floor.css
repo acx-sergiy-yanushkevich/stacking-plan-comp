@@ -21,10 +21,10 @@
 }
 
 /* Mini stack */
-.sp-mini { width: 56px; }
+.sp-mini { width: 76px; }
 .sp-mini__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .sp-mini__row {
-  position: relative; display: flex; align-items: center; justify-content: center; width: 56px; height: 22px;
+  position: relative; display: flex; align-items: center; justify-content: flex-start; gap: 4px; width: 76px; height: 22px; padding-left: 9px;
   border: 1px solid var(--sp-color-border); border-radius: 3px; overflow: hidden; background: var(--sp-color-card);
   font-size: var(--sp-text-11); font-weight: 600; color: var(--sp-color-text); transition: border-color var(--sp-ease);
 }
@@ -93,12 +93,12 @@
   .sp-floor__grid { grid-template-columns: minmax(0, 1fr); padding: var(--sp-space-3); }
   .sp-mini { width: auto; }
   .sp-mini__list { flex-direction: row; flex-wrap: wrap; }
-  .sp-mini__row { width: 36px; }
+  .sp-mini__row { width: 40px; }
   .sp-floor__side { grid-column: auto; }
   .sp-fkpis { grid-template-columns: 1fr; }
 }
 
-.sp-mini__pct { font-size: 9px; font-weight: 600; margin-left: 3px; color: var(--sp-color-text-weak); position: relative; }
+.sp-mini__pct { font-size: 11px; font-weight: 500; margin-left: auto; padding-right: 5px; color: var(--sp-color-text-weak); position: relative; }
 
 
 .sp-plate .sp-seg.is-selected .sp-seg__ring { stroke: var(--sp-color-brand); stroke-opacity: 0.25; stroke-width: 8; fill: none; }
@@ -106,3 +106,5 @@
 
 /* Lobby / building-use slice: weak text on a card-coloured halo so the hatch never crosses the letters. */
 .sp-plate .sp-seg--lobby text { fill: var(--sp-color-text-weak); stroke: var(--sp-color-card); stroke-width: 3px; stroke-linejoin: round; paint-order: stroke fill; }
+
+@media (max-width: 760px) { .sp-mini__pct { display: none; } }

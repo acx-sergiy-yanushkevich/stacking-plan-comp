@@ -53,11 +53,13 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
   // the suite, attributed to the most advanced stage on that suite. The stage rows therefore sum to the card.
   const seen = new Map<string, Deal>();
   const sfByStage = new Map<string, number>();
+  let spaceSf = 0;
   for (const s of segments) {
     const lists = [s.availability?.deals, s.marketed?.deals, isLeaseKind(s.kind) || s.kind === 'committed' ? s.lease?.deals : undefined];
     const live: Deal[] = [];
     for (const list of lists) for (const d of activeDeals(list)) if (!seen.has(d.id)) { seen.set(d.id, d); live.push(d); }
     if (live.length) {
+      spaceSf += s.size;
       const top = live.reduce((a, b) => (stageRank(b.stage) > stageRank(a.stage) ? b : a));
       sfByStage.set(top.stage, (sfByStage.get(top.stage) ?? 0) + Math.min(s.size, Math.max(...live.map((d) => d.size))));
     }
@@ -97,7 +99,7 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
         </p>
         {roll.overAllocated.length > 0 && !safe && (
           <p className="sp-ins__note sp-ins__warn">
-            {roll.overAllocated.map((o) => `${o.floor} is over-allocated by ${sf(o.sf)}`).join('; ')}: lease SF is shown as recorded, so the periods can exceed the leasable area.
+            {roll.overAllocated.map((o) => `${o.floor} is over-allocated by ${sf(o.sf)}`).join('; ')}: lease SF is shown as recorded, so the periods can exceed the leasable area. Leased is capped at {num(model.kpis.leased)} SF: {num(Math.round(model.kpis.physical * model.kpis.leasable))} occupied + {num(model.kpis.committed)} signed, not in + {num(model.kpis.availableSublease)} sublet vacant − {num(roll.overAllocated.reduce((t, o) => t + o.sf, 0))} over-allocated.
           </p>
         )}
       </Section>
@@ -204,7 +206,7 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
         ) : (
         <>
         <p className="sp-ins__explain">
-          {plural(model.kpis.pipeline.deals, 'live deal')} · {num(model.kpis.pipeline.sf)} SF in play · {model.kpis.pipeline.onVacancy} on vacancies. SF counts each space once, at its most advanced stage.
+          {plural(model.kpis.pipeline.deals, 'live deal')} · {num(model.kpis.pipeline.sf)} SF requested on {num(spaceSf)} SF of space · {model.kpis.pipeline.onVacancy} on vacancies. Requested SF counts each space once, at its most advanced stage, capped at the space.
         </p>
         <ul className="sp-ins__list">
           {byStage.map((row) => (

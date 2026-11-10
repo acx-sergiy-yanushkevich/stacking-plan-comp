@@ -29,6 +29,8 @@ export interface BlockProps {
   compact?: boolean;
   /** Another unit of the selected lease (multi-floor tenant). */
   related?: boolean;
+  /** A near miss of the active finder: kept readable, not dimmed. */
+  partial?: boolean;
 }
 
 const PAD = 8;
@@ -37,10 +39,11 @@ const LINE = 15;
 const CP = 12.5;
 /** One-letter state cue for blocks too narrow for any text. */
 const GLYPH: Partial<Record<Segment['kind'], string>> = { available: 'A', sublease: 'S', committed: 'C', forsale: '$', holdover: '!', mtm: '!', unmarketed: '?', projected: 'V' };
-const GLYPH_WORD: Partial<Record<Segment['kind'], string>> = { available: 'Available', sublease: 'Sublease', committed: 'Signed', forsale: 'For sale', unmarketed: 'Gap', projected: 'Vacant' };
+/** The state in a word, for blocks too narrow for their name; same vocabulary as the legend. */
+const STATE_WORD: Partial<Record<Segment['kind'], string[]>> = { available: ['Available'], sublease: ['Sublease'], committed: ['Signed'], forsale: ['For sale'], unmarketed: ['Unaccounted'], projected: ['Vacant'] };
 
 /** One suite on the plan: tone fill, pattern, accent bar, adaptive text, badges. */
-export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelect, onFocus, onKeyDown, enlarged, compact, related }: BlockProps) {
+export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelect, onFocus, onKeyDown, enlarged, compact, related, partial }: BlockProps) {
   const tone = text.tone;
   const fill = `var(--tone-${tone}-fill)`;
   const edge = `var(--tone-${tone}-edge)`;
@@ -68,104 +71,152 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   const inner = w - PAD * 2 - reserved;
   // Lines below the first run the full width (the corner badges only occupy the first line); the
   // bottom-right deal pill reserves its corner on the last line instead.
-  const innerBody = w - PAD * 2 - (showDeal && pillBottom ? 22 : 0);
+  const innerBody = w - PAD * 2;
 
-  // Decide the lines. Rules: a name is shown whole or not at all (a fragment misleads; the tooltip and
-  // the accessible name carry the full name); the SF line is never dropped in favour of a name line;
-  // facts beyond SF (suite, lens value, meta) fill whatever room is left.
+  // Decide the lines. Rules, in priority order:
+  //  1. a name is shown whole (13 px on one or two lines, or 11 px on up to three) or not at all;
+  //  2. the SF figure is never dropped in favour of a name;
+  //  3. the lens fact (date, rate, stage) is kept whenever name and SF leave a line for it, stepping
+  //     down to 11 px and 10 px on narrow blocks before a rate is split over two lines;
+  //  4. a block with no room for its name says its state in a word, so colour is never the only cue.
   type Line = { t: string; cls: string; font: string };
+  const accentLeft = tone === 'expiring' || tone === 'risk';
+  const accentPad = accentLeft ? 3 : 0;
+  /** Does line i run beside the bottom-right deal pill at this line pitch? */
+  const pillHit = (i: number, compact: boolean) => showDeal && pillBottom && (compact ? 17 + CP * i : PAD + 11 + LINE * i) + 3 > h - 22;
   const sfUnit = `${text.sfShort} SF`;
   const sfLens = text.lensShort ? `${sfUnit} · ${text.lensShort}` : null;
-  const factsFor = (nameLineCount: number): Line[] => {
-    const out: Line[] = [];
-    // Width available to the fact at index i: the first line of the block clears the corner badges.
-    const fw = (i: number) => (nameLineCount + i === 0 ? inner : innerBody);
+  const isSmall = (l: Line) => l.cls === 'sp-seg__tiny' || l.cls === 'sp-seg__micro';
+  /** Usable width of line i: the first line clears the corner badges; small type runs closer to the edges. */
+  const room = (i: number, font: string, compact: boolean) => {
+    const pill = pillHit(i, compact) ? 22 : 0;
+    const base = (i === 0 ? inner : innerBody) - pill;
+    if (i === 0 && reserved) return base;
+    if (font === FONT_TINY) return Math.max(base, w - 8 - accentPad - pill);
+    if (font === FONT_MICRO) return w - 4 - accentPad - pill;
+    return base;
+  };
+  /** A fact on line i at the largest size that fits (12 px; 11 and 10 px on narrow blocks only). */
+  const sized = (t: string, i: number, cls: string, compact: boolean): Line | null => {
+    if (fits(t, room(i, FONT_SUB, compact), FONT_SUB)) return { t, cls, font: FONT_SUB };
+    if (tier === 0 || !compact) return null;
+    if (fits(t, room(i, FONT_TINY, true), FONT_TINY)) return { t, cls: 'sp-seg__tiny', font: FONT_TINY };
+    if (fits(t, room(i, FONT_MICRO, true), FONT_MICRO)) return { t, cls: 'sp-seg__micro', font: FONT_MICRO };
+    return null;
+  };
+  /** Fact lines that can follow n name lines: with the lens fact, with a rate split over two lines, SF only. */
+  /** Placeholder for a variant that does not fit at this pitch (keeps variants index-aligned across pitches). */
+  const NONE: Line[] = [];
+  const factSets = (n: number, compact: boolean) => {
+    const full: Line[][] = [];
+    const split: Line[][] = [];
+    const sfOnly: Line[][] = [];
     if (tier === 0) {
-      // Full tier: suite + SF (or SF + lens value when the name took two lines), then the meta line.
-      const squeezed = nameLineCount >= 2 && sfLens && fits(sfLens, fw(0), FONT_SUB) ? sfLens : null;
-      const first = squeezed ?? (fits(text.sub, fw(0), FONT_SUB) ? text.sub : sfLens && fits(sfLens, fw(0), FONT_SUB) ? sfLens : sfUnit);
-      out.push({ t: first, cls: 'sp-seg__sub', font: FONT_SUB });
+      const first: Line = { t: fits(text.sub, room(n, FONT_SUB, compact), FONT_SUB) ? text.sub : sfUnit, cls: 'sp-seg__sub', font: FONT_SUB };
       if (text.meta) {
         // A rate is shown whole or not at all (dropping the lease type would mislead); other facts may lose trailing parts.
         const isRate = text.meta.includes('$');
-        const alt = fits(text.meta, fw(1), FONT_SUB) ? text.meta : isRate ? text.meta.replace(/^Asking /, '') : fitParts(text.meta, fw(1), FONT_SUB);
-        if (alt && fits(alt, fw(1), FONT_SUB) && (isRate || alt.length >= 4) && !first.includes(alt)) out.push({ t: alt, cls: 'sp-seg__meta', font: FONT_SUB });
-      }
+        const r = room(n + 1, FONT_SUB, compact);
+        const alt = fits(text.meta, r, FONT_SUB) ? text.meta : isRate ? text.meta.replace(/^Asking /, '') : fitParts(text.meta, r, FONT_SUB);
+        full.push(alt && fits(alt, r, FONT_SUB) && (isRate || alt.length >= 4) ? [first, { t: alt, cls: 'sp-seg__meta', font: FONT_SUB }] : NONE);
+      } else full.push(NONE);
+      // Short rows: SF and the lens fact share one line rather than repeat a date on two.
+      full.push(sfLens && fits(sfLens, room(n, FONT_SUB, compact), FONT_SUB) ? [{ t: sfLens, cls: 'sp-seg__sub', font: FONT_SUB }] : NONE);
+      sfOnly.push([first]);
     } else {
-      const sfLine = sfLens && fits(sfLens, fw(0), FONT_SUB) ? sfLens : fits(sfUnit, fw(0), FONT_SUB) ? sfUnit : fits(sfUnit, fw(0) + PAD, FONT_SUB) ? sfUnit : null;
-      if (sfLine) out.push({ t: sfLine, cls: 'sp-seg__sf', font: FONT_SUB });
-      else if (fits(sfUnit, w - 6, FONT_TINY)) out.push({ t: sfUnit, cls: 'sp-seg__tiny', font: FONT_TINY });
-      else if (fits(sfUnit, w - 2, FONT_MICRO)) out.push({ t: sfUnit, cls: 'sp-seg__micro', font: FONT_MICRO });
-      const micro = out.length > 0 && out[0].cls === 'sp-seg__micro';
-      if (text.lensShort && !(sfLine && sfLine.includes(text.lensShort))) {
-        if (micro) {
-          if (fits(text.lensShort, w - 2, FONT_MICRO)) out.push({ t: text.lensShort, cls: 'sp-seg__micro', font: FONT_MICRO });
-        } else if (fits(text.lensShort, fw(out.length), FONT_SUB)) out.push({ t: text.lensShort, cls: 'sp-seg__meta', font: FONT_SUB });
-        else if (text.lensShort.includes('$') && text.lensShort.includes(' ')) {
-          // A rate that is too long for one line keeps its unit and type on a second line ("$32/SF/yr" / "FSG").
-          const cut = text.lensShort.lastIndexOf(' ');
-          const a = text.lensShort.slice(0, cut);
-          const b = text.lensShort.slice(cut + 1);
-          if (fits(a, fw(out.length), FONT_SUB) && fits(b, fw(out.length + 1), FONT_SUB)) out.push({ t: a, cls: 'sp-seg__meta', font: FONT_SUB }, { t: b, cls: 'sp-seg__meta', font: FONT_SUB });
+      const sfL = sized(sfUnit, n, 'sp-seg__sf', compact);
+      if (text.lensShort) {
+        full.push(sfLens && fits(sfLens, room(n, FONT_SUB, compact), FONT_SUB) ? [{ t: sfLens, cls: 'sp-seg__sf', font: FONT_SUB }] : NONE);
+        if (sfL) {
+          const l = sized(text.lensShort, n + 1, 'sp-seg__meta', compact);
+          // When the fact only fits on the line above the deal pill, SF takes the line beside the pill.
+          const up = l ? null : sized(text.lensShort, n, 'sp-seg__meta', compact);
+          const sfDown = up ? sized(sfUnit, n + 1, 'sp-seg__sf', compact) : null;
+          full.push(l ? [sfL, l] : up && sfDown ? [up, sfDown] : NONE);
+          if (!l && !(up && sfDown) && text.lensShort.includes('$') && text.lensShort.includes(' ')) {
+            // Last resort for a rate: unit and lease type on a second line ("$32/SF/yr" / "FSG").
+            const cut = text.lensShort.lastIndexOf(' ');
+            const r1 = sized(text.lensShort.slice(0, cut), n + 1, 'sp-seg__meta', compact);
+            const r2 = sized(text.lensShort.slice(cut + 1), n + 2, 'sp-seg__meta', compact);
+            if (r1 && r2) split.push([sfL, r1, r2]);
+          }
         }
       }
+      if (sfL) sfOnly.push([sfL]);
     }
-    return out;
+    return { full, split, sfOnly };
   };
-  const attempt = (nameLines: string[], cls: string, font: string): { lines: Line[]; compact: boolean } | null => {
-    const facts = factsFor(nameLines.length);
-    if (nameLines.length === 0 && facts.length === 0) return null;
-    // A name is never worth more than the SF figure: when the SF line cannot sit under the name, try without the name.
-    if (nameLines.length > 0 && !facts.some((f) => f.t.includes(text.sfShort))) return null;
-    const name: Line[] = nameLines.map((t) => ({ t, cls, font }));
-    const fit = (facts2: Line[]) => {
-      const need = name.length + facts2.length;
-      if (need <= cap15) return { lines: [...name, ...facts2], compact: false };
-      if (need <= cap13) return { lines: [...name, ...facts2], compact: true };
-      return null;
-    };
-    // Optional facts (never the SF line) go first when the row is short.
-    if (fit(facts)) return fit(facts);
-    // Drop optional facts from the end; a split rate (two meta lines) goes as a pair.
-    let keep = Math.max(1, cap13 - name.length);
-    if (keep < facts.length && facts[keep - 1].cls === 'sp-seg__meta' && facts[keep]?.cls === 'sp-seg__meta' && facts[keep - 1].t.includes('$')) keep -= 1;
-    return facts.length > 1 ? fit(facts.slice(0, Math.max(1, keep))) : null;
+  const fit = (ls: Line[], named: boolean) => {
+    const small = ls.some(isSmall);
+    const cap = small || ls.length > cap15 ? cap13 : cap15;
+    return ls.length > 0 && ls.length <= cap ? { lines: ls, compact: small || ls.length > cap15, named } : null;
   };
-  const whole = (ls: string[]) => ls.length > 0 && ls.join(' ') === text.name;
-  const one = fits(text.name, inner, FONT_NAME) ? [text.name] : [];
-  const two = one.length ? [] : wrapWords(text.name, inner, FONT_NAME, 2);
-  // Tiny lines may use the full width only when no badge sits in the corner.
-  const tiny = one.length ? [] : wrapWords(text.name, reserved ? inner : Math.max(inner, w - 8), FONT_TINY, 3);
-  const chosen =
-    (one.length ? attempt(one, 'sp-seg__name', FONT_NAME) : null) ??
-    (whole(two) ? attempt(two, 'sp-seg__name', FONT_NAME) : null) ??
-    (whole(tiny) && h >= 48 ? attempt(tiny, 'sp-seg__tiny', FONT_TINY) : null) ??
-    attempt([], 'sp-seg__name', FONT_NAME);
-  const lines: Line[] = chosen?.lines ?? [];
-  const compactPitch = (chosen?.compact ?? false) || lines.some((l) => l.cls === 'sp-seg__tiny' || l.cls === 'sp-seg__micro');
-  const maxLines = compactPitch ? cap13 : cap15;
-  // SF alone says nothing about state: prefix the state word when the only line is the SF figure.
-  if (lines.length === 1 && lines[0].cls === 'sp-seg__sf') {
-    const word = GLYPH_WORD[seg.kind] ?? '';
-    const withWord = word ? `${word} ${lines[0].t}` : '';
-    if (withWord && fits(withWord, inner, FONT_SUB)) lines[0] = { ...lines[0], t: withWord };
-    else if (word && lines.length < maxLines) lines.unshift({ t: word, cls: 'sp-seg__name', font: FONT_NAME });
+  const nameLine = (t: string): Line => ({ t, cls: 'sp-seg__name', font: FONT_NAME });
+  const nameSets: Line[][] = [];
+  if (fits(text.name, inner, FONT_NAME)) nameSets.push([nameLine(text.name)]);
+  else {
+    const two = wrapWords(text.name, inner, FONT_NAME, 2);
+    if (two.length && two.join(' ') === text.name) nameSets.push(two.map(nameLine));
+    const tiny = h >= 48 ? wrapWords(text.name, room(0, FONT_TINY, true), FONT_TINY, 3) : [];
+    if (tiny.length && tiny.join(' ') === text.name) nameSets.push(tiny.map((t) => ({ t, cls: 'sp-seg__tiny', font: FONT_TINY })));
   }
+  /** The state in a word, for a block that cannot hold its name. */
+  const wordLine = (): Line[] => {
+    const words = seg.kind === 'unmarketed' && /not available/.test(text.name) ? ['Not available'] : seg.kind === 'available' && seg.availability?.isVacant && !seg.availableFrom ? ['Available', 'Vacant'] : (STATE_WORD[seg.kind] ?? []);
+    for (const t of words) {
+      if (fits(t, inner, FONT_NAME)) return [nameLine(t)];
+      if (fits(t, room(0, FONT_TINY, true), FONT_TINY)) return [{ t, cls: 'sp-seg__tiny', font: FONT_TINY }];
+      if (fits(t, room(0, FONT_MICRO, true), FONT_MICRO)) return [{ t, cls: 'sp-seg__micro', font: FONT_MICRO }];
+    }
+    return [];
+  };
+  /** First layout in a category that fits; widths are computed for the pitch the layout ends up using. */
+  const tryCat = (cat: 'full' | 'split' | 'sfOnly', leads: Line[][], named: boolean, maxLines = 99) => {
+    for (const lead of leads) {
+      // Richer variants first (suite and months before the one-line form), at the regular pitch before the compact one.
+      const sets = [false, true].map((compact) => factSets(lead.length, compact)[cat]);
+      for (let i = 0; i < Math.max(sets[0].length, sets[1].length); i += 1)
+        for (const compact of [false, true]) {
+          const fs = sets[compact ? 1 : 0][i];
+          if (!fs || fs.length === 0 || lead.length + fs.length > maxLines) continue;
+          const r = fit([...lead, ...fs], named);
+          if (r && r.compact === compact) return r;
+        }
+    }
+    return null;
+  };
+  const pick = () => {
+    const withName = tryCat('full', nameSets, true) ?? tryCat('split', nameSets, true, 4) ?? tryCat('sfOnly', nameSets, true);
+    if (withName) return withName;
+    // No name fits together with its SF line: the state word (when there is one), SF and the lens fact.
+    const wl = wordLine();
+    for (const lead of wl.length ? [wl, []] : [[]]) {
+      const r = tryCat('full', [lead], false) ?? tryCat('split', [lead], false) ?? tryCat('sfOnly', [lead], false);
+      if (r) return r;
+    }
+    return wl.length ? fit(wl, false) : null;
+  };
+  const picked = pick();
+  const lines: Line[] = picked?.lines ?? [];
+  const compactPitch = picked?.compact ?? false;
+  const lineX = (l: Line) => (l.cls === 'sp-seg__micro' ? 2 : l.cls === 'sp-seg__tiny' ? 4 : PAD) + accentPad;
   // Narrowest tier: a single state glyph so colour is never the only cue.
-  const glyph = lines.length === 0 && w >= 24 && h >= 40 ? ((w >= 48 && GLYPH_WORD[seg.kind] && fits(GLYPH_WORD[seg.kind]!, w - 8, FONT_SUB) ? GLYPH_WORD[seg.kind] : GLYPH[seg.kind]) ?? null) : null;
+  const glyph = lines.length === 0 && w >= 24 && h >= 40 ? (GLYPH[seg.kind] ?? null) : null;
 
   const pattern = text.pattern;
   const patternFill = pattern === 'hatch' ? `url(#${PATTERN_IDS.hatch})` : pattern === 'dots' ? `url(#${PATTERN_IDS.dots})` : pattern === 'asking' ? `url(#${PATTERN_IDS.asking})` : null;
-  // Accessible name: the full name and facts first; the drawn label last so it is still contained (WCAG 2.5.3).
+  // Accessible name: floor, the full name when it is not drawn, exactly what is drawn (WCAG 2.5.3), then
+  // the facts that are not drawn. Nothing is said twice.
   const visible = [glyph ?? '', ...lines.map((l) => l.t), showSecond && second ? second.text : '', showOther && other ? other.text : '', showDeal && deal ? deal.text : ''].filter(Boolean).join(' ');
-  const badgeFacts = text.badges.map((b) => (b.kind === 'deal' ? `${b.text} live deal${b.text === '1' ? '' : 's'}` : b.title ?? b.text)).filter((t) => t && !text.aria.includes(t));
-  const ariaLabel = `${text.aria}${badgeFacts.length ? `, ${badgeFacts.join(', ')}` : ''}${visible && !text.aria.startsWith(visible) ? `. Label: ${visible}` : ''}`;
-  const accentLeft = tone === 'expiring' || tone === 'risk';
+  const dealTail = showDeal && deal ? ` live deal${deal.text === '1' ? '' : 's'}` : '';
+  const floorName = text.aria.split(',')[0];
+  const extras = [text.sub, text.meta, ...text.badges.filter((bd) => !(bd.kind === 'deal' && dealTail)).map((bd) => (bd.kind === 'deal' ? `${bd.text} live deal${bd.text === '1' ? '' : 's'}` : bd.title ?? bd.text))].filter((t, i, all) => t && !visible.includes(t) && all.indexOf(t) === i);
+  const ariaLabel = `${[floorName, picked?.named ? null : text.name, visible ? `${visible}${dealTail}` : null].filter(Boolean).join(', ')}${extras.length ? `. ${extras.join(', ')}` : ''}`;
   const accentTop = tone === 'rent-net';
 
   return (
     <g
-      className={`sp-seg ${selected ? 'is-selected' : ''} ${related ? 'is-related' : ''} ${dim ? 'is-dim' : ''} ${pattern === 'dashed' ? 'sp-seg--dashed' : ''}`}
+      className={`sp-seg ${selected ? 'is-selected' : ''} ${related ? 'is-related' : ''} ${dim ? 'is-dim' : ''} ${partial ? 'is-partial' : ''} ${pattern === 'dashed' ? 'sp-seg--dashed' : ''}`}
       role="gridcell"
       tabIndex={focusable ? 0 : -1}
       aria-label={ariaLabel}
@@ -181,19 +232,21 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
       <rect className="sp-seg__ring" x={-3} y={-3} width={w + 6} height={h + 6} rx={7} />
       <rect className="sp-seg__rect" width={w} height={h} rx={4} fill={fill} stroke={edge} />
       {patternFill && <rect width={w} height={h} rx={4} fill={patternFill} pointerEvents="none" />}
-      {patternFill && lines.length > 0 && (
-        <rect
-          className="sp-seg__backing"
-          x={PAD - 4 + (accentLeft ? 3 : 0)}
-          y={PAD - 3}
-          width={Math.min(w - PAD * 2 + 8, Math.ceil(Math.max(...lines.map((l) => measure(l.t, l.font)))) + 8)}
-          height={lines.length * (compactPitch ? CP : LINE) + 4}
-          rx={3}
-          fill={fill}
-          fillOpacity={0.9}
-          pointerEvents="none"
-        />
-      )}
+      {patternFill && lines.length > 0 &&
+        (tone === 'empty' || tone === 'deal-none' ? [{ f: 'var(--sp-color-card)', o: 0.9 }] : [{ f: fill, o: 0.9 }]).map((layer, i) => (
+          <rect
+            key={i}
+            className="sp-seg__backing"
+            x={Math.max(1, Math.min(...lines.map(lineX)) - 4)}
+            y={(compactPitch ? 6 : PAD) - 3}
+            width={Math.min(w - 2, Math.ceil(Math.max(...lines.map((l) => measure(l.t, l.font)))) + 8)}
+            height={lines.length * (compactPitch ? CP : LINE) + 4}
+            rx={3}
+            fill={layer.f}
+            fillOpacity={layer.o}
+            pointerEvents="none"
+          />
+        ))}
       {accentLeft && <rect className="sp-seg__accent" x={0} y={0} width={3} height={h} rx={1} fill={edge} />}
       {accentTop && <rect className="sp-seg__accent" x={0} y={0} width={w} height={3} fill={edge} />}
       {glyph && (
@@ -205,7 +258,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
         const pitch = compactPitch ? CP : LINE;
         const top = compactPitch ? 6 + 11 : PAD + 11;
         return (
-        <text key={i} className={l.cls} x={l.cls === 'sp-seg__micro' ? 1 : l.cls === 'sp-seg__tiny' ? 3 : PAD + (accentLeft ? 3 : 0)} y={top + i * pitch} fill={color}>
+        <text key={i} className={l.cls} x={lineX(l)} y={top + i * pitch} fill={color}>
           {`${l.t} `}
         </text>
         );

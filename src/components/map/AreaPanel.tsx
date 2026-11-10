@@ -19,7 +19,7 @@ const ROWS: Array<{ label: string; value: (r: AreaRing) => string }> = [
   { label: 'Median HH income', value: (r) => usd0(r.medianIncome) },
   { label: 'Median age', value: (r) => r.medianAge.toFixed(1) },
   { label: "Bachelor's degree", value: (r) => pct(r.bachelorsPct) },
-  { label: 'Mean commute', value: (r) => `${r.meanCommuteMin.toFixed(1)} min` },
+  { label: 'Mean commute', value: (r) => `${r.meanCommuteMin.toFixed(1)}\u00a0min` },
 ];
 
 function Skeleton() {

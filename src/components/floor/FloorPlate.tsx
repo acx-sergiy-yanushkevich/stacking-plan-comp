@@ -104,33 +104,33 @@ function chord(pts: Pt[], y: number): [number, number] | null {
   return min < max ? [min, max] : null;
 }
 
+type NameMode = 'name' | 'tiny' | 'none';
 /** Candidate label lines for a slice whose usable label width is `fw` and bbox height `bh`. */
-function linesFor(text: SegmentText, tier: 0 | 1 | 2 | 3, fw: number, bh: number): Line[] {
+function linesFor(text: SegmentText, tier: 0 | 1 | 2 | 3, fw: number, bh: number, mode: NameMode): Line[] {
   const lines: Line[] = [];
-  if (tier <= 1) {
-    // Whole name or no name: a fragment ("Café") misleads more than it helps.
-    const two = wrapWords(text.name, fw, FONT_NAME, 2);
-    const tiny = two.join(' ') === text.name ? [] : wrapWords(text.name, fw, FONT_TINY, 3);
-    if (two.length && two.join(' ') === text.name) for (const l of two) lines.push({ t: l, cls: 'sp-seg__name', font: FONT_NAME });
-    else if (tiny.length && tiny.join(' ') === text.name) for (const l of tiny) lines.push({ t: l, cls: 'sp-seg__tiny', font: FONT_TINY });
-    if (fits(text.sub, fw, FONT_SUB)) lines.push({ t: text.sub, cls: 'sp-seg__sub', font: FONT_SUB });
-    else if (fits(`${text.sfShort} SF`, fw, FONT_SUB)) lines.push({ t: `${text.sfShort} SF`, cls: 'sp-seg__sub', font: FONT_SUB });
-    if (text.meta && bh >= 4 * LINE + 2 * PAD) {
-      if (fits(text.meta, fw, FONT_SUB)) lines.push({ t: text.meta, cls: 'sp-seg__meta', font: FONT_SUB });
-      else {
-        const short = fitParts(text.meta, fw, FONT_SUB);
-        if (short.length >= 4 && fits(short, fw, FONT_SUB)) lines.push({ t: short, cls: 'sp-seg__meta', font: FONT_SUB });
-      }
-    }
-  } else if (tier === 2) {
-    const nameLines = wrapWords(text.name, fw, FONT_NAME, 2);
-    if (nameLines.join(' ') === text.name) for (const l of nameLines) lines.push({ t: l, cls: 'sp-seg__name', font: FONT_NAME });
-    const unit = `${text.sfShort} SF`;
-    if (fits(unit, fw, FONT_SUB)) lines.push({ t: unit, cls: 'sp-seg__sf', font: FONT_SUB });
-    else if (fits(text.sfShort, fw, FONT_SUB) && lines.length) lines.push({ t: text.sfShort, cls: 'sp-seg__sf', font: FONT_SUB });
+  const unit = `${text.sfShort} SF`;
+  // Whole name or no name: a fragment ("Café") misleads more than it helps.
+  if (tier <= 2 && mode !== 'none') {
+    const ls = mode === 'name' ? wrapWords(text.name, fw, FONT_NAME, 2) : wrapWords(text.name, fw, FONT_TINY, 3);
+    if (ls.length && ls.join(' ') === text.name) for (const l of ls) lines.push(mode === 'name' ? { t: l, cls: 'sp-seg__name', font: FONT_NAME } : { t: l, cls: 'sp-seg__tiny', font: FONT_TINY });
   }
-  // No room for the name: the lens fact ("Feb '27", "$32/SF/yr FSG") says the state, so colour is never the only cue.
-  if (lines.length && !lines.some((l) => l.cls === 'sp-seg__name' || l.cls === 'sp-seg__tiny') && text.lensShort && fits(text.lensShort, fw, FONT_SUB)) lines.unshift({ t: text.lensShort, cls: 'sp-seg__meta', font: FONT_SUB });
+  const named = lines.length > 0;
+  if (tier <= 1) {
+    if (fits(text.sub, fw, FONT_SUB)) lines.push({ t: text.sub, cls: 'sp-seg__sub', font: FONT_SUB });
+    else if (fits(unit, fw, FONT_SUB)) lines.push({ t: unit, cls: 'sp-seg__sub', font: FONT_SUB });
+    if (text.meta && bh >= 4 * LINE + 2 * PAD) {
+      const short = fits(text.meta, fw, FONT_SUB) ? text.meta : fitParts(text.meta, fw, FONT_SUB);
+      if (short.length >= 4 && fits(short, fw, FONT_SUB)) lines.push({ t: short, cls: 'sp-seg__meta', font: FONT_SUB });
+    }
+  } else if (fits(unit, fw, FONT_SUB)) lines.push({ t: unit, cls: 'sp-seg__sf', font: FONT_SUB });
+  else if (fits(unit, fw, FONT_TINY)) lines.push({ t: unit, cls: 'sp-seg__small', font: FONT_TINY });
+  // No name: the state in a word, or the lens fact ("Feb '27", "$32/SF/yr FSG"), under the SF, so colour
+  // is never the only cue.
+  if (!named && lines.length && !lines.some((l) => l.cls === 'sp-seg__meta')) {
+    const word = /^For sale/.test(text.name) ? 'For sale' : /^Available/.test(text.name) ? 'Available' : null;
+    const fact = text.lensShort || word;
+    if (fact) lines.push(fits(fact, fw, FONT_SUB) ? { t: fact, cls: 'sp-seg__meta', font: FONT_SUB } : { t: fact, cls: 'sp-seg__small', font: FONT_TINY });
+  }
   return lines;
 }
 
@@ -152,7 +152,7 @@ function placeLines(poly: Pt[], cy: number, lines: Line[]): PlacedLine[] {
   const isName = (cls: string) => cls === 'sp-seg__name' || cls === 'sp-seg__tiny';
   const nameFailed = placed.some((l) => isName(l.cls) && !l.fitsHere);
   // A lens fact or SF line that misses its chord at 12 px gets a second chance at 11 px (it says the state).
-  const first = placed.map((l) => (!l.fitsHere && !isName(l.cls) && l.font !== FONT_TINY ? { ...l, font: FONT_TINY, cls: 'sp-seg__tiny', fitsHere: false } : l));
+  const first = placed.map((l) => (!l.fitsHere && !isName(l.cls) && l.font !== FONT_TINY ? { ...l, font: FONT_TINY, cls: 'sp-seg__small', fitsHere: false } : l));
   const second = layout(first.map(({ t, cls, font }) => ({ t, cls, font })));
   const kept = second.filter((l) => l.fitsHere && !(nameFailed && isName(l.cls)));
   return layout(kept.map(({ t, cls, font }) => ({ t, cls, font }))).map(({ t, cls, font, x, y }) => ({ t, cls, font, x, y }));
@@ -220,7 +220,14 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
       const c = chord(poly, cy);
       const usable = Math.min(b.w, c ? c[1] - c[0] : 0);
       const tier = textTier(usable);
-      const lines = placeLines(poly, cy, linesFor(text, tier, usable - 2 * SIDE, b.h));
+      // The whole name at 13 px, then at 11 px; failing both, no name and the state under the SF figure.
+      const fw = usable - 2 * SIDE;
+      const hasName = (ls: PlacedLine[]) => ls.some((l) => l.cls === 'sp-seg__name' || l.cls === 'sp-seg__tiny');
+      let lines = placeLines(poly, cy, linesFor(text, tier, fw, b.h, 'name'));
+      if (!hasName(lines)) {
+        const tiny = placeLines(poly, cy, linesFor(text, tier, fw, b.h, 'tiny'));
+        lines = hasName(tiny) ? tiny : placeLines(poly, cy, linesFor(text, tier, fw, b.h, 'none'));
+      }
       const blockTop = lines.length ? lines[0].y - 11 : NaN;
       const badges = usable >= 120 ? placeBadges(poly, text, blockTop, cy) : [];
       return { seg, text, poly, lines, badges, tier };
@@ -299,7 +306,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
             className={['sp-seg', selected ? 'is-selected' : '', dim ? 'is-dim' : '', p === 'dashed' ? 'sp-seg--dashed' : '', s.seg.key.endsWith('-lobby') ? 'sp-seg--lobby' : ''].filter(Boolean).join(' ')}
             role={s.seg.key.endsWith('-lobby') ? 'img' : 'button'}
             tabIndex={s.seg.key.endsWith('-lobby') ? undefined : i === tabStop ? 0 : -1}
-            aria-label={`${s.text.aria}${s.lines.length || s.badges.length ? `. Label: ${[...s.lines.map((l) => l.t), ...s.badges.map((b) => b.text)].filter(Boolean).join(' ')}` : ''}`}
+            aria-label={s.text.aria}
             aria-pressed={s.seg.key.endsWith('-lobby') ? undefined : selected}
             data-key={s.seg.key}
             style={{ color: edge }}

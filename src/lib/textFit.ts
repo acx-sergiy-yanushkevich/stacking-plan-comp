@@ -80,3 +80,28 @@ export function fitParts(text: string, maxPx: number, font: string): string {
   }
   return out;
 }
+
+/**
+ * Web fonts load after first paint (font-display: swap). Widths measured before then come from the
+ * fallback face, so the cache is dropped and subscribers re-render when a font finishes loading.
+ */
+let fontEpoch = 0;
+const fontListeners = new Set<() => void>();
+export const getFontEpoch = () => fontEpoch;
+export function subscribeFonts(cb: () => void): () => void {
+  fontListeners.add(cb);
+  return () => fontListeners.delete(cb);
+}
+if (typeof document !== 'undefined' && document.fonts) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const bump = () => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      cache.clear();
+      fontEpoch += 1;
+      fontListeners.forEach((l) => l());
+    }, 30);
+  };
+  document.fonts.ready.then(bump).catch(() => undefined);
+  document.fonts.addEventListener?.('loadingdone', bump);
+}

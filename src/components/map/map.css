@@ -151,3 +151,4 @@
 .sp-map-floor__swatch { width: 10px; height: 10px; border-radius: 2px; border: 1px solid; flex: none; }
 .sp-map-floor__num { font-weight: 600; min-width: 14px; text-align: right; }
 .sp-map-floor__pct { font-size: 10px; color: var(--sp-color-text-weak); }
+.sp-map-floor__state { font-size: 10px; color: var(--sp-color-text-weak); white-space: nowrap; }

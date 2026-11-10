@@ -92,3 +92,6 @@
 
 .sp-timeline__legend { padding: 8px 16px 2px; }
 .sp-timeline__legend .sp-legend__num { color: var(--sp-color-text-weak); }
+
+.sp-tl-card { padding: 0; }
+.sp-tl-card .sp-timeline { padding-top: 0; }

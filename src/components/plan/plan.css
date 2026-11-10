@@ -8,6 +8,10 @@
 .sp-seg.is-selected .sp-seg__ring { stroke: var(--sp-color-brand); stroke-opacity: 0.25; stroke-width: 6; fill: none; }
 .sp-seg.is-related .sp-seg__rect { stroke: var(--sp-color-brand); stroke-width: 2; stroke-dasharray: 5 3; }
 .sp-seg.is-dim { opacity: 0.35; }
+/* Finder near misses: a washed fill with a dashed edge and readable dark text. */
+.sp-seg.is-partial .sp-seg__rect { fill-opacity: 0.4; stroke-dasharray: 5 3; }
+.sp-seg.is-partial text:not(.sp-badge text) { fill: var(--sp-color-text); }
+.sp-seg.is-partial .sp-seg__backing { fill: var(--sp-color-card); }
 .sp-seg.is-dim text, .sp-seg.is-dim .sp-badge, .sp-seg.is-dim .sp-seg__backing { display: none; }
 .sp-seg:focus-visible { outline: none; }
 .sp-seg:focus-visible .sp-seg__rect { stroke: var(--sp-color-focus); stroke-width: 2; }
@@ -20,6 +24,7 @@
 .sp-seg__sf { font-size: 12px; font-weight: 600; }
 .sp-seg__glyph { font-size: 12px; font-weight: 700; opacity: 0.85; }
 .sp-seg__tiny { font-size: 11px; font-weight: 600; }
+.sp-seg__small { font-size: 11px; }
 .sp-seg__micro { font-size: 10px; font-weight: 600; letter-spacing: -0.02em; }
 .sp-seg__tiny-meta { font-size: 11px; opacity: 0.9; }
 .sp-seg__edge { pointer-events: none; }

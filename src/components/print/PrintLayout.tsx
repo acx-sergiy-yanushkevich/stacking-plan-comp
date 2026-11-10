@@ -86,6 +86,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
               <td className="num">{num(k.leased)} leased</td>
               <td colSpan={rows[0].length - 4}>
                 {pct(k.occupancy)} leased · {num(k.availableDirect + k.availableSublease)} SF available · {num(k.committed)} SF signed, not in
+                {safe && model.roll.overAllocated.length > 0 && ` · rows sum to ${num(k.leased + model.roll.overAllocated.reduce((t, o) => t + o.sf, 0))} SF; leased is capped at the leasable area (${num(k.leased)} SF)`}
                 {!safe && model.roll.overAllocated.length > 0 && ` · rows sum to ${num(k.leased + model.roll.overAllocated.reduce((t, o) => t + o.sf, 0))} SF; ${model.roll.overAllocated.map((o) => `${o.floor} records exceed its leasable area by ${num(o.sf)} SF`).join(', ')}, so leased is capped at ${num(k.leased)} SF`}
               </td>
             </tr>

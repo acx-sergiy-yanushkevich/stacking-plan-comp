@@ -91,8 +91,8 @@
     --tone-muted-fill: #24272b; --tone-muted-text: #8f98a3; --tone-muted-edge: #343940;
     --tone-neutral-fill: #2b3139; --tone-neutral-text: #e9edf2; --tone-neutral-edge: #434b56;
     --tone-confidential-fill: #2f3238; --tone-confidential-text: #c8ccd3; --tone-confidential-edge: #555b64;
-    --tone-exp-0-fill: #ff7a45; --tone-exp-0-text: #1a0d05; --tone-exp-0-edge: #ffb08a;
-    --tone-exp-1-fill: #c9471a; --tone-exp-1-text: #ffffff; --tone-exp-1-edge: #f08a5e;
+    --tone-exp-0-fill: #ff9a6b; --tone-exp-0-text: #1a0d05; --tone-exp-0-edge: #ffc4a6;
+    --tone-exp-1-fill: #e2632c; --tone-exp-1-text: #1a0d05; --tone-exp-1-edge: #f39a70;
     --tone-exp-2-fill: #a53d1a; --tone-exp-2-text: #ffffff; --tone-exp-2-edge: #d27a4d;
     --tone-exp-3-fill: #7a3a22; --tone-exp-3-text: #ffe9d2; --tone-exp-3-edge: #b0714a;
     --tone-exp-4-fill: #523127; --tone-exp-4-text: #f0e4d8; --tone-exp-4-edge: #8a6652;
@@ -132,8 +132,8 @@
   --tone-muted-fill: #24272b; --tone-muted-text: #8f98a3; --tone-muted-edge: #343940;
   --tone-neutral-fill: #2b3139; --tone-neutral-text: #e9edf2; --tone-neutral-edge: #434b56;
   --tone-confidential-fill: #2f3238; --tone-confidential-text: #c8ccd3; --tone-confidential-edge: #555b64;
-  --tone-exp-0-fill: #ff7a45; --tone-exp-0-text: #1a0d05; --tone-exp-0-edge: #ffb08a;
-  --tone-exp-1-fill: #c9471a; --tone-exp-1-text: #ffffff; --tone-exp-1-edge: #f08a5e;
+  --tone-exp-0-fill: #ff9a6b; --tone-exp-0-text: #1a0d05; --tone-exp-0-edge: #ffc4a6;
+  --tone-exp-1-fill: #e2632c; --tone-exp-1-text: #1a0d05; --tone-exp-1-edge: #f39a70;
   --tone-exp-2-fill: #a53d1a; --tone-exp-2-text: #ffffff; --tone-exp-2-edge: #d27a4d;
   --tone-exp-3-fill: #7a3a22; --tone-exp-3-text: #ffe9d2; --tone-exp-3-edge: #b0714a;
   --tone-exp-4-fill: #523127; --tone-exp-4-text: #f0e4d8; --tone-exp-4-edge: #8a6652;

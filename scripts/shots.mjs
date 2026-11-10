@@ -59,7 +59,8 @@ for (const [name, qs] of [
 ]) {
   await mobile.goto(base + qs, { waitUntil: 'networkidle' });
   await mobile.waitForTimeout(qs.includes('view=map') ? 2500 : 350);
-  await mobile.screenshot({ path: `${out}/${name}.png`, fullPage: !qs.includes('view=map') });
+  // A selected block opens the bottom sheet: capture the viewport a phone user sees, not the full page.
+  await mobile.screenshot({ path: `${out}/${name}.png`, fullPage: !qs.includes('view=map') && !qs.includes('select=') });
 }
 const dark = await browser.newPage({ viewport: { width: 1440, height: 1100 }, colorScheme: 'dark', locale: 'en-US', reducedMotion: 'reduce' });
 hook(dark, 'dark');

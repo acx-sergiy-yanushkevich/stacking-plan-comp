@@ -1,4 +1,6 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { getFontEpoch, subscribeFonts } from './lib/textFit';
+import { segmentText } from './components/plan/segmentText';
 import { property, TODAY } from './data/mock/property';
 import { usePlanModel } from './model/usePlanModel';
 import { usePlanState, useDocumentTitle } from './state/usePlanState';
@@ -52,6 +54,21 @@ function Shell() {
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.asOf]);
+
+  // Selecting a block is announced: focus stays on the plan, so a screen-reader user would otherwise hear nothing.
+  const announcedSelect = useRef(state.select);
+  useEffect(() => {
+    if (state.select === announcedSelect.current) return;
+    announcedSelect.current = state.select;
+    const seg = state.select ? model.segIndex.get(state.select) : null;
+    if (!seg) return;
+    const floorName = model.floors.find((f) => f.floor.id === seg.floorId)?.floor.name ?? '';
+    const t = segmentText(seg, { safe: model.safe, asOf: model.asOf, today: model.today, lens: state.lens, floorName });
+    setAnnounce(`Opened ${t.name}, ${floorName}${seg.suite ? `, suite ${seg.suite}` : ''}, ${num(seg.size)} SF. Details are in the side panel; Escape returns to the plan.`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.select]);
+  // Labels are fitted by measuring text: fit them again once the web font has loaded.
+  const fontTick = useSyncExternalStore(subscribeFonts, getFontEpoch, () => 0);
 
   useEffect(() => {
     if (state.theme) document.documentElement.dataset.theme = state.theme;
@@ -165,7 +182,7 @@ function Shell() {
       <KpiStrip model={model} state={state} onAction={onKpi} />
       <Toolbar state={state} patch={patch} />
       <main className={`sp-main sp-no-print ${state.view === 'floor' && mode !== 'block' ? 'sp-main--wide' : ''}`} id="sp-plan" tabIndex={-1}>
-        <div className="sp-stage">
+        <div className="sp-stage" key={state.view === 'map' ? 'map' : `fonts-${fontTick}`}>
           {state.view === 'stack' && <StackView model={model} state={state} patch={patch} />}
           {state.view === 'floor' && <FloorView model={model} state={state} patch={patch} />}
           {state.view === 'timeline' && <TimelineView model={model} state={state} patch={patch} />}
@@ -202,7 +219,7 @@ function Shell() {
           {inspector}
         </Sheet>
       )}
-      <PrintLayout model={model} state={state} visible={PRINT_PREVIEW} />
+      <PrintLayout key={`print-${fontTick}`} model={model} state={state} visible={PRINT_PREVIEW} />
     </div>
   );
 }

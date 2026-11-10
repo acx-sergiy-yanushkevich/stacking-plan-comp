@@ -4,7 +4,7 @@ import { deriveFloors, isLeaseKind, segmentIndex, activeDeals, type FloorView, t
 import { computeKpis, kpiDeltas, type Kpis } from '../domain/kpis';
 import { rollover, bucketOf, type RolloverBucket } from '../domain/rollover';
 import { legendFor, type LegendItem } from '../domain/lenses';
-import { findFits, filterFits, type FitOption, type FitType } from '../domain/finder';
+import { findFits, filterFits, nearMisses, type FitOption, type FitType } from '../domain/finder';
 import { findIssues, issueCounts, recentChanges, type Issue } from '../domain/issues';
 import { timelineModel } from '../domain/timeline';
 import type { PlanState, WindowKey } from '../state/planState';
@@ -55,6 +55,8 @@ export interface PlanModel {
   bucketKeys: Set<string> | null;
   /** Union of the active filter; null when nothing is filtered. */
   highlight: Set<string> | null;
+  /** Finder alternatives: not matches, but kept readable instead of dimmed. */
+  partial?: Set<string> | null;
   filterLabel: string | null;
   timeline: ReturnType<typeof timelineModel>;
   selected: Segment | null;
@@ -158,7 +160,10 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
     if (!req) return null;
     const r = findFits(floors, req.size, req.by, req.max, property.inquiries, asOf);
     const options = filterFits(r.options, req.type);
-    return { options, keys: new Set(options.flatMap((o) => o.keys)), largestNow: r.largestNow };
+    const keys = new Set(options.flatMap((o) => o.keys));
+    // The same alternatives the Find panel lists (smaller spaces and stacked floors) when exact options are few.
+    const near = options.length < 3 ? nearMisses(floors, req.size, asOf) : [];
+    return { options, keys, partial: new Set(near.flatMap((m) => m.keys).filter((k) => !keys.has(k))), largestNow: r.largestNow };
   }, [floors, req, property.inquiries, asOf]);
 
   const worklist = useMemo(() => {
@@ -203,7 +208,7 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
   } else if (activeWorklist && effectiveWindow) {
     highlight = new Set(activeWorklist.map((r) => r.segKey));
     const total = activeWorklist.reduce((s, r) => s + r.size, 0);
-    filterLabel = `${WINDOW_LABEL[effectiveWindow]} renewal worklist · ${activeWorklist.length} lease${activeWorklist.length === 1 ? '' : 's'} · ${sf(total)}`;
+    filterLabel = `${effectiveWindow === 'risk' ? 'Leases at risk (holdover, month-to-month)' : `Leases ending within ${WINDOW_LABEL[effectiveWindow]}`} · ${activeWorklist.length} lease${activeWorklist.length === 1 ? '' : 's'} · ${sf(total)}`;
   } else if (bucketKeys && state.bucket !== null) {
     highlight = bucketKeys;
     const b: RolloverBucket | undefined = roll.buckets.find((x) => x.key === state.bucket);
@@ -237,6 +242,7 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
     searchReasons,
     bucketKeys,
     highlight,
+    partial: fits && req ? fits.partial : null,
     filterLabel,
     timeline,
     selected,

@@ -1,4 +1,4 @@
-import { toneLabel } from '../../domain/lenses';
+import { toneLabel, toneShort } from '../../domain/lenses';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { FilterSpecification, GeoJSONSource, Map as MapLibreMap, MapLayerMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -145,7 +145,7 @@ interface Tip {
 const floorTip = (f: FloorView) => `${f.floor.name} · ${pct(f.leasable > 0 ? f.leased / f.leasable : 0)} leased · ${num(f.leasable)} RSF`;
 
 /** Keyboard-reachable equivalent of clicking a 3D floor (DESIGN.md §6). */
-function FloorList({ floors, selected, onSelect, toneOf, stateOf }: { floors: FloorView[]; selected: string | null; onSelect: (id: string) => void; toneOf: (f: FloorView) => string; stateOf: (f: FloorView) => string }) {
+function FloorList({ floors, selected, onSelect, toneOf, stateOf, shortOf }: { floors: FloorView[]; selected: string | null; onSelect: (id: string) => void; toneOf: (f: FloorView) => string; stateOf: (f: FloorView) => string; shortOf: (f: FloorView) => string }) {
   const ordered = useMemo(() => [...floors].sort((a, b) => b.floor.sequence - a.floor.sequence), [floors]);
   const ref = useRef<HTMLDivElement>(null);
   const focusIndex = Math.max(
@@ -175,7 +175,7 @@ function FloorList({ floors, selected, onSelect, toneOf, stateOf }: { floors: Fl
           data-floor={f.floor.id}
           className="sp-map-floor"
           aria-pressed={f.floor.id === selected}
-          aria-label={`${f.floor.sequence} ${pct(f.leasable > 0 ? f.leased / f.leasable : 0)} ${floorTip(f)}${stateOf(f) ? ` · mostly ${stateOf(f)}` : ''}${f.available ? `, ${num(f.available)} SF available` : ''}`}
+          aria-label={`${f.floor.sequence} ${pct(f.leasable > 0 ? f.leased / f.leasable : 0)} ${shortOf(f)} ${floorTip(f)}${stateOf(f) ? ` · mostly ${stateOf(f)}` : ''}${f.available ? `, ${num(f.available)} SF available` : ''}`}
           title={`${floorTip(f)}${stateOf(f) ? ` · mostly ${stateOf(f)}` : ''}`}
           tabIndex={i === focusIndex ? 0 : -1}
           onClick={() => onSelect(f.floor.id)}
@@ -184,6 +184,7 @@ function FloorList({ floors, selected, onSelect, toneOf, stateOf }: { floors: Fl
           <span className="sp-map-floor__swatch" style={{ background: `var(--tone-${toneOf(f)}-fill)`, borderColor: `var(--tone-${toneOf(f)}-edge)` }} aria-hidden="true" />
           <span className="sp-map-floor__num">{`${f.floor.sequence} `}</span>
           <span className="sp-map-floor__pct">{`${pct(f.leasable > 0 ? f.leased / f.leasable : 0)} `}</span>
+          <span className="sp-map-floor__state">{`${shortOf(f)} `}</span>
         </button>
       ))}
     </div>
@@ -219,6 +220,7 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
   const mapProperty = useMemo(() => (live ? { ...property, footprint: live.polygon, footprintSource: live.source } : property), [property, live]);
 
   const toneOf = useCallback((f: FloorView) => dominantTone(f, state.lens, state.safe), [state.lens, state.safe]);
+  const shortOf = useCallback((f: FloorView) => toneShort(dominantTone(f, state.lens, state.safe), state.lens, state.safe), [state.lens, state.safe]);
   const stateOf = useCallback((f: FloorView) => toneLabel(dominantTone(f, state.lens, state.safe), state.lens, state.safe), [state.lens, state.safe]);
   const toneOfSeg = useCallback((s: FloorView['segments'][number]) => toneFor(s, state.lens, state.safe), [state.lens, state.safe]);
   const features = useMemo(() => toFloorFeatures(suiteExtrusionFeatures(mapProperty, floors, toneOfSeg, property.floorHeightFt), INFLATE), [mapProperty, floors, toneOfSeg, property.floorHeightFt]);
@@ -354,7 +356,7 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
         </p>
       </div>
 
-      <FloorList floors={floors} selected={state.floor} onSelect={selectFloor} toneOf={toneOf} stateOf={stateOf} />
+      <FloorList floors={floors} selected={state.floor} onSelect={selectFloor} toneOf={toneOf} stateOf={stateOf} shortOf={shortOf} />
 
       {status === 'ready' && (
         <MapControls

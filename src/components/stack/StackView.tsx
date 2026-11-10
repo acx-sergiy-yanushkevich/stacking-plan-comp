@@ -144,7 +144,9 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
     if (state.select && segIndex.has(state.select)) {
       setFocusKey(state.select);
       // With the bottom sheet open (narrow layouts), keep the chosen block in view above it.
-      if (typeof window !== 'undefined' && window.innerWidth < 1100) document.querySelector<SVGGElement>(`.sp-stage [data-key="${CSS.escape(state.select)}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      // (Deferred: on a deep link the sheet and the rows are not laid out yet.)
+      const key = state.select;
+      if (typeof window !== 'undefined' && window.innerWidth < 1100) window.setTimeout(() => document.querySelector<SVGGElement>(`.sp-stage [data-key="${CSS.escape(key)}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 250);
     }
   }, [state.select, segIndex]);
 
@@ -269,7 +271,8 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                       h={rowH}
                       selected={state.select === b.key}
                       related={(!!selectedLease && state.select !== b.key && seg.lease?.id === selectedLease && seg.kind !== 'available') || (!!pinnedKeys && pinnedKeys.has(b.key) && state.select !== b.key)}
-                      dim={!!highlight && !highlight.has(b.key)}
+                      dim={!!highlight && !highlight.has(b.key) && !(highlight === model.highlight && model.partial?.has(b.key))}
+                      partial={!!highlight && highlight === model.highlight && !highlight.has(b.key) && !!model.partial?.has(b.key)}
                       focusable={activeKey === b.key}
                       enlarged={b.enlarged}
                       compact={phone}

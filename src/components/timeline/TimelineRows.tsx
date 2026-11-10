@@ -305,9 +305,12 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
   let outside = false;
   // Room to the right must also hold the trailing Holdover / MTM tag, which is drawn there first.
   const trailingNeed = !tagText && !safe && (isHoldover || isMtm) ? Math.ceil(measure(isMtm ? 'MTM' : 'Holdover', TAG_FONT)) + 16 : 0;
-  if (!isAvail && (!nameText || nameText === sfOnly) && name) {
+  // A label that fits inside only without its suite or SF moves out whole when the lane to the right is free.
+  const insideShort = plotRight >= 800 && nameText === name && subText !== sub;
+  if (!isAvail && (!nameText || nameText === sfOnly || insideShort) && name) {
     const room = freeRight - (x1 + extW) - 10 - trailingNeed;
-    if (room > 0 && measure(name, NAME_FONT) <= room) {
+    const need = measure(name, NAME_FONT) + (insideShort ? measure(' · ', SUB_FONT) + measure(sub, SUB_FONT) : 0);
+    if (room > 0 && need <= room) {
       nameText = name;
       outside = true;
       const rest = room - measure(name, NAME_FONT) - measure(' · ', SUB_FONT);
@@ -399,7 +402,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
         </g>
       )}
       {nameText && (
-        <text className={`sp-tl-bar__text ${outside ? 'sp-tl-bar__text--outside' : ''}`} x={outside ? x1 + extW + 6 + (trailingTag ? trailingW + 6 : 0) : textX} y={y + BAR_HEIGHT / 2 + 4} fill={outside ? 'var(--sp-color-text)' : ink} style={!outside && (bar.committed || bar.sublease) ? { paintOrder: 'stroke', stroke: fill, strokeWidth: 3, strokeLinejoin: 'round' } : undefined}>
+        <text className={`sp-tl-bar__text ${outside ? 'sp-tl-bar__text--outside' : ''}`} x={outside ? x1 + extW + 6 + (trailingTag ? trailingW + 6 : 0) : textX} y={y + BAR_HEIGHT / 2 + 4} fill={outside ? 'var(--sp-color-text)' : ink} style={{ paintOrder: 'stroke', stroke: outside ? 'var(--sp-color-card)' : fill, strokeWidth: 3, strokeLinejoin: 'round' }}>
           <tspan className="sp-tl-bar__name">{nameText}</tspan>
           {subText && <tspan className="sp-tl-bar__sub"> · {subText}</tspan>}
         </text>
