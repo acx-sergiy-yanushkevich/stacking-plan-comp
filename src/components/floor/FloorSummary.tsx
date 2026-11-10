@@ -35,22 +35,22 @@ export function FloorSummary({ floor, model, state, patch }: FloorSummaryProps) 
         <div className="sp-fkpi sp-fkpi--wide">
           <dt>Leased</dt>
           <dd>
-            <span className="sp-fkpi__value">{pct(leasedShare)}</span>
+            <span className="sp-fkpi__value sp-nb">{pct(leasedShare)}</span>
             <span className="sp-fkpi__bar" aria-hidden="true">
               <span className="sp-fkpi__bar-fill" style={{ width: `${Math.min(100, leasedShare * 100)}%` }} />
             </span>
             <span className="sp-fkpi__context">
-              {sf(floor.leased)} of {sf(floor.leasable)}
+              <span className="sp-nb">{sf(floor.leased)}</span> <span className="sp-nb">of {sf(floor.leasable)}</span>
             </span>
           </dd>
         </div>
         <div className="sp-fkpi">
           <dt>Available</dt>
           <dd>
-            <span className="sp-fkpi__value">{sf(floor.available)}</span>
+            <span className="sp-fkpi__value sp-nb">{sf(floor.available)}</span>
             {(floor.available > 0 || !coming) && (
               <span className="sp-fkpi__context">
-                {num(direct)}{' '}direct · {num(sublease)}{' '}sublease
+                <span className="sp-nb">{num(direct)}{' '}direct</span> <span className="sp-nb">· {num(sublease)}{' '}sublease</span>
               </span>
             )}
             {coming && <span className="sp-fkpi__context">{comingText(coming)}</span>}
@@ -59,7 +59,7 @@ export function FloorSummary({ floor, model, state, patch }: FloorSummaryProps) 
         <div className="sp-fkpi">
           <dt>Largest contiguous</dt>
           <dd>
-            <span className="sp-fkpi__value">{sf(floor.maxContiguous)}</span>
+            <span className="sp-fkpi__value sp-nb">{sf(floor.maxContiguous)}</span>
             <span className="sp-fkpi__context">
               {floor.maxContiguous > 0 ? 'direct, available now' : coming?.from ? `no direct space until ${fmtMonthYearShort(coming.from)}` : 'no direct space now'}
             </span>
@@ -74,7 +74,7 @@ export function FloorSummary({ floor, model, state, patch }: FloorSummaryProps) 
                 <>
                   <span className="sp-fkpi__value">{tenantLabel(next.lease, safe)}</span>
                   <span className="sp-fkpi__context">
-                    {fmtDate(next.endDate)} · {fmtMonths(next.monthsToExpiry).replace(/ /g, ' ')}
+                    <span className="sp-nb">{fmtDate(next.endDate)}</span> <span className="sp-nb">· {fmtMonths(next.monthsToExpiry).replace(/ /g, ' ')}</span>
                   </span>
                 </>
               ) : (

@@ -12,10 +12,14 @@ export function usePlanState(today: ISODate): [PlanState, (patch: Partial<PlanSt
   const [state, setState] = useState<PlanState>(() => parseState(window.location.search, today));
 
   // `applyPatch` holds the prospect-safe invariants on every change: turning the mode on drops a search in
-  // progress, and no control can open the worklist or an expiry highlight while it is on.
-  const patch = useCallback((p: Partial<PlanState>) => {
-    setState((prev) => applyPatch(prev, p));
-  }, []);
+  // progress and returns the plan to today, and no control can open the worklist, an expiry highlight or
+  // another as-of date while it is on.
+  const patch = useCallback(
+    (p: Partial<PlanState>) => {
+      setState((prev) => applyPatch(prev, p, today));
+    },
+    [today],
+  );
 
   // Write every change to the URL (also normalises an initial URL with invalid params).
   useEffect(() => {

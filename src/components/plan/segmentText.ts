@@ -3,7 +3,7 @@ import type { ISODate } from '../../domain/types';
 import { fmtDate, fmtMonthYear, fmtMonthYearShort, fmtMonths } from '../../domain/dates';
 import { compactRate, num, rate, sf, usd, usd0 } from '../../domain/format';
 import { dealCount, rentType, rentValue, topDeal, toneFor, type LensId, type Tone } from '../../domain/lenses';
-import { canShowActivity, canShowDeals, canShowInPlaceRent, canShowIssues, canShowListingStatus, canShowTenant, canShowTenantRisk, marketedFor, rentVisible, tenantLabel, termHidden } from '../../domain/safe';
+import { canShowActivity, canShowDeals, canShowInPlaceRent, canShowIssues, canShowListingStatus, canShowTenant, canShowTenantRisk, leaseDatesHidden, marketedFor, rentVisible, tenantLabel, termHidden } from '../../domain/safe';
 import type { PatternKind } from './Patterns';
 
 export interface Badge {
@@ -115,7 +115,8 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
     }
     case 'committed': {
       name = lease && canShowTenant(safe) ? lease.tenant : name;
-      meta = lease ? `Moves in ${fmtMonthYear(lease.commencement)}` : '';
+      // Prospect-safe: a signed lease shows no date either; the badge says what it is.
+      meta = lease && !leaseDatesHidden(kind, safe) ? `Moves in ${fmtMonthYear(lease.commencement)}` : '';
       badges.push({ kind: 'info', text: 'Signed, not in', title: 'Lease signed; tenant has not taken occupancy' });
       break;
     }
@@ -152,7 +153,7 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
   }
 
   // Lens-specific line 3 overrides
-  if (lens === 'expiry' && seg.monthsToExpiry !== null && !termHidden(kind, safe) && (kind === 'leased' || kind === 'sublease' || kind === 'committed')) {
+  if (lens === 'expiry' && seg.monthsToExpiry !== null && !leaseDatesHidden(kind, safe) && (kind === 'leased' || kind === 'sublease' || kind === 'committed')) {
     meta = `${fmtMonths(seg.monthsToExpiry)} left${seg.endDate ? ` · ${fmtMonthYearShort(seg.endDate)}` : ''}`;
   }
   if (lens === 'rent') {
@@ -186,7 +187,7 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
 
   // Short lens value: the one fact the active lens colours by, in a few characters.
   let lensShort = '';
-  if ((lens === 'expiry' || lens === 'status') && seg.endDate && !termHidden(kind, safe) && (kind === 'leased' || kind === 'sublease' || kind === 'committed')) lensShort = fmtMonthYearShort(seg.endDate);
+  if ((lens === 'expiry' || lens === 'status') && seg.endDate && !leaseDatesHidden(kind, safe) && (kind === 'leased' || kind === 'sublease' || kind === 'committed')) lensShort = fmtMonthYearShort(seg.endDate);
   if (lens === 'rent') {
     const v = rentValue(seg);
     const t = rentType(seg);
@@ -205,7 +206,7 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
     const d = topDeal(seg);
     if (d) lensShort = d.stage === 'Lease Out' ? 'Lease out' : d.stage;
   }
-  if (kind === 'committed' && lens === 'status' && lease) lensShort = `In ${fmtMonthYearShort(lease.commencement)}`;
+  if (kind === 'committed' && lens === 'status' && lease && !leaseDatesHidden(kind, safe)) lensShort = `In ${fmtMonthYearShort(lease.commencement)}`;
   const lines = [name, sub, meta].filter(Boolean);
   const badgeText = badges.map(badgeLabel).join(', ');
   const tooltip = [...lines, badgeText].filter(Boolean).join('\n');

@@ -20,6 +20,9 @@
   position: sticky; top: var(--sp-space-3);
 }
 .sp-bview__stage { min-width: 0; will-change: transform; }
+/* While the model docks or undocks its floor labels are hidden (they would be drawn, at the size the model
+   starts from, over the floor column coming in); hero.css fades them back in once it has settled. */
+.sp-bview__stage.is-moving .sp-hero__tags { opacity: 0; transition: none; }
 .sp-bview__stage .sp-mini { width: var(--sp-bview-pick); }
 /* The model is sized by height, from the room below it on first load; `--sp-hero-ratio` (width over
    height of the drawing) turns a width limit into a height limit, so the drawing is never letterboxed and
@@ -31,10 +34,12 @@
 .sp-bview__grid.is-docked .sp-bview__model .sp-hero svg { --sp-bview-max: min(30cqw, 440px); }
 
 /* ── Alone ──────────────────────────────────────────────────────────────────────────── */
-.sp-bview__grid.is-alone { grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); }
+/* The two columns are one height: the KPI rows share the height of the model beside them (kpis.css), so
+   the column ends where the model does and the quick starts close it. */
+.sp-bview__grid.is-alone { grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); align-items: stretch; }
 /* The KPI list lays itself out by the width it is given (kpis.css): a list in a column, six tiles in a row. */
 .sp-bview__alone { display: flex; flex-direction: column; gap: var(--sp-space-3); min-width: 0; container-type: inline-size; }
-.sp-bview__starts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-space-2); }
+.sp-bview__starts { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-space-2); }
 .sp-bview__starts-label { flex: 1 0 100%; }
 /* The model column measures itself (container units), so the model takes the width that is really left
    after the picker and the labels, whatever stands beside the view. */
@@ -42,7 +47,8 @@
 .sp-bview__grid.is-alone .sp-bview__model .sp-hero svg {
   /* The width left for the drawing. Written on the drawing itself: the label room is a property of the model inside. */
   --sp-bview-max: calc(100cqw - var(--sp-bview-pick) - var(--sp-hero-gap) - var(--sp-hero-room, 28px));
-  height: min(clamp(280px, calc(100vh - var(--sp-bview-top, 400px) - 64px), 760px), calc(var(--sp-bview-max) / var(--sp-hero-ratio, 1)));
+  /* Nothing stands under the model (its caption and note are above it), so it runs to the foot of the card. */
+  height: min(clamp(280px, calc(100vh - var(--sp-bview-top, 420px) - 44px), 760px), calc(var(--sp-bview-max) / var(--sp-hero-ratio, 1)));
 }
 /* Alone, the picker is a ladder against the building: each row sits level with the floor it names (the
    model says where its stack of floors is). Rows keep a readable minimum, so on a small model the ladder
@@ -56,14 +62,18 @@
 }
 .sp-bview__grid.is-alone .sp-mini__list > li { flex: 1 1 0; min-height: 0; display: flex; }
 .sp-bview__grid.is-alone .sp-mini__row { height: auto; }
-/* The caption has one fixed line: pointing from floor to floor changes its words, never the layout.
-   Should a very narrow view need a second line, it runs over the top of the model instead of pushing it. */
+/* Above the model, as one group: the caption line (the floor under the pointer, or the prompt), then the
+   note saying what the words beside the floors are.
+   The caption has one fixed line: pointing from floor to floor changes its words, never the layout. Where
+   the column is narrow its closing hint is left out, so the floor's numbers still fit that line. */
+.sp-bview__lead { align-self: stretch; display: flex; flex-direction: column; gap: 1px; }
 .sp-bview__caption {
-  align-self: stretch; height: 20px; overflow: visible; text-align: center;
+  height: 20px; overflow: visible; text-align: center;
   font-size: var(--sp-text-13); line-height: 20px; color: var(--sp-color-text-weak); font-variant-numeric: tabular-nums;
 }
 .sp-bview__caption strong { color: var(--sp-color-text); font-weight: 600; }
-.sp-bview__note { align-self: stretch; text-align: center; font-size: var(--sp-text-12); line-height: 1.35; color: var(--sp-color-text-faint); }
+.sp-bview__note { text-align: center; font-size: var(--sp-text-12); line-height: 1.35; color: var(--sp-color-text-faint); text-wrap: balance; }
+@container (max-width: 899px) { .sp-bview__caption-more { display: none; } }
 
 /* ── Docked ─────────────────────────────────────────────────────────────────────────── */
 /* The floor column comes in from the right as the model docks; the KPI column fades back in as it undocks. */
@@ -82,8 +92,12 @@
   margin-top: var(--sp-space-2); padding-top: var(--sp-space-3); border-top: 1px solid var(--sp-color-border);
 }
 .sp-bview__info .sp-fkpi--wide { grid-column: auto; }
+/* The floor's four numbers: in a row while each card can hold its figure and its note on one line each
+   (about 180 px a card); in a column narrower than that, two by two, with room. A figure is never parted
+   from its unit either way (floor.css, `.sp-nb`). */
 .sp-bview__info .sp-fkpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-@container (max-width: 639px) { .sp-bview__info .sp-fkpis { grid-template-columns: 1fr 1fr; } }
+.sp-bview__info .sp-fkpi dt { white-space: nowrap; }
+@container (max-width: 759px) { .sp-bview__info .sp-fkpis { grid-template-columns: 1fr 1fr; } }
 /* A narrow floor column: the name and the actions share the first line, the floor's numbers take the second. */
 @container (max-width: 719px) {
   .sp-bview__floor-head { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 2px var(--sp-space-3); }
@@ -98,9 +112,23 @@
 /* Docked: the model is a compact figure and the picker keeps the floor numbers alone (it is the keyboard
    way between floors), so the plate and the floor's numbers share the first screen with the model. */
 @container sp-bview (max-width: 1039px) {
-  .sp-bview__grid.is-docked { gap: var(--sp-space-4); }
+  .sp-bview__grid.is-docked { gap: var(--sp-space-4); padding-top: var(--sp-space-3); }
   .sp-bview__grid.is-docked .sp-bview__model { --sp-bview-pick: 40px; --sp-hero-gap: var(--sp-space-2); }
   .sp-bview__grid.is-docked .sp-bview__model .sp-hero svg { --sp-bview-max: min(20cqw, 200px); height: min(300px, calc(var(--sp-bview-max) / var(--sp-hero-ratio, 1))); }
+  /* Less air between the floor's name, its plate and its numbers, so the numbers start on the first screen. */
+  .sp-bview__floor { gap: 6px; }
+  .sp-bview__floor .sp-plate__caption { margin-top: 2px; line-height: 1.35; }
+}
+/* The same narrow card on a laptop, where it is narrow because the inspector stands beside it and not
+   because the window is: the window is wide and tall enough, so the model takes the height there is
+   below the legend (up to a quarter of the card's width), instead of the tablet's compact figure. */
+@media (min-width: 1100px) {
+  @container sp-bview (max-width: 1039px) {
+    .sp-bview__grid.is-docked .sp-bview__model .sp-hero svg {
+      --sp-bview-max: min(25cqw, 260px);
+      height: min(clamp(300px, calc(100vh - var(--sp-bview-top, 430px) - 28px), 560px), calc(var(--sp-bview-max) / var(--sp-hero-ratio, 1)));
+    }
+  }
 }
 /* ── A card under 1100 px ───────────────────────────────────────────────────────────── */
 /* Alone: one column, so the model keeps the width its floor facts need. The six KPIs in a row, the quick
@@ -109,3 +137,11 @@
   .sp-bview__grid.is-alone { grid-template-columns: minmax(0, 1fr); gap: var(--sp-space-3); }
   .sp-bview__starts-label { flex: none; }
 }
+
+/* ── The card's head ────────────────────────────────────────────────────────────────── */
+/* The note about a floor whose records exceed its area shares the title's line (it wraps under it where
+   there is no room), then the legend: one band less above the model and the plate at every width. */
+.sp-bview > .sp-stack__head { gap: 6px 12px; }
+.sp-bview > .sp-stack__head .sp-stack__title { order: 0; }
+.sp-bview > .sp-stack__head .sp-legend__note { order: 1; width: auto; flex: 1 1 320px; text-align: right; }
+.sp-bview > .sp-stack__head .sp-legend { order: 2; flex: 1 1 100%; }

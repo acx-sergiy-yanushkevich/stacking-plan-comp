@@ -1,12 +1,16 @@
 // Prospect-safe leak check: with safe=1, no tenant, contact, broker or prospect name, no in-place
 // rent, no deal, inquiry, tenant-risk or data-issue wording, no record action, no quiet (unpublished)
-// listing and no lease term may appear anywhere: DOM text, live regions, toasts, titles, aria-labels,
-// SVG <title>s, the values of inputs, or the URL.
+// listing, no date of any lease (start or end, in place or signed), no rollover by period and no
+// expiring figure may appear anywhere: DOM text, live regions, toasts, titles, aria-labels, SVG
+// <title>s, the print layout, the values of inputs, or the URL.
 //
-// Two kinds of state are checked. Fresh loads: a link opened with safe=1. Transitions: the app is
-// loaded with the mode OFF, something that puts a name on screen is done (a block is selected, a deal
-// record opened, a tenant searched, a tab opened, a block hovered), then the Prospect-safe switch is
-// clicked and the same rules are applied at once, with no wait, and again after the app has settled.
+// Three kinds of state are checked. Fresh loads: a link opened with safe=1. Time travel: every one of
+// those links again with `asOf` set to later dates, which must give the same page as today's, to the
+// character (a later date used to show each lease's end as a vacated suite, and to open a quiet
+// listing). Transitions: the app is loaded with the mode OFF, something that puts a name on screen is
+// done (a block is selected, a deal record opened, a tenant searched, a tab opened, a block hovered, the
+// date moved), then the Prospect-safe switch is clicked and the same rules are applied at once, with no
+// wait, and again after the app has settled. Last, the CSV export, today and for a later date.
 import { chromium } from 'playwright';
 import { readFileSync } from 'node:fs';
 
@@ -30,6 +34,63 @@ const quietBadges = new Set();
 for (const m of src.matchAll(/avail\(\{[^}]*?availableFrom: '(\d{4})-(\d{2})-\d{2}'[^}]*?published: false/g)) quietBadges.add(`Avail ${MONTHS[Number(m[2]) - 1]} '${m[1].slice(2)}`);
 // In-place lease rates render as a single value "$29/SF/yr FSG"; asking rents are ranges "$31–$33/SF/yr".
 const inPlaceRent = /(?<![–-])\$\d[\d.,]*\/SF\/(yr|mo)\s(FSG|MG|NNN)/;
+
+// ── Lease dates ────────────────────────────────────────────────────────────────────────────────
+// Every commencement, expiration and termination date in the mock, in each form the app writes a
+// date: ISO (the CSV), "Sep 30, 2028", "Sep 2028" and "Sep '28". A date that is also a date of the
+// offer (available from, sublease thru) or of the page itself (today, a record's last change) is not
+// a lease date to a reader, so it is left out; for the month forms, so is its whole month.
+const TODAY = /export const TODAY[^=]*= '(\d{4}-\d{2}-\d{2})'/.exec(src)?.[1];
+if (!TODAY) {
+  console.error('Could not read TODAY from the mock data.');
+  process.exit(2);
+}
+const isoDates = (re) => [...src.matchAll(re)].map((m) => m[1]);
+const leaseDateList = isoDates(/\b(?:commencement|expiration|termination): '(\d{4}-\d{2}-\d{2})'/g);
+const publicDates = new Set([TODAY, ...isoDates(/\b(?:availableFrom|subleaseExpiration|verifiedAt|dataUpdated|at|date|updated|neededBy|asOf): '(\d{4}-\d{2}-\d{2})'/g)]);
+const long = (d) => `${MONTHS[Number(d.slice(5, 7)) - 1]} ${Number(d.slice(8, 10))}, ${d.slice(0, 4)}`;
+const monthYear = (d) => `${MONTHS[Number(d.slice(5, 7)) - 1]} ${d.slice(0, 4)}`;
+const monthShort = (d) => `${MONTHS[Number(d.slice(5, 7)) - 1]} '${d.slice(2, 4)}`;
+const publicMonths = new Set([...publicDates].map((d) => d.slice(0, 7)));
+const leaseDates = new Set(leaseDateList.filter((d) => !publicDates.has(d)));
+const leaseDateWords = new Map();
+for (const d of leaseDates) {
+  leaseDateWords.set(d, d);
+  leaseDateWords.set(long(d), d);
+  if (!publicMonths.has(d.slice(0, 7))) {
+    leaseDateWords.set(monthYear(d), d);
+    leaseDateWords.set(monthShort(d), d);
+  }
+}
+if (leaseDates.size < 20) {
+  console.error(`Only ${leaseDates.size} lease dates were read from the mock data: the check would prove little.`);
+  process.exit(2);
+}
+
+// ── Quiet listings, whatever the suite's state ─────────────────────────────────────────────────
+// Each unpublished availability: its record id (a block or bar drawn for it carries it as its key) and
+// its asking range, when no published listing asks the same.
+const availBlocks = [...src.matchAll(/avail\(\{([^}]*)\}/g)].map((m) => m[1]);
+const field = (b, name) => new RegExp(`\\b${name}: '?([^,'\\s]+)'?`).exec(b)?.[1];
+const askOf = (b) => `$${field(b, 'rentLow')}–$${field(b, 'rentHigh')}/SF/`;
+const quiet = availBlocks.filter((b) => /published: false/.test(b));
+const quietIds = quiet.map((b) => field(b, 'id'));
+const publishedAsks = new Set(availBlocks.filter((b) => !/published: false/.test(b)).map(askOf));
+const quietAsks = quiet.map(askOf).filter((a) => !publishedAsks.has(a));
+if (!quietIds.length) {
+  console.error('The mock data has no unpublished availability: the quiet-listing checks would prove nothing.');
+  process.exit(2);
+}
+
+// Later as-of dates each safe link is loaded with, in months from today.
+const AHEAD = [3, 6, 12, 24];
+const addMonths = (d, n) => {
+  const t = Number(d.slice(0, 4)) * 12 + Number(d.slice(5, 7)) - 1 + n;
+  const y = Math.floor(t / 12);
+  const m = (t % 12) + 1;
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return `${y}-${String(m).padStart(2, '0')}-${String(Math.min(Number(d.slice(8, 10)), last)).padStart(2, '0')}`;
+};
 
 const states = [
   '?view=building&safe=1',
@@ -68,8 +129,19 @@ const states = [
   '?view=stack&safe=1&bucket=0',
   '?view=stack&safe=1&mode=issues',
   '?view=stack&safe=1&q=anadarko',
+  '?view=stack&safe=1&asOf=2027-04-15',
   '?view=stack&safe=1&asOf=2028-01-01',
   '?view=stack&safe=1&asOf=2028-01-01&lens=expiry',
+  '?view=timeline&safe=1&asOf=2028-01-01',
+  '?view=stack&safe=1&select=L09-U1',
+  '?view=timeline&safe=1&select=L09-U1',
+  '?view=stack&safe=1&lens=expiry&select=L09-U1',
+  '?view=stack&safe=1&select=L14-U2',
+  '?view=stack&safe=1&select=A04',
+  '?view=stack&safe=1&req=20000&by=2027-06-01',
+  '?view=stack&safe=1&req=12000&fit=sublease&mode=find',
+  '?view=building&safe=1&floor=F4',
+  '?view=floor&floor=F4&safe=1',
   '?view=timeline&safe=1',
   '?view=timeline&safe=1&lens=expiry',
   '?view=floor&floor=F6&safe=1',
@@ -152,6 +224,22 @@ function findLeaks(text, { q } = {}) {
   if (term) found.push(`lease term "${term[0]}"`);
   const rent = inPlaceRent.exec(text);
   if (rent) found.push(`rent "${rent[0]}"`);
+  // No date of any lease, in any form the app writes one.
+  for (const [word, d] of leaseDateWords) if (text.includes(word)) found.push(`lease date "${word}" (${d})`);
+  const dated = /\b(Leased since|Moves in|moves in|Commence[sd]?|Vacated|Vacates|Projected vacancy|vacated)\b/.exec(text);
+  if (dated) found.push(`lease date wording "${dated[0]}"`);
+  // No total by period, no expiring figure, no lease count: with every suite's RSF on the page they name suites.
+  const period = /< ?12 mo\b|\b\d–\d yr\b|\b\d\+ yr\b|\bLease rollover\b|\bRollover from\b|\bShare of (leased|listed)|\b\d+ leases?\b|\bleases? ending\b/.exec(text);
+  if (period) found.push(`rollover by period "${period[0]}"`);
+  if (expiringFigure && text.includes(expiringFigure)) found.push(`the expiring figure "${expiringFigure}"`);
+  const expiring = /expiring in 12 months[^.;\n]*\d/i.exec(text);
+  if (expiring) found.push(`an expiring figure is stated: "${expiring[0]}"`);
+  // The plan is today's: no other as-of date in the URL, no change chip against today.
+  if (/[?&]asOf=/.test(text)) found.push('an as-of date in the URL');
+  if (/\bProjected · |\(projected\)/.test(text)) found.push('a projected as-of date');
+  for (const a of quietAsks) if (text.includes(a)) found.push(`a quiet listing's asking rent "${a}"`);
+  const broken = /\bNaN\b|\bundefined\b|Invalid Date/.exec(text);
+  if (broken) found.push(`broken text "${broken[0]}"`);
   return found;
 }
 
@@ -160,6 +248,20 @@ async function findDomLeaks() {
   const found = [];
   const riskGeom = await page.evaluate(() => document.querySelectorAll('.sp-tl-bar__ext--risk, .sp-tl-tag--risk').length);
   if (riskGeom) found.push(`risk geometry (${riskGeom})`);
+  // A quiet listing is never drawn, whatever the suite's state: no block, slice or bar carries its record.
+  const quietDrawn = await page.evaluate((ids) => ids.filter((id) => document.querySelector(`[data-key="${id}"], [data-seg="${id}"], [data-bar^="tl-${id}"]`)), quietIds);
+  if (quietDrawn.length) found.push(`quiet listing drawn (${quietDrawn.join(', ')})`);
+  // The date cannot be moved: no slider, no rollover band, and the as-of control opens nothing.
+  const movable = await page.evaluate(() => ({
+    sliders: document.querySelectorAll('[role="slider"]').length,
+    bands: document.querySelectorAll('.sp-tl-band__col, .sp-tl-roll, .sp-roll').length,
+    asOf: [...document.querySelectorAll('.sp-header__asof button')].filter((b) => b.getAttribute('aria-disabled') !== 'true').length,
+    ended: document.querySelectorAll('.sp-tl-bar--projected, [data-bar^="tl-hist-"]').length,
+  }));
+  if (movable.sliders) found.push(`the as-of date can be dragged (${movable.sliders} slider)`);
+  if (movable.bands) found.push(`a rollover band or chart is drawn (${movable.bands})`);
+  if (movable.asOf) found.push('the as-of control is not locked');
+  if (movable.ended) found.push(`an ended lease is drawn (${movable.ended})`);
   // An at-risk lease must be indistinguishable from an ordinary one: same words, same tooltip, same colour.
   const sig = await signatures([...riskKeys, ...ordinaryKeys]);
   const ordinary = new Set(ordinaryKeys.flatMap((k) => sig[k] ?? []));
@@ -186,6 +288,16 @@ const report = (label, found) => {
 await page.goto(base + '?view=stack', { waitUntil: 'networkidle' });
 await page.waitForTimeout(300);
 const kinds = await page.evaluate(() => [...document.querySelectorAll('.sp-stack [data-key]')].map((el) => [el.getAttribute('data-key'), el.getAttribute('aria-label') ?? '']));
+// The figure the broker's Expiring 12 mo card shows: it must be nowhere on a prospect's page.
+const expiringFigure = await page.evaluate(() => {
+  const card = [...document.querySelectorAll('.sp-kpi')].find((c) => c.querySelector('.sp-kpi__label')?.textContent === 'Expiring 12 mo');
+  const n = card?.querySelector('.sp-kpi__value')?.textContent?.match(/[\d,]{4,}/)?.[0];
+  return n ? `${n} SF` : null;
+});
+if (!expiringFigure) {
+  console.error('Could not read the Expiring 12 mo figure from the broker view: the check for it would prove nothing.');
+  process.exit(2);
+}
 const riskKeys = kinds.filter(([, a]) => /Holdover|MTM|Month-to-month/.test(a)).map(([k]) => k);
 const ordinaryKeys = kinds.filter(([, a]) => /\bExp [A-Z]/.test(a) && !/Holdover|MTM|Month-to-month|sublease/i.test(a)).map(([k]) => k);
 if (riskKeys.length < 2 || ordinaryKeys.length < 5) {
@@ -193,13 +305,16 @@ if (riskKeys.length < 2 || ordinaryKeys.length < 5) {
   process.exit(2);
 }
 
-// ── Fresh loads ────────────────────────────────────────────────────────────────────────────────
-for (const qs of states) {
-  if (!wanted(qs)) continue;
+/**
+ * One link, read in full: the page as loaded, then every list behind a tab. Returns the text and
+ * whatever the DOM rules found.
+ */
+async function read(qs) {
   await page.goto(base + qs, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(qs.includes('map') ? 1500 : 250);
+  // Long enough for the live region's summary of the as-of date (it is written 400 ms after the load).
+  await page.waitForTimeout(qs.includes('map') ? 1500 : 600);
   let text = await grab();
-  const found = await findDomLeaks();
+  const dom = await findDomLeaks();
   // Lists behind tabs render only once their tab is chosen: open every tab and check what it shows.
   const tabs = page.locator('.sp-flists__tabs [role="radio"]');
   for (let i = 0; i < (await tabs.count()); i++) {
@@ -207,13 +322,48 @@ for (const qs of states) {
     await page.waitForTimeout(80);
     text += '\n' + (await grab());
   }
-  found.push(...findLeaks(text, { q: new URLSearchParams(qs).get('q') }));
+  return { text, dom };
+}
+
+/** Where two readings first differ, as a short quote of each. */
+function firstDifference(a, b) {
+  const la = a.split('\n');
+  const lb = b.split('\n');
+  const i = la.findIndex((line, n) => line !== lb[n]);
+  const at = i === -1 ? la.length : i;
+  const cut = (t) => (t === undefined ? '(nothing)' : `"${t.length > 110 ? `${t.slice(0, 110)}…` : t}"`);
+  return `today ${cut(la[at])} ≠ later ${cut(lb[at])}`;
+}
+
+/** The same link with its as-of date replaced. */
+const withAsOf = (qs, date) => {
+  const p = new URLSearchParams(qs.slice(1));
+  p.set('asOf', date);
+  return `?${p.toString()}`;
+};
+
+// ── Fresh loads, and each of them again for later as-of dates ──────────────────────────────────
+for (const qs of states) {
+  if (!wanted(qs)) continue;
+  const { text, dom } = await read(qs);
+  const found = [...dom, ...findLeaks(text, { q: new URLSearchParams(qs).get('q') })];
   // Search must not confirm a tenant by highlighting
   if (qs.includes('q=anadarko')) {
     const [dimmed, total] = await page.evaluate(() => [document.querySelectorAll('.sp-seg.is-dim').length, document.querySelectorAll('.sp-seg').length]);
     if (dimmed > 0 && dimmed < total) found.push(`search highlighted ${total - dimmed} block(s) for a tenant name in prospect-safe mode`);
   }
   report(qs, found);
+
+  // Time travel: the link with a later as-of date is the same page as the link without one. Nothing
+  // may differ: not a block, a title, an aria-label, the print layout, a live region or the URL.
+  const today = new URLSearchParams(qs.slice(1)).has('asOf') ? (await read(withAsOf(qs, TODAY))).text : text;
+  for (const months of AHEAD) {
+    const date = addMonths(TODAY, months);
+    const later = await read(withAsOf(qs, date));
+    const drift = [...later.dom, ...findLeaks(later.text, { q: new URLSearchParams(qs).get('q') })];
+    if (later.text !== today) drift.push(`the page differs from today's: ${firstDifference(today, later.text)}`);
+    report(`${qs} · as of +${months} mo (${date})`, drift);
+  }
 }
 
 // ── Transitions: the mode is turned on while something named is on screen ──────────────────────
@@ -250,6 +400,13 @@ const transitions = [
   ['match an open inquiry', '?view=stack&inquiry=I02', async () => {}, null],
   ['the deals lens with a suite selected', '?view=stack&lens=deals&select=A02', async () => {}, null],
   ['the expiration lens in the Timeline, projected to 2028', '?view=timeline&lens=expiry&asOf=2028-01-01', async () => {}, null],
+  ['the Stack projected to April 2027 (a suite vacated, a quiet listing open)', '?view=stack&asOf=2027-04-15', async () => {}, 'Vacated'],
+  ['the Stack projected, with the suite of the quiet listing selected', '?view=stack&asOf=2027-04-15&select=A04', async () => {}, 'Quiet'],
+  ['the Building view projected two years, Floor 6 open', '?view=building&floor=F6&asOf=2028-11-09', async () => {}, null],
+  ['the date moved from the as-of popover (+12 mo)', '?view=stack', async () => { await page.getByRole('button', { name: /^As of / }).click(); await page.getByRole('button', { name: '+12 mo', exact: true }).click(); await page.keyboard.press('Escape'); }, 'Projected'],
+  ['the date moved with the Timeline cursor (keyboard)', '?view=timeline', async () => { await page.getByRole('slider', { name: 'As-of date' }).focus(); await page.keyboard.press('PageUp'); await page.keyboard.press('PageUp'); }, 'Projected'],
+  ['the rollover chart on screen (Building panel)', '?view=stack', async () => {}, '< 12 mo'],
+  ['a signed lease selected (its move-in date on screen)', '?view=stack&select=L09-U1', async () => {}, 'Moves in'],
 ];
 
 for (const [name, qs, act, mustShowFirst] of transitions) {
@@ -291,22 +448,54 @@ for (const [name, qs, act, mustShowFirst] of transitions) {
   report(label, found);
 }
 
-// ── The prospect-safe CSV export ───────────────────────────────────────────────────────────────
-if (wanted('prospect-safe CSV export')) try {
-  await page.goto(base + '?view=stack&safe=1', { waitUntil: 'networkidle' });
+// ── The prospect-safe CSV export, today and for a later date ───────────────────────────────────
+/** Download the rent roll from the Export menu of the page as loaded. */
+async function exportCsv(qs) {
+  await page.goto(base + qs, { waitUntil: 'networkidle' });
   await page.getByRole('button', { name: 'Export' }).click();
   const [download] = await Promise.all([page.waitForEvent('download', { timeout: 5000 }), page.getByRole('menuitem', { name: /Rent roll \(CSV\)/ }).click()]);
-  const csv = readFileSync(await download.path(), 'utf8');
+  return { csv: readFileSync(await download.path(), 'utf8'), name: download.suggestedFilename() };
+}
+if (wanted('prospect-safe CSV export')) try {
+  const { csv, name } = await exportCsv('?view=stack&safe=1');
   const found = findLeaks(csv);
   const rows = csv.split(/\r?\n/).map((r) => r.split(','));
   const col = (h) => rows[0].indexOf(h);
   for (const r of rows.slice(1)) if (r[col('State')] === 'Leased' && (r[col('Expiration')] || r[col('Months remaining')] || r[col('Rate')])) found.push(`CSV: Ste ${r[col('Suite')]} shows a term or rent`);
+  // No lease has a start or an end in the file: the only dates left are the offer's (a sublease's own end).
+  for (const r of rows.slice(1)) {
+    if (r[col('Commencement')]) found.push(`CSV: Ste ${r[col('Suite')]} has a commencement (${r[col('Commencement')]})`);
+    if (r[col('Expiration')] && r[col('State')] !== 'Sublease') found.push(`CSV: Ste ${r[col('Suite')]} (${r[col('State')]}) has an expiration (${r[col('Expiration')]})`);
+    if (r[col('Months remaining')]) found.push(`CSV: Ste ${r[col('Suite')]} has months remaining`);
+  }
+  if (!rows.some((r) => r[col('State')] === 'Committed')) found.push('CSV: the signed lease is missing, so its dates were not checked');
   // Asking rents are marketing information: the sublet suite's must be in the file, as it is in the PDF.
   if (!rows.some((r) => r[col('State')] === 'Sublease' && /^\d+(\.\d+)?–\d+(\.\d+)?$/.test(r[col('Rate')] ?? ''))) found.push('CSV: the sublease asking rent is missing');
   report('prospect-safe CSV export', found);
+  // A link with a later as-of date exports the same file under the same name: today's.
+  for (const months of AHEAD) {
+    const date = addMonths(TODAY, months);
+    const later = await exportCsv(`?view=stack&safe=1&asOf=${date}`);
+    const drift = [];
+    if (later.csv !== csv) drift.push(`the file differs from today's: ${firstDifference(csv, later.csv)}`);
+    if (later.name !== name || later.name.includes(date)) drift.push(`the file name differs or carries the date (${later.name})`);
+    report(`prospect-safe CSV export · as of +${months} mo (${date})`, drift);
+  }
 } catch (e) {
   leaks++;
   console.log(`FAIL prospect-safe CSV export: ${String(e.message).split('\n')[0]}`);
+}
+
+// ── The prospect-safe print layout ─────────────────────────────────────────────────────────────
+// It is in the DOM of every state above, so every rule has already read it; this reads it alone and
+// proves the report is there to be read (an empty report would pass every rule).
+if (wanted('prospect-safe print layout')) {
+  await page.goto(base + '?view=stack&safe=1&print=1', { waitUntil: 'networkidle' });
+  const printed = (await page.evaluate(() => document.querySelector('.sp-print')?.innerText ?? '')).replace(/\u00a0/g, ' ');
+  const found = findLeaks(printed);
+  for (const must of ['Rent roll', 'Available from', 'Space on offer', 'Coming supply', 'Withheld']) if (!printed.includes(must)) found.push(`the report has no "${must}": it was not read`);
+  for (const h of ['Commencement', 'Expiration', 'Remaining', 'Leases', 'Period']) if (new RegExp(`(^|\\n|\\t)${h}(\\t|\\n|$)`, 'i').test(printed)) found.push(`the report has a "${h}" column`);
+  report('prospect-safe print layout', found);
 }
 
 await browser.close();

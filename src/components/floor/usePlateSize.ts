@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useState, type RefCallback } from 'react';
 import type { GeoPolygon } from '../../domain/types';
 import { levelPolygon, projectPolygon } from '../../domain/geometry';
 
@@ -34,22 +34,42 @@ export function plateSize(containerWidth: number, aspect: number): PlateSize {
   return { width, height };
 }
 
+/** Just enough of an element and of ResizeObserver for `observeWidth` (and its test) to work with. */
+export interface Measurable {
+  getBoundingClientRect(): { width: number };
+}
+type ObserverCtor = new (onResize: () => void) => { observe(el: never): void; disconnect(): void };
+
 /**
- * Tracks the plate container's width with a ResizeObserver (guarded for SSR and tests)
- * and derives the plate's drawing size.
+ * Reports an element's width now and again whenever its box changes. Returns what stops it.
+ * Without a ResizeObserver (SSR, tests) it reports once.
  */
-export function usePlateSize(aspect: number, fallbackWidth = 640): [RefObject<HTMLDivElement | null>, PlateSize] {
-  const ref = useRef<HTMLDivElement | null>(null);
+export function observeWidth(
+  el: Measurable,
+  onWidth: (width: number) => void,
+  Observer: ObserverCtor | undefined = typeof ResizeObserver === 'undefined' ? undefined : (ResizeObserver as unknown as ObserverCtor),
+): () => void {
+  const measure = () => onWidth(Math.max(0, Math.floor(el.getBoundingClientRect().width)));
+  measure();
+  if (!Observer) return () => {};
+  const ro = new Observer(measure);
+  ro.observe(el as never);
+  return () => ro.disconnect();
+}
+
+/**
+ * Tracks the plate container's width and derives the plate's drawing size.
+ *
+ * The ref is a callback: it measures when the element is attached, not when the component that owns the
+ * hook mounts. The Building view renders its plate only while a floor is open, so the element appears
+ * (and goes, and comes back) long after the view mounted; each time it is measured and observed afresh,
+ * and the observer of the element that left is disconnected.
+ */
+export function usePlateSize(aspect: number, fallbackWidth = 640): [RefCallback<HTMLDivElement>, PlateSize] {
   const [cw, setCw] = useState(fallbackWidth);
-  useLayoutEffect(() => {
-    const el = ref.current;
+  const ref = useCallback((el: HTMLDivElement | null) => {
     if (!el) return;
-    const measure = () => setCw(Math.max(0, Math.floor(el.getBoundingClientRect().width)));
-    measure();
-    if (typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
+    return observeWidth(el, setCw);
   }, []);
   return [ref, plateSize(cw, aspect)];
 }

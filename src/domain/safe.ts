@@ -1,5 +1,7 @@
-import type { FloorView, Segment } from './derive';
-import type { Availability, Deal, Lease } from './types';
+import { floorTotals, type FloorView, type Segment, type SegmentKind } from './derive';
+import type { Kpis } from './kpis';
+import type { RolloverBucket } from './rollover';
+import type { Availability, Deal, ISODate, Lease } from './types';
 
 /**
  * The prospect-safe policy, in one module. `safe=1` is what a broker shows a prospect: the building,
@@ -14,24 +16,47 @@ import type { Availability, Deal, Lease } from './types';
  *   tenant name, contact, industry               tenantLabel · contactLabel · canShowTenant
  *   in-place and confidential rents              rentVisible · canShowInPlaceRent
  *   holdover and month-to-month                  canShowTenantRisk
- *   when a lease in place ends (every lease)     canShowLeaseTerm · termHidden · safeFloors
+ *   every date of every lease (see below)        canShowLeaseTerm · termHidden · leaseDatesHidden · safeFloors
  *   the renewal worklist, expiry highlighting    canShowLeaseTerm
+ *   SF and leases ending per period              canShowRollover · safeRollover · safeKpis
+ *   any as-of date but today                     canTimeTravel · planDate (state/planState.ts holds the URL to it)
  *   deals: stage, prospect, size, counts         canShowDeals · visibleDeals · prospectLabel
  *   open inquiries and where they came from      canShowInquiries · visibleInquiries
  *   data issues, counts included                 canShowIssues · visibleIssues
  *   brokers and record owners                    canShowBrokers · brokerLabel
  *   last touch, change history, verified stamps  canShowActivity
- *   quiet (unpublished) listings                 listingVisible · marketedFor · safeFloors
+ *   quiet (unpublished) listings                 listingVisible · marketedFor · publishedFloors
  *   whether a listing is quiet or published      canShowListingStatus
  *   record actions (they name the record)        canShowRecordActions
  *   a search typed before the mode was turned on canKeepSearch (state/planState.ts applies it)
  *
- * Lease terms. A holdover or month-to-month lease has no end date to show. If every other lease showed
- * its expiry, those two would be the only suites without one, which is exactly what must not be told.
- * So a prospect is shown no lease term at all: a lease in place reads "Leased" whether it runs to 2034,
- * expired last year or never had an end date. Space on offer keeps its dates and asking rents, a signed
- * lease keeps its move-in date, and building-wide totals (WALT, SF rolling per year) stay because they
- * describe the building and no single suite.
+ * The rule for leases, in four parts. Each closes a way of working out what the one before withheld.
+ *
+ * 1. No date of any lease. A prospect is shown no commencement date, no end date and no time remaining,
+ *    for a lease in place or for one that is signed and not yet in. A lease in place reads "Leased"
+ *    whether it runs to 2034, expired last year (holdover) or never had an end date (month-to-month),
+ *    so none stands out by what it lacks; a signed lease reads "Signed, not in". `safeFloors` removes
+ *    the dates from the segment and from the lease record it carries, so a view that never asks still
+ *    has no date to print. Space on offer keeps its own dates and asking rents: available from, a
+ *    sublease's "thru" date.
+ *
+ * 2. Nothing by period. With every suite's RSF on the page, "4–5 yr · 13,400 SF · 1 lease" can only
+ *    be one suite, and "35,300 SF expiring in 12 months" only one set of suites. So the rollover by
+ *    period (table, chart, timeline band, chips) and the Expiring 12 mo figure are withheld, lease
+ *    counts included. `safeRollover` and `safeKpis` hand a prospect-safe caller no period and no figure.
+ *
+ * 3. Today only. Moving the as-of date re-draws each lease as vacated once it has ended, which gives
+ *    every end date away one step at a time. A prospect-safe plan is always drawn as of today
+ *    (`planDate`): a link's `asOf` is ignored, turning the mode on returns to today and the as-of
+ *    controls are off. No history of ended leases is drawn either.
+ *
+ * 4. A quiet listing is never drawn, whatever the suite's state: not as a badge on an occupied suite,
+ *    not as available space, not as a sublease (`publishedFloors`).
+ *
+ * WALT stays. It is one figure for the whole building: one equation in as many unknowns as there are
+ * leases. With no period total, no date and no second as-of date beside it, it bounds no single
+ * lease more tightly than "somewhere between nothing and the whole of it". Occupancy, available SF
+ * and the largest block stay for the same reason: they describe space, not terms.
  */
 
 export const TITLE = 'Stacking plan';
@@ -66,19 +91,50 @@ export const canShowTenant = (safe: boolean): boolean => !safe;
 export const canShowTenantRisk = (safe: boolean): boolean => !safe;
 
 /**
- * When a lease in place ends: its expiry date, the months left, its colour on the expiration ramp, its
- * row in the renewal worklist. A prospect is shown none of it, for any lease (see "Lease terms" above).
+ * When a lease starts and ends: its dates, the months left, its colour on the expiration ramp, its
+ * row in the renewal worklist. A prospect is shown none of it, for any lease (rule 1 above).
  */
 export const canShowLeaseTerm = (safe: boolean): boolean => !safe;
 
 const IN_PLACE: ReadonlySet<string> = new Set(['leased', 'holdover', 'mtm', 'sublease']);
 
 /**
- * True when this segment's lease term must not be shown: in prospect-safe mode, every lease in place
- * alike (ordinary, holdover, month-to-month, and the head lease behind a sublet suite), so none stands
- * out. A sublease's own "thru" date is part of the offer and is not a lease term.
+ * True when this segment is a lease in place that a prospect sees only as "Leased": ordinary,
+ * holdover, month-to-month, and the head lease behind a sublet suite, so none stands out. A
+ * sublease's own "thru" date is part of the offer and is not a lease term.
  */
 export const termHidden = (kind: string, safe: boolean): boolean => !canShowLeaseTerm(safe) && IN_PLACE.has(kind);
+
+/**
+ * True when no date of this segment's lease may be shown: every lease in place (`termHidden`) and also
+ * a lease that is signed and not yet in, whose move-in and end dates are lease dates like any other.
+ */
+export const leaseDatesHidden = (kind: string, safe: boolean): boolean => !canShowLeaseTerm(safe) && (IN_PLACE.has(kind) || kind === 'committed');
+
+/** SF and leases ending per period, and the Expiring 12 mo figure (rule 2 above). */
+export const canShowRollover = (safe: boolean): boolean => !safe;
+
+/** Whether the plan may be drawn for a date other than today (rule 3 above). */
+export const canTimeTravel = (safe: boolean): boolean => !safe;
+
+/** The date a plan is drawn for: the as-of date asked for, or today when time travel is withheld. */
+export const planDate = (asOf: ISODate, today: ISODate, safe: boolean): ISODate => (canTimeTravel(safe) ? asOf : today);
+
+/**
+ * The rollover as a caller may show it: every period and the at-risk SF, or none of them. What is
+ * left (`overAllocated`) names floors, not leases.
+ */
+export function safeRollover<T extends { buckets: RolloverBucket[]; atRisk: number }>(roll: T, safe: boolean): T {
+  return canShowRollover(safe) ? roll : { ...roll, buckets: [], atRisk: 0 };
+}
+
+/**
+ * The KPIs as a caller may show them: with or without the Expiring 12 mo figure and its lease
+ * count. Ask `canShowRollover` before printing either; a caller that forgets prints a zero, not a leak.
+ */
+export function safeKpis(k: Kpis, safe: boolean): Kpis {
+  return canShowRollover(safe) ? k : { ...k, expiring12: 0, expiring12Leases: 0 };
+}
 
 /** Deal activity: stage, prospect, size, updated date, the pipeline and every deal count. */
 export const canShowDeals = (safe: boolean): boolean => !safe;
@@ -122,43 +178,80 @@ export const listingVisible = (a: Pick<Availability, 'published'>, safe: boolean
 export const marketedFor = (seg: Pick<Segment, 'marketed'>, safe: boolean): Availability | undefined =>
   seg.marketed && listingVisible(seg.marketed, safe) ? seg.marketed : undefined;
 
+/** The lease kind a suite goes back to when the sublease offered on it is a quiet listing. */
+function headKind(s: Segment): SegmentKind {
+  if (s.endDate === null) return 'mtm';
+  return s.headMonths !== null && s.headMonths !== undefined && s.headMonths < 0 ? 'holdover' : 'leased';
+}
+
+/** One segment with any quiet listing taken out of it; the same object when it carries none. */
+function withoutQuietListing(s: Segment): Segment {
+  let out = s;
+  if (out.marketed && out.marketed.published === false) out = { ...out, marketed: undefined };
+  const a = out.availability;
+  if (!a || a.published !== false) return out;
+  // A sublet suite goes back to being the lease it is; its months are the head lease's again.
+  if (out.kind === 'sublease') return { ...out, kind: headKind(out), availability: undefined, monthsToExpiry: out.headMonths ?? null, headMonths: undefined };
+  // Vacant space listed quietly is, to a prospect, space that is not on the market.
+  return { ...out, kind: 'unmarketed', availability: undefined, lease: undefined, availableFrom: undefined };
+}
+
 /**
- * The floors with quiet marketed-for-later listings removed from the occupied suites that carry them,
- * and nothing else changed. Building-wide totals (KPIs, the rollover) are computed from this: they
- * need the real lease terms, and they name no suite. Outside prospect-safe mode the input is returned as is.
+ * The floors with every quiet listing removed, whatever the suite's state, and nothing else changed:
+ * an occupied suite loses its "marketed for later", a sublet suite goes back to leased, and vacant
+ * space listed quietly becomes space that is not on the market. The floor's own figures are worked
+ * out again from what is left. Building-wide totals (the KPIs) are computed from this: they need the
+ * real lease terms, and they name no suite. Outside prospect-safe mode the input is returned as is.
  */
 export function publishedFloors(floors: FloorView[], safe: boolean): FloorView[] {
   if (!safe) return floors;
   return floors.map((f) => {
-    if (f.segments.every((s) => !s.marketed || listingVisible(s.marketed, safe))) return f;
-    return { ...f, segments: f.segments.map((s) => (s.marketed && !listingVisible(s.marketed, safe) ? { ...s, marketed: undefined } : s)) };
+    const segments = f.segments.map(withoutQuietListing);
+    const orphans = f.orphanSubleases.filter((a) => listingVisible(a, safe));
+    if (segments.every((s, i) => s === f.segments[i]) && orphans.length === f.orphanSubleases.length) return f;
+    return { ...f, segments, ...floorTotals(segments, f.leasable), orphanSubleases: orphans };
   });
 }
 
+/** A lease record with its dates removed: what a prospect-safe segment carries. */
+const withoutDates = (lease: Lease): Lease => ({ ...lease, commencement: '', expiration: null, termination: null });
+
 /**
- * One lease in place, as a prospect may see it: a leased suite with no end. Holdover and
- * month-to-month become plain `leased`; the end date and the months left are removed and the segment is
- * marked `termWithheld`, so nothing drawn from it (block, plate, bar, row, legend) can tell one lease
- * from another. A sublet suite keeps the sublease's own end, which is part of the offer.
+ * One segment as a prospect may see it (rule 1 above).
+ *  - A lease in place: a leased suite with no start and no end. Holdover and month-to-month become
+ *    plain `leased`, so nothing drawn from it (block, plate, bar, row, legend) can tell one lease
+ *    from another. A sublet suite keeps the sublease's own end, which is part of the offer.
+ *  - A lease signed and not yet in: still `committed`, with no move-in and no end date.
+ *  - The signed lease that will replace the tenant (`next`) says the tenant is leaving: removed.
+ *  - Space a lease used to occupy carries no trace of that lease, and a suite whose lease has ended
+ *    with nothing on offer (`projected`, drawn only for a later as-of date) is space not on the market.
  */
 function withoutTerm(s: Segment): Segment {
+  const lease = s.lease && withoutDates(s.lease);
   if (s.kind === 'sublease') {
     const thru = s.availability?.subleaseExpiration ?? null;
-    return { ...s, endDate: thru, monthsToExpiry: thru ? s.monthsToExpiry : null, headMonths: null, termWithheld: true };
+    return { ...s, lease, next: undefined, endDate: thru, monthsToExpiry: thru ? s.monthsToExpiry : null, headMonths: null, termWithheld: true };
   }
-  return { ...s, kind: 'leased', endDate: null, monthsToExpiry: null, termWithheld: true };
+  if (IN_PLACE.has(s.kind)) return { ...s, kind: 'leased', lease, next: undefined, endDate: null, monthsToExpiry: null, termWithheld: true };
+  if (s.kind === 'committed') return { ...s, lease, endDate: null, monthsToExpiry: null, termWithheld: true };
+  if (s.kind === 'projected') return { ...s, kind: 'unmarketed', lease: undefined, endDate: null, monthsToExpiry: null };
+  return s.lease || s.suspect || s.next ? { ...s, lease: undefined, suspect: undefined, next: undefined } : s;
 }
 
 /**
  * The floors as a prospect may see them, for everything that draws or lists a suite: quiet listings
- * are removed (`publishedFloors`) and every lease in place loses its term (`withoutTerm`), so anything
+ * are removed (`publishedFloors`) and every lease loses its dates (`withoutTerm`), so anything
  * computed from the result (blocks, bars, lists, the legend, finder options) cannot show either. A new
- * view that never asks `termHidden` still receives no term to show. Outside prospect-safe mode the
- * input is returned as is.
+ * view that never asks `termHidden` still receives no date to show. Pass floors derived for
+ * `planDate`; floors derived for a later date come out with no vacated suite and no quiet listing
+ * all the same. Outside prospect-safe mode the input is returned as is.
  */
 export function safeFloors(floors: FloorView[], safe: boolean): FloorView[] {
   if (!safe) return floors;
-  return publishedFloors(floors, safe).map((f) => (f.segments.some((s) => termHidden(s.kind, safe)) ? { ...f, segments: f.segments.map((s) => (termHidden(s.kind, safe) ? withoutTerm(s) : s)) } : f));
+  return publishedFloors(floors, safe).map((f) => {
+    const segments = f.segments.map(withoutTerm);
+    return segments.every((s, i) => s === f.segments[i]) ? f : { ...f, segments, ...floorTotals(segments, f.leasable) };
+  });
 }
 
 /**

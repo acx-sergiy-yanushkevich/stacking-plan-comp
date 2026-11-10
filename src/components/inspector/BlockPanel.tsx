@@ -19,6 +19,7 @@ import {
   marketedFor,
   rentVisible,
   tenantLabel,
+  leaseDatesHidden,
   termHidden,
   visibleDeals,
   visibleInquiries,
@@ -28,6 +29,7 @@ import { selectSegment, type Patch } from '../plan/actions';
 import { kindLabel } from '../plan/segmentText';
 import { Actions, type ActionItem } from './Actions';
 import { DealList, Facts, Section, dedupeDeals, touchText } from './parts';
+import { OptionSection } from './OptionSection';
 
 export interface BlockPanelProps {
   seg: Segment;
@@ -72,7 +74,8 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
   const rentText = lease ? (rentVisible(lease, safe) && lease.rate !== null ? rate(lease.rate, lease.rateUnit, lease.leaseType) : !canShowInPlaceRent(safe) ? 'Hidden' : lease.confidential ? 'Confidential' : 'Not on record') : undefined;
   const remaining = (() => {
     if (!lease) return undefined;
-    if (termHidden(seg.kind, safe)) return undefined;
+    // Prospect-safe: no date of any lease, in place or signed.
+    if (leaseDatesHidden(seg.kind, safe)) return undefined;
     if (seg.kind === 'mtm') return 'Month-to-month';
     if (seg.kind === 'holdover') return `Holdover · expired ${seg.endDate ? fmtDate(seg.endDate) : ''}`;
     if (seg.kind === 'committed') return `Moves in ${fmtDate(lease.commencement)}`;
@@ -121,6 +124,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
 
   return (
     <>
+      {model.option && <OptionSection option={model.option} model={model} current={seg.key} patch={patch} />}
       {carriesLease && lease && (
         <Section title={seg.kind === 'committed' ? 'Signed lease' : seg.kind === 'projected' ? 'Previous lease' : 'Lease'}>
           <Facts
@@ -128,8 +132,8 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
               canShowTenant(safe) && ['Tenant', <strong key="t">{lease.tenant}</strong>],
               ['Contact', contactLabel(lease.tenantContact, safe)],
               canShowTenant(safe) && ['Industry', lease.industry],
-              // Prospect-safe: no lease in place shows its term; every one says "Leased" and nothing more.
-              termHidden(seg.kind, safe) ? ['Status', 'Leased'] : ['Term', `${fmtDate(lease.commencement)} – ${seg.endDate ? fmtDate(seg.endDate) : 'open (MTM)'}`],
+              // Prospect-safe: no lease shows a date. One in place says "Leased", one signed says "Signed, not in", and nothing more.
+              leaseDatesHidden(seg.kind, safe) ? ['Status', termHidden(seg.kind, safe) ? 'Leased' : 'Signed, not in'] : ['Term', `${fmtDate(lease.commencement)} – ${seg.endDate ? fmtDate(seg.endDate) : 'open (MTM)'}`],
               ['Remaining', remaining],
               ['Rent', rentText],
               ['Broker', brokerLabel(lease.owner, safe)],

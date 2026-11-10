@@ -133,6 +133,39 @@ describe('the prospect-safe boundary in the state layer', () => {
     expect(applyPatch(on, { safe: false })).toEqual({ ...d, safe: false });
   });
 
+  it('a link opened with safe on ignores its as-of date: the plan is today\'s, and the URL says so', () => {
+    for (const asOf of ['2027-04-15', '2028-01-01', '2025-01-01']) {
+      const s = parseState(`?safe=1&asOf=${asOf}&view=stack`, TODAY);
+      expect(s, asOf).toMatchObject({ safe: true, asOf: TODAY, view: 'stack' });
+      expect(serializeState(s, TODAY)).toBe('?view=stack&safe=1');
+    }
+    // Without the mode the same link keeps its date.
+    expect(parseState('?asOf=2027-04-15&view=stack', TODAY).asOf).toBe('2027-04-15');
+  });
+
+  it('turning the mode on returns a projected plan to today, and no control can move the date while it is on', () => {
+    const projected: PlanState = { ...d, asOf: '2027-04-15' };
+    const on = applyPatch(projected, { safe: true }, TODAY);
+    expect(on).toMatchObject({ safe: true, asOf: TODAY });
+    // The as-of popover, the timeline cursor and the map's presenter all go through applyPatch.
+    for (const asOf of ['2027-02-01', '2030-06-01', '2026-01-01']) expect(applyPatch(on, { asOf }, TODAY).asOf, asOf).toBe(TODAY);
+    expect(applyPatch(on, { asOf: '2028-01-01', lens: 'expiry' }, TODAY)).toMatchObject({ asOf: TODAY, lens: 'expiry' });
+    // Turning the mode off does not bring the old date back; from there the date moves again.
+    const off = applyPatch(on, { safe: false }, TODAY);
+    expect(off.asOf).toBe(TODAY);
+    expect(applyPatch(off, { asOf: '2028-01-01' }, TODAY).asOf).toBe('2028-01-01');
+    // Outside the mode nothing is pinned.
+    expect(applyPatch(projected, { lens: 'rent' }, TODAY).asOf).toBe('2027-04-15');
+  });
+
+  it('safeState holds the date only when it is told what today is', () => {
+    const on: PlanState = { ...d, safe: true, asOf: '2028-01-01' };
+    expect(safeState(on, TODAY).asOf).toBe(TODAY);
+    expect(safeState(on)).toBe(on);
+    const pinned = safeState(on, TODAY);
+    expect(safeState(pinned, TODAY)).toBe(pinned);
+  });
+
   it('safeState and enterSafe leave a state outside the mode untouched, and are idempotent inside it', () => {
     const open: PlanState = { ...d, q: 'cirrus', window: '90', bucket: 1, mode: 'issues' };
     expect(safeState(open)).toBe(open);

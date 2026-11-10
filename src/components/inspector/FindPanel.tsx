@@ -7,8 +7,8 @@ import { canShowDeals, canShowInquiries } from '../../domain/safe';
 import { Button, Chip, Icon, Segmented, SelectField, TextField } from '../ui';
 import { selectSegment, type Patch } from '../plan/actions';
 import { Section } from './parts';
-import { nearMisses } from '../../domain/finder';
-import { setHoverKeys, setPinnedKeys } from '../../state/hoverStore';
+import { chosenOption, neededByDate, type FitOption, type NearMiss } from '../../domain/finder';
+import { setHoverKeys, setPinnedOption } from '../../state/hoverStore';
 
 export interface FindPanelProps {
   model: PlanModel;
@@ -23,14 +23,29 @@ const TYPES: Array<{ id: FitKind; label: string }> = [
   { id: 'sublease', label: 'Sublease' },
 ];
 
+/** Quick "Needed by" dates, in months from the as-of date; 0 is the as-of date itself. */
+const BY_PRESETS = [0, 3, 6, 12];
+
+/**
+ * A finder row keeps the whole option, not one suite of it: every suite is lit in the plan, the
+ * first one opens in the inspector and the inspector lists the rest (`OptionSection`).
+ */
+function openOption(patch: Patch, row: FitOption | NearMiss) {
+  setPinnedOption(chosenOption(row));
+  selectSegment(patch, row.keys[0]);
+}
+
 export function FindPanel({ model, state, patch }: FindPanelProps) {
-  const { safe, asOf, property } = model;
+  const { safe, asOf, today, property } = model;
   const [hovered, setHovered] = useState<number | null>(null);
   const inquiry = state.inquiry ? property.inquiries.find((i) => i.id === state.inquiry) ?? null : null;
   const req = model.req;
   const largest = model.fits?.largestNow ?? { size: model.kpis.maxContiguous.size, floorName: model.kpis.maxContiguous.floorName ?? '' };
   const options = model.fits?.options ?? [];
-  const misses = req && options.length < 3 ? nearMisses(model.floors, req.size, asOf) : [];
+  // Alternatives come from the model, already held to the chosen space type: the list and the plan agree.
+  const misses = model.fits?.alternatives ?? [];
+  const by = state.by ?? inquiry?.neededBy ?? null;
+  const setBy = (next: string | null) => patch({ by: next, inquiry: null, req: state.req ?? inquiry?.minSize ?? null, max: state.max ?? inquiry?.maxSize ?? null });
 
   const numberOrNull = (v: string) => {
     const n = Number(v);
@@ -70,25 +85,27 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
             </p>
           )}
           <div className="sp-ins__form-row">
-            <SelectField label="Needed by" value={state.by ?? inquiry?.neededBy ?? ''} onChange={(e) => patch({ by: e.target.value || null, inquiry: null, req: state.req ?? inquiry?.minSize ?? null, max: state.max ?? inquiry?.maxSize ?? null })}>
-              <option value="">Any time</option>
-              {Array.from({ length: 36 }, (_, i) => addMonths(asOf.slice(0, 7) + '-01', i + 1)).map((d) => (
-                <option key={d} value={d}>
-                  {fmtMonthYear(d)}
-                </option>
-              ))}
-              {(() => {
-                const applied = state.by ?? inquiry?.neededBy ?? '';
-                const months = Array.from({ length: 36 }, (_, i) => addMonths(asOf.slice(0, 7) + '-01', i + 1));
-                return applied && !months.includes(applied) ? <option value={applied}>{fmtDate(applied)}</option> : null;
-              })()}
-            </SelectField>
+            <TextField label="Needed by" kind="date" min={asOf} value={by ?? ''} onChange={(e) => setBy(neededByDate(e.target.value))} />
             <div className="sp-field">
               <span className="sp-field__label" id="sp-find-type">
                 Type
               </span>
               <Segmented aria-label="Space type" options={TYPES} value={state.fit} onChange={(fit) => patch({ fit })} />
             </div>
+          </div>
+          {/* Any exact date can be typed or picked above; these set the common ones in one click. */}
+          <div className="sp-ins__chips" role="group" aria-label="Needed by, quick dates">
+            <Chip selected={by === null} onClick={() => setBy(null)}>
+              Any time
+            </Chip>
+            {BY_PRESETS.map((months) => {
+              const d = addMonths(asOf, months);
+              return (
+                <Chip key={months} selected={by === d} onClick={() => setBy(d)} title={fmtDate(d)}>
+                  {months === 0 ? (asOf === today ? 'Today' : 'As-of date') : `+${months} mo`}
+                </Chip>
+              );
+            })}
           </div>
           {/* The open inquiries are other prospects' requirements: the list is the broker's, not a prospect's. */}
           {canShowInquiries(safe) && (
@@ -123,13 +140,13 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
         <Section title="Options">
           <div className="sp-empty">
             <Icon name="search" size={24} />
-            <div className="sp-empty__title">{`No space fits ${num(req.size)}${req.max ? `–${num(req.max)}` : ''} SF${req.by ? ` by ${fmtMonthYear(req.by)}` : ''}`}</div>
+            <div className="sp-empty__title">{`No space fits ${num(req.size)}${req.max ? `–${num(req.max)}` : ''} SF${req.by ? ` by ${fmtDate(req.by)}` : ''}`}</div>
             <p>Raise the maximum, drop the type filter or move the date to include space marketed for later.</p>
             <Button size="sm" onClick={() => patch({ by: addMonths(req.by ?? asOf, 12), inquiry: null, req: req.size, max: req.max })}>
               Try 12 months later
             </Button>
           </div>
-          <NearMisses misses={misses} patch={patch} max={req.max} />
+          <NearMisses misses={misses} patch={patch} max={req.max} selected={state.select} />
         </Section>
       ) : (
         <Section title={`Options · ${options.length}`}>
@@ -146,10 +163,7 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
                   <button
                     type="button"
                     className={`sp-ins__row ${hovered === i ? 'is-hover' : ''} ${selected ? 'is-selected' : ''}`}
-                    onClick={() => {
-                      setPinnedKeys(o.keys.length > 1 ? new Set(o.keys) : null);
-                      selectSegment(patch, o.keys[0]);
-                    }}
+                    onClick={() => openOption(patch, o)}
                     onMouseEnter={() => {
                       setHovered(i);
                       setHoverKeys(new Set(o.keys));
@@ -209,41 +223,54 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
       {options.length > 0 && misses.length > 0 && (
         <Section title="Alternatives">
           <p className="sp-ins__note" style={{ marginTop: 0, marginBottom: 8 }}>
-            Smaller spaces with their shortfall, and stacked floors that combine direct and sublease space.
+            {state.fit === 'any' ? 'Smaller spaces with their shortfall, and stacked floors that combine direct and sublease space.' : `Smaller ${state.fit} spaces with their shortfall, and stacked floors of ${state.fit} space. Choose “Any” to combine direct and sublease space.`}
           </p>
-          <NearMisses misses={misses} patch={patch} max={req?.max ?? null} />
+          <NearMisses misses={misses} patch={patch} max={req?.max ?? null} selected={state.select} />
         </Section>
       )}
     </>
   );
 }
 
-function NearMisses({ misses, patch, max }: { misses: ReturnType<typeof nearMisses>; patch: Patch; max: number | null }) {
+function NearMisses({ misses, patch, max, selected }: { misses: NearMiss[]; patch: Patch; max: number | null; selected: string | null }) {
   if (!misses.length) return null;
+  const light = (m: NearMiss | null) => setHoverKeys(m ? new Set(m.keys) : null);
   return (
     <ul className="sp-ins__list" aria-label="Near misses">
-      {misses.map((m) => (
-        <li key={m.keys.join('+')}>
-          <button type="button" className="sp-ins__row" onClick={() => selectSegment(patch, m.keys[0])}>
-            <div className="sp-ins__row-main">
-              <div className="sp-ins__row-title">
-                <span>{m.floorName}</span>
-                {m.kind === 'stack' && <span className="sp-ins__tag">stacked floors</span>}
+      {misses.map((m) => {
+        const isSelected = selected !== null && m.keys.includes(selected);
+        return (
+          <li key={m.keys.join('+')}>
+            <button
+              type="button"
+              className={`sp-ins__row ${isSelected ? 'is-selected' : ''}`}
+              aria-pressed={isSelected}
+              onClick={() => openOption(patch, m)}
+              onMouseEnter={() => light(m)}
+              onMouseLeave={() => light(null)}
+              onFocus={() => light(m)}
+              onBlur={() => light(null)}
+            >
+              <div className="sp-ins__row-main">
+                <div className="sp-ins__row-title">
+                  <span>{m.floorName}</span>
+                  {m.kind === 'stack' && <span className="sp-ins__tag">stacked floors</span>}
+                </div>
+                <div className="sp-ins__row-meta">
+                  <span>{m.type}</span>
+                  <span>{m.from ? fmtMonthYear(m.from) : 'Now'}</span>
+                  {m.shortfall > 0 && <span>{num(m.shortfall)} SF short</span>}
+                  {max !== null && m.size > max && <span>{num(m.size - max)} SF over max</span>}
+                  {m.kind === 'stack' && <span>{plural(m.keys.length, 'suite')} on two floors</span>}
+                </div>
               </div>
-              <div className="sp-ins__row-meta">
-                <span>{m.type}</span>
-                <span>{m.from ? fmtMonthYear(m.from) : 'Now'}</span>
-                {m.shortfall > 0 && <span>{num(m.shortfall)} SF short</span>}
-                {max !== null && m.size > max && <span>{num(m.size - max)} SF over max</span>}
-                {m.kind === 'stack' && <span>two floors</span>}
+              <div className="sp-ins__row-end">
+                <span className="sp-ins__row-value">{sf(m.size)}</span>
               </div>
-            </div>
-            <div className="sp-ins__row-end">
-              <span className="sp-ins__row-value">{sf(m.size)}</span>
-            </div>
-          </button>
-        </li>
-      ))}
+            </button>
+          </li>
+        );
+      })}
     </ul>
   );
 }

@@ -1,5 +1,5 @@
 import type { ISODate } from '../domain/types';
-import { canKeepSearch, canShowIssues, canShowLeaseTerm } from '../domain/safe';
+import { canKeepSearch, canShowIssues, canShowLeaseTerm, planDate } from '../domain/safe';
 
 /**
  * URL-synced plan state. Pure: no React, no DOM. `usePlanState` wires it to
@@ -108,15 +108,18 @@ function text(v: string | null): string | null {
 
 /**
  * What prospect-safe mode never holds, whatever asked for it: the renewal worklist and the rollover
- * highlight (both point at single leases by their term) and the data-issues panel. Idempotent, and
- * the identity outside prospect-safe mode.
+ * highlight (both point at single leases by their term), the data-issues panel, and an as-of date
+ * other than today (a later date shows each lease's end as a vacated suite). `today` is passed by
+ * whoever owns the clock (`parseState`, `usePlanState`); without it the date is left alone.
+ * Idempotent, and the identity outside prospect-safe mode.
  */
-export function safeState(s: PlanState): PlanState {
+export function safeState(s: PlanState, today?: ISODate): PlanState {
   if (!s.safe) return s;
   const window = canShowLeaseTerm(s.safe) ? s.window : null;
   const bucket = canShowLeaseTerm(s.safe) ? s.bucket : null;
   const mode = (s.mode === 'worklist' && !canShowLeaseTerm(s.safe)) || (s.mode === 'issues' && !canShowIssues(s.safe)) ? 'building' : s.mode;
-  return window === s.window && bucket === s.bucket && mode === s.mode ? s : { ...s, window, bucket, mode };
+  const asOf = today ? planDate(s.asOf, today, s.safe) : s.asOf;
+  return window === s.window && bucket === s.bucket && mode === s.mode && asOf === s.asOf ? s : { ...s, window, bucket, mode, asOf };
 }
 
 /**
@@ -124,24 +127,25 @@ export function safeState(s: PlanState): PlanState {
  * `safeState`, a search in progress is dropped, because it may be a tenant, contact or prospect name
  * and would otherwise sit in the search box and the URL. Typing a suite or floor afterwards works.
  */
-export function enterSafe(s: PlanState): PlanState {
-  const next = safeState(s);
+export function enterSafe(s: PlanState, today?: ISODate): PlanState {
+  const next = safeState(s, today);
   return next.safe && next.q && !canKeepSearch(next.safe) ? { ...next, q: '' } : next;
 }
 
 /**
  * The one way state changes: apply a patch, then hold the prospect-safe invariants. Every control
- * goes through this (`usePlanState`), so no handler has to remember to clear anything itself.
+ * goes through this (`usePlanState`), so no handler has to remember to clear anything itself: a
+ * handler that asks for another as-of date while the mode is on simply stays on today.
  */
-export function applyPatch(prev: PlanState, patch: Partial<PlanState>): PlanState {
+export function applyPatch(prev: PlanState, patch: Partial<PlanState>, today?: ISODate): PlanState {
   const next = { ...prev, ...patch };
-  return next.safe && !prev.safe ? enterSafe(next) : safeState(next);
+  return next.safe && !prev.safe ? enterSafe(next, today) : safeState(next, today);
 }
 
 export function parseState(search: string, today: ISODate): PlanState {
   const p = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
   const d = defaultState(today);
-  return enterSafe({
+  const parsed: PlanState = {
     view: oneOf(VIEWS, p.get('view'), d.view),
     lens: oneOf(LENSES, p.get('lens'), d.lens),
     asOf: isoOrNull(p.get('asOf')) ?? today,
@@ -161,7 +165,9 @@ export function parseState(search: string, today: ISODate): PlanState {
     census: text(p.get('census')),
     theme: oneOfOrNull(THEMES, p.get('theme')),
     ...(p.get('skin') === 'classic' ? { skin: 'classic' as const } : p.get('skin') === 'aurora' ? { skin: 'aurora' as const } : {}),
-  });
+  };
+  // A link with `safe=1` is a crossing into the mode: `q` and `asOf` are dropped with everything else it never holds.
+  return enterSafe(parsed, today);
 }
 
 /** Query string with defaults omitted; '' when everything is default, otherwise leading `?`. */

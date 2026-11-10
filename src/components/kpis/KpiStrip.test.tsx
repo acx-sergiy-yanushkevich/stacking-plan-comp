@@ -57,6 +57,24 @@ describe('KpiStrip', () => {
     expect(html).toContain('Withheld');
     expect(html).not.toContain('on vacancies');
   });
+
+  it('withholds Expiring 12 mo in prospect-safe mode: no SF, no share, no lease count, even from a model that carries them', () => {
+    const open = render(TODAY);
+    const figure = open.kpis.expiring12.toLocaleString('en-US');
+    expect(open.kpis.expiring12).toBeGreaterThan(0);
+    expect(open.html).toContain(`>${figure}<span class="sp-kpi__unit">`);
+    expect(open.html).toMatch(/of leased · \d+ leases?/);
+    // `render` hands the strip the broker's KPIs: the card itself asks the policy.
+    for (const variant of ['strip', 'column'] as const) {
+      const { html } = render(TODAY, true, variant);
+      const card = /<div class="sp-kpi sp-kpi--static"[^>]*><span class="sp-kpi__label sp-label">Expiring 12 mo<\/span>.*?<\/div>/.exec(html)?.[0] ?? '';
+      expect(card).toContain('<span>Withheld</span>');
+      expect(html).not.toContain(figure);
+      expect(html).not.toMatch(/\d+ leases?\b|of leased/);
+      // A figure, not a button: there is nothing to open.
+      expect(html.match(/<button type="button" class="sp-kpi/g)?.length).toBe(4);
+    }
+  });
 });
 
 describe('KpiStrip, column variant', () => {

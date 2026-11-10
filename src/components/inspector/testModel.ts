@@ -1,11 +1,11 @@
 import { property, TODAY } from '../../data/mock/property';
 import { activeDeals, deriveFloors, isLeaseKind, segmentIndex, type FloorView } from '../../domain/derive';
-import { filterFits, findFits } from '../../domain/finder';
+import { filterFits, findFits, nearMisses } from '../../domain/finder';
 import { findIssues, issueCounts, recentChanges } from '../../domain/issues';
 import { computeKpis, kpiDeltas } from '../../domain/kpis';
 import { legendFor } from '../../domain/lenses';
 import { rollover } from '../../domain/rollover';
-import { canShowLeaseTerm, publishedFloors, safeFloors } from '../../domain/safe';
+import { canShowLeaseTerm, planDate, publishedFloors, safeFloors, safeKpis, safeRollover } from '../../domain/safe';
 import { timelineModel } from '../../domain/timeline';
 import { WINDOW_MONTHS, type PlanModel, type WorklistRow } from '../../model/usePlanModel';
 import type { PlanState, WindowKey } from '../../state/planState';
@@ -15,13 +15,13 @@ import type { PlanState, WindowKey } from '../../state/planState';
  * views and panels can be rendered to a string. Imported by tests only; nothing in the app uses it.
  */
 export function buildModel(state: PlanState): PlanModel {
-  const asOf = state.asOf;
+  const asOf = planDate(state.asOf, TODAY, state.safe);
   // As in `usePlanModel`: totals keep the real lease terms; `floors` is the prospect-safe projection every view draws.
   const totals = publishedFloors(deriveFloors(property, asOf, TODAY), state.safe);
   const totalsToday = asOf === TODAY ? totals : publishedFloors(deriveFloors(property, TODAY, TODAY), state.safe);
   const floors = safeFloors(totals, state.safe);
-  const kpis = computeKpis(property, totals, asOf);
-  const kpisToday = asOf === TODAY ? kpis : computeKpis(property, totalsToday, TODAY);
+  const kpis = safeKpis(computeKpis(property, totals, asOf), state.safe);
+  const kpisToday = asOf === TODAY ? kpis : safeKpis(computeKpis(property, totalsToday, TODAY), state.safe);
   const issues = findIssues(property, totals, TODAY);
   const inquiry = state.inquiry ? property.inquiries.find((i) => i.id === state.inquiry) ?? null : null;
   const req = inquiry
@@ -31,7 +31,9 @@ export function buildModel(state: PlanState): PlanModel {
       : null;
   const found = req ? findFits(floors, req.size, req.by, req.max, property.inquiries, asOf) : null;
   const options = found && req ? filterFits(found.options, req.type) : [];
-  const fits = found ? { options, keys: new Set(options.flatMap((o) => o.keys)), largestNow: found.largestNow } : null;
+  const keys = new Set(options.flatMap((o) => o.keys));
+  const alternatives = found && req && options.length < 3 ? nearMisses(floors, req.size, asOf, req.type) : [];
+  const fits = found ? { options, keys, alternatives, partial: new Set(alternatives.flatMap((m) => m.keys).filter((k) => !keys.has(k))), largestNow: found.largestNow } : null;
   const worklist = (w: WindowKey): WorklistRow[] => worklistRows(floors, w);
   const segIndex = segmentIndex(floors);
   const selected = state.select ? segIndex.get(state.select) ?? null : null;
@@ -47,7 +49,7 @@ export function buildModel(state: PlanState): PlanModel {
     kpis,
     kpisToday,
     deltas: asOf === TODAY ? null : kpiDeltas(kpis, kpisToday),
-    roll: rollover(totals, asOf, 'rolling', 8),
+    roll: safeRollover(rollover(totals, asOf, 'rolling', 8), state.safe),
     issues,
     counts: issueCounts(issues),
     changes: recentChanges(property, TODAY, 30),
@@ -61,7 +63,7 @@ export function buildModel(state: PlanState): PlanModel {
     bucketKeys: null,
     highlight: fits?.keys ?? null,
     filterLabel: null,
-    timeline: timelineModel(property, floors, asOf, TODAY),
+    timeline: timelineModel(property, floors, asOf, TODAY, state.safe),
     selected,
     selectedFloor,
     anyEnlarged: false,

@@ -63,6 +63,8 @@
 .sp-fkpi__value { font-size: var(--sp-text-15); font-weight: 600; color: var(--sp-color-text); line-height: 1.3; overflow-wrap: anywhere; }
 .sp-fkpi__value--muted { color: var(--sp-color-text-faint); font-weight: 500; }
 .sp-fkpi__context { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }
+/* A figure and its unit, a count and its noun, a date: one piece. A narrow card breaks between pieces, never inside one. */
+.sp-nb { white-space: nowrap; }
 .sp-fkpi__bar { display: block; height: 6px; border-radius: 3px; background: var(--sp-color-card-2); border: 1px solid var(--sp-color-border); overflow: hidden; }
 .sp-fkpi__bar-fill { display: block; height: 100%; background: var(--sp-color-brand); }
 .sp-floor__warn { align-self: flex-start; }

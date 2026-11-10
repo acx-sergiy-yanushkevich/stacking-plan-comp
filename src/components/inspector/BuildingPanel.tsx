@@ -7,7 +7,7 @@ import { fmtDate, fmtMonthYear } from '../../domain/dates';
 import { num, plural, sf } from '../../domain/format';
 import type { Change } from '../../domain/types';
 import { comingSupply } from '../../domain/kpis';
-import { canShowActivity, canShowDeals, canShowInPlaceRent, canShowIssues, canShowLeaseTerm, canShowTenantRisk, listingVisible } from '../../domain/safe';
+import { canShowActivity, canShowDeals, canShowInPlaceRent, canShowIssues, canShowRollover, canShowTenantRisk, listingVisible } from '../../domain/safe';
 import { Button, Chip, Icon } from '../ui';
 import { selectSegment, toggleBucket, type Patch } from '../plan/actions';
 import { RolloverChart } from './RolloverChart';
@@ -85,45 +85,49 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
   });
 
   const activeBucket = state.bucket;
-  const tail = roll.buckets[roll.buckets.length - 1];
+  const tail = roll.buckets.at(-1);
   const bucketNote = activeBucket !== null ? roll.buckets.find((b) => b.key === activeBucket) : null;
 
   return (
     <>
-      <Section
-        title="Rollover"
-        aside={
-          bucketNote ? (
-            <Chip tone="brand" selected onClick={() => toggleBucket(patch, state.bucket, activeBucket!)} aria-label={`Clear the ${bucketNote.label} filter`} icon="close">
-              {bucketNote.label}
-            </Chip>
-          ) : undefined
-        }
-      >
-        <RolloverChart
-          buckets={roll.buckets}
-          atRisk={roll.atRisk}
-          atRiskLeases={holdover.leases + mtm.leases}
-          activeBucket={activeBucket}
-          onBucket={canShowLeaseTerm(safe) ? (key) => key !== null && toggleBucket(patch, state.bucket, key) : undefined}
-          onAtRisk={openRisk}
-          showRisk={canShowTenantRisk(safe)}
-        />
-        <p className="sp-ins__note">
-          Lease SF ending in rolling 12-month periods from {fmtDate(asOf)}; “{tail.label}” collects everything later.{' '}
-          {canShowLeaseTerm(safe) ? 'Click a bar to highlight those leases in the plan.' : 'Building totals only: no suite shows its lease term in prospect-safe mode.'}
-        </p>
-        {roll.overAllocated.length > 0 && canShowIssues(safe) && (
-          <p className="sp-ins__note sp-ins__warn">
-            {roll.overAllocated.map((o) => `${o.floor} is over-allocated by ${sf(o.sf)}`).join('; ')}: periods use recorded SF, so they can exceed the leasable area; leased is capped at {num(model.kpis.leased)} SF.
+      {/* Rollover by period can be matched to suites by their RSF: a prospect sees none of it (domain/safe.ts, rule 2). */}
+      {canShowRollover(safe) && tail ? (
+        <Section
+          title="Rollover"
+          aside={
+            bucketNote ? (
+              <Chip tone="brand" selected onClick={() => toggleBucket(patch, state.bucket, activeBucket!)} aria-label={`Clear the ${bucketNote.label} filter`} icon="close">
+                {bucketNote.label}
+              </Chip>
+            ) : undefined
+          }
+        >
+          <RolloverChart
+            buckets={roll.buckets}
+            atRisk={roll.atRisk}
+            atRiskLeases={holdover.leases + mtm.leases}
+            activeBucket={activeBucket}
+            onBucket={(key) => key !== null && toggleBucket(patch, state.bucket, key)}
+            onAtRisk={openRisk}
+            showRisk={canShowTenantRisk(safe)}
+          />
+          <p className="sp-ins__note">
+            Lease SF ending in rolling 12-month periods from {fmtDate(asOf)}; “{tail.label}” collects everything later. Click a bar to highlight those leases in the plan.
           </p>
-        )}
-      </Section>
+          {roll.overAllocated.length > 0 && canShowIssues(safe) && (
+            <p className="sp-ins__note sp-ins__warn">
+              {roll.overAllocated.map((o) => `${o.floor} is over-allocated by ${sf(o.sf)}`).join('; ')}: periods use recorded SF, so they can exceed the leasable area; leased is capped at {num(model.kpis.leased)} SF.
+            </p>
+          )}
+        </Section>
+      ) : null}
 
+      {!canShowTenantRisk(safe) ? (
+        <Section title="Lease terms">
+          <p className="sp-ins__explain">Lease dates, rollover by period and tenant risk are withheld in prospect-safe mode.</p>
+        </Section>
+      ) : (
       <Section title="At risk">
-        {!canShowTenantRisk(safe) ? (
-          <p className="sp-ins__explain">Tenant risk is withheld in prospect-safe mode.</p>
-        ) : (
         <ul className="sp-ins__list">
           {(
             [
@@ -149,8 +153,8 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
             </li>
           ))}
         </ul>
-        )}
       </Section>
+      )}
 
       <Section title="Coming supply">
         <ul className="sp-ins__list">

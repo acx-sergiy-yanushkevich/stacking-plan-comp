@@ -6,6 +6,7 @@ import { toneFor, toneShort, type Tone } from '../../domain/lenses';
 import { canShowIssues } from '../../domain/safe';
 import type { GeoPolygon } from '../../domain/types';
 import type { Lens } from '../../state/planState';
+import { lensFact } from '../building/floorFact';
 
 /** Pure helpers behind the map: tone selection, colour resolution, geometry tweaks, expressions. */
 
@@ -45,26 +46,49 @@ export function dominantTone(f: FloorView, lens: Lens, safe: boolean): Tone {
 }
 
 /**
- * What the floor list writes after a floor's leased share. One word for the dominant state ("Leased")
- * hid a third of Floor 8 standing empty, so the list says what is true instead, in exact SF: the
- * space on offer, a unit for sale, an area with no record. The dominant state keeps its word when it
- * is anything but plain leased ("At risk", "Expiring", or the band in the other lenses), because that
- * word explains the swatch. Prospect-safe wording follows the plan's: a gap is "not on the market".
+ * What the floor list writes after a floor's leased share.
+ *
+ * It says of a floor what the Building view says of it, in the same words from the same function
+ * (`lensFact`, building/floorFact.ts): in the status lens holdover, month-to-month or an expiry within 12
+ * months, whatever share of the floor they are; the next expiry in the expiration lens; the live deals;
+ * the rents. One word for the dominant state hid them: Floor 2's month-to-month tenant and Floor 1's
+ * café expiring in February were not on this list while the Building view flagged both. Prospect-safe
+ * follows with it: `lensFact` says nothing a prospect may not be told.
+ *
+ * Beside that, in exact SF: the space on offer (said to be a sublease when it all is), a unit for sale,
+ * an area with no record ("not on the market" for a prospect). Where the Building view has nothing to
+ * add, the state that colours most of the floor keeps its word when it is anything but plain leased,
+ * because that word explains the swatch.
  */
 export function floorState(f: FloorView, lens: Lens, safe: boolean): string {
   const sum = (kind: FloorView['segments'][number]['kind']) => f.segments.filter((s) => s.kind === kind).reduce((t, s) => t + s.size, 0);
-  const word = toneShort(dominantTone(f, lens, safe), lens, safe);
-  const facts: string[] = [];
-  if (lens !== 'status' || word !== 'Leased') facts.push(word);
-  if (f.available > 0) {
-    const onlySublease = sum('sublease') === f.available;
-    facts.push(`${num(f.available)} SF ${onlySublease ? 'sublease ' : ''}available`);
-  }
+  const space = f.available > 0 ? `${num(f.available)} SF ${sum('sublease') === f.available ? 'sublease ' : ''}available` : '';
   const forSale = sum('forsale');
-  if (forSale > 0) facts.push(`${num(forSale)} SF for sale`);
   const gap = sum('unmarketed');
+  const said = lensFact(f, lens, safe);
+  const dominant = dominantTone(f, lens, safe);
+  // In the status lens these states are already on the row in SF; "Leased" needs no word at all.
+  const inSf: Tone[] = ['leased', 'neutral', 'available', 'sublease', 'forsale', 'empty'];
+  const word = said || (lens === 'status' && inSf.includes(dominant)) ? '' : toneShort(dominant, lens, safe);
+  // Status reads as on the model ("5,500 SF available · holdover"); the other lenses lead with what they colour by.
+  const facts = (lens === 'status' ? [space, said || word] : [said || word, space]).filter(Boolean);
+  if (forSale > 0) facts.push(`${num(forSale)} SF for sale`);
   if (gap > 0) facts.push(`${num(gap)} SF ${canShowIssues(safe) ? 'unaccounted' : 'not on the market'}`);
-  return facts.filter(Boolean).join(' · ');
+  const text = facts.join(' · ');
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/**
+ * A second colour for a floor's swatch: the at-risk tone when the floor holds a holdover or
+ * month-to-month tenant, else (status lens) the expiring tone when a lease ends within 12 months, unless
+ * that state already colours most of the floor. Null when there is none, and always in prospect-safe
+ * mode, where those leases are drawn as plain leased (`toneFor`).
+ */
+export function accentTone(f: FloorView, lens: Lens, safe: boolean): Tone | null {
+  const dominant = dominantTone(f, lens, safe);
+  const tones = new Set(f.segments.map((s) => toneFor(s, lens, safe)));
+  for (const t of ['risk', 'expiring'] as const) if (tones.has(t) && dominant !== t) return t;
+  return null;
 }
 
 /** `#rgb` or `#rrggbb` (any case, surrounding space) → lowercase `#rrggbb`; anything else → null. */

@@ -18,6 +18,8 @@ import { RolloverChips } from './RolloverChips';
 import { barLabel, labelText, NAME_FONT, SUB_FONT, tagWidth, wrapLabel, type LabelLine } from './barLabel';
 import { layoutStackedRows, stackedLaneHeight, STACK_LANE_GAP, viewAxis } from './layout';
 import { measure } from '../../lib/textFit';
+import { buildModel as planModel } from '../inspector/testModel';
+import { fmtDate } from '../../domain/dates';
 
 // jsdom-free: the view guards ResizeObserver, but keep the global so the hook path is exercised.
 (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = class {
@@ -84,10 +86,33 @@ describe('TimelineView', () => {
   });
 
   it('hides every tenant name in prospect-safe mode', () => {
-    const model = buildModel(TODAY, true);
-    const html = renderToString(<TimelineView model={model} state={parseState('?safe=1', TODAY)} patch={() => {}} />);
+    const state = parseState('?safe=1', TODAY);
+    const html = renderToString(<TimelineView model={planModel(state)} state={state} patch={() => {}} />);
     for (const name of tenantNames) expect(html, name).not.toContain(name);
-    expect(html).toContain('role="slider"');
+  });
+
+  it('prospect-safe: no lease bar says when it began or ends, there is no rollover band and the date cannot be moved', () => {
+    const state = parseState('?safe=1&view=timeline', TODAY);
+    const html = renderToString(<TimelineView model={planModel(state)} state={state} patch={() => {}} />).replace(/<!-- -->/g, '');
+    // The cursor is a marker, not a slider; the band and its periods are gone.
+    expect(html).not.toContain('role="slider"');
+    expect(html).toContain('aria-label="Plan as of Nov 9, 2026"');
+    expect(html).not.toMatch(/sp-tl-band__col|sp-tl-roll|&lt; 12 mo|Rollover/);
+    expect(html).toContain('the date cannot be moved');
+    // No lease date in any tooltip or accessible name: no "Leased since", no "moves in", no year of a commencement.
+    expect(html).not.toMatch(/Leased since|[Mm]oves in|Vacated/);
+    // "… left" is said of the sublease on offer (its own term) and of nothing else.
+    const left = [...html.matchAll(/aria-label="([^"]*\d+ (?:mo|yr)[^"]* left)"/g)].map((m) => m[1]);
+    expect(left).toHaveLength(1);
+    expect(left[0]).toContain('Sublease thru Sep 2030');
+    const leaseDates = new Set(property.leases.flatMap((l) => [l.commencement, l.expiration, l.termination]).filter((d): d is string => !!d));
+    for (const a of property.availabilities) for (const d of [a.availableFrom, a.subleaseExpiration]) if (d) leaseDates.delete(d);
+    for (const d of leaseDates) expect(html, d).not.toContain(fmtDate(d));
+    // Space on offer keeps its dates.
+    expect(html).toContain('– Sep 30, 2030');
+    // A link that asks for a later date draws the same chart.
+    const later = parseState('?safe=1&view=timeline&asOf=2028-01-01', TODAY);
+    expect(renderToString(<TimelineView model={planModel(later)} state={later} patch={() => {}} />).replace(/<!-- -->/g, '')).toBe(html);
   });
 
   it('shows the Today marker, holdover and projected extensions when time-travelling', () => {

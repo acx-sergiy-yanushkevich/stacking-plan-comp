@@ -42,8 +42,9 @@ export interface Segment {
   /** For available segments: date it becomes available when that is after as-of (null = now). */
   availableFrom?: ISODate | null;
   /**
-   * Prospect-safe projection only (`safeFloors`): this is a lease in place whose term is withheld.
-   * `endDate` and `monthsToExpiry` are null (a sublet suite keeps the sublease's own end).
+   * Prospect-safe projection only (`safeFloors`): this is a lease, in place or signed, whose dates are
+   * withheld. `endDate` and `monthsToExpiry` are null (a sublet suite keeps the sublease's own end) and
+   * the `lease` it carries has no commencement, expiration or termination date.
    */
   termWithheld?: boolean;
 }
@@ -247,6 +248,15 @@ function deriveFloor(p: Property, floor: Floor, asOf: ISODate, today: ISODate): 
     });
   }
 
+  return { floor, leasable, segments, ...floorTotals(segments, leasable), overAllocatedBy: Math.max(0, -gap), orphanSubleases: orphans };
+}
+
+/**
+ * A floor's figures from its segments: leased and available SF and the largest contiguous direct run.
+ * `deriveFloor` uses it, and so does the prospect-safe projection (`domain/safe.ts`) whenever it
+ * changes what a segment is, so the figures always describe the segments they sit beside.
+ */
+export function floorTotals(segments: Segment[], leasable: number): Pick<FloorView, 'leased' | 'available' | 'maxContiguous' | 'bestRun'> {
   // Leased includes signed leases not yet commenced (owner-report convention); physical occupancy does not.
   const rawLeased = segments.filter((s) => isLeaseKind(s.kind) || s.kind === 'committed').reduce((s, x) => s + x.size, 0);
   const available = segments
@@ -271,18 +281,7 @@ function deriveFloor(p: Property, floor: Floor, asOf: ISODate, today: ISODate): 
       runKeys = [];
     }
   }
-
-  return {
-    floor,
-    leasable,
-    segments,
-    leased: Math.min(rawLeased, leasable),
-    available,
-    maxContiguous,
-    bestRun,
-    overAllocatedBy: Math.max(0, -gap),
-    orphanSubleases: orphans,
-  };
+  return { leased: Math.min(rawLeased, leasable), available, maxContiguous, bestRun };
 }
 
 /** Every distinct floor a lease occupies (for "also on floors 9, 10"). */

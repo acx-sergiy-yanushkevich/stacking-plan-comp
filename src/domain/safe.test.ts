@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../data/mock/property';
-import { deriveFloors } from './derive';
+import { deriveFloors, floorTotals } from './derive';
+import { computeKpis } from './kpis';
+import { rollover } from './rollover';
+import { addMonths } from './dates';
 import {
   brokerLabel,
   canShowActivity,
@@ -10,18 +13,24 @@ import {
   canShowInquiries,
   canShowIssues,
   canShowLeaseTerm,
+  canShowRollover,
+  canTimeTravel,
   canKeepSearch,
   canShowListingStatus,
   canShowRecordActions,
   canShowTenant,
   canShowTenantRisk,
   contactLabel,
+  leaseDatesHidden,
   listingVisible,
   marketedFor,
+  planDate,
   prospectLabel,
   publishedFloors,
   rentVisible,
   safeFloors,
+  safeKpis,
+  safeRollover,
   SAFE_TITLE,
   tenantLabel,
   termHidden,
@@ -178,11 +187,40 @@ describe('lease terms in prospect-safe mode', () => {
     expect(p.termWithheld).toBe(true);
   });
 
-  it('space on offer, signed leases and gaps are passed through untouched, with sizes and order intact', () => {
-    for (const s of raw.filter((x) => !['leased', 'holdover', 'mtm', 'sublease'].includes(x.kind))) {
+  it('a signed lease keeps its state and loses its dates: no move-in, no end, no months', () => {
+    const signed = raw.filter((s) => s.kind === 'committed');
+    expect(signed.length).toBeGreaterThan(0);
+    for (const s of signed) {
+      expect([s.lease!.commencement > TODAY, s.endDate !== null], s.key).toEqual([true, true]);
       const p = byKey(s.key);
-      // A quiet listing is removed by the same projection; everything else is the same object.
+      expect([p.kind, p.endDate, p.monthsToExpiry, p.termWithheld], s.key).toEqual(['committed', null, null, true]);
+    }
+  });
+
+  it('no segment carries a lease date: the lease record itself has none left', () => {
+    const withLease = segs.filter((s) => s.lease);
+    expect(withLease.length).toBeGreaterThan(15);
+    for (const s of withLease) expect([s.lease!.commencement, s.lease!.expiration, s.lease!.termination], s.key).toEqual(['', null, null]);
+    // The tenant behind a data gap and the lease signed to replace a tenant are not carried either.
+    expect(segs.some((s) => s.suspect || s.next)).toBe(false);
+    // The records the plan was derived from are untouched.
+    expect(property.leases.every((l) => l.commencement !== '')).toBe(true);
+  });
+
+  it('leaseDatesHidden covers every lease, in place or signed, and nothing on offer', () => {
+    for (const kind of ['leased', 'holdover', 'mtm', 'sublease', 'committed']) expect([leaseDatesHidden(kind, true), leaseDatesHidden(kind, false)], kind).toEqual([true, false]);
+    for (const kind of ['available', 'forsale', 'unmarketed']) expect(leaseDatesHidden(kind, true), kind).toBe(false);
+    // "Leased" is said of a lease in place only: a signed lease keeps its own state.
+    expect(termHidden('committed', true)).toBe(false);
+  });
+
+  it('space on offer and gaps are passed through untouched, with sizes and order intact', () => {
+    for (const s of raw.filter((x) => !['leased', 'holdover', 'mtm', 'sublease', 'committed'].includes(x.kind))) {
+      const p = byKey(s.key);
+      // A quiet listing is removed by the same projection, and so is the tenant a data gap is traced to;
+      // everything else is the same object.
       if (s.marketed?.published === false) expect(p.marketed).toBeUndefined();
+      else if (s.suspect || s.lease) expect([p.suspect, p.lease, p.kind, p.size], s.key).toEqual([undefined, undefined, s.kind, s.size]);
       else expect(p, s.key).toBe(s);
     }
     expect(segs.map((s) => [s.key, s.size, s.order])).toEqual(raw.map((s) => [s.key, s.size, s.order]));
@@ -192,5 +230,96 @@ describe('lease terms in prospect-safe mode', () => {
   it('does not mutate what it was given', () => {
     expect(atRisk.map((s) => s.kind).sort()).toEqual(['holdover', 'mtm']);
     expect(ordinary.every((s) => s.endDate !== null && s.termWithheld === undefined)).toBe(true);
+  });
+});
+
+describe('prospect-safe is today only', () => {
+  const later = [3, 6, 12, 24, 60].map((m) => addMonths(TODAY, m));
+
+  it('planDate is the date asked for outside the mode and today inside it, whatever was asked for', () => {
+    expect([canTimeTravel(false), canTimeTravel(true)]).toEqual([true, false]);
+    for (const d of [...later, addMonths(TODAY, -12), TODAY]) {
+      expect(planDate(d, TODAY, false)).toBe(d);
+      expect(planDate(d, TODAY, true)).toBe(TODAY);
+    }
+  });
+
+  it('the mock has what time travel used to give away: suites vacated by a later date, and a quiet listing that opens', () => {
+    const at = deriveFloors(property, '2027-04-15', TODAY).flatMap((f) => f.segments);
+    expect(at.some((s) => s.kind === 'projected' && s.endDate !== null)).toBe(true);
+    expect(at.find((s) => s.key === 'A04')).toMatchObject({ kind: 'available', availability: { published: false } });
+  });
+
+  it('floors derived for a later date still come out with no vacated suite, no lease date and no quiet listing', () => {
+    const quiet = new Set(property.availabilities.filter((a) => a.published === false).map((a) => a.id));
+    expect(quiet.size).toBeGreaterThan(0);
+    for (const asOf of [TODAY, ...later]) {
+      const raw = deriveFloors(property, asOf, TODAY);
+      const out = safeFloors(raw, true);
+      for (const f of out) {
+        for (const s of f.segments) {
+          expect(s.kind, `${asOf} ${s.key}`).not.toBe('projected');
+          expect([s.availability, s.marketed].some((a) => a && quiet.has(a.id)), `${asOf} ${s.key} quiet listing`).toBe(false);
+          if (s.lease) expect([s.lease.commencement, s.lease.expiration, s.lease.termination, s.endDate === null || s.kind === 'sublease'], `${asOf} ${s.key}`).toEqual(['', null, null, true]);
+          if (!['leased', 'sublease', 'committed'].includes(s.kind)) expect(s.lease, `${asOf} ${s.key}`).toBeUndefined();
+        }
+        expect(f.orphanSubleases.some((a) => quiet.has(a.id))).toBe(false);
+        // The floor's figures describe the segments beside them.
+        expect([f.leased, f.available, f.maxContiguous, f.bestRun], `${asOf} ${f.floor.name}`).toEqual(Object.values(floorTotals(f.segments, f.leasable)));
+      }
+      // Nothing is lost or resized: the same suites, the same SF.
+      expect(out.flatMap((f) => f.segments).map((s) => [s.key, s.size])).toEqual(raw.flatMap((f) => f.segments).map((s) => [s.key, s.size]));
+    }
+  });
+
+  it('a quiet listing on vacant space is space not on the market, and the floor no longer counts it as available', () => {
+    const raw = deriveFloors(property, '2027-04-15', TODAY);
+    const f6 = raw.find((f) => f.floor.id === 'F6')!;
+    expect(f6.available).toBe(21400);
+    const out = publishedFloors(raw, true).find((f) => f.floor.id === 'F6')!;
+    expect(out.segments.find((s) => s.key === 'A04')).toMatchObject({ kind: 'unmarketed', availability: undefined, lease: undefined });
+    expect([out.available, out.maxContiguous, out.bestRun]).toEqual([0, 0, []]);
+    // The broker's plan is untouched.
+    expect(publishedFloors(raw, false)).toBe(raw);
+    expect(f6.segments.find((s) => s.key === 'A04')!.kind).toBe('available');
+  });
+
+  it('a quiet sublease listing puts the suite back to the lease it is', () => {
+    const raw = deriveFloors(property, TODAY, TODAY);
+    const hushed = raw.map((f) => ({ ...f, segments: f.segments.map((s) => (s.kind === 'sublease' && s.availability ? { ...s, availability: { ...s.availability, published: false } } : s)) }));
+    const sub = hushed.flatMap((f) => f.segments).find((s) => s.kind === 'sublease')!;
+    const back = publishedFloors(hushed, true).flatMap((f) => f.segments).find((s) => s.key === sub.key)!;
+    expect([back.kind, back.availability, back.monthsToExpiry, back.headMonths]).toEqual(['leased', undefined, sub.headMonths, undefined]);
+    const floor = publishedFloors(hushed, true).find((f) => f.floor.id === sub.floorId)!;
+    expect(floor.available).toBe(hushed.find((f) => f.floor.id === sub.floorId)!.available - sub.size);
+  });
+});
+
+describe('totals by period in prospect-safe mode', () => {
+  const floors = deriveFloors(property, TODAY, TODAY);
+  const roll = rollover(floors, TODAY, 'rolling', 8);
+  const kpis = computeKpis(property, floors, TODAY);
+
+  it('the mock shows why: a period whose SF is one suite, and an expiring total that is one set of suites', () => {
+    const sizes = floors.flatMap((f) => f.segments).filter((s) => s.lease).map((s) => s.size);
+    const single = roll.buckets.filter((b) => b.leases === 1 && sizes.filter((z) => z === b.sf).length === 1);
+    expect(single.length).toBeGreaterThan(0);
+    expect(kpis.expiring12).toBeGreaterThan(0);
+  });
+
+  it('safeRollover hands a prospect no period and no at-risk SF, and keeps the rest', () => {
+    expect([canShowRollover(false), canShowRollover(true)]).toEqual([true, false]);
+    expect(safeRollover(roll, false)).toBe(roll);
+    const out = safeRollover(roll, true);
+    expect([out.buckets, out.atRisk]).toEqual([[], 0]);
+    expect(out.overAllocated).toBe(roll.overAllocated);
+    expect(roll.buckets.length).toBe(9);
+  });
+
+  it('safeKpis hands a prospect no expiring figure and no lease count, and changes nothing else', () => {
+    expect(safeKpis(kpis, false)).toBe(kpis);
+    const out = safeKpis(kpis, true);
+    expect([out.expiring12, out.expiring12Leases]).toEqual([0, 0]);
+    expect({ ...out, expiring12: kpis.expiring12, expiring12Leases: kpis.expiring12Leases }).toEqual(kpis);
   });
 });

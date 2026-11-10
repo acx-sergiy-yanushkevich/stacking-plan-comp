@@ -124,6 +124,8 @@
   :root[data-skin='glass'] .sp-header__title h1 { font-size: 22px; letter-spacing: -0.025em; }
   :root[data-skin='glass'] .sp-header__property { font-size: var(--sp-text-13); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
   @media (max-width: 760px) { :root[data-skin='glass'] .sp-header__title h1 { font-size: 17px; } }
+  /* A tablet's header is two rows tall (the controls take their own): less padding round it, so the plan starts sooner. */
+  @media (min-width: 761px) and (max-width: 1099px) { :root[data-skin='glass'] .sp-header { padding: 12px 16px; } }
   :root[data-skin='glass'] .sp-header__icon { border-radius: 12px; background: var(--sp-brand-grad); box-shadow: var(--sp-brand-glow); }
 
   /* Floating surfaces sit over busy content: nearly opaque, still frosted. */
