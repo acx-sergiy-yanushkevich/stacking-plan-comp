@@ -9,7 +9,7 @@ import { findIssues, issueCounts, recentChanges, type Issue } from '../domain/is
 import { timelineModel } from '../domain/timeline';
 import type { PlanState, WindowKey } from '../state/planState';
 import { num, sf } from '../domain/format';
-import { fmtDate } from '../domain/dates';
+import { daysBetween, fmtDate } from '../domain/dates';
 
 export interface WorklistRow {
   segKey: string;
@@ -64,10 +64,12 @@ export interface PlanModel {
   anyEnlarged: boolean;
 }
 
-export const WINDOW_MONTHS: Record<Exclude<WindowKey, 'risk'>, number> = { '90': 3, '180': 6, '12': 12, '24': 24 };
+/** Day windows are counted in days; month windows use `months < n`, the same test as the Expiring KPI and the rollover's first buckets. */
+export const WINDOW_DAYS: Partial<Record<WindowKey, number>> = { '90': 90, '180': 180 };
+export const WINDOW_MONTHS: Partial<Record<WindowKey, number>> = { '12': 12, '24': 24 };
 export const WINDOW_LABEL: Record<WindowKey, string> = { risk: 'At risk', '90': '90 days', '180': '180 days', '12': '12 months', '24': '24 months' };
 
-function buildWorklist(floors: FloorView[], window: WindowKey): WorklistRow[] {
+function buildWorklist(floors: FloorView[], window: WindowKey, asOf: ISODate): WorklistRow[] {
   const rows: WorklistRow[] = [];
   const seen = new Set<string>();
   for (const f of floors) {
@@ -78,7 +80,9 @@ function buildWorklist(floors: FloorView[], window: WindowKey): WorklistRow[] {
       if (seen.has(id)) continue;
       const risk = s.kind === 'holdover' || s.kind === 'mtm';
       const months = s.kind === 'sublease' ? (s.headMonths ?? s.monthsToExpiry) : s.monthsToExpiry;
-      const inWindow = window === 'risk' ? risk : !risk && months !== null && months <= WINDOW_MONTHS[window];
+      const days = WINDOW_DAYS[window];
+      const within = days !== undefined ? !!s.endDate && daysBetween(asOf, s.endDate) <= days : months !== null && months < (WINDOW_MONTHS[window] ?? 0);
+      const inWindow = window === 'risk' ? risk : !risk && within;
       if (!inWindow) continue;
       seen.add(id);
       rows.push({
@@ -171,12 +175,12 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
     return (w: WindowKey) => {
       let rows = cache.get(w);
       if (!rows) {
-        rows = buildWorklist(floors, w);
+        rows = buildWorklist(floors, w, asOf);
         cache.set(w, rows);
       }
       return rows;
     };
-  }, [floors]);
+  }, [floors, asOf]);
   const effectiveWindow: WindowKey | null = state.window === 'risk' && safe ? '12' : state.window;
   const activeWorklist = effectiveWindow ? worklist(effectiveWindow) : null;
 

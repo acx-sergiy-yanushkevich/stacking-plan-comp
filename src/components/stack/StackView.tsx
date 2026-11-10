@@ -225,6 +225,11 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                   <text className="sp-gutter__name" x={8} y={phone ? rowH / 2 + 5 : rowH >= 60 ? 22 : 15}>
                     {floorNum}
                   </text>
+                  {phone && f.overAllocatedBy > 0 && !state.safe && (
+                    <text className="sp-gutter__warn" x={2} y={rowH - 3} fontSize={9} fontWeight={600}>
+                      +{num(f.overAllocatedBy)} SF
+                    </text>
+                  )}
                   {!phone && (
                     <>
                       <text className="sp-gutter__pct" x={44} y={rowH >= 60 ? 22 : 15}>

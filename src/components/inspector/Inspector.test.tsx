@@ -78,7 +78,7 @@ function rowsFor(floors: FloorView[], window: WindowKey): WorklistRow[] {
       if (!s.lease || !isLeaseKind(s.kind)) continue;
       const risk = s.kind === 'holdover' || s.kind === 'mtm';
       const months = s.kind === 'sublease' ? (s.headMonths ?? s.monthsToExpiry) : s.monthsToExpiry;
-      const inWindow = window === 'risk' ? risk : !risk && months !== null && months <= WINDOW_MONTHS[window];
+      const inWindow = window === 'risk' ? risk : !risk && months !== null && months <= (WINDOW_MONTHS[window] ?? 0);
       if (!inWindow) continue;
       rows.push({
         segKey: s.key,

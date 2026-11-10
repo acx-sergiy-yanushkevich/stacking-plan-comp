@@ -42,7 +42,7 @@
   .sp-stack__head .sp-legend { display: grid; grid-template-columns: 1fr; gap: 2px 10px; }
   .sp-stack__head .sp-legend__item { display: grid; grid-template-columns: 14px 1fr auto; gap: 6px; align-items: center; white-space: nowrap; min-width: 0; }
   .sp-stack__head .sp-legend__num { font-size: 10px; }
-  .sp-stack__head .sp-legend__note { display: none; }
+  .sp-stack__head .sp-legend__note { grid-column: 1 / -1; white-space: normal; font-size: 10px; }
   .sp-stack__title .sp-weak { display: none; }
   .sp-stack__foot span:last-child { display: none; }
 }

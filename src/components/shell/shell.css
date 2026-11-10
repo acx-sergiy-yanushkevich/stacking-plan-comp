@@ -20,7 +20,7 @@
 .sp-header__facts > span:not(.sp-dot) { border-left: 1px solid var(--sp-color-border-strong); margin-left: -1px; padding: 0 10px; line-height: 1.3; }
 .sp-header__facts .sp-dot { display: none; }
 .sp-header__facts > span { white-space: nowrap; }
-.sp-header__verified { display: inline-flex; align-items: center; gap: 4px; color: var(--sp-color-success); font-weight: 500; flex-basis: 100%; }
+.sp-header__verified { display: inline-flex; align-items: center; gap: 4px; color: var(--sp-color-success); font-weight: 500; }
 .sp-header__stale { margin-left: 6px; }
 .sp-header__sale { display: inline-flex; align-items: center; gap: 4px; color: var(--tone-forsale-text); font-weight: 600; }
 .sp-header__verified--stale { color: var(--sp-color-warn); }

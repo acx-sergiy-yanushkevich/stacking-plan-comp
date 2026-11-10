@@ -57,6 +57,22 @@ export function Toolbar({ state, patch }: ToolbarProps) {
         <Button icon="clock" active={state.mode === 'worklist'} onClick={() => toggleMode('worklist')} title="Renewal sweep: leases ending in a window">
           Worklist
         </Button>
+        {view === 'map' && (
+          <Button
+            icon="people"
+            active={state.mode === 'area'}
+            onClick={() => {
+              if (state.mode === 'area') patch({ mode: 'building' });
+              else {
+                rememberTrigger();
+                patch({ mode: 'area', select: null, floor: null, req: null, max: null, by: null, inquiry: null, window: null });
+              }
+            }}
+            title="Demographics, transit and amenities around the property"
+          >
+            Area
+          </Button>
+        )}
       </div>
     </section>
   );
