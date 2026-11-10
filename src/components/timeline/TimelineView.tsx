@@ -98,6 +98,7 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
           start={start}
           end={end}
           asOf={model.asOf}
+          today={model.today}
           lens={state.lens}
           safe={model.safe}
           plotLeft={GUTTER}

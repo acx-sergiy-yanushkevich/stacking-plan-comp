@@ -1,7 +1,8 @@
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import type { Deal, DealStage } from '../../domain/types';
-import { isLeaseKind } from '../../domain/derive';
+import { activeDeals, isLeaseKind } from '../../domain/derive';
+import { stageRank } from '../../domain/lenses';
 import { fmtDate, fmtMonthYear } from '../../domain/dates';
 import { num, plural, sf } from '../../domain/format';
 import { Button, Chip, Icon } from '../ui';
@@ -30,15 +31,23 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
   const mtm = risk('mtm');
   const openRisk = () => patch({ window: 'risk', mode: 'worklist' });
 
-  // Pipeline by stage: every live deal on vacancies, marketed space and in-place renewals, once.
+  // Pipeline by stage, with the same rule as the Pipeline KPI (computeKpis): live deals only (Lease Out
+  // is a signed lease, not pipeline), each deal once, and SF in play counted once per suite and capped at
+  // the suite, attributed to the most advanced stage on that suite. The stage rows therefore sum to the card.
   const seen = new Map<string, Deal>();
+  const sfByStage = new Map<string, number>();
   for (const s of segments) {
-    const lists = [s.availability?.deals, s.marketed?.deals, isLeaseKind(s.kind) || s.kind === 'committed' ? s.lease?.deals : undefined, s.kind === 'committed' ? s.origin?.deals : undefined];
-    for (const list of lists) for (const d of list ?? []) if (!seen.has(d.id)) seen.set(d.id, d);
+    const lists = [s.availability?.deals, s.marketed?.deals, isLeaseKind(s.kind) || s.kind === 'committed' ? s.lease?.deals : undefined];
+    const live: Deal[] = [];
+    for (const list of lists) for (const d of activeDeals(list)) if (!seen.has(d.id)) { seen.set(d.id, d); live.push(d); }
+    if (live.length) {
+      const top = live.reduce((a, b) => (stageRank(b.stage) > stageRank(a.stage) ? b : a));
+      sfByStage.set(top.stage, (sfByStage.get(top.stage) ?? 0) + Math.min(s.size, Math.max(...live.map((d) => d.size))));
+    }
   }
-  const byStage = STAGES.map((stage) => {
+  const byStage = STAGES.filter((stage) => stage !== 'Lease Out').map((stage) => {
     const deals = [...seen.values()].filter((d) => d.stage === stage);
-    return { stage, count: deals.length, sf: deals.reduce((t, d) => t + d.size, 0) };
+    return { stage, count: deals.length, sf: sfByStage.get(stage) ?? 0 };
   });
 
   const activeBucket = state.bucket;

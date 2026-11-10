@@ -50,6 +50,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
       value: num(k.maxContiguous.size),
       unit: 'SF',
       context: k.maxContiguous.floorName ? `${k.maxContiguous.floorName} · direct · contiguous` : 'No direct space available',
+      delta: d ? { text: sfDelta(d.maxContiguous), good: d.maxContiguous >= 0 } : null,
       active: false,
       title: 'Largest run of adjacent direct availabilities. Click to see every option at this size.',
     },

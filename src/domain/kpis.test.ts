@@ -67,6 +67,6 @@ describe('kpiDeltas', () => {
     expect(d.leased).toBe(later.leased - today.leased);
     expect(d.occupancy).toBeCloseTo(later.occupancy - today.occupancy, 10);
     expect(d.pipelineDeals).toBe(later.pipeline.deals - today.pipeline.deals);
-    expect(kpiDeltas(today, today)).toEqual({ leased: 0, occupancy: 0, availableDirect: 0, availableSublease: 0, expiring12: 0, walt: 0, pipelineDeals: 0 });
+    expect(kpiDeltas(today, today)).toEqual({ leased: 0, occupancy: 0, availableDirect: 0, availableSublease: 0, expiring12: 0, walt: 0, pipelineDeals: 0, maxContiguous: 0 });
   });
 });

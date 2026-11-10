@@ -32,6 +32,7 @@ export interface TimelineRowsProps {
   start: ISODate;
   end: ISODate;
   asOf: ISODate;
+  today: ISODate;
   lens: LensId;
   safe: boolean;
   plotLeft: number;
@@ -76,7 +77,7 @@ function ellipsize(text: string, maxPx: number, font: string): string {
   return lo < 2 ? '' : `${text.slice(0, lo).trimEnd()}…`;
 }
 
-export function TimelineRows({ rows, segIndex, start, end, asOf, lens, safe, plotLeft, plotWidth, clipId, highlight, selected, hovered, onSelect, onHover }: TimelineRowsProps) {
+export function TimelineRows({ rows, segIndex, start, end, asOf, today, lens, safe, plotLeft, plotWidth, clipId, highlight, selected, hovered, onSelect, onHover }: TimelineRowsProps) {
   // One tab stop for the whole chart: arrows move between bars (← → within a floor, ↑ ↓ across floors).
   const rootRef = useRef<SVGGElement | null>(null);
   const [focusKey, setFocusKey] = useState<string | null>(null);
@@ -157,6 +158,7 @@ export function TimelineRows({ rows, segIndex, start, end, asOf, lens, safe, plo
                         cursorX={cursorX}
                         plotRight={plotRight}
                         asOf={asOf}
+                        today={today}
                         lens={lens}
                         safe={safe}
                         dim={highlight !== null && !highlight.has(bar.segKey)}
@@ -187,6 +189,7 @@ interface BarProps {
   cursorX: number;
   plotRight: number;
   asOf: ISODate;
+  today: ISODate;
   lens: LensId;
   safe: boolean;
   /** Pixel x where the next bar in this lane starts (label may spill into the gap). */
@@ -201,8 +204,8 @@ interface BarProps {
   onHover: (h: BarHover | null) => void;
 }
 
-function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf, lens, safe, freeRight, focusable, onFocusBar, onNavigate, dim, selected, hovered, onSelect, onHover }: BarProps) {
-  const text = segmentText(seg, { safe, asOf, lens, floorName, today: asOf });
+function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf, today, lens, safe, freeRight, focusable, onFocusBar, onNavigate, dim, selected, hovered, onSelect, onHover }: BarProps) {
+  const text = segmentText(seg, { safe, asOf, lens, floorName, today });
   const tone = text.tone;
   const fill = `var(--tone-${tone}-fill)`;
   const edge = `var(--tone-${tone}-edge)`;
@@ -220,8 +223,9 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
   let x1: number;
   if (isAvail) x1 = plotRight;
   else if (isMtm) x1 = Math.min(plotRight, Math.max(cursorX, visibleX0 + 24) + FADE_PX);
-  else if (safeRisk && bar.kind === 'mtm') x1 = Math.min(plotRight, Math.max(cursorX, visibleX0 + 24) + FADE_PX);
-  else if (safeRisk) x1 = bar.end ? Math.max(X(bar.end), visibleX0 + 24) : plotRight;
+  // Prospect-safe: holdover and MTM draw as a plain lease running to the cursor, like any lease with a
+  // withheld term, so neither the end date nor an open-ended fade can single them out.
+  else if (safeRisk) x1 = Math.max(cursorX, visibleX0 + 24);
   else x1 = bar.end ? X(bar.end) : plotRight;
   const w = Math.max(2, x1 - x0);
   const visibleW = x1 - visibleX0;
@@ -296,7 +300,9 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
     ? bar.start > asOf
       ? `Available from ${fmtDate(bar.start)} · no end date`
       : 'Available now · no end date'
-    : `${fmtDate(bar.start)} – ${bar.end ? fmtDate(bar.end) : safeRisk ? '' : 'open-ended (no end date)'}${bar.end && !isHoldover && !isProjected && bar.kind !== 'committed' ? ` · ${fmtMonths(Math.max(0, monthsBetween(asOf, bar.end)))} left` : ''}`;
+    : safeRisk
+      ? `Leased since ${fmtDate(bar.start)}`
+      : `${fmtDate(bar.start)} – ${bar.end ? fmtDate(bar.end) : 'open-ended (no end date)'}${bar.end && !isHoldover && !isProjected && bar.kind !== 'committed' ? ` · ${fmtMonths(Math.max(0, monthsBetween(asOf, bar.end)))} left` : ''}`;
   const tooltip = `${text.tooltip}\n${dates}`;
   // A bar too narrow for its name spills the label into the free space to its right.
   let outside = false;
@@ -353,7 +359,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
       onBlur={() => onHover(null)}
     >
       {!hovered && <title>{tooltip}</title>}
-      {(isMtm || isAvail || (safeRisk && bar.kind === 'mtm')) && (
+      {(isMtm || isAvail) && (
         <defs>
           <linearGradient id={gradId} gradientUnits="userSpaceOnUse" x1={x1 - FADE_PX} x2={x1} y1={0} y2={0}>
             <stop offset="0" stopColor="#fff" stopOpacity={1} />
@@ -365,7 +371,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
         </defs>
       )}
       {selected && <rect className="sp-seg__ring" x={x0 - 2} y={y - 2} width={w + extW + 4} height={BAR_HEIGHT + 4} rx={5} />}
-      <g mask={isMtm || isAvail || (safeRisk && bar.kind === 'mtm') ? `url(#${gradId}-mask)` : undefined}>
+      <g mask={isMtm || isAvail ? `url(#${gradId}-mask)` : undefined}>
         <rect className="sp-seg__rect" x={x0 + 0.5} y={y + 0.5} width={rectW} height={BAR_HEIGHT - 1} rx={3} fill={fill} stroke={edge} />
         {bar.committed && <rect className="sp-seg__overlay" x={x0 + 0.5} y={y + 0.5} width={rectW} height={BAR_HEIGHT - 1} rx={3} fill={`url(#${PATTERN_IDS.hatch})`} />}
         {bar.sublease && <rect className="sp-seg__overlay" x={x0 + 0.5} y={y + 0.5} width={rectW} height={BAR_HEIGHT - 1} rx={3} fill={`url(#${PATTERN_IDS.dots})`} />}

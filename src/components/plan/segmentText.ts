@@ -141,8 +141,8 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
   if (lens === 'rent') {
     const v = rentValue(seg);
     const t = rentType(seg);
-    if (seg.lease?.confidential && kind !== 'available') meta = 'Rent confidential';
-    else if (safe && kind !== 'available' && kind !== 'sublease') meta = 'Rent hidden';
+    if (safe && kind !== 'available' && kind !== 'sublease') meta = 'Rent hidden';
+    else if (seg.lease?.confidential && kind !== 'available') meta = 'Rent confidential';
     else if (v !== null && t && seg.availability && (kind === 'available' || kind === 'sublease'))
       meta = `Asking ${compactRate(seg.availability.rentLow, seg.availability.rentHigh, seg.availability.rateUnit, seg.availability.leaseType)}`;
     else if (v !== null && t && seg.lease && seg.lease.rate !== null) meta = rate(seg.lease.rate, seg.lease.rateUnit, seg.lease.leaseType);
@@ -171,7 +171,12 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
   if (lens === 'rent') {
     const v = rentValue(seg);
     const t = rentType(seg);
-    if (v !== null && t && !(seg.lease?.confidential && kind !== 'available') && !(safe && kind !== 'available' && kind !== 'sublease')) lensShort = `$${Number.isInteger(v) ? v : v.toFixed(0)} ${t}`;
+    if (v !== null && t && !(seg.lease?.confidential && kind !== 'available') && !(safe && kind !== 'available' && kind !== 'sublease')) {
+      // Exact figure with its unit, never rounded: "$29.75/yr FSG" (the lease's own unit, as recorded).
+      const unit = seg.lease ? seg.lease.rateUnit : seg.availability?.rateUnit ?? 'yr';
+      const raw = seg.lease && seg.lease.rate !== null && kind !== 'available' && kind !== 'sublease' ? seg.lease.rate : v;
+      lensShort = `$${Number.isInteger(raw) ? raw : raw.toFixed(2)}/${unit} ${t}`;
+    }
   }
   if (lens === 'deals' && !safe) {
     const d = topDeal(seg);

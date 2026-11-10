@@ -149,7 +149,7 @@ export function computeKpis(p: Property, floors: FloorView[], asOf: ISODate): Kp
 export function kpiDeltas(
   now: Kpis,
   base: Kpis,
-): { leased: number; occupancy: number; availableDirect: number; availableSublease: number; expiring12: number; walt: number; pipelineDeals: number } {
+): { leased: number; occupancy: number; availableDirect: number; availableSublease: number; expiring12: number; walt: number; pipelineDeals: number; maxContiguous: number } {
   return {
     leased: now.leased - base.leased,
     occupancy: now.occupancy - base.occupancy,
@@ -158,5 +158,6 @@ export function kpiDeltas(
     expiring12: now.expiring12 - base.expiring12,
     walt: now.walt - base.walt,
     pipelineDeals: now.pipeline.deals - base.pipeline.deals,
+    maxContiguous: now.maxContiguous.size - base.maxContiguous.size,
   };
 }

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { daysBetween, fmtDate } from '../../domain/dates';
-import { num, pct, usd0 } from '../../domain/format';
+import { num, pct, usd, usd0 } from '../../domain/format';
 import { Button, Chip, Icon, Menu, Switch } from '../ui';
 import { AsOfPopover } from './AsOfPopover';
 import { rememberTrigger } from '../../state/focusStore';
@@ -56,7 +56,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
             <>
               <span className="sp-dot">·</span>
               <span className="sp-header__sale" title={`Listed for sale by ${property.saleListing.broker} · ${property.saleListing.status}`}>
-                <Icon name="dollar" size={12} /> For sale {usd0(property.saleListing.price)} · {usd0(Math.round(property.saleListing.price / kpis.leasable))}/RSF
+                <Icon name="dollar" size={12} /> For sale {usd0(property.saleListing.price)} · {usd(property.saleListing.price / kpis.leasable)}/RSF
                 {property.saleListing.capRate !== null ? ` · ${pct(property.saleListing.capRate)} cap` : ''}
               </span>
             </>

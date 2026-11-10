@@ -74,7 +74,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
     const squeezed = text.lensShort ? `${text.sfShort} SF · ${text.lensShort}` : null;
     if (lines.length < maxLines) {
       const t = nameTookTwo && squeezed && fits(squeezed, inner, FONT_SUB) ? squeezed : fits(sub, inner, FONT_SUB) ? sub : `${text.sfShort} SF`;
-      lines.push({ t, cls: 'sp-seg__sub', font: FONT_SUB });
+      if (fits(t, inner, FONT_SUB) || t === `${text.sfShort} SF`) lines.push({ t, cls: 'sp-seg__sub', font: FONT_SUB });
     }
     if (lines.length < maxLines && text.meta && fits(text.meta, inner, FONT_SUB)) lines.push({ t: text.meta, cls: 'sp-seg__meta', font: FONT_SUB });
     else if (lines.length < maxLines && text.meta) {
@@ -92,8 +92,9 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
     }
     const withUnit = `${text.sfShort} SF`;
     const withLens = text.lensShort ? `${text.sfShort} SF · ${text.lensShort}` : null;
-    const sfText = withLens && fits(withLens, inner, FONT_SUB) ? withLens : fits(withUnit, inner, FONT_SUB) ? withUnit : text.sfShort;
-    if (fits(sfText, inner, FONT_SUB)) lines.push({ t: sfText, cls: 'sp-seg__sf', font: FONT_SUB });
+    const sfText = withLens && fits(withLens, inner, FONT_SUB) ? withLens : fits(withUnit, inner, FONT_SUB) ? withUnit : null;
+    if (sfText) lines.push({ t: sfText, cls: 'sp-seg__sf', font: FONT_SUB });
+    else if (lines.length === 0 && fits(withUnit, inner + PAD, FONT_SUB)) lines.push({ t: withUnit, cls: 'sp-seg__sf', font: FONT_SUB });
     if (text.lensShort && lines.length < maxLines && !lines.some((l) => l.t.includes(text.lensShort)) && fits(text.lensShort, inner, FONT_SUB)) lines.push({ t: text.lensShort, cls: 'sp-seg__meta', font: FONT_SUB });
   }
   // Too many lines: drop the second name line before any SF / lens line (the tooltip keeps the full name).
