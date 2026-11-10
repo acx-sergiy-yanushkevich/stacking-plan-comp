@@ -10,6 +10,11 @@ From round 9 the app is judged as a **standalone web app** with its glass skin (
 
 Prospect-safe by design: asking rents and asking prices on availabilities (including the for-sale condo unit) are marketing information and stay visible; the building's own sale listing shows only "Listed for sale" (price, $/RSF, cap rate and broker withheld).
 
+New in round 10 (judge these as part of the product):
+- **Floor focus.** Clicking a floor number or a suite expands that floor's row to full width and about double height, with facts from the other lenses (shots 04, 05, 13, 29, 30). In the default view no suite is drawn narrower than 124 px.
+- **Phone layout.** Below 760 px the stack is one card per floor: a to-scale bar plus a full-width row per suite; the legend is collapsed (shots 23, 24).
+- **Building model.** An axonometric model of the building sits at the top of the Building and Floor panels, cut into suites and coloured by the lens. Hovering a floor there lights it in the stack and the other way round; a click focuses the floor and lifts the floors above; a second click opens the floor plan. It is a labelled image for assistive technology; the stack is the accessible equivalent.
+
 ## Read first
 
 1. `docs/BRIEF.md`: the product, personas, top 10 jobs, domain rules, and the **scoring rubric** you must use (UI /20, UX /20, Engineering /10).

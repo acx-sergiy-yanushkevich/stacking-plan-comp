@@ -66,6 +66,27 @@ export function wrapWords(text: string, maxPx: number, font: string, maxLines: n
   return lines;
 }
 
+/** Like `wrapWords`, with a width per line (the first line of a block may be shorter than the rest). */
+export function wrapWordsVar(text: string, widthOf: (line: number) => number, font: string, maxLines: number): string[] {
+  const words = text.split(' ').filter(Boolean);
+  const lines: string[] = [];
+  let cur = '';
+  for (const w of words) {
+    const next = cur ? `${cur} ${w}` : w;
+    if (measure(next, font) <= widthOf(lines.length)) {
+      cur = next;
+    } else {
+      if (!cur) return lines;
+      lines.push(cur);
+      cur = w;
+      if (lines.length === maxLines) return lines;
+      if (measure(cur, font) > widthOf(lines.length)) return lines;
+    }
+  }
+  if (cur && lines.length < maxLines) lines.push(cur);
+  return lines;
+}
+
 export const fits = (text: string, maxPx: number, font: string) => measure(text, font) <= maxPx;
 
 /** Longest prefix of " · "-separated parts that fits; a part is never split. */

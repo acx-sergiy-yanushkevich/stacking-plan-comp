@@ -1,0 +1,22 @@
+/* The building model at the top of the Building and Floor panels. Tokens only. */
+.sp-hero { margin: 0 calc(-1 * var(--sp-space-4)) var(--sp-space-3); padding: 2px var(--sp-space-4) 10px; border-bottom: 1px solid var(--sp-color-border); }
+.sp-hero svg { display: block; width: 100%; height: auto; overflow: visible; }
+.sp-hero__ground { fill: #0b1020; fill-opacity: 0.16; filter: blur(7px); transform: translate(5px, 9px); }
+.sp-hero__floor { cursor: pointer; transition: transform var(--sp-ease-slow), opacity var(--sp-ease-slow), filter var(--sp-ease); }
+.sp-hero__face { stroke: var(--sp-color-card); stroke-width: 0.6; stroke-linejoin: round; stroke-opacity: 0.85; }
+.sp-hero__shade { fill: #0b1020; pointer-events: none; }
+.sp-hero__floor.is-hot { filter: brightness(1.07) saturate(1.15); }
+.sp-hero__floor.is-hot .sp-hero__face, .sp-hero__floor.is-focus .sp-hero__face { stroke: var(--sp-color-brand); stroke-opacity: 0.9; stroke-width: 0.9; }
+/* Floors above the focused one lift and fade, so its plate (suite by suite) shows. */
+.sp-hero__floor.is-above { opacity: 0.2; }
+.sp-hero__floor.is-above.is-hot { opacity: 0.6; }
+.sp-hero__slice.is-dim { opacity: 0.28; }
+.sp-hero__slice.is-selected .sp-hero__face { stroke: var(--sp-color-brand); stroke-width: 1.6; stroke-opacity: 1; }
+.sp-hero__cap { display: flex; flex-direction: column; gap: 1px; margin-top: 4px; min-height: 34px; }
+.sp-hero__cap-main { font-size: var(--sp-text-12); font-weight: 600; color: var(--sp-color-text); font-variant-numeric: tabular-nums; }
+.sp-hero__cap-hint { font-size: var(--sp-text-11); color: var(--sp-color-text-weak); }
+/* The phone sheet has no room for it; the floor cards carry the same information. */
+.sp-sheet .sp-hero { display: none; }
+@media print { .sp-hero { display: none; } }
+/* Lifted floors let clicks through their top faces, so the exposed plate of the focused floor is clickable. */
+.sp-hero__floor.is-above .sp-hero__top { pointer-events: none; }

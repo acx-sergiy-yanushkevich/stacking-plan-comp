@@ -40,3 +40,22 @@ export function usePinnedKeys(): Set<string> | null {
     () => null,
   );
 }
+
+/** The floor under the pointer (in the stack or on the building model), so each can light it in the other. */
+let hoverFloor: string | null = null;
+const floorListeners = new Set<() => void>();
+export function setHoverFloor(next: string | null) {
+  if (next === hoverFloor) return;
+  hoverFloor = next;
+  for (const l of floorListeners) l();
+}
+export function useHoverFloor(): string | null {
+  return useSyncExternalStore(
+    (l) => {
+      floorListeners.add(l);
+      return () => floorListeners.delete(l);
+    },
+    () => hoverFloor,
+    () => null,
+  );
+}

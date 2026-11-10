@@ -20,6 +20,7 @@ import { FloorPanel } from './FloorPanel';
 import { FindPanel } from './FindPanel';
 import { WorklistPanel } from './WorklistPanel';
 import { IssuesPanel } from './IssuesPanel';
+import { BuildingHero } from '../hero/BuildingHero';
 import './inspector.css';
 
 export interface InspectorProps {
@@ -73,6 +74,11 @@ function headFor(mode: InspectorMode, model: PlanModel, state: PlanState, patch:
 export default function Inspector({ model, state, patch, mode, areaPanel }: InspectorProps) {
   const head = headFor(mode, model, state, patch);
   const bodyKey = `${mode}:${mode === 'block' ? state.select : mode === 'floor' ? state.floor : mode === 'worklist' ? state.window : ''}`;
+  // The scroll container outlives a panel change (the building model stays mounted), so reset it by hand.
+  const bodyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (bodyRef.current) bodyRef.current.scrollTop = 0;
+  }, [bodyKey]);
 
   // Tool panels (find, worklist, issues, area) take focus when they open so Escape works at once.
   const titleRef = useRef<HTMLHeadingElement | null>(null);
@@ -125,8 +131,11 @@ export default function Inspector({ model, state, patch, mode, areaPanel }: Insp
         </div>
         {head.close && <Button variant="ghost" size="sm" icon="close" iconOnly aria-label="Close" title="Close (Esc)" onClick={head.close} />}
       </div>
-      <div key={bodyKey} className="sp-ins__body">
-        {body}
+      <div className="sp-ins__body" ref={bodyRef}>
+        {(mode === 'building' || mode === 'floor') && state.view !== 'map' && <BuildingHero model={model} state={state} patch={patch} />}
+        <div key={bodyKey} className="sp-ins__content">
+          {body}
+        </div>
       </div>
     </div>
   );

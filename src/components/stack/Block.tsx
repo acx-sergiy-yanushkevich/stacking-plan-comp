@@ -1,7 +1,7 @@
 import type { KeyboardEvent } from 'react';
 import type { Segment } from '../../domain/derive';
 import { textTier } from '../../domain/layout';
-import { fitParts, wrapWords, fits, measure } from '../../lib/textFit';
+import { fitParts, wrapWords, wrapWordsVar, fits, measure } from '../../lib/textFit';
 import { PATTERN_IDS } from '../plan/Patterns';
 import type { SegmentText } from '../plan/segmentText';
 
@@ -31,6 +31,8 @@ export interface BlockProps {
   related?: boolean;
   /** A near miss of the active finder: kept readable, not dimmed. */
   partial?: boolean;
+  /** More facts to show when the block is tall enough (a focused floor): rent, term, deal. */
+  extra?: string[];
 }
 
 const PAD = 8;
@@ -43,7 +45,7 @@ const GLYPH: Partial<Record<Segment['kind'], string>> = { available: 'A', sublea
 const STATE_WORD: Partial<Record<Segment['kind'], string[]>> = { available: ['Available'], sublease: ['Sublease'], committed: ['Signed'], forsale: ['For sale'], unmarketed: ['Unaccounted'], projected: ['Vacant'] };
 
 /** One suite on the plan: tone fill, pattern, accent bar, adaptive text, badges. */
-export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelect, onFocus, onKeyDown, enlarged, compact, related, partial }: BlockProps) {
+export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelect, onFocus, onKeyDown, enlarged, compact, related, partial, extra }: BlockProps) {
   const tone = text.tone;
   const fill = `var(--tone-${tone}-fill)`;
   const edge = `var(--tone-${tone}-edge)`;
@@ -155,9 +157,9 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   const nameSets: Line[][] = [];
   if (fits(text.name, inner, FONT_NAME)) nameSets.push([nameLine(text.name)]);
   else {
-    const two = wrapWords(text.name, inner, FONT_NAME, 2);
+    const two = wrapWordsVar(text.name, (i) => (i === 0 ? inner : innerBody), FONT_NAME, 2);
     if (two.length && two.join(' ') === text.name) nameSets.push(two.map(nameLine));
-    const tiny = h >= 48 ? wrapWords(text.name, room(0, FONT_TINY, true), FONT_TINY, 3) : [];
+    const tiny = h >= 48 ? wrapWordsVar(text.name, (i) => room(i, FONT_TINY, true), FONT_TINY, 3) : [];
     if (tiny.length && tiny.join(' ') === text.name) nameSets.push(tiny.map((t) => ({ t, cls: 'sp-seg__tiny', font: FONT_TINY })));
     // Narrow tiles: the whole name at 10 px before giving it up.
     const micro = tier >= 2 && h >= 48 && seg.kind !== 'unmarketed' ? wrapWords(text.name, room(0, FONT_MICRO, true), FONT_MICRO, 2) : [];
@@ -204,6 +206,12 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   const picked = pick();
   const lines: Line[] = picked?.lines ?? [];
   const compactPitch = picked?.compact ?? false;
+  if (extra && picked && !compactPitch) {
+    for (const e of extra) {
+      if (lines.length >= cap15) break;
+      if (fits(e, innerBody, FONT_SUB) && !lines.some((l) => l.t.includes(e))) lines.push({ t: e, cls: 'sp-seg__meta', font: FONT_SUB });
+    }
+  }
   const lineX = (l: Line) => (l.cls === 'sp-seg__micro' ? 2 : l.cls === 'sp-seg__tiny' ? 4 : PAD) + accentPad;
   // Narrowest tier: a single state glyph so colour is never the only cue.
   const glyph = lines.length === 0 && w >= 24 && h >= 40 ? (GLYPH[seg.kind] ?? null) : null;
