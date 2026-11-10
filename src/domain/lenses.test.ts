@@ -132,9 +132,9 @@ describe('prospect-safe', () => {
     expect(tone('L13-U1', 'status', true)).toBe('leased');
     expect(tone('A10', 'status', true)).toBe('forsale');
   });
-  it('rent lens hides in-place rents but keeps asking rents and confidential', () => {
+  it('rent lens hides in-place rents the same way for every lease (confidential included) and keeps asking rents', () => {
     expect(tone('L02-U1', 'rent', true)).toBe('muted');
-    expect(tone('L18-U1', 'rent', true)).toBe('confidential');
+    expect(tone('L18-U1', 'rent', true)).toBe('muted');
     expect(tone('A02', 'rent', true)).toBe('rent-2');
   });
   it('deals lens shows only vacant vs not', () => {

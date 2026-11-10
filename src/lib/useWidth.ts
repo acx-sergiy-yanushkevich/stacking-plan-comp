@@ -7,7 +7,12 @@ export function useWidth<T extends HTMLElement>(fallback = 960): [React.RefObjec
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const measure = () => setWidth(Math.max(0, Math.floor(el.getBoundingClientRect().width)));
+    // Content box: an SVG drawn at this width inside a padded container must not be rescaled.
+    const measure = () => {
+      const cs = getComputedStyle(el);
+      const pad = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+      setWidth(Math.max(0, Math.floor(el.getBoundingClientRect().width - pad)));
+    };
     measure();
     if (typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(measure);

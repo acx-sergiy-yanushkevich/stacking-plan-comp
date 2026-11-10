@@ -163,9 +163,11 @@ export function toneFor(seg: Segment, lens: LensId, prospectSafe: boolean): Tone
     }
     case 'rent':
       if (seg.kind === 'forsale') return 'forsale';
+      // Prospect-safe: every lease's rent (in place or committed) is withheld the same way, so a
+      // confidential lease does not stand out.
+      if (prospectSafe && (!isVacantKind(seg) || seg.kind === 'committed')) return 'muted';
       // Confidential wins over everything that carries the lease (in place or committed).
       if (seg.lease?.confidential && (!isVacantKind(seg) || seg.kind === 'committed')) return 'confidential';
-      if (prospectSafe && !isVacantKind(seg)) return 'muted';
       return rentTone(rentValue(seg), rentType(seg));
   }
 }

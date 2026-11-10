@@ -51,7 +51,7 @@
 
 /* Focus + hover link with the building model */
 .sp-stack__rowbg.is-floor-selected { stroke: var(--sp-color-brand); stroke-opacity: 0.35; }
-.sp-stack__rowbg.is-hot { fill: var(--sp-color-brand-soft); }
+.sp-stack__rowbg.is-hot { fill: var(--sp-color-brand-soft); stroke: var(--sp-color-brand); stroke-opacity: 0.5; }
 
 /* ── Phone: one card per floor ─────────────────────────── */
 .sp-pstack .sp-stack__head { display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 10px 12px; }

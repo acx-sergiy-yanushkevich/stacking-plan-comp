@@ -7,7 +7,7 @@ import { PATTERN_IDS } from '../plan/Patterns';
 import { patternFor } from '../plan/segmentText';
 import { num, pct } from '../../domain/format';
 import { openFloor, openFloorPlate, type Patch } from '../plan/actions';
-import { setHoverFloor, setHoverKeys, useHoverFloor } from '../../state/hoverStore';
+import { setHoverFloor, useHoverFloor } from '../../state/hoverStore';
 import './hero.css';
 
 export interface BuildingHeroProps {
@@ -153,16 +153,9 @@ export function BuildingHero({ model, state, patch, compact }: BuildingHeroProps
               className={cls}
               aria-hidden="true"
               transform={above ? `translate(0 ${-LIFT})` : undefined}
-              onPointerEnter={() => {
-                setHoverFloor(f.id);
-                setHoverKeys(new Set(f.keys));
-              }}
-              onPointerLeave={() => {
-                setHoverFloor(null);
-                setHoverKeys(null);
-              }}
+              onPointerEnter={() => setHoverFloor(f.id)}
+              onPointerLeave={() => setHoverFloor(null)}
               onClick={() => {
-                setHoverKeys(null);
                 if (f.id === focusId) openFloorPlate(patch, f.id);
                 else openFloor(patch, f.id);
               }}
