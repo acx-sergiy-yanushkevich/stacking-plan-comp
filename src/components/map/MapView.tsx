@@ -9,10 +9,10 @@ import { suiteExtrusionFeatures } from '../../domain/geometry';
 import { toneFor } from '../../domain/lenses';
 import type { PlanModel } from '../../model/usePlanModel';
 import { isDark, type PlanState } from '../../state/planState';
-import { usePrefersDark, usePrefersReducedMotion } from '../../lib/useMedia';
+import { useIsPhone, usePrefersDark, usePrefersReducedMotion } from '../../lib/useMedia';
 import { openFloor, openFloorPlate } from '../plan/actions';
 import { Legend } from '../plan/Legend';
-import { Chip, useToast } from '../ui';
+import { Chip, Icon, useToast } from '../ui';
 import { FootprintFallback } from './FootprintFallback';
 import { MapControls } from './MapControls';
 import {
@@ -23,6 +23,7 @@ import {
   LAYER_CAP,
   LAYER_FLOORS,
   SOURCE_FLOORS,
+  accentTone,
   dominantTone,
   floorState,
   floorColorExpression,
@@ -150,7 +151,7 @@ interface Tip {
 const floorTip = (f: FloorView) => `${f.floor.name} · ${pct(f.leasable > 0 ? f.leased / f.leasable : 0)} leased · ${num(f.leasable)} RSF`;
 
 /** Keyboard-reachable equivalent of clicking a 3D floor (DESIGN.md §6). */
-function FloorList({ floors, selected, onSelect, toneOf, stateOf, shortOf }: { floors: FloorView[]; selected: string | null; onSelect: (id: string) => void; toneOf: (f: FloorView) => string; stateOf: (f: FloorView) => string; shortOf: (f: FloorView) => string }) {
+function FloorList({ floors, selected, onSelect, toneOf, accentOf, stateOf, shortOf }: { floors: FloorView[]; selected: string | null; onSelect: (id: string) => void; toneOf: (f: FloorView) => string; accentOf: (f: FloorView) => string | null; stateOf: (f: FloorView) => string; shortOf: (f: FloorView) => string }) {
   const ordered = useMemo(() => [...floors].sort((a, b) => b.floor.sequence - a.floor.sequence), [floors]);
   const ref = useRef<HTMLDivElement>(null);
   const focusIndex = Math.max(
@@ -173,7 +174,9 @@ function FloorList({ floors, selected, onSelect, toneOf, stateOf, shortOf }: { f
   };
   return (
     <div ref={ref} className="sp-map-floors" role="group" aria-label="Floors" onKeyDown={onKey}>
-      {/* Each row's accessible name starts with the text on the row, then adds the floor's size and its dominant state. */}
+      {/* Each row's accessible name starts with the text on the row, then adds the floor's size and its dominant state.
+          The swatch is the colour of most of the floor; a floor that also holds an at-risk or expiring lease
+          shows that colour in its lower half. The words on the row say the same, so it is never colour alone. */}
       {ordered.map((f, i) => (
         <button
           key={f.floor.id}
@@ -187,7 +190,14 @@ function FloorList({ floors, selected, onSelect, toneOf, stateOf, shortOf }: { f
           onClick={() => onSelect(f.floor.id)}
           onDoubleClick={() => undefined}
         >
-          <span className="sp-map-floor__swatch" style={{ background: `var(--tone-${toneOf(f)}-fill)`, borderColor: `var(--tone-${toneOf(f)}-edge)` }} aria-hidden="true" />
+          <span
+            className="sp-map-floor__swatch"
+            style={{
+              background: accentOf(f) ? `linear-gradient(135deg, var(--tone-${toneOf(f)}-fill) 0 50%, var(--tone-${accentOf(f)}-edge) 50%)` : `var(--tone-${toneOf(f)}-fill)`,
+              borderColor: `var(--tone-${accentOf(f) ?? toneOf(f)}-edge)`,
+            }}
+            aria-hidden="true"
+          />
           <span className="sp-map-floor__num">{`${f.floor.sequence} `}</span>
           <span className="sp-map-floor__pct">{`${pct(f.leasable > 0 ? f.leased / f.leasable : 0)} leased `}</span>
           {shortOf(f) && <span className="sp-map-floor__state">{`${shortOf(f)} `}</span>}
@@ -226,7 +236,8 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
   const mapProperty = useMemo(() => (live ? { ...property, footprint: live.polygon, footprintSource: live.source } : property), [property, live]);
 
   const toneOf = useCallback((f: FloorView) => dominantTone(f, state.lens, state.safe), [state.lens, state.safe]);
-  // What is true of the floor in exact SF ("7,400 SF available"), not only its dominant state.
+  const accentOf = useCallback((f: FloorView) => accentTone(f, state.lens, state.safe), [state.lens, state.safe]);
+  // What the Building view says of the floor in this lens, and its space in exact SF ("7,400 SF available"), not only its dominant state.
   const shortOf = useCallback((f: FloorView) => floorState(f, state.lens, state.safe), [state.lens, state.safe]);
   const stateOf = useCallback((f: FloorView) => toneLabel(dominantTone(f, state.lens, state.safe), state.lens, state.safe), [state.lens, state.safe]);
   const toneOfSeg = useCallback((s: FloorView['segments'][number]) => toneFor(s, state.lens, state.safe), [state.lens, state.safe]);
@@ -341,13 +352,26 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
 
   const selectFloor = useCallback((id: string) => openFloor(patch, id), [patch]);
   const floorCount = floors.length;
+  // A phone has room for the map or for eight legend rows, not both: the legend folds to one row, as on the phone timeline.
+  const phone = useIsPhone();
+  const legendStates = model.legend.filter((i) => i.sf > 0).length;
   const footprintLabel = mapProperty.footprintSource === 'osm' ? 'OpenStreetMap' : 'demo';
 
   return (
     <div className={`sp-map ${status === 'failed' ? 'is-fallback' : ''}`.trim()} data-status={status}>
-      <div className="sp-map-legend">
-        <Legend items={model.legend} compact />
-      </div>
+      {phone ? (
+        <details className="sp-map-legend sp-map-legend--fold">
+          <summary>
+            Legend · {legendStates} states
+            <Icon name="chevron-down" size={14} />
+          </summary>
+          <Legend items={model.legend} compact />
+        </details>
+      ) : (
+        <div className="sp-map-legend">
+          <Legend items={model.legend} compact />
+        </div>
+      )}
       <div className="sp-map__stage">
       <div ref={containerRef} className="sp-map__canvas" aria-label="3D map of the property" role="application" />
       {status === 'failed' && <FootprintFallback footprint={mapProperty.footprint} floors={floors} toneOf={toneOf} selectedFloorId={state.floor} onSelect={selectFloor} />}
@@ -367,7 +391,7 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
         </p>
       </div>
 
-      <FloorList floors={floors} selected={state.floor} onSelect={selectFloor} toneOf={toneOf} stateOf={stateOf} shortOf={shortOf} />
+      <FloorList floors={floors} selected={state.floor} onSelect={selectFloor} toneOf={toneOf} accentOf={accentOf} stateOf={stateOf} shortOf={shortOf} />
 
       {status === 'ready' && (
         <MapControls

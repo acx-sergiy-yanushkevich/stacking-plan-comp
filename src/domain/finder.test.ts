@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../data/mock/property';
 import { deriveFloors } from './derive';
-import { filterFits, findFits, matchingInquiries, type FitOption } from './finder';
+import { chosenOption, filterFits, findFits, matchingInquiries, nearMisses, neededByDate, optionSuites, type FitOption } from './finder';
 import type { Availability, Floor, Lease, Property } from './types';
 
 const at = (asOf: string) => deriveFloors(property, asOf, TODAY);
@@ -247,15 +247,113 @@ describe('for-sale units', () => {
 });
 
 describe('nearMisses', () => {
-  it('lists the closest smaller spaces and adjacent-floor stacks for a requirement nothing fits now', async () => {
-    const { nearMisses } = await import('./finder');
-    const floors = deriveFloors(property, TODAY, TODAY);
+  const floors = deriveFloors(property, TODAY, TODAY);
+
+  it('lists the closest smaller spaces and adjacent-floor stacks for a requirement nothing fits now', () => {
     const misses = nearMisses(floors, 12000, TODAY);
     expect(misses.length).toBeGreaterThan(0);
     expect(misses.every((m) => m.keys.every((k) => k !== 'A10'))).toBe(true);
     const first = misses[0];
     expect(first.shortfall).toBeLessThanOrEqual(misses[misses.length - 1].shortfall);
     // Floors 7 and 8 together (7,000 sublease + 7,400 direct) make a 14,400 SF stack.
-    expect(misses.some((m) => m.kind === 'stack' && m.size === 14400)).toBe(true);
+    expect(misses.find((m) => m.kind === 'stack' && m.size === 14400)).toMatchObject({ floorName: 'Floors 7–8', type: 'Direct + sublease', shortfall: 0 });
+  });
+
+  it('holds every alternative to the space type asked for, before the list is cut to its limit', () => {
+    const any = nearMisses(floors, 12000, TODAY, 'any');
+    expect(any).toEqual(nearMisses(floors, 12000, TODAY));
+    expect(new Set(any.map((m) => m.type)).has('Direct + sublease')).toBe(true);
+
+    const sublease = nearMisses(floors, 12000, TODAY, 'sublease');
+    expect(sublease.length).toBeGreaterThan(0);
+    expect(sublease.every((m) => m.type === 'Sublease')).toBe(true);
+    // The 7,000 SF sublease on Floor 7 is the near miss a sublease-only search is for: it used to be
+    // pushed off the four-row list by direct and mixed stacks.
+    expect(sublease).toContainEqual(expect.objectContaining({ kind: 'short', floorName: 'Floor 7', size: 7000, shortfall: 5000, keys: ['L14-U2'] }));
+
+    const direct = nearMisses(floors, 12000, TODAY, 'direct');
+    expect(direct.length).toBeGreaterThan(0);
+    expect(direct.every((m) => m.type === 'Direct')).toBe(true);
+    // The mixed Floors 7–8 stack is not direct space; no key of a sublet suite is in any direct row.
+    expect(direct.some((m) => m.size === 14400)).toBe(false);
+    expect(direct.flatMap((m) => m.keys)).not.toContain('L14-U2');
+    for (const m of direct) for (const s of optionSuites(floors, m.keys, TODAY)) expect(s.type, `${m.floorName} ${s.key}`).toBe('Direct');
+  });
+
+  it('the limit is spent on rows of the asked type: a sublease search is not left with fewer rows than exist', () => {
+    const all = nearMisses(floors, 12000, TODAY, 'sublease', 100);
+    expect(nearMisses(floors, 12000, TODAY, 'sublease', 4)).toEqual(all.slice(0, 4));
+    expect(nearMisses(floors, 12000, TODAY, 'direct', 2)).toHaveLength(2);
+  });
+});
+
+describe('a finder row as the option that is kept', () => {
+  const floors = deriveFloors(property, TODAY, TODAY);
+  const stack = nearMisses(floors, 12000, TODAY).find((m) => m.kind === 'stack' && m.size === 14400)!;
+
+  it('chosenOption keeps every suite of a multi-floor alternative, its total, type and timing', () => {
+    const option = chosenOption(stack);
+    expect(option).toEqual({ title: 'Floors 7–8', keys: stack.keys, size: 14400, type: 'Direct + sublease', from: stack.from, shortfall: 0 });
+    expect(option.keys.length).toBeGreaterThan(1);
+    // A copy: the option does not change if the finder's own row does.
+    expect(option.keys).not.toBe(stack.keys);
+  });
+
+  it('optionSuites lists each suite of the option, top floor first, and they add up to the option', () => {
+    const suites = optionSuites(floors, stack.keys, TODAY);
+    expect(suites.map((s) => s.key)).toEqual(stack.keys);
+    expect(suites.reduce((t, s) => t + s.size, 0)).toBe(stack.size);
+    expect(new Set(suites.map((s) => s.floorName))).toEqual(new Set(['Floor 8', 'Floor 7']));
+    expect(suites[0].floorName).toBe('Floor 8');
+    expect(suites.find((s) => s.key === 'L14-U2')).toMatchObject({ floorId: 'F7', suite: '720', size: 7000, type: 'Sublease' });
+    expect(suites.filter((s) => s.type === 'Direct').reduce((t, s) => t + s.size, 0)).toBe(7400);
+  });
+
+  it('keeps an exact multi-floor option whole too, and its shortfall is zero', () => {
+    const { options } = findFits(floors, 12000, null, null, [], TODAY);
+    const multi = options.find((o) => o.multiFloor);
+    if (multi) {
+      const option = chosenOption(multi);
+      expect([option.keys, option.size, option.shortfall]).toEqual([multi.keys, multi.size, 0]);
+      expect(optionSuites(floors, option.keys, TODAY).reduce((t, s) => t + s.size, 0)).toBe(multi.size);
+    }
+    const short = nearMisses(floors, 12000, TODAY).find((m) => m.shortfall > 0)!;
+    expect(chosenOption(short).shortfall).toBe(short.shortfall);
+  });
+
+  it('optionSuites leaves out a key that is not lease space, and counts an occupied suite by what is marketed', () => {
+    expect(optionSuites(floors, ['A10', 'nope', 'F2-gap'], TODAY)).toEqual([]);
+    // Suite 600 is occupied and marketed from April 2027: the space is the listing's, dated.
+    expect(optionSuites(floors, ['L13-U1'], TODAY)).toEqual([expect.objectContaining({ key: 'L13-U1', floorName: 'Floor 6', suite: '600', size: 21400, type: 'Direct', from: '2027-04-01' })]);
+    // Once that date has passed it reads as now.
+    expect(optionSuites(floors, ['L13-U1'], '2027-04-01')[0].from).toBeNull();
+  });
+});
+
+describe('needed by: an exact date, today included', () => {
+  const floors = deriveFloors(property, TODAY, TODAY);
+
+  it('neededByDate accepts a whole calendar date and nothing else', () => {
+    expect(neededByDate(TODAY)).toBe(TODAY);
+    expect(neededByDate('2026-11-23')).toBe('2026-11-23');
+    expect(neededByDate('2028-02-29')).toBe('2028-02-29');
+    for (const bad of ['', '2026-11', '2026-13-01', '2027-02-30', '11/23/2026', '2026-1-5', 'today']) expect(neededByDate(bad), bad).toBeNull();
+  });
+
+  it('needed today: space available now is on time and space marketed for later is late', () => {
+    const { options } = findFits(floors, 5000, TODAY, null, [], TODAY);
+    expect(options.some((o) => o.from === null && !o.late)).toBe(true);
+    const later = options.filter((o) => o.from !== null && o.from > TODAY);
+    expect(later.length).toBeGreaterThan(0);
+    expect(later.every((o) => o.late)).toBe(true);
+    // On-time options are ranked first.
+    expect(options.findIndex((o) => o.late)).toBeGreaterThanOrEqual(options.filter((o) => !o.late).length);
+  });
+
+  it('an exact date inside a month is not the first of that month: a listing dated the 1st is on time for the 15th and late for the day before', () => {
+    const when = (by: string) => findFits(floors, 20000, by, null, [], TODAY).options.find((o) => o.keys.includes('L13-U1'))!;
+    expect(when('2027-04-15')).toMatchObject({ from: '2027-04-01', late: false });
+    expect(when('2027-04-01').late).toBe(false);
+    expect(when('2027-03-31').late).toBe(true);
   });
 });

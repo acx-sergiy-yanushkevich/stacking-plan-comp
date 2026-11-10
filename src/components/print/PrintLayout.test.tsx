@@ -63,11 +63,55 @@ describe('PrintLayout', () => {
     // No lease shows its term, so the report has no expirations table at all (and so no rent or renewal column).
     expect(html).not.toMatch(/Lease expirations|Renewal worklist|No leases end in the next 12 months/);
     expect(html).not.toMatch(/<th>Rent<\/th>|<th>Renewal<\/th>|<th>Ends<\/th>/);
-    expect(html).toContain('lease terms are withheld');
-    // The rent roll: every lease in place is "Leased" with no expiration and nothing remaining.
-    const roll = pages.slice(0, pages.indexOf('<h2>Lease rollover</h2>'));
+    expect(html).toContain('lease dates and rollover are withheld');
+    // The rent roll: every lease in place is "Leased", and the table has no lease-date column at all.
+    const roll = pages.slice(0, pages.indexOf('<h2>Space on offer</h2>'));
+    expect(roll).not.toMatch(/<th>(Commencement|Expiration|Remaining)<\/th>/);
+    expect(roll).toContain('<th>Available from</th>');
     const leased = [...roll.matchAll(/<tr>(.*?)<\/tr>/g)].map((m) => [...m[1].matchAll(/<td[^>]*>(.*?)<\/td>/g)].map((c) => c[1])).filter((r) => r[4] === 'Leased');
     expect(leased.length).toBeGreaterThan(10);
-    for (const r of leased) expect([r[6], r[7]], `Ste ${r[1]}`).toEqual(['—', '—']);
+    for (const r of leased) expect(r.slice(5), `Ste ${r[1]}`).toEqual(['—', 'Withheld']);
+  });
+
+  it('prospect-safe report has no rollover by period, no expiring figure and no lease count', () => {
+    const open = render('?print=1');
+    expect(open.html).toContain('<h2>Lease rollover</h2>');
+    expect(open.html).toContain('<th class="num">Leases</th>');
+    const expiring = `${open.model.kpis.expiring12.toLocaleString('en-US')} SF`;
+    expect(open.html).toContain(expiring);
+    const { html, model } = render('?print=1&safe=1');
+    expect(html).not.toMatch(/Lease rollover|<th[^>]*>Leases<\/th>|<th>Period<\/th>|Share of (leased|listed)/);
+    expect(html).not.toMatch(/\d+ leases?\b/);
+    expect(html).not.toContain(expiring);
+    // Every period's SF is gone, whether or not another figure happens to equal it.
+    expect(model.roll.buckets).toEqual([]);
+    for (const b of open.model.roll.buckets.filter((x) => x.sf > 0)) expect(html, b.label).not.toContain(`<td>${b.label}</td>`);
+    expect(html).toMatch(/Expiring 12 mo<\/div><div class="sp-print__kpi-value">Withheld/);
+  });
+
+  it('prospect-safe report prints no date of any lease, signed leases included, at any as-of date asked for', () => {
+    const leaseDates = new Set(property.leases.flatMap((l) => [l.commencement, l.expiration, l.termination]).filter((d): d is string => !!d));
+    for (const a of property.availabilities) for (const d of [a.availableFrom, a.subleaseExpiration]) if (d) leaseDates.delete(d);
+    const today = render('?print=1&safe=1').html;
+    for (const d of leaseDates) {
+      const [y, m, day] = d.split('-').map(Number);
+      const long = `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][m - 1]} ${day}, ${y}`;
+      expect(today, long).not.toContain(long);
+    }
+    expect(today).not.toMatch(/Moves in|Vacated|Projected vacancy/);
+    // A link that asks for another date is drawn as of today: the report is the same, character for character.
+    for (const asOf of ['2027-02-10', '2027-04-15', '2028-11-10', '2031-01-01']) expect(render(`?print=1&safe=1&asOf=${asOf}`).html, asOf).toBe(today);
+  });
+
+  it('prospect-safe report lists the space on offer with its dates and asking rents, and no quiet listing', () => {
+    const { html } = render('?print=1&safe=1');
+    const offer = html.slice(html.indexOf('<h2>Space on offer</h2>'), html.indexOf('<h2>Coming supply</h2>'));
+    expect(offer.length).toBeGreaterThan(500);
+    expect(offer).toContain('Fl 3 · 350');
+    expect(offer).toMatch(/\$\d+–\$\d+\/SF\/yr (FSG|MG|NNN)/);
+    expect(offer).toContain('thru Sep 30, 2030');
+    // Suite 600 is occupied and listed quietly for April 2027: it is not on offer to a prospect.
+    expect(offer).not.toMatch(/Fl 6 · 600|Apr 1, 2027/);
+    expect(render('?print=1').html).not.toContain('<h2>Space on offer</h2>');
   });
 });

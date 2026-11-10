@@ -35,6 +35,36 @@ import './components/ui/ui.css';
 import './components/shell/shell.css';
 import './components/kpis/kpis.css';
 
+/** What can take keyboard focus in a view that has just been shown. */
+const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * Where the keyboard goes after a KPI was activated. A KPI that opens a tool (the finder, the worklist)
+ * hands focus to that panel's heading, as the panel does itself when it opens beside the Stack; in the
+ * Building view the panel is new on screen, and the KPI row that was pressed has left with the column it
+ * stood in. A KPI that changes the view (WALT, to the Timeline) hands focus to the first control of the
+ * view that came in. Focus never stays on a control that is gone, which would drop it to <body>.
+ */
+function focusAfterKpi(action: KpiAction): void {
+  if (typeof document === 'undefined') return;
+  const opensPanel = action === 'find' || action === 'find-largest' || action === 'expiry-worklist';
+  // Two frames: the new state renders in the first; a panel that mounts with it is in the page by the second.
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      const active = document.activeElement;
+      const lost = !active || active === document.body || !active.isConnected;
+      const heading = opensPanel ? document.querySelector<HTMLElement>('.sp-inspector .sp-ins__title, .sp-sheet .sp-ins__title') : null;
+      if (heading) {
+        heading.focus({ preventScroll: true });
+        return;
+      }
+      if (!lost) return;
+      const first = document.querySelector<HTMLElement>('.sp-stage')?.querySelector<HTMLElement>(FOCUSABLE);
+      (first ?? document.querySelector<HTMLElement>('#sp-plan'))?.focus({ preventScroll: true });
+    }),
+  );
+}
+
 const PRINT_PREVIEW = typeof location !== 'undefined' && new URLSearchParams(location.search).get('print') === '1';
 
 function Shell() {
@@ -165,6 +195,7 @@ function Shell() {
         patch({ lens: 'deals', mode: 'building', select: null, window: null, req: null, inquiry: null, bucket: null });
         break;
     }
+    focusAfterKpi(a);
   };
 
   const dataSource = useMemo(() => createDataSource(state.live, state.census), [state.live, state.census]);
@@ -174,11 +205,14 @@ function Shell() {
     </Suspense>
   );
   // Escape on the page itself (no panel, popover or block focused) clears the active filter and returns to the plan.
+  // In the Building view the plan's own controls do not use the key, so it works from them as well: the
+  // view closes its open floor first (BuildingView), and the next Escape clears the filter here.
+  const stageOwnsEscape = shownView(state.view, phone) !== 'building';
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return;
       const el = document.activeElement as HTMLElement | null;
-      if (el && el !== document.body && el.closest('.sp-ins, .sp-pop__panel, .sp-sheet, .sp-stage, input, select, textarea')) return;
+      if (el && el !== document.body && el.closest(`.sp-ins, .sp-pop__panel, .sp-sheet, ${stageOwnsEscape ? '.sp-stage, ' : ''}input, select, textarea`)) return;
       if (state.bucket !== null || state.q || state.window || state.req !== null || state.inquiry) {
         patch({ bucket: null, q: '', window: null, req: null, max: null, by: null, inquiry: null, mode: 'building' });
         refocusTrigger();
@@ -186,7 +220,7 @@ function Shell() {
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [state.bucket, state.q, state.window, state.req, state.inquiry, patch]);
+  }, [state.bucket, state.q, state.window, state.req, state.inquiry, patch, stageOwnsEscape]);
 
   const inspector = useMemo(
     () => <Inspector model={model} state={state} patch={patch} mode={mode} areaPanel={areaPanel} />,

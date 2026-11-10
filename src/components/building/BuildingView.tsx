@@ -35,6 +35,9 @@ const ALONE_ANGLE = -34;
 const DOCK_MS = 760;
 const DOCK_EASE = 'cubic-bezier(0.22, 0.8, 0.2, 1)';
 
+/** Where Escape belongs to what has the keyboard: a panel, a popover or menu, the phone sheet, a field. */
+const ESCAPE_OWNERS = '.sp-ins, .sp-pop__panel, .sp-sheet, [role="dialog"], [role="menu"], [role="listbox"], input, select, textarea';
+
 /** An element's top edge in the page as laid out: transforms (a slide in progress) are left out. */
 function layoutTop(el: HTMLElement): number {
   let y = 0;
@@ -93,15 +96,22 @@ export default function BuildingView({ model, state, patch, onKpi }: BuildingVie
   // before React touches the page, so it is exact however the page has moved since.
   const [wasDocked, setWasDocked] = useState(docked);
   const [from, setFrom] = useState<DOMRect | null>(null);
+  // While the model is on its way its floor labels are hidden: at the size it starts from they would be
+  // drawn over the floor column coming in beside it. They fade back in when it has settled.
+  const [moving, setMoving] = useState(false);
   if (wasDocked !== docked) {
     setWasDocked(docked);
     setFrom(stageRef.current?.getBoundingClientRect() ?? null);
+    setMoving(!reduceMotion);
   }
   useLayoutEffect(() => {
     const el = stageRef.current;
-    if (!el || !from || reduceMotion || !el.animate) return;
-    const to = el.getBoundingClientRect();
-    if (to.height === 0 || from.height === 0) return;
+    const to = el?.getBoundingClientRect();
+    if (!el || !to || !from || reduceMotion || !el.animate || to.height === 0 || from.height === 0) {
+      setMoving(false);
+      return;
+    }
+    const settled = window.setTimeout(() => setMoving(false), DOCK_MS);
     // The picker and the building start at the left edge of the box in both states: hold that edge and
     // match the height, so the model never starts outside the card.
     const scale = from.height / to.height;
@@ -109,22 +119,49 @@ export default function BuildingView({ model, state, patch, onKpi }: BuildingVie
     const dy = from.top + from.height / 2 - (to.top + to.height / 2);
     const frames = [{ transformOrigin: 'left center', transform: `translate(${dx}px, ${dy}px) scale(${scale})` }, { transformOrigin: 'left center', transform: 'none' }];
     el.animate(frames, { duration: DOCK_MS, easing: DOCK_EASE });
+    return () => window.clearTimeout(settled);
   }, [from, reduceMotion]);
 
   // A stale pointer position must not light a floor after the layout has changed under it.
   useEffect(() => () => setHoverFloor(null), [docked]);
 
-  // Keyboard focus never falls to the page: when the control that was used leaves the screen (a quick
-  // start, "Whole building"), focus moves to that floor's row in the picker.
-  const refocus = useRef<{ id: string; at: number } | null>(null);
+  // Keyboard focus never falls to the page. Whenever a floor opens or closes and the control that had
+  // focus has left the screen with it (a quick start, a KPI row, "Whole building", a suite on the plate
+  // that Escape closed), focus moves to that floor's row in the picker. Escape asks for the row outright.
+  const refocus = useRef<{ id: string; at: number; force?: boolean } | null>(null);
+  const shownBefore = useRef({ docked, openId });
   useEffect(() => {
-    const want = refocus.current;
+    const want = refocus.current && performance.now() - refocus.current.at <= 2000 ? refocus.current : null;
     refocus.current = null;
-    if (!want || performance.now() - want.at > 2000) return;
+    const before = shownBefore.current;
+    shownBefore.current = { docked, openId };
+    // Only a change counts: not the first render (a link that opens a floor leaves focus where the browser put it).
+    if (before.docked === docked && before.openId === openId) return;
+    const id = want?.id ?? openId ?? before.openId;
+    if (!id) return;
     const active = document.activeElement;
-    if (active && active !== document.body && active.isConnected) return;
-    stageRef.current?.querySelector<HTMLElement>(`.sp-mini [data-floor="${want.id}"]`)?.focus({ preventScroll: true });
+    const lost = !active || active === document.body || !active.isConnected;
+    if (!lost && !want?.force) return;
+    stageRef.current?.querySelector<HTMLElement>(`.sp-mini [data-floor="${id}"]`)?.focus({ preventScroll: true });
   }, [docked, openId]);
+
+  // Escape closes the open floor and returns to the whole building, with focus on that floor's row in the
+  // picker. Not while a panel, a popover, the sheet or a field has the keyboard (each closes itself), and
+  // not when something nearer has already used the key (a selected suite on the plate clears first).
+  useEffect(() => {
+    if (!pinned || !openId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+      const el = document.activeElement as HTMLElement | null;
+      if (el && el !== document.body && el.closest(ESCAPE_OWNERS)) return;
+      if (document.querySelector('.sp-sheet')) return;
+      e.preventDefault();
+      refocus.current = { id: openId, at: performance.now(), force: true };
+      patch({ floor: null, select: null });
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [pinned, openId, patch]);
 
   const aspect = useMemo(() => plateAspect(property.footprint), [property.footprint]);
   const [plateRef, size] = usePlateSize(aspect);
@@ -211,18 +248,23 @@ export default function BuildingView({ model, state, patch, onKpi }: BuildingVie
           {/* One line, always the same height: the numbers of the floor under the pointer, or the prompt. It
               follows the pointer, so it is not announced; the picker rows carry the same facts in their names. */}
           {!docked && (
-            <p className="sp-bview__caption">
-              {hovered ? (
-                <>
-                  <strong>{hovered.floor.name}</strong> · {floorSentence(hovered, model.asOf, safe)}
-                  {hoveredFact ? ` · ${hoveredFact}` : ''} · click to open its plan
-                </>
-              ) : (
-                `Point at a floor for its numbers. Click one to open its plan${canShowDeals(safe) ? ', suites and deals' : ' and suites'}.`
-              )}
-            </p>
+            <div className="sp-bview__lead">
+              <p className="sp-bview__caption">
+                {hovered ? (
+                  <>
+                    <strong>{hovered.floor.name}</strong> · {floorSentence(hovered, model.asOf, safe)}
+                    {hoveredFact ? ` · ${hoveredFact}` : ''}
+                    <span className="sp-bview__caption-more"> · click to open its plan</span>
+                  </>
+                ) : (
+                  `Point at a floor for its numbers. Click one to open its plan${canShowDeals(safe) ? ', suites and deals' : ' and suites'}.`
+                )}
+              </p>
+              {/* What the words beside the floors are, kept with the line above: the two are read together, then the model. */}
+              <p className="sp-bview__note">{factNote(state.lens, safe)}</p>
+            </div>
           )}
-          <div className="sp-bview__stage" ref={stageRef}>
+          <div className={`sp-bview__stage ${moving ? 'is-moving' : ''}`} ref={stageRef}>
             <BuildingHero
               model={model}
               state={state}
@@ -231,11 +273,11 @@ export default function BuildingView({ model, state, patch, onKpi }: BuildingVie
               onPick={pick}
               angle={docked ? 0 : ALONE_ANGLE}
               tagFact={docked ? undefined : tagFact}
+              openId={openId}
               floorTitle={(id) => `${texts(id)?.sentence ?? ''}${id === openId ? '' : docked ? ' · click to open this floor instead' : ' · click to open its plan'}`}
               beside={<MiniStack floors={floors} currentId={openId ?? ''} hotId={hoverId} onPick={pick} onPreview={setHoverFloor} describe={(f) => texts(f.floor.id)?.label ?? f.floor.name} />}
             />
           </div>
-          {!docked && <p className="sp-bview__note">{factNote(state.lens, safe)}</p>}
         </div>
 
         {floor && (

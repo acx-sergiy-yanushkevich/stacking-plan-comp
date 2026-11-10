@@ -1,10 +1,10 @@
 import type { PlanModel, WorklistRow } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { fmtDate, fmtMonths } from '../../domain/dates';
-import { num, pct, rate, sf } from '../../domain/format';
-import { rentRollDisplay, unplacedLeases } from '../../domain/exportCsv';
+import { num, pct, rate, rateRange, sf, usd, usd0 } from '../../domain/format';
+import { RENT_ROLL_NUMERIC, rentRollDisplay, unplacedLeases } from '../../domain/exportCsv';
 import { comingSupply } from '../../domain/kpis';
-import { canShowDeals, canShowInPlaceRent, canShowIssues, canShowLeaseTerm, canShowTenantRisk, rentVisible, tenantLabel } from '../../domain/safe';
+import { canShowDeals, canShowInPlaceRent, canShowIssues, canShowLeaseTerm, canShowRollover, canShowTenantRisk, marketedFor, rentVisible, tenantLabel } from '../../domain/safe';
 import { Legend } from '../plan/Legend';
 import StackView from '../stack/StackView';
 import './print.css';
@@ -18,7 +18,8 @@ export interface PrintLayoutProps {
 
 /**
  * Owner-ready report, landscape Letter. Page 1 cover + plan, page 2 rent roll,
- * page 3 rollover and the 12-month renewal worklist. Honour prospect-safe everywhere.
+ * page 3 rollover and the 12-month renewal worklist. The prospect-safe report has no rollover, no
+ * worklist and no lease date anywhere: its page 3 is the space on offer and the coming supply.
  */
 export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
   const { property: p, kpis: k, safe } = model;
@@ -29,13 +30,39 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
   const worklist: WorklistRow[] = showTerms ? model.worklist('12') : [];
   // Without the at-risk row, a share of leased SF would let a reader work the at-risk SF out: shares are then of the SF listed.
   const showRisk = canShowTenantRisk(safe);
+  // SF and leases ending per period can be matched to suites by their RSF: a prospect-safe report prints neither.
+  const showRollover = canShowRollover(safe);
   const atRisk: WorklistRow[] = showRisk ? model.worklist('risk') : [];
   const unplaced = canShowIssues(safe) ? unplacedLeases(p, model.asOf).length : 0;
   const coming = comingSupply(model.floors.flatMap((f) => f.segments), model.asOf, safe);
   const overBy = model.roll.overAllocated.reduce((t, o) => t + o.sf, 0);
   const showDeals = canShowDeals(safe);
   const showRent = canShowInPlaceRent(safe);
+  const offers = showRollover ? [] : spaceOnOffer(model);
   const noop = () => {};
+  // The owner report lists coming supply under the rollover; the prospect-safe report, which has no
+  // worklist, gives it the second column.
+  const comingTable = (
+    <>
+      <h2 style={showRollover ? { marginTop: 14 } : undefined}>Coming supply</h2>
+      <table className="sp-print__table sp-print__table--tight">
+        <tbody>
+          <tr>
+            <td>Occupied, marketed for later</td>
+            <td className="num">{coming.sf ? `${num(coming.sf)} SF${coming.from ? ` from ${fmtDate(coming.from)}` : ''}` : '—'}</td>
+          </tr>
+          <tr>
+            <td>Signed, not yet in</td>
+            <td className="num">{k.committed ? `${num(k.committed)} SF` : '—'}</td>
+          </tr>
+          <tr>
+            <td>Largest contiguous block now</td>
+            <td className="num">{k.maxContiguous.size ? `${num(k.maxContiguous.size)} SF · ${k.maxContiguous.floorName}` : '—'}</td>
+          </tr>
+        </tbody>
+      </table>
+    </>
+  );
   return (
     <div className={`sp-print ${visible ? 'sp-print--visible' : ''}`} aria-hidden={!visible} inert={!visible}>
       <section className="sp-print__page">
@@ -58,7 +85,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
           <Kpi label="Leased" value={pct(k.occupancy)} note={`${pct(k.physical)} occupied`} />
           <Kpi label="Available" value={sf(k.availableDirect + k.availableSublease)} note={`${num(k.availableDirect)} direct · ${num(k.availableSublease)} sublease`} />
           <Kpi label="Largest block" value={sf(k.maxContiguous.size)} note={k.maxContiguous.floorName ?? ''} />
-          <Kpi label="Expiring 12 mo" value={sf(k.expiring12)} note={`${k.expiring12Leases} leases`} />
+          <Kpi label="Expiring 12 mo" value={showRollover ? sf(k.expiring12) : 'Withheld'} note={showRollover ? `${k.expiring12Leases} leases` : 'Prospect-safe'} />
           <Kpi label="WALT" value={`${k.walt.toFixed(2)} yr`} note="SF-weighted" />
           <Kpi label="Pipeline" value={showDeals ? `${k.pipeline.deals} deals` : 'Withheld'} note={showDeals ? `${sf(k.pipeline.sf)} requested` : 'Prospect-safe'} />
         </div>
@@ -67,7 +94,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
           <StackView model={model} state={state} patch={noop} bare rowHeight={48} />
         </div>
         <footer className="sp-print__foot">
-          Floor width is proportional to gross floor area; suite width to RSF. Figures are exact RSF from AscendixRE records. {safe ? 'Tenant names, contacts, in-place rents and lease terms are withheld.' : ''}
+          Floor width is proportional to gross floor area; suite width to RSF. Figures are exact RSF from AscendixRE records. {safe ? 'Tenant names, contacts, in-place rents, lease dates and rollover are withheld.' : ''}
         </footer>
       </section>
 
@@ -86,7 +113,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
             {rows.slice(1).map((r, i) => (
               <tr key={i}>
                 {r.map((c, j) => (
-                  <td key={j} className={j === 3 || j === 7 || j === 9 ? 'num' : ''}>
+                  <td key={j} className={RENT_ROLL_NUMERIC.has(rows[0][j]) ? 'num' : ''}>
                     {c}
                   </td>
                 ))}
@@ -116,15 +143,17 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
         <RunningHead p={p} asOf={model.asOf} safe={safe} page={3} />
         <div className="sp-print__two">
           <div>
+            {showRollover ? (
+              <>
             <h2>Lease rollover</h2>
-            <p className="sp-print__note">SF of leases ending in each 12-month period from {fmtDate(model.asOf)}.{showRisk ? '' : ' Shares are of the SF listed here. Building totals only: no suite shows its lease term.'}</p>
+            <p className="sp-print__note">SF of leases ending in each 12-month period from {fmtDate(model.asOf)}.</p>
             <table className="sp-print__table sp-print__table--tight">
               <thead>
                 <tr>
                   <th>Period</th>
                   <th className="num">SF</th>
                   <th className="num">Leases</th>
-                  <th className="num">{showRisk ? 'Share of leased' : 'Share of listed SF'}</th>
+                  <th className="num">Share of leased</th>
                 </tr>
               </thead>
               <tbody>
@@ -133,18 +162,52 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
                     <td>{b.label}</td>
                     <td className="num">{b.sf ? num(b.sf) : '—'}</td>
                     <td className="num">{b.leases || '—'}</td>
-                    <td className="num">{b.sf ? pct(b.sf / (showRisk ? k.leased : model.roll.buckets.reduce((t, x) => t + x.sf, 0))) : '—'}</td>
+                    <td className="num">{b.sf ? pct(b.sf / k.leased) : '—'}</td>
                   </tr>
                 ))}
                 {showRisk && (
-                <tr>
-                  <td>At risk (holdover, month-to-month)</td>
-                  <td className="num">{num(model.roll.atRisk)}</td>
-                  <td className="num" colSpan={2}></td>
-                </tr>
+                  <tr>
+                    <td>At risk (holdover, month-to-month)</td>
+                    <td className="num">{num(model.roll.atRisk)}</td>
+                    <td className="num" colSpan={2}></td>
+                  </tr>
                 )}
               </tbody>
             </table>
+              </>
+            ) : (
+              <>
+                <h2>Space on offer</h2>
+                <table className="sp-print__table sp-print__table--tight">
+                  <thead>
+                    <tr>
+                      <th>Floor · Suite</th>
+                      <th className="num">RSF</th>
+                      <th>Type</th>
+                      <th>Available</th>
+                      <th>Asking</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {offers.map((o) => (
+                      <tr key={o.key}>
+                        <td style={{ whiteSpace: 'nowrap' }}>{o.where}</td>
+                        <td className="num">{num(o.size)}</td>
+                        <td>{o.type}</td>
+                        <td>{o.when}</td>
+                        <td>{o.asking}</td>
+                      </tr>
+                    ))}
+                    {offers.length === 0 && (
+                      <tr>
+                        <td colSpan={5}>No space is on offer.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+                <p className="sp-print__note">Asking rents carry their unit and lease type. Lease dates, rollover by period and the renewal worklist are withheld from this report.</p>
+              </>
+            )}
             {showRent && k.rentByType.length > 0 && (
               <>
                 <h2 style={{ marginTop: 14 }}>In-place rent by lease type</h2>
@@ -171,24 +234,9 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
                 </p>
               </>
             )}
-            <h2 style={{ marginTop: 14 }}>Coming supply</h2>
-            <table className="sp-print__table sp-print__table--tight">
-              <tbody>
-                <tr>
-                  <td>Occupied, marketed for later</td>
-                  <td className="num">{coming.sf ? `${num(coming.sf)} SF${coming.from ? ` from ${fmtDate(coming.from)}` : ''}` : '—'}</td>
-                </tr>
-                <tr>
-                  <td>Signed, not yet in</td>
-                  <td className="num">{k.committed ? `${num(k.committed)} SF` : '—'}</td>
-                </tr>
-                <tr>
-                  <td>Largest contiguous block now</td>
-                  <td className="num">{k.maxContiguous.size ? `${num(k.maxContiguous.size)} SF · ${k.maxContiguous.floorName}` : '—'}</td>
-                </tr>
-              </tbody>
-            </table>
+            {showRollover && comingTable}
           </div>
+          {!showRollover && <div>{comingTable}</div>}
           {showTerms && (
           <div>
             <h2>{atRisk.length ? 'Renewal worklist · at risk and next 12 months' : 'Renewal worklist · next 12 months'}</h2>
@@ -244,6 +292,41 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
       </section>
     </div>
   );
+}
+
+interface Offer {
+  key: string;
+  where: string;
+  size: number;
+  type: string;
+  when: string;
+  asking: string;
+}
+
+/**
+ * Every space a prospect can take, top floor first: vacant direct space, sublease space, units for
+ * sale and occupied suites with a published listing for a later date. Built from the model's floors,
+ * which in prospect-safe mode hold no quiet listing.
+ */
+function spaceOnOffer(model: PlanModel): Offer[] {
+  const out: Offer[] = [];
+  for (const f of model.floors) {
+    for (const s of f.segments) {
+      const where = `${f.floor.name.replace(/^Floor /, 'Fl ')}${s.suite ? ` · ${s.suite}` : ''}`;
+      const a = s.availability;
+      if (a && s.kind === 'forsale') {
+        out.push({ key: s.key, where, size: s.size, type: 'For sale', when: 'Now', asking: a.askingPrice ? `${usd0(a.askingPrice)} · ${usd(a.askingPrice / s.size)}/SF` : '—' });
+      } else if (a && (s.kind === 'available' || s.kind === 'sublease')) {
+        const when = s.kind === 'sublease' ? `${a.availableFrom && a.availableFrom > model.asOf ? fmtDate(a.availableFrom) : 'Now'}${a.subleaseExpiration ? ` · thru ${fmtDate(a.subleaseExpiration)}` : ''}` : s.availableFrom ? fmtDate(s.availableFrom) : 'Now';
+        out.push({ key: s.key, where, size: s.size, type: s.kind === 'sublease' ? 'Sublease' : 'Direct', when, asking: a.rentHigh > 0 ? rateRange(a.rentLow, a.rentHigh, a.rateUnit, a.leaseType) : '—' });
+      }
+      const m = marketedFor(s, model.safe);
+      if (m && m.kind === 'Lease') {
+        out.push({ key: `${s.key}-later`, where, size: m.size, type: m.sublease ? 'Sublease' : 'Direct', when: m.availableFrom ? fmtDate(m.availableFrom) : 'Later', asking: m.rentHigh > 0 ? rateRange(m.rentLow, m.rentHigh, m.rateUnit, m.leaseType) : '—' });
+      }
+    }
+  }
+  return out;
 }
 
 /** In-place rent of a worklist row; a dash when it is confidential or not on record. */

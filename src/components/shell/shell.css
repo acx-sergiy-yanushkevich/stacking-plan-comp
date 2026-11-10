@@ -31,6 +31,11 @@
 .sp-header__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .sp-header__asof .sp-btn { font-variant-numeric: tabular-nums; }
 .sp-header__asof--projected .sp-btn { background: var(--sp-color-warn-soft); border-color: var(--sp-color-warn); color: var(--sp-color-warn); }
+/* Prospect-safe: the date is fixed to today. The button states it and opens nothing; the note under it says why. */
+.sp-header__asof--locked { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.sp-header__asof--locked .sp-btn { cursor: default; }
+.sp-header__asof--locked .sp-btn:hover { background: var(--sp-color-card); }
+.sp-header__asof-note { font-size: var(--sp-text-11); line-height: 1.2; color: var(--sp-color-text-weak); white-space: nowrap; }
 /* Narrow desktop and tablet: the controls take their own row so the title and facts keep the full width. */
 @media (max-width: 1180px) {
   .sp-header { flex-wrap: wrap; }

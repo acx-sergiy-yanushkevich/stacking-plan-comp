@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import type { ISODate } from '../../domain/types';
 import { addMonths, fmtDate, monthsBetween, fmtMonths } from '../../domain/dates';
 import { Button, Chip, Popover, TextField } from '../ui';
@@ -9,6 +9,11 @@ export interface AsOfPopoverProps {
   onChange: (d: ISODate) => void;
   /** Miniature lease timeline used as a scrubber (Task 16). */
   miniTimeline?: ReactNode;
+  /**
+   * The date cannot be moved (prospect-safe: a later date would show each lease's end as a vacated
+   * suite). The control then states the date and why it is fixed, and opens nothing.
+   */
+  locked?: boolean;
 }
 
 const PRESETS: Array<{ label: string; months: number }> = [
@@ -19,10 +24,24 @@ const PRESETS: Array<{ label: string; months: number }> = [
   { label: '+5 yr', months: 60 },
 ];
 
-export function AsOfPopover({ asOf, today, onChange, miniTimeline }: AsOfPopoverProps) {
+export function AsOfPopover({ asOf, today, onChange, miniTimeline, locked = false }: AsOfPopoverProps) {
   const [open, setOpen] = useState(false);
+  const noteId = useId();
   const projected = asOf !== today;
   const ahead = monthsBetween(today, asOf);
+  if (locked) {
+    // `aria-disabled`, not `disabled`: the button keeps its tab stop, so the reason can be reached and read.
+    return (
+      <div className="sp-header__asof sp-header__asof--locked">
+        <Button icon="calendar" iconRight="lock" aria-disabled="true" aria-describedby={noteId} title="Prospect-safe shows the plan as of today. Turn Prospect-safe off to move the date.">
+          As of {fmtDate(asOf)}
+        </Button>
+        <span id={noteId} className="sp-header__asof-note">
+          Fixed to today in prospect-safe
+        </span>
+      </div>
+    );
+  }
   return (
     <div className={`sp-header__asof ${projected ? 'sp-header__asof--projected' : ''}`}>
       <Popover

@@ -1,6 +1,6 @@
 import type { ISODate, Property } from './types';
 import { activeDeals, isLeaseKind, leaseEnd, type FloorView, type Segment, type SegmentKind } from './derive';
-import { canShowDeals, canShowInPlaceRent, canShowIssues, canShowTenantRisk, rentVisible, tenantLabel, termHidden } from './safe';
+import { canShowDeals, canShowInPlaceRent, canShowIssues, canShowLeaseTerm, canShowTenantRisk, leaseDatesHidden, rentVisible, tenantLabel, termHidden } from './safe';
 import { fmtDate, fmtMonths } from './dates';
 import { num, rate as fmtRate, rateRange, usd, usd0 } from './format';
 
@@ -36,9 +36,10 @@ const STATE_LABEL: Record<SegmentKind, string> = {
  * (top floor first, left to right). Unmarketed gaps are not records, so they are
  * skipped. RSF is the exact number, never formatted. Rates carry no `$` so the
  * CSV opens as numbers; the Unit column says `yr`/`mo`. In prospect-safe mode the Live deals column
- * is dropped (deal activity is not for prospects), no lease in place has an expiration or months
- * remaining (every one is "Leased"), and a sublet suite is written as the space on offer: its asking
- * rent and the sublease's own end, the same facts the prospect-safe PDF prints for it.
+ * is dropped (deal activity is not for prospects), no lease has a commencement, an expiration or
+ * months remaining, whether it is in place ("Leased") or signed and not yet in ("Committed"), and a
+ * sublet suite is written as the space on offer: its asking rent and the sublease's own end, the same
+ * facts the prospect-safe PDF prints for it.
  */
 export function rentRollRows(p: Property, floors: FloorView[], asOf: ISODate, safe: boolean): string[][] {
   const rows: string[][] = [dealColumn([...RENT_ROLL_HEADER], safe)];
@@ -117,9 +118,9 @@ function segmentRow(f: FloorView, s: Segment, safe: boolean): string[] {
     }
   }
 
-  // Prospect-safe: no lease in place has an expiration or months remaining, so a holdover or a
-  // month-to-month lease cannot be found by its empty cells.
-  const hidden = termHidden(s.kind, safe);
+  // Prospect-safe: no lease has a commencement, an expiration or months remaining, so a holdover or a
+  // month-to-month lease cannot be found by its empty cells and no lease can be dated by when it began.
+  const hidden = leaseDatesHidden(s.kind, safe);
   const risk = s.kind === 'holdover' || s.kind === 'mtm';
   const months = hidden ? '' : risk ? (s.kind === 'holdover' ? 'Holdover' : 'MTM') : s.monthsToExpiry === null ? '' : String(Math.max(0, s.monthsToExpiry));
   // A sublet suite in prospect-safe mode: the sublease's own end (part of the offer), never the head lease's.
@@ -127,7 +128,7 @@ function segmentRow(f: FloorView, s: Segment, safe: boolean): string[] {
   const live = activeDeals(s.lease?.deals).length + activeDeals(s.availability?.deals).length + activeDeals(s.marketed?.deals).length;
 
   const state = stateLabel(s, safe);
-  return [f.floor.name, s.suite ?? '', tenant, String(s.size), state, commencement, expirationOut, months, rate, unit, leaseType, String(live)];
+  return [f.floor.name, s.suite ?? '', tenant, String(s.size), state, hidden ? '' : commencement, expirationOut, months, rate, unit, leaseType, String(live)];
 }
 
 /** The State cell: prospect-safe shows every lease in place as "Leased" (a sublet suite stays "Sublease"). */
@@ -138,16 +139,18 @@ export const RENT_ROLL_DISPLAY_HEADER = ['Floor', 'Suite', 'Tenant', 'RSF', 'Sta
 /**
  * The same rent roll, formatted for reading (print layout): thousands separators,
  * long dates, "Holdover" / "MTM" instead of month counts, rates with unit and type,
- * asking prices for sale units. Drops the Live deals column in prospect-safe mode.
+ * asking prices for sale units. In prospect-safe mode the Live deals column is dropped and so are the
+ * three lease-date columns (Commencement, Expiration, Remaining): what is left of them is one
+ * "Available from" column, filled only for space on offer.
  */
 export function rentRollDisplay(p: Property, floors: FloorView[], asOf: ISODate, safe: boolean): string[][] {
-  const rows: string[][] = [dealColumn([...RENT_ROLL_DISPLAY_HEADER], safe)];
+  const rows: string[][] = [displayColumns([...RENT_ROLL_DISPLAY_HEADER], safe, true)];
   for (const f of floors) {
     for (const s of f.segments) {
       if (s.kind === 'unmarketed') continue;
       const lease = isLeaseKind(s.kind) || s.kind === 'committed' || s.kind === 'projected' ? s.lease : undefined;
       const a = s.availability;
-      const hidden = termHidden(s.kind, safe);
+      const hidden = leaseDatesHidden(s.kind, safe);
       let tenant = '—';
       let start = '—';
       let end = '—';
@@ -155,14 +158,14 @@ export function rentRollDisplay(p: Property, floors: FloorView[], asOf: ISODate,
       let stateExtra = '';
       if (s.kind === 'sublease' && a) {
         tenant = lease ? `${tenantLabel(lease, safe)} (sublandlord)` : 'Sublease';
-        start = lease ? fmtDate(lease.commencement) : a.availableFrom ? fmtDate(a.availableFrom) : 'Now';
+        start = hidden ? '—' : lease ? fmtDate(lease.commencement) : a.availableFrom ? fmtDate(a.availableFrom) : 'Now';
         // The Expiration column is the head lease's; the sublease's own end is in the State cell.
         end = hidden ? '—' : s.endDate ? fmtDate(s.endDate) : '—';
         rate = lease && rentVisible(lease, safe) && lease.rate !== null ? fmtRate(lease.rate, lease.rateUnit, lease.leaseType) : !canShowInPlaceRent(safe) ? 'Withheld' : lease?.confidential ? 'Confidential' : '—';
         stateExtra = rentVisible(a, safe) ? ` · asking ${rateRange(a.rentLow, a.rentHigh, a.rateUnit, a.leaseType)}${a.subleaseExpiration ? ` thru ${fmtDate(a.subleaseExpiration)}` : ''}` : '';
       } else if (lease) {
         tenant = tenantLabel(lease, safe);
-        start = fmtDate(lease.commencement);
+        start = hidden ? '—' : fmtDate(lease.commencement);
         end = hidden ? '—' : s.endDate ? fmtDate(s.endDate) : canShowTenantRisk(safe) ? 'Month-to-month' : '—';
         rate = rentVisible(lease, safe) && lease.rate !== null ? fmtRate(lease.rate, lease.rateUnit, lease.leaseType) : !canShowInPlaceRent(safe) ? 'Withheld' : lease.confidential ? 'Confidential' : '—';
       } else if (a) {
@@ -176,16 +179,29 @@ export function rentRollDisplay(p: Property, floors: FloorView[], asOf: ISODate,
       const remaining = hidden ? '—' : risk ? (s.kind === 'holdover' ? 'Holdover' : 'MTM') : s.monthsToExpiry === null ? '—' : fmtMonths(Math.max(0, s.monthsToExpiry));
       const live = activeDeals(s.lease?.deals).length + activeDeals(s.availability?.deals).length + activeDeals(s.marketed?.deals).length;
       const row = [f.floor.name, s.suite ?? '—', tenant, num(s.size), stateLabel(s, safe) + stateExtra, start, end, remaining, rate, live ? String(live) : '—'];
-      rows.push(dealColumn(row, safe));
+      rows.push(displayColumns(row, safe));
     }
   }
   for (const l of unplacedRows(p, asOf, safe)) {
     const end = leaseEnd(l);
     const row = [l.floorId ? (p.floors.find((f) => f.id === l.floorId)?.name ?? '—') : '—', '—', tenantLabel(l, safe), '—', 'Not placed (data issue)', fmtDate(l.commencement), end ? fmtDate(end) : 'Month-to-month', '—', rentVisible(l, safe) && l.rate !== null ? fmtRate(l.rate, l.rateUnit, l.leaseType) : '—', '—'];
-    rows.push(dealColumn(row, safe));
+    rows.push(displayColumns(row, safe));
   }
   return rows;
 }
+
+/**
+ * The display columns a reader may see. With lease terms withheld, Expiration and Remaining go and
+ * the start column is headed "Available from": a lease's row has a dash there, space on offer its date.
+ */
+function displayColumns(row: string[], safe: boolean, header = false): string[] {
+  const out = dealColumn(row, safe);
+  if (canShowLeaseTerm(safe)) return out;
+  return [...out.slice(0, 5), header ? 'Available from' : out[5], ...out.slice(8)];
+}
+
+/** Display columns that hold figures (right-aligned in the printed table), by their heading. */
+export const RENT_ROLL_NUMERIC: ReadonlySet<string> = new Set(['RSF', 'Remaining', 'Live deals']);
 
 /** RFC 4180: quote cells containing comma, quote or newline; double internal quotes; CRLF rows. */
 export function toCsv(rows: string[][]): string {

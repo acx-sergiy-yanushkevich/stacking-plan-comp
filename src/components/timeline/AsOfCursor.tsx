@@ -26,6 +26,11 @@ export interface AsOfCursorProps {
   onChange: (d: ISODate) => void;
   onDragStart?: () => void;
   onDragEnd?: () => void;
+  /**
+   * The date cannot be moved (prospect-safe: the plan is always today's). The cursor is then a marker,
+   * not a slider: no pointer or keyboard handling and no tab stop.
+   */
+  locked?: boolean;
 }
 
 const HANDLE_FONT = '600 12px Inter, system-ui, sans-serif';
@@ -43,7 +48,7 @@ function clamp(d: ISODate, start: ISODate, end: ISODate): ISODate {
  * the parent patches global state so the whole plan recomputes. No transitions: the
  * numbers it drives must never read as interpolated.
  */
-export function AsOfCursor({ asOf, today, start, end, svgRef, plotLeft, plotWidth, top, height, handleHeight = 28, compact = false, onChange, onDragStart, onDragEnd, hideLine }: AsOfCursorProps) {
+export function AsOfCursor({ asOf, today, start, end, svgRef, plotLeft, plotWidth, top, height, handleHeight = 28, compact = false, onChange, onDragStart, onDragEnd, hideLine, locked = false }: AsOfCursorProps) {
   const x = plotLeft + Math.min(plotWidth, Math.max(0, dateToX(asOf, start, end, plotWidth)));
   const frame = useRef<number | null>(null);
   const pendingX = useRef<number | null>(null);
@@ -148,6 +153,27 @@ export function AsOfCursor({ asOf, today, start, end, svgRef, plotLeft, plotWidt
   // Keep the handle inside the SVG at both ends of the axis.
   const handleX = Math.min(Math.max(x - handleW / 2, plotLeft - 8), plotLeft + plotWidth - handleW + 8);
 
+  const marks = (
+    <>
+      {!hideLine && <line className="sp-cursor__line" x1={x} x2={x} y1={top} y2={top + height} />}
+      <rect className="sp-cursor__handle" x={handleX} y={top} width={handleW} height={handleHeight} rx={compact ? 2 : 4} />
+      {!compact && (
+        <text className="sp-cursor__label" x={handleX + handleW / 2} y={top + handleHeight / 2 + 4} textAnchor="middle">
+          {label}
+        </text>
+      )}
+    </>
+  );
+
+  if (locked) {
+    return (
+      <g className={`sp-cursor sp-cursor--locked ${compact ? 'sp-cursor--compact' : ''}`} role="img" aria-label={`Plan as of ${fmtDate(asOf)}`} style={{ cursor: 'default' }}>
+        <title>{`As of ${fmtDate(asOf)}. Prospect-safe shows the plan as of today; the date cannot be moved.`}</title>
+        {marks}
+      </g>
+    );
+  }
+
   return (
     <g
       className={`sp-cursor ${compact ? 'sp-cursor--compact' : ''}`}
@@ -168,13 +194,7 @@ export function AsOfCursor({ asOf, today, start, end, svgRef, plotLeft, plotWidt
       <title>{`As of ${fmtDate(asOf)}. Drag, or use the arrow keys, to move the as-of date.`}</title>
       {/* Wide invisible hit area so the 2 px line is easy to grab. */}
       <rect className="sp-cursor__hit" x={x - 8} y={top} width={16} height={height} fill="transparent" />
-      {!hideLine && <line className="sp-cursor__line" x1={x} x2={x} y1={top} y2={top + height} />}
-      <rect className="sp-cursor__handle" x={handleX} y={top} width={handleW} height={handleHeight} rx={compact ? 2 : 4} />
-      {!compact && (
-        <text className="sp-cursor__label" x={handleX + handleW / 2} y={top + handleHeight / 2 + 4} textAnchor="middle">
-          {label}
-        </text>
-      )}
+      {marks}
     </g>
   );
 }

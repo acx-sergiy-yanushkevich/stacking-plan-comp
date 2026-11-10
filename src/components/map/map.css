@@ -139,6 +139,12 @@
   .sp-map-legend .sp-legend { display: grid; grid-template-columns: 1fr; gap: 1px 8px; }
   .sp-map-legend .sp-legend__item { display: grid; grid-template-columns: 14px 1fr auto; gap: 6px; align-items: center; white-space: nowrap; min-width: 0; }
   .sp-map-legend .sp-legend__num { font-size: 10px; }
+  /* Folded by default: one row that says how many states there are; opened, the same exact figures as before. */
+  .sp-map-legend--fold { padding: 6px 8px; }
+  .sp-map-legend--fold summary { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 36px; padding: 0 10px; border: 1px solid var(--sp-color-border); border-radius: 8px; font-size: var(--sp-text-12); font-weight: 600; color: var(--sp-color-text-weak); cursor: pointer; list-style: none; }
+  .sp-map-legend--fold summary::-webkit-details-marker { display: none; }
+  .sp-map-legend--fold[open] summary { margin-bottom: 8px; }
+  .sp-map-legend--fold[open] summary .sp-icon { transform: rotate(180deg); }
   .sp-map-floors { position: static; transform: none; display: flex; flex-direction: row; flex-wrap: wrap; gap: 4px; margin: 6px 8px 8px; padding: 4px; }
   .sp-map-floor { min-height: 28px; min-width: 32px; }
   .sp-map-controls { top: 8px; bottom: auto; right: 8px; }

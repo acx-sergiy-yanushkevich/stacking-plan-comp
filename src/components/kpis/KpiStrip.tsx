@@ -3,7 +3,7 @@ import type { PlanState } from '../../state/planState';
 import { fmtMonthYearShort } from '../../domain/dates';
 import { num, pct, plural, sfDelta } from '../../domain/format';
 import { waltCard, waltTitle } from './walt';
-import { canShowLeaseTerm } from '../../domain/safe';
+import { canShowRollover } from '../../domain/safe';
 
 export type KpiAction = 'status' | 'find' | 'find-largest' | 'expiry-worklist' | 'timeline' | 'deals';
 
@@ -27,7 +27,7 @@ interface Card {
   delta?: { text: string; good: boolean | null } | null;
   active: boolean;
   title: string;
-  /** Informational card with no action (prospect-safe Pipeline). */
+  /** Informational card with no action (prospect-safe: Expiring 12 mo and Pipeline). */
   static?: boolean;
 }
 
@@ -65,18 +65,27 @@ export function KpiStrip({ model, state, onAction, variant = 'strip' }: KpiStrip
       active: false,
       title: 'Largest run of adjacent direct availabilities. Click to see every option at this size.',
     },
-    {
-      id: 'expiry-worklist',
-      label: 'Expiring 12 mo',
-      value: num(k.expiring12),
-      unit: 'SF',
-      context: `${k.leased ? pct(k.expiring12 / k.leased) : '0%'} of leased · ${plural(k.expiring12Leases, 'lease')}`,
-      delta: d ? { text: sfDelta(d.expiring12), good: d.expiring12 <= 0 } : null,
-      active: state.window === '12' || (state.lens === 'expiry' && state.mode === 'building' && state.bucket === null),
-      title: canShowLeaseTerm(model.safe) ? 'Lease SF ending within 12 months of the as-of date. Click for the expiration lens and the 12-month worklist.' : 'Lease SF ending within 12 months of the as-of date.',
-      // Prospect-safe withholds which leases end when, so there is nothing to open: a figure, not a button.
-      static: !canShowLeaseTerm(model.safe),
-    },
+    canShowRollover(safe)
+      ? {
+          id: 'expiry-worklist',
+          label: 'Expiring 12 mo',
+          value: num(k.expiring12),
+          unit: 'SF',
+          context: `${k.leased ? pct(k.expiring12 / k.leased) : '0%'} of leased · ${plural(k.expiring12Leases, 'lease')}`,
+          delta: d ? { text: sfDelta(d.expiring12), good: d.expiring12 <= 0 } : null,
+          active: state.window === '12' || (state.lens === 'expiry' && state.mode === 'building' && state.bucket === null),
+          title: 'Lease SF ending within 12 months of the as-of date. Click for the expiration lens and the 12-month worklist.',
+        }
+      : {
+          // With every suite's RSF on the plan, the SF expiring (and the lease count) would name the suites: no figure at all.
+          id: 'expiry-worklist',
+          label: 'Expiring 12 mo',
+          value: 'Withheld',
+          context: 'Lease terms are not shown in prospect-safe mode',
+          active: false,
+          title: 'When leases end is withheld in prospect-safe mode',
+          static: true,
+        },
     {
       id: 'timeline',
       label: 'WALT',

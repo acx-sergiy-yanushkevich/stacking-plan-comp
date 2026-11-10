@@ -6,7 +6,7 @@ import { num, pct } from '../../domain/format';
 import { fmtDate } from '../../domain/dates';
 import { matchingInquiries } from '../../domain/finder';
 import { useIsPhone } from '../../lib/useMedia';
-import { useHoverKeys, usePinnedKeys, setPinnedKeys, setHoverFloor, useHoverFloor } from '../../state/hoverStore';
+import { useHoverKeys, usePinnedKeys, setHoverFloor, useHoverFloor } from '../../state/hoverStore';
 import type { FloorView, Segment } from '../../domain/derive';
 import { PhoneStack } from './PhoneStack';
 import { focusFacts } from '../plan/focusFacts';
@@ -50,9 +50,6 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
   const planPx = Math.max(240, width - gutter - 8);
   const hoverKeys = useHoverKeys();
   const pinnedKeys = usePinnedKeys();
-  useEffect(() => {
-    if (!model.fits) setPinnedKeys(null);
-  }, [model.fits]);
   const { floors, segIndex } = model;
   const highlight = hoverKeys ?? model.highlight;
 

@@ -40,6 +40,25 @@ const contrast = (a: string, b: string) => {
 };
 /** CIE lightness, 0–100. */
 const lightness = (hex: string) => 116 * Math.cbrt(lum(hex)) - 16;
+/** Hue angle, 0–360 (0 for a grey). */
+const hue = (hex: string) => {
+  const [r, g, b] = rgb(hex).map((c) => c / 255);
+  const max = Math.max(r, g, b);
+  const d = max - Math.min(r, g, b);
+  if (d === 0) return 0;
+  const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return (h * 60 + 360) % 360;
+};
+/** The shorter way round the hue circle between two colours, in degrees. */
+const hueApart = (a: string, b: string) => {
+  const d = Math.abs(hue(a) - hue(b));
+  return Math.min(d, 360 - d);
+};
+/**
+ * Two fills a reader can tell apart at a glance without their edges: a different hue family (60° or
+ * more) or a clear step in lightness (12 L* or more). Two pale pinks 13° and 8 L* apart are neither.
+ */
+const clearlyApart = (a: string, b: string) => hueApart(a, b) >= 60 || Math.abs(lightness(a) - lightness(b)) >= 12;
 
 const vice = read('vice.css');
 const night = tokens(block(vice, ":root[data-skin='glass'][data-palette='vice'][data-theme='dark']"));
@@ -107,6 +126,10 @@ describe('Vice palette, night ramps', () => {
     expect(contrast(fill('exp-2'), fill('risk'))).toBeGreaterThanOrEqual(3);
   });
 
+  it('keeps Holdover / MTM clearly apart from every step of the expiration ramp, in hue or in lightness', () => {
+    for (const i of [0, 1, 2, 3, 4, 5]) expect(clearlyApart(fill('risk'), fill(`exp-${i}`)), `risk against exp-${i}`).toBe(true);
+  });
+
   it('orders the deal ramp by lightness', () => {
     const steps = [0, 1, 2, 3].map((i) => lightness(fill(`deal-${i}`)));
     for (let i = 1; i < steps.length; i += 1) expect(steps[i], `deal-${i}`).toBeGreaterThan(steps[i - 1]);
@@ -118,14 +141,6 @@ describe('Vice palette, day', () => {
   // plate, which paint the fill. The 3D map deepens each solid 45% toward the tone's edge (MapView).
   const MAP_DEEPEN = 0.45;
   const mix = (a: string, b: string, t: number) => `#${rgb(a).map((x, i) => Math.round(x + (rgb(b)[i] - x) * t).toString(16).padStart(2, '0')).join('')}`;
-  const hue = (hex: string) => {
-    const [r, g, b] = rgb(hex).map((c) => c / 255);
-    const max = Math.max(r, g, b);
-    const d = max - Math.min(r, g, b);
-    if (d === 0) return 0;
-    const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
-    return (h * 60 + 360) % 360;
-  };
 
   it('draws leased on the model in the legend\'s own colour, a step stronger', () => {
     for (const tone of ['leased', 'neutral', 'muted']) {
@@ -152,6 +167,49 @@ describe('Vice palette, day', () => {
       const [r, , b] = rgb(wall);
       expect(b - r, `${tone} tint`).toBeGreaterThanOrEqual(15);
     }
+  });
+
+  // Holdover / MTM is drawn in the at-risk tone beside the expiration ramp, in the same lens and the same
+  // legend. In round 13 the 2–3 yr step was a pink 13° and 8 L* from it, and two floors read as one band.
+  describe('expiration lens', () => {
+    const fill = (tone: string) => day.get(`--tone-${tone}-fill`)!;
+    const steps = [0, 1, 2, 3, 4, 5].map((i) => fill(`exp-${i}`));
+
+    it('keeps Holdover / MTM clearly apart from every step of the ramp, in hue or in lightness', () => {
+      steps.forEach((step, i) => {
+        expect(clearlyApart(fill('risk'), step), `risk ${fill('risk')} against exp-${i} ${step}: hue ${hueApart(fill('risk'), step).toFixed(0)}° apart, ${Math.abs(lightness(fill('risk')) - lightness(step)).toFixed(1)} L* apart`).toBe(true);
+      });
+      // The check has teeth: the pink it replaced fails it.
+      expect(clearlyApart(fill('risk'), '#ecbfd3')).toBe(false);
+    });
+
+    it('has no pink step: after red, orange and amber the ramp is lavender, periwinkle and pale blue', () => {
+      const pink = hue(fill('risk'));
+      for (const i of [3, 4, 5]) {
+        expect(hue(steps[i]), `exp-${i} hue`).toBeGreaterThanOrEqual(190);
+        expect(hue(steps[i]), `exp-${i} hue`).toBeLessThanOrEqual(280);
+        expect(Math.min(Math.abs(hue(steps[i]) - pink), 360 - Math.abs(hue(steps[i]) - pink)), `exp-${i} from pink`).toBeGreaterThanOrEqual(60);
+      }
+      for (const i of [0, 1, 2]) expect(hue(steps[i]), `exp-${i} stays warm`).toBeLessThanOrEqual(45);
+    });
+
+    it('orders the ramp from soonest (darkest) to latest, the three cool steps 5 L* or more apart', () => {
+      for (let i = 1; i < steps.length; i += 1) expect(lightness(steps[i]), `exp-${i} lighter than exp-${i - 1}`).toBeGreaterThan(lightness(steps[i - 1]));
+      // Lavender, periwinkle and pale blue are neighbours in hue, so lightness is what separates them.
+      for (const i of [4, 5]) expect(lightness(steps[i]) - lightness(steps[i - 1]), `exp-${i - 1} to exp-${i}`).toBeGreaterThanOrEqual(5);
+    });
+
+    it('tells every pair of steps apart: a different hue family, or 5 L* or more between them', () => {
+      for (let i = 0; i < steps.length; i += 1)
+        for (let j = i + 1; j < steps.length; j += 1) expect(hueApart(steps[i], steps[j]) >= 60 || Math.abs(lightness(steps[i]) - lightness(steps[j])) >= 5, `exp-${i} and exp-${j}`).toBe(true);
+    });
+
+    it('outlines every step at 3:1 or more on the day card, and carries dark or light text at 4.5:1', () => {
+      for (let i = 0; i < steps.length; i += 1) {
+        for (const card of DAY_CARDS) expect(contrast(day.get(`--tone-exp-${i}-edge`)!, card), `exp-${i} edge on ${card}`).toBeGreaterThanOrEqual(3);
+        expect(contrast(day.get(`--tone-exp-${i}-text`)!, steps[i]), `exp-${i} text`).toBeGreaterThanOrEqual(4.5);
+      }
+    });
   });
 
   it('draws leased as a tint, not as the white glass pane', () => {

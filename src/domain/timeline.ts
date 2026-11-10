@@ -12,6 +12,12 @@ export interface TimelineBar {
   kind: SegmentKind;
   sublease: boolean;
   committed: boolean;
+  /**
+   * Prospect-safe: this is a lease's bar and its dates are withheld. `start` and `end` are the chart's
+   * own (a lease in place runs in from before the axis and has no end; a signed lease runs on from the
+   * as-of date) and must never be printed as dates of the lease.
+   */
+  datesWithheld?: boolean;
 }
 
 export interface TimelineRow {
@@ -29,8 +35,12 @@ export interface TimelineModel {
  * Timeline rows (top floor first) with one bar per lease unit or availability
  * (DESIGN.md §2.5). Axis runs from the earliest commencement in view or
  * today − 12 months (whichever is earlier, snapped to the 1st) to as-of + 10 years.
+ *
+ * Prospect-safe (`safe`, with floors from `safeFloors`): no bar is placed by a lease's dates. Every
+ * lease in place is the same bar, in from the left edge and open-ended; a signed lease runs on from
+ * the as-of date; leases that have already ended are not drawn. Space on offer keeps its own dates.
  */
-export function timelineModel(p: Property, floors: FloorView[], asOf: ISODate, today: ISODate): TimelineModel {
+export function timelineModel(p: Property, floors: FloorView[], asOf: ISODate, today: ISODate, safe = false): TimelineModel {
   const views = new Map(floors.map((f) => [f.floor.id, f]));
   const rows: TimelineRow[] = p.floors
     .slice()
@@ -40,8 +50,9 @@ export function timelineModel(p: Property, floors: FloorView[], asOf: ISODate, t
       const bars = segs.flatMap((s) => barFor(s, asOf));
       // History: leases on this floor that ended before the as-of date are no longer segments,
       // but their term still happened. Draw them as ended bars on whatever occupies the suite now.
+      // A prospect is shown no lease's end, an ended one included.
       const horizon = addMonths(today, -12);
-      for (const l of p.leases) {
+      for (const l of safe ? [] : p.leases) {
         const end = leaseEnd(l);
         if (!end || end >= asOf || end < horizon) continue;
         for (const u of l.units) {
@@ -55,17 +66,25 @@ export function timelineModel(p: Property, floors: FloorView[], asOf: ISODate, t
     });
 
   let start = startOfMonth(addMonths(today, -12));
-  for (const row of rows) for (const bar of row.bars) if (bar.start < start) start = startOfMonth(bar.start);
+  for (const row of rows) for (const bar of row.bars) if (bar.start !== OPEN_START && bar.start < start) start = startOfMonth(bar.start);
+  // A lease in place whose dates are withheld began "before the chart": one month left of the axis, so
+  // every such bar is cut square at the left edge, the way a long-running lease is.
+  const before = addMonths(start, -1);
+  for (const row of rows) row.bars = row.bars.map((bar) => (bar.start === OPEN_START ? { ...bar, start: before } : bar));
 
   return { start, end: addMonths(asOf, 120), rows };
 }
 
+/** Placeholder start of a bar that runs in from before the axis (replaced once the axis is known). */
+const OPEN_START = '';
+
 function barFor(s: FloorView['segments'][number], asOf: ISODate): TimelineBar[] {
   const isLeaseBar = isLeaseKind(s.kind) || s.kind === 'committed' || s.kind === 'projected';
   if (isLeaseBar && s.lease) {
-    // Prospect-safe (`safeFloors` marks the segment): the lease's end is withheld, so its bar is the
-    // chart's open-ended lease bar (`mtm`, no end), which runs past the as-of line and fades. Every
-    // lease in place is drawn that way, so the bars say nothing about which lease ends when.
+    // Prospect-safe (`safeFloors` marks the segment): the lease's dates are withheld, so a lease in
+    // place is the chart's open-ended lease bar (`mtm`, no end), which runs past the as-of line and
+    // fades. Every lease in place is drawn that way, so the bars say nothing about which lease began
+    // or ends when. A signed lease keeps its hatched bar, from the as-of date on.
     const withheld = !!s.termWithheld;
     const headEnd = withheld ? null : leaseEnd(s.lease);
     const bars: TimelineBar[] = [
@@ -73,18 +92,20 @@ function barFor(s: FloorView['segments'][number], asOf: ISODate): TimelineBar[] 
         key: `tl-${s.key}`,
         segKey: s.key,
         label: s.lease.tenant,
-        start: s.lease.commencement,
+        start: withheld ? (s.kind === 'committed' ? asOf : OPEN_START) : s.lease.commencement,
         end: headEnd,
         // the head lease stays a lease bar; the sublease itself is drawn as its own bar below
-        kind: withheld ? 'mtm' : s.kind === 'sublease' ? 'leased' : s.kind,
+        kind: withheld ? (s.kind === 'committed' ? 'committed' : 'mtm') : s.kind === 'sublease' ? 'leased' : s.kind,
         sublease: false,
         committed: s.kind === 'committed',
+        ...(withheld ? { datesWithheld: true } : {}),
       },
     ];
     // Sublease: its own bar from the availability date to the sublease expiration. When it runs to the
     // head lease's own end, the head bar simply becomes the (dotted) sublease bar: one suite, one bar.
+    // With the head lease's dates withheld there is no end to compare: the sublease always has its own bar.
     const subEnd = s.availability ? (s.availability.subleaseExpiration ?? headEnd) : null;
-    if (s.kind === 'sublease' && s.availability && subEnd === leaseEnd(s.lease)) {
+    if (s.kind === 'sublease' && s.availability && !withheld && subEnd === leaseEnd(s.lease)) {
       bars[0] = { ...bars[0], end: subEnd, kind: 'sublease', sublease: true };
     } else if (s.kind === 'sublease' && s.availability) {
       bars.push({

@@ -12,7 +12,7 @@ import { TimelineRows, type BarHover } from './TimelineRows';
 import { layoutRows, layoutStackedRows, rowsHeight, viewAxis } from './layout';
 import { AsOfCursor } from './AsOfCursor';
 import { RolloverChips } from './RolloverChips';
-import { canShowLeaseTerm } from '../../domain/safe';
+import { canShowRollover, canTimeTravel } from '../../domain/safe';
 import { barLabel, SUB_FONT, tagWidth, wrapLabel, type LabelLine } from './barLabel';
 import { useWidth } from './useWidth';
 import { measure } from '../../lib/textFit';
@@ -58,7 +58,10 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
     ? Math.ceil(Math.max(50, ...rows.map((r) => measure(`${num(r.floor.size - r.floor.nonLeasable)} SF`, SUB_FONT)))) + 12
     : GUTTER;
   const plotWidth = Math.max(200, width - gutter - (stackedMode ? 2 : 8));
-  const bandHeight = stackedMode ? 0 : BAND_H;
+  // Prospect-safe has no rollover band (SF per period would name suites) and no movable as-of date.
+  const showRollover = canShowRollover(model.safe);
+  const timeTravel = canTimeTravel(model.safe);
+  const bandHeight = stackedMode || !showRollover ? 0 : BAND_H;
   const rowsTop = STRIP_H + bandHeight + 2;
   // Stacked: every bar's whole label, wrapped to the plot. The lane heights follow from the line counts.
   const labels = useMemo(() => {
@@ -147,7 +150,7 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
         )}
       </div>
     <div className={`sp-timeline ${stackedMode ? 'sp-timeline--stacked' : ''}`} ref={hostRef}>
-      {stackedMode && <RolloverChips buckets={model.roll.buckets} atRisk={model.safe ? 0 : model.roll.atRisk} asOf={model.asOf} activeBucket={state.bucket} onBucket={canShowLeaseTerm(model.safe) ? onBucket : undefined} />}
+      {stackedMode && showRollover && <RolloverChips buckets={model.roll.buckets} atRisk={model.roll.atRisk} asOf={model.asOf} activeBucket={state.bucket} onBucket={onBucket} />}
       <svg ref={svgRef} className="sp-timeline__svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="group" aria-label={`Lease timeline, ${rows.length} floors`}>
         <defs>
           <clipPath id={clipId}>
@@ -165,9 +168,9 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
           bandHeight={bandHeight}
           height={height - BOTTOM_PAD}
           buckets={model.roll.buckets}
-          atRisk={model.safe ? 0 : model.roll.atRisk}
+          atRisk={model.roll.atRisk}
           activeBucket={state.bucket}
-          onBucket={canShowLeaseTerm(model.safe) ? onBucket : undefined}
+          onBucket={onBucket}
         />
         <line className="sp-cursor__line sp-cursor__line--under" x1={gutter + dateToX(model.asOf, start, end, plotWidth)} x2={gutter + dateToX(model.asOf, start, end, plotWidth)} y1={0} y2={height - BOTTOM_PAD} />
         <TimelineRows
@@ -190,6 +193,7 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
           onHover={onHover}
         />
         <AsOfCursor
+          locked={!timeTravel}
           asOf={model.asOf}
           today={model.today}
           start={start}
@@ -212,7 +216,11 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
         </div>
       )}
       <p className="sp-timeline__note">
-        {stackedMode ? 'Drag the date handle to move the as-of date; the whole plan recomputes. Tap a lease for its details.' : 'Drag the cursor or use ← → to move the as-of date; the whole plan recomputes.'}
+        {!timeTravel
+          ? 'Prospect-safe shows the plan as of today: the date cannot be moved, and no lease shows when it began or ends.'
+          : stackedMode
+            ? 'Drag the date handle to move the as-of date; the whole plan recomputes. Tap a lease for its details.'
+            : 'Drag the cursor or use ← → to move the as-of date; the whole plan recomputes.'}
       </p>
     </div>
     </section>

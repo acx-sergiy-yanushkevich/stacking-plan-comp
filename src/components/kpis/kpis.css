@@ -30,9 +30,16 @@
   /* The figure itself has no break point; only its unit may drop to a second line before anything is cut. */
   .sp-kpi__value > span:first-child { white-space: normal; }
 }
+/* A tablet is short of height more than of width: the header and the toolbar each take two rows there,
+   so the tiles are set tighter (the notes are already in the tooltips at this width) and the plan, or an
+   open floor's numbers, starts sooner. */
+@media (min-width: 761px) and (max-width: 1099px) {
+  :root[data-skin] .sp-kpis .sp-kpi { padding: 8px 12px 9px; gap: 1px; }
+  :root[data-skin] .sp-kpis .sp-kpi__value { font-size: var(--sp-text-22); letter-spacing: -0.02em; gap: 2px 6px; }
+}
 @media (min-width: 761px) and (max-width: 979px) {
   :root[data-skin] section.sp-kpis { gap: 6px; }
-  :root[data-skin] .sp-kpis .sp-kpi { padding: 10px 10px 11px; }
+  :root[data-skin] .sp-kpis .sp-kpi { padding: 8px 10px 9px; }
   :root[data-skin] .sp-kpis .sp-kpi__value { font-size: 20px; letter-spacing: -0.02em; gap: 2px 6px; }
   .sp-kpi__label { letter-spacing: 0.02em; }
 }
@@ -67,9 +74,14 @@
  * not six cards of their own. The selectors carry `:root[data-skin] section` to outrank the skin's
  * tile rules, which are written for the strip.
  */
-:root[data-skin] section.sp-kpis--col { display: flex; flex-direction: column; gap: 6px; overflow: visible; }
+:root[data-skin] section.sp-kpis--col { display: flex; flex-direction: column; gap: 6px; overflow: visible; flex: 1 1 auto; }
+/* Given a column taller than the list (the model beside it sets the height), the six rows share it evenly,
+   each keeping its two lines together in the middle of its row; they stop growing at 88 px, so on a very
+   tall window the list keeps its rhythm and the spare room falls between the rows. */
+:root[data-skin] section.sp-kpis--col { justify-content: space-between; }
 :root[data-skin] section.sp-kpis--col .sp-kpi,
 :root[data-skin] section.sp-kpis--col .sp-kpi:last-child {
+  flex: 1 1 auto; max-height: 88px; align-content: center;
   display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'label value' 'context context';
   align-items: baseline; gap: 1px var(--sp-space-3); padding: 7px 12px 8px;
   background: var(--sp-color-card-2); border: 1px solid var(--sp-color-border); border-radius: 10px;
@@ -96,7 +108,7 @@
 @container (min-width: 600px) {
   :root[data-skin] section.sp-kpis--col { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
   :root[data-skin] section.sp-kpis--col .sp-kpi,
-  :root[data-skin] section.sp-kpis--col .sp-kpi:last-child { display: flex; flex-direction: column; gap: 1px; padding: 6px 8px 7px; }
+  :root[data-skin] section.sp-kpis--col .sp-kpi:last-child { display: flex; flex-direction: column; gap: 1px; padding: 6px 8px 7px; max-height: none; }
   :root[data-skin] section.sp-kpis--col .sp-kpi__value { flex-direction: row; justify-content: flex-start; font-size: var(--sp-text-15); }
   .sp-kpis--col .sp-kpi__context { display: none; }
   .sp-kpis--col .sp-kpi__label { font-size: 10px; letter-spacing: 0.02em; }

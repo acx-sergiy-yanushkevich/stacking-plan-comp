@@ -111,13 +111,16 @@
     --tone-empty-edge: #787f92; --tone-deal-none-edge: #787f92;
     --tone-confidential-edge: #757a86;
     /* Daytime expiration lens: lightness ordered (soonest is darkest) and stepping in hue as the night ramp
-       does (red, orange, amber, pink, lavender, pale blue), so no two neighbours are one amber apart. */
+       does: red, orange, amber for the three steps that need attention, then lavender, periwinkle and
+       pale blue. No step is pink: Holdover / MTM (`--tone-risk-fill`, a pale pink) stands beside this ramp
+       in the same lens, and every step is far from it in hue or in lightness (vice.test.ts). The three
+       cool steps are 6 L* or more apart, and each edge is 4:1 or more on the day card at its darkest. */
     --tone-exp-0-fill: #a8321a; --tone-exp-0-text: #ffffff; --tone-exp-0-edge: #7a2210;
     --tone-exp-1-fill: #d9641f; --tone-exp-1-text: #1a0d05; --tone-exp-1-edge: #9c4310;
     --tone-exp-2-fill: #f2a640; --tone-exp-2-text: #181818; --tone-exp-2-edge: #a8650f;
-    --tone-exp-3-fill: #ecbfd3; --tone-exp-3-text: #181818; --tone-exp-3-edge: #a24a78;
-    --tone-exp-4-fill: #ded3f4; --tone-exp-4-text: #181818; --tone-exp-4-edge: #6f55ad;
-    --tone-exp-5-fill: #d9e5f1; --tone-exp-5-text: #181818; --tone-exp-5-edge: #55708f;
+    --tone-exp-3-fill: #c9b5ee; --tone-exp-3-text: #181818; --tone-exp-3-edge: #6a4fb0;
+    --tone-exp-4-fill: #bfd2f7; --tone-exp-4-text: #181818; --tone-exp-4-edge: #4a66b0;
+    --tone-exp-5-fill: #d7e8f1; --tone-exp-5-text: #181818; --tone-exp-5-edge: #4f7285;
     --tone-rent-0-edge: #5d87a8; --tone-rent-1-edge: #4f82ad; --tone-rent-2-edge: #3d76a6; --tone-rent-3-edge: #2f6c9e;
     --tone-deal-0-edge: #5f80cf; --tone-deal-1-edge: #4f74c8;
 

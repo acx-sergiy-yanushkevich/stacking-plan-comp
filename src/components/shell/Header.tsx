@@ -4,6 +4,7 @@ import { isDark, type PlanState } from '../../state/planState';
 import { daysBetween, fmtDate } from '../../domain/dates';
 import { num, pct, usd, usd0 } from '../../domain/format';
 import { Button, Chip, Icon, Menu, Switch, useToastBoundary } from '../ui';
+import { canTimeTravel, planDate } from '../../domain/safe';
 import { AsOfPopover } from './AsOfPopover';
 import { rememberTrigger } from '../../state/focusStore';
 import { usePrefersDark } from '../../lib/useMedia';
@@ -93,9 +94,10 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
         </div>
       </div>
       <div className="sp-header__actions">
-        <AsOfPopover asOf={state.asOf} today={today} onChange={(asOf) => patch({ asOf })} miniTimeline={miniTimeline} />
-        {/* Turning it on drops a search in progress, the worklist and any toast: the state layer (applyPatch) and useToastBoundary do it, not this handler. */}
-        <Switch checked={state.safe} onChange={(safe) => patch({ safe })} label="Prospect-safe" title="Hide tenant names, contacts, rents, lease terms and prospects" />
+        {/* The date the plan is drawn for: in prospect-safe mode that is today, whatever was asked for. */}
+        <AsOfPopover asOf={planDate(state.asOf, today, state.safe)} today={today} onChange={(asOf) => patch({ asOf })} miniTimeline={miniTimeline} locked={!canTimeTravel(state.safe)} />
+        {/* Turning it on drops a search in progress, the worklist, a projected as-of date and any toast: the state layer (applyPatch) and useToastBoundary do it, not this handler. */}
+        <Switch checked={state.safe} onChange={(safe) => patch({ safe })} label="Prospect-safe" title="Hide tenant names, contacts, rents, lease dates and prospects, and show the plan as of today" />
         {!state.safe && (
         <Button
           icon="warning"

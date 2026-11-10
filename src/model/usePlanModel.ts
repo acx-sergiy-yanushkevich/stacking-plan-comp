@@ -1,11 +1,12 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { Deal, ISODate, Property, Touch } from '../domain/types';
-import { canShowLeaseTerm, publishedFloors, safeFloors } from '../domain/safe';
+import { canShowLeaseTerm, planDate, publishedFloors, safeFloors, safeKpis, safeRollover } from '../domain/safe';
 import { deriveFloors, isLeaseKind, segmentIndex, activeDeals, type FloorView, type Segment } from '../domain/derive';
 import { computeKpis, kpiDeltas, type Kpis } from '../domain/kpis';
 import { rollover, bucketOf, type RolloverBucket } from '../domain/rollover';
 import { legendFor, type LegendItem } from '../domain/lenses';
-import { findFits, filterFits, nearMisses, type FitOption, type FitType } from '../domain/finder';
+import { findFits, filterFits, nearMisses, type ChosenOption, type FitOption, type FitType, type NearMiss } from '../domain/finder';
+import { setPinnedOption, usePinnedOption } from '../state/hoverStore';
 import { findIssues, issueCounts, recentChanges, type Issue } from '../domain/issues';
 import { timelineModel } from '../domain/timeline';
 import type { PlanState, WindowKey } from '../state/planState';
@@ -47,7 +48,12 @@ export interface PlanModel {
   legend: LegendItem[];
   /** Active requirement (from state or the matched inquiry). */
   req: { size: number; max: number | null; by: ISODate | null; type: FitType } | null;
-  fits: { options: FitOption[]; keys: Set<string>; largestNow: { size: number; floorName: string } } | null;
+  /**
+   * Finder results for `req`. `alternatives` are the near misses the Find panel lists when exact options
+   * are few (smaller spaces, stacked floors), already narrowed to the requirement's space type; `partial`
+   * is their suites, which the plan keeps readable instead of dimming.
+   */
+  fits: { options: FitOption[]; keys: Set<string>; alternatives: NearMiss[]; partial: Set<string>; largestNow: { size: number; floorName: string } } | null;
   worklist: (window: WindowKey) => WorklistRow[];
   activeWorklist: WorklistRow[] | null;
   searchMatches: Set<string> | null;
@@ -58,6 +64,11 @@ export interface PlanModel {
   highlight: Set<string> | null;
   /** Finder alternatives: not matches, but kept readable instead of dimmed. */
   partial?: Set<string> | null;
+  /**
+   * The finder row the user clicked, while the finder is on and the selected suite is one of its
+   * suites: all of them are in `highlight`, and the inspector lists them.
+   */
+  option?: ChosenOption | null;
   filterLabel: string | null;
   timeline: ReturnType<typeof timelineModel>;
   selected: Segment | null;
@@ -140,24 +151,28 @@ function search(floors: FloorView[], q: string, safe: boolean): Map<string, stri
 }
 
 export function usePlanModel(property: Property, state: PlanState, today: ISODate): PlanModel {
-  const { asOf, safe, lens } = state;
+  const { safe, lens } = state;
+  // Prospect-safe is always drawn as of today (domain/safe.ts, rule 3): the model does not rely on the
+  // state layer having already dropped the date.
+  const asOf = planDate(state.asOf, today, safe);
   // Two projections, one policy (domain/safe.ts). `totals` keeps the real lease terms and feeds only
-  // building-wide figures (KPIs, the rollover, issue detection), which name no suite. `floors` is what every
-  // view draws and lists: in prospect-safe mode it carries no quiet listing and no lease term, so no block,
-  // bar, row, finder option or label built from it can show either.
+  // building-wide figures (KPIs, issue detection), which name no suite. `floors` is what every view draws
+  // and lists: in prospect-safe mode it carries no quiet listing and no lease date, so no block, bar, row,
+  // finder option or label built from it can show either.
   const totals = useMemo(() => publishedFloors(deriveFloors(property, asOf, today), safe), [property, asOf, today, safe]);
   const totalsToday = useMemo(() => (asOf === today ? totals : publishedFloors(deriveFloors(property, today, today), safe)), [property, totals, asOf, today, safe]);
   const floors = useMemo(() => safeFloors(totals, safe), [totals, safe]);
   const segIndex = useMemo(() => segmentIndex(floors), [floors]);
-  const kpis = useMemo(() => computeKpis(property, totals, asOf), [property, totals, asOf]);
-  const kpisToday = useMemo(() => (asOf === today ? kpis : computeKpis(property, totalsToday, today)), [property, totalsToday, kpis, asOf, today]);
+  const kpis = useMemo(() => safeKpis(computeKpis(property, totals, asOf), safe), [property, totals, asOf, safe]);
+  const kpisToday = useMemo(() => (asOf === today ? kpis : safeKpis(computeKpis(property, totalsToday, today), safe)), [property, totalsToday, kpis, asOf, today, safe]);
   const deltas = useMemo(() => (asOf === today ? null : kpiDeltas(kpis, kpisToday)), [kpis, kpisToday, asOf, today]);
-  const roll = useMemo(() => rollover(totals, asOf, 'rolling', 8), [totals, asOf]);
+  // The rollover by period is withheld from a prospect: `safeRollover` leaves no period to draw.
+  const roll = useMemo(() => safeRollover(rollover(totals, asOf, 'rolling', 8), safe), [totals, asOf, safe]);
   const issues = useMemo(() => findIssues(property, totals, today), [property, totals, today]);
   const counts = useMemo(() => issueCounts(issues), [issues]);
   const changes = useMemo(() => recentChanges(property, today, 30), [property, today]);
   const legend = useMemo(() => legendFor(lens, safe, floors), [lens, safe, floors]);
-  const timeline = useMemo(() => timelineModel(property, floors, asOf, today), [property, floors, asOf, today]);
+  const timeline = useMemo(() => timelineModel(property, floors, asOf, today, safe), [property, floors, asOf, today, safe]);
 
   const inquiry = state.inquiry ? property.inquiries.find((i) => i.id === state.inquiry) ?? null : null;
   const req = useMemo(() => {
@@ -172,9 +187,9 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
     const r = findFits(floors, req.size, req.by, req.max, property.inquiries, asOf);
     const options = filterFits(r.options, req.type);
     const keys = new Set(options.flatMap((o) => o.keys));
-    // The same alternatives the Find panel lists (smaller spaces and stacked floors) when exact options are few.
-    const near = options.length < 3 ? nearMisses(floors, req.size, asOf) : [];
-    return { options, keys, partial: new Set(near.flatMap((m) => m.keys).filter((k) => !keys.has(k))), largestNow: r.largestNow };
+    // Alternatives (smaller spaces and stacked floors) when exact options are few, held to the same space type.
+    const alternatives = options.length < 3 ? nearMisses(floors, req.size, asOf, req.type) : [];
+    return { options, keys, alternatives, partial: new Set(alternatives.flatMap((m) => m.keys).filter((k) => !keys.has(k))), largestNow: r.largestNow };
   }, [floors, req, property.inquiries, asOf]);
 
   const worklist = useMemo(() => {
@@ -196,17 +211,27 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
   const searchMatches = useMemo(() => (searchReasons ? new Set(searchReasons.keys()) : null), [searchReasons]);
 
   const bucketKeys = useMemo(() => {
-    if (state.bucket === null || !canShowLeaseTerm(safe)) return null;
-    const tail = roll.buckets[roll.buckets.length - 1].key;
+    const tail = roll.buckets.at(-1)?.key;
+    if (state.bucket === null || !canShowLeaseTerm(safe) || tail === undefined) return null;
     const out = new Set<string>();
     for (const f of floors) for (const s of f.segments) if (s.lease && bucketOf(s, 'rolling', tail) === state.bucket) out.add(s.key);
     return out;
   }, [floors, roll, state.bucket, safe]);
 
+  // A clicked finder row is kept while the finder is on and the selection stays inside it; it is
+  // forgotten when the finder clears, so it cannot come back with a later requirement.
+  const pinnedOption = usePinnedOption();
+  const finding = fits !== null;
+  useEffect(() => {
+    if (!finding) setPinnedOption(null);
+  }, [finding]);
+  const option = fits && pinnedOption && state.select !== null && pinnedOption.keys.includes(state.select) ? pinnedOption : null;
+
   let highlight: Set<string> | null = null;
   let filterLabel: string | null = null;
   if (fits && req) {
-    highlight = fits.keys;
+    // Every suite of the chosen option is lit, whether it is an exact match or an alternative.
+    highlight = option ? new Set([...fits.keys, ...option.keys]) : fits.keys;
     const who = inquiry ? (safe ? 'an open inquiry' : inquiry.prospect) : null;
     filterLabel = `${who ? `Space for ${who}: ` : 'Space that fits '}${num(req.size)}${req.max ? `–${num(req.max)}` : '+'} SF${req.by ? ` by ${fmtDate(req.by)}` : ''} · ${fits.options.length} option${fits.options.length === 1 ? '' : 's'}`;
   } else if (searchMatches && searchMatches.size === 0) {
@@ -258,6 +283,7 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
     bucketKeys,
     highlight,
     partial: fits && req ? fits.partial : null,
+    option,
     filterLabel,
     timeline,
     selected,

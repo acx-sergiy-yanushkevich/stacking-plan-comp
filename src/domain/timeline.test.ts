@@ -95,25 +95,61 @@ describe('axis maths', () => {
 describe('timelineModel in prospect-safe mode', () => {
   const floors = deriveFloors(property, TODAY, TODAY);
   const open = timelineModel(property, floors, TODAY, TODAY);
-  const safe = timelineModel(property, safeFloors(floors, true), TODAY, TODAY);
+  const safe = timelineModel(property, safeFloors(floors, true), TODAY, TODAY, true);
   const bars = (m: typeof open) => m.rows.flatMap((r) => r.bars);
   const inPlace = floors.flatMap((f) => f.segments).filter((s) => s.kind === 'leased' || s.kind === 'holdover' || s.kind === 'mtm');
 
-  it('draws every lease in place as the same open-ended bar: no end date for any of them', () => {
+  it('draws every lease in place as the same bar: in from before the axis, with no end', () => {
+    const starts = new Set<string>();
     for (const s of inPlace) {
       const bar = bars(safe).find((b) => b.key === `tl-${s.key}`)!;
-      expect([bar.kind, bar.end], s.key).toEqual(['mtm', null]);
+      expect([bar.kind, bar.end, bar.datesWithheld], s.key).toEqual(['mtm', null, true]);
+      starts.add(bar.start);
     }
-    // Outside the mode an ordinary lease keeps its end and a holdover its own kind.
+    // One start for all of them, left of the axis, and it is no lease's commencement.
+    expect(starts.size).toBe(1);
+    const [start] = [...starts];
+    expect(start < safe.start).toBe(true);
+    expect(property.leases.some((l) => l.commencement === start)).toBe(false);
+    // Outside the mode an ordinary lease keeps its dates and a holdover its own kind.
     expect(bars(open).find((b) => b.key === 'tl-L13-U1')).toMatchObject({ kind: 'leased', end: '2027-03-31' });
     expect(bars(open).some((b) => b.kind === 'holdover')).toBe(true);
     expect(bars(safe).some((b) => b.kind === 'holdover')).toBe(false);
   });
 
-  it('keeps the bars for space on offer, signed leases and the sublease end exactly as they were', () => {
-    const keep = (m: typeof open) => bars(m).filter((b) => b.kind === 'available' || b.kind === 'forsale' || b.kind === 'committed' || b.kind === 'sublease' || b.kind === 'projected');
+  it('places no bar by a lease date: a signed lease runs on from the as-of date, and the axis does not reach back to a commencement', () => {
+    const signed = bars(safe).filter((b) => b.committed);
+    expect(signed.length).toBeGreaterThan(0);
+    for (const b of signed) expect([b.kind, b.start, b.end, b.datesWithheld], b.key).toEqual(['committed', TODAY, null, true]);
+    const leaseDates = new Set(property.leases.flatMap((l) => [l.commencement, l.expiration, l.termination]).filter(Boolean));
+    for (const b of bars(safe).filter((x) => x.datesWithheld)) expect([leaseDates.has(b.start), b.end], b.key).toEqual([false, null]);
+    expect(safe.start).toBe('2025-11-01');
+    expect(open.start < safe.start).toBe(true);
+  });
+
+  it('draws no lease that has already ended (its end is a lease date too)', () => {
+    const at = '2028-01-01';
+    const raw = deriveFloors(property, at, TODAY);
+    expect(timelineModel(property, raw, at, TODAY).rows.flatMap((r) => r.bars).some((b) => b.key.startsWith('tl-hist-') || b.kind === 'projected')).toBe(true);
+    const later = timelineModel(property, safeFloors(raw, true), at, TODAY, true).rows.flatMap((r) => r.bars);
+    expect(later.some((b) => b.key.startsWith('tl-hist-') || b.kind === 'projected')).toBe(false);
+  });
+
+  it('keeps the bars for space on offer exactly as they were', () => {
+    const keep = (m: typeof open) => bars(m).filter((b) => b.kind === 'available' || b.kind === 'forsale');
     // The quiet listing on Floor 6 is removed by the same projection; everything else is unchanged.
     expect(keep(safe)).toEqual(keep(open).filter((b) => b.key !== 'tl-L13-U1-mkt'));
-    expect(bars(safe).length).toBe(bars(open).length - 1);
+    expect(keep(safe).length).toBeGreaterThan(5);
+  });
+
+  it('a sublet suite is the head lease, dateless like any other, and the sublease as its own bar with the dates of the offer', () => {
+    // To the broker the two are one bar when the sublease runs to the head lease's end, and it starts at the lease's commencement.
+    expect(bars(open).filter((b) => b.segKey === 'L14-U2')).toEqual([expect.objectContaining({ key: 'tl-L14-U2', kind: 'sublease', start: '2018-09-15', end: '2030-09-30' })]);
+    // A prospect never gets that merged bar: it would start on the head lease's commencement and say the two end together.
+    const [head, sub] = bars(safe).filter((b) => b.segKey === 'L14-U2');
+    expect(head).toMatchObject({ key: 'tl-L14-U2', kind: 'mtm', end: null, datesWithheld: true });
+    const a = property.availabilities.find((x) => x.sublease && x.suite === '720')!;
+    expect(sub).toMatchObject({ key: 'tl-L14-U2-sub', kind: 'sublease', start: a.availableFrom ?? TODAY, end: a.subleaseExpiration });
+    expect(sub.datesWithheld).toBeUndefined();
   });
 });

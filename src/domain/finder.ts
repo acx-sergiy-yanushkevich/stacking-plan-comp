@@ -258,28 +258,43 @@ export interface NearMiss {
   type: 'Direct' | 'Sublease' | 'Direct + sublease';
 }
 
+/** One space a tenant could take: a vacant or sublet suite, or an occupied one marketed for later. */
+interface Space {
+  key: string;
+  size: number;
+  from: ISODate | null;
+  type: 'Direct' | 'Sublease';
+}
+
+/** Lease space on a floor, left to right. Units offered for sale are never lease space. */
+function spacesOn(f: FloorView): Space[] {
+  return f.segments.flatMap((s): Space[] => {
+    if (s.kind === 'available') return [{ key: s.key, size: s.size, from: s.availableFrom ?? null, type: 'Direct' }];
+    if (s.kind === 'sublease') return [{ key: s.key, size: s.size, from: s.availability?.availableFrom ?? null, type: 'Sublease' }];
+    if (s.marketed && s.marketed.kind === 'Lease') return [{ key: s.key, size: s.marketed.size, from: s.marketed.availableFrom, type: s.marketed.sublease ? 'Sublease' : 'Direct' }];
+    return [];
+  });
+}
+
+const mixOf = (spaces: Space[]): NearMiss['type'] => (spaces.every((x) => x.type === 'Direct') ? 'Direct' : spaces.every((x) => x.type === 'Sublease') ? 'Sublease' : 'Direct + sublease');
+const latest = (spaces: Space[]): ISODate | null => spaces.map((x) => x.from).filter(Boolean).sort().at(-1) ?? null;
+
 /**
  * When the finder has few exact options: the closest single spaces that fall short of the
- * requirement, and vertically adjacent floors whose available space (direct and sublease together)
- * would meet it. Never offers for-sale units. Sorted by smallest shortfall first.
+ * requirement, and vertically adjacent floors whose available space would meet it. `type` is the
+ * requirement's space type and is applied before anything is combined or counted, so a sublease-only
+ * search is offered sublease space only (never a direct or mixed alternative) and the `limit` is
+ * spent on rows the tenant can use. Never offers for-sale units. Sorted by smallest shortfall first.
  */
-export function nearMisses(floors: FloorView[], req: number, asOf: ISODate, limit = 4): NearMiss[] {
+export function nearMisses(floors: FloorView[], req: number, asOf: ISODate, type: FitType = 'any', limit = 4): NearMiss[] {
+  const want = type === 'any' ? null : type === 'direct' ? 'Direct' : 'Sublease';
+  const spaces = (f: FloorView) => spacesOn(f).filter((x) => !want || x.type === want);
   const out: NearMiss[] = [];
-  const spaces = (f: FloorView) =>
-    f.segments.flatMap((s) => {
-      if (s.kind === 'available' || s.kind === 'sublease')
-        return [{ key: s.key, size: s.size, from: s.availableFrom ?? (s.kind === 'sublease' ? s.availability?.availableFrom ?? null : null), type: s.kind === 'sublease' ? ('Sublease' as const) : ('Direct' as const) }];
-      if (s.marketed && s.marketed.kind === 'Lease') return [{ key: s.key, size: s.marketed.size, from: s.marketed.availableFrom, type: s.marketed.sublease ? ('Sublease' as const) : ('Direct' as const) }];
-      return [];
-    });
   for (const f of floors) {
     const sp = spaces(f);
-    // whole-floor available total (direct + sublease) as one candidate when several suites exist
+    // whole-floor available total as one candidate when several suites exist
     const total = sp.reduce((s, x) => s + x.size, 0);
-    if (sp.length > 1 && total < req) {
-      const from = sp.map((x) => x.from).filter(Boolean).sort().at(-1) ?? null;
-      out.push({ kind: 'short', floorName: f.floor.name, size: total, shortfall: req - total, keys: sp.map((x) => x.key), from, type: sp.every((x) => x.type === 'Direct') ? 'Direct' : sp.every((x) => x.type === 'Sublease') ? 'Sublease' : 'Direct + sublease' });
-    }
+    if (sp.length > 1 && total < req) out.push({ kind: 'short', floorName: f.floor.name, size: total, shortfall: req - total, keys: sp.map((x) => x.key), from: latest(sp), type: mixOf(sp) });
     for (const x of sp) if (x.size < req) out.push({ kind: 'short', floorName: f.floor.name, size: x.size, shortfall: req - x.size, keys: [x.key], from: x.from, type: x.type });
   }
   for (let i = 0; i < floors.length - 1; i++) {
@@ -289,8 +304,7 @@ export function nearMisses(floors: FloorView[], req: number, asOf: ISODate, limi
     const all = [...a, ...b];
     const size = all.reduce((s, x) => s + x.size, 0);
     if (size < req) continue;
-    const from = all.map((x) => x.from).filter(Boolean).sort().at(-1) ?? null;
-    out.push({ kind: 'stack', floorName: `Floors ${floors[i + 1].floor.sequence}–${floors[i].floor.sequence}`, size, shortfall: 0, keys: all.map((x) => x.key), from, type: all.every((x) => x.type === 'Direct') ? 'Direct' : 'Direct + sublease' });
+    out.push({ kind: 'stack', floorName: `Floors ${floors[i + 1].floor.sequence}–${floors[i].floor.sequence}`, size, shortfall: 0, keys: all.map((x) => x.key), from: latest(all), type: mixOf(all) });
   }
   const seen = new Set<string>();
   return out
@@ -303,4 +317,55 @@ export function nearMisses(floors: FloorView[], req: number, asOf: ISODate, limi
     .sort((x, y) => x.shortfall - y.shortfall || (x.from ?? '').localeCompare(y.from ?? '') || y.size - x.size)
     .slice(0, limit)
     .map((m) => ({ ...m, from: m.from && m.from > asOf ? m.from : null }));
+}
+
+/** One suite of a finder option, as the option summary lists it. */
+export interface OptionSuite extends Space {
+  floorId: string;
+  floorName: string;
+  suite: string | null;
+}
+
+/**
+ * The suites that make up a finder option or alternative, top floor first and left to right, each
+ * with the SF, type and date it contributes. Keys that are no longer lease space are left out, so the
+ * summary never lists a suite the plan does not offer. A date on or before `asOf` reads as now (null).
+ */
+export function optionSuites(floors: FloorView[], keys: readonly string[], asOf: ISODate): OptionSuite[] {
+  const wanted = new Set(keys);
+  return floors.flatMap((f) => {
+    const suiteOf = new Map(f.segments.map((s) => [s.key, s.suite]));
+    return spacesOn(f)
+      .filter((x) => wanted.has(x.key))
+      .map((x) => ({ ...x, from: x.from && x.from > asOf ? x.from : null, floorId: f.floor.id, floorName: f.floor.name, suite: suiteOf.get(x.key) ?? null }));
+  });
+}
+
+/**
+ * The option a click on a finder row keeps: every suite in it, its total and when all of it is free.
+ * `title` is the row's own name ("Floors 7–8", "Floor 12").
+ */
+export interface ChosenOption {
+  title: string;
+  keys: string[];
+  size: number;
+  type: NearMiss['type'];
+  from: ISODate | null;
+  /** SF short of the requirement, for an alternative that does not meet it; 0 otherwise. */
+  shortfall: number;
+}
+
+/** A finder row (an exact option or an alternative) as the option to keep when it is clicked. */
+export function chosenOption(row: Pick<FitOption | NearMiss, 'floorName' | 'keys' | 'size' | 'type' | 'from'> & { shortfall?: number }): ChosenOption {
+  return { title: row.floorName, keys: [...row.keys], size: row.size, type: row.type, from: row.from, shortfall: row.shortfall ?? 0 };
+}
+
+/**
+ * A "Needed by" date as typed or picked: a whole calendar date (today included) or nothing. Anything
+ * else (a half-typed date, a date that does not exist) is no date, never a guess.
+ */
+export function neededByDate(value: string): ISODate | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const t = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(t.getTime()) && t.toISOString().slice(0, 10) === value ? value : null;
 }
