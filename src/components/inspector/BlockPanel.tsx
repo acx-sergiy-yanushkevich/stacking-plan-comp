@@ -4,7 +4,7 @@ import type { Availability } from '../../domain/types';
 import { isLeaseKind, leaseFloors, type Segment } from '../../domain/derive';
 import { daysBetween, fmtDate, fmtMonths } from '../../domain/dates';
 import { matchingInquiries } from '../../domain/finder';
-import { num, rate, rateRange, sf, usd0 } from '../../domain/format';
+import { num, rate, rateRange, sf, usd, usd0 } from '../../domain/format';
 import { STALE_DAYS } from '../../domain/issues';
 import { contactLabel, prospectLabel, rentVisible, tenantLabel } from '../../domain/safe';
 import { Chip } from '../ui';
@@ -84,7 +84,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
     } else actions.push({ action: 'new-availability', record: `Suite ${seg.suite ?? ''} on ${floorName}` });
   } else if (a) {
     const rec = `Availability ${a.id}`;
-    actions.push({ action: 'open-availability', record: rec, primary: true }, { action: 'new-deal', record: rec }, { action: 'log-call', record: rec });
+    actions.push({ action: 'open-availability', record: rec, primary: true }, { action: 'create-listing', record: rec }, { action: 'new-deal', record: rec }, { action: 'log-call', record: rec });
   } else if (seg.kind === 'unmarketed') {
     if (seg.suspect) actions.push({ action: 'add-unit', record: `Lease ${seg.suspect.id}`, primary: true });
     actions.push({ action: 'new-availability', record: `${sf(seg.size)} on ${floorName}`, primary: !seg.suspect });
@@ -155,7 +155,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
               ['Type', 'Condo unit'],
               ['Status', a.status],
               ['Asking price', rentVisible(a, safe) && a.askingPrice ? usd0(a.askingPrice) : 'Hidden'],
-              ['Per SF', rentVisible(a, safe) && a.askingPrice ? `${usd0(Math.round(a.askingPrice / seg.size))}/SF` : 'Hidden'],
+              ['Per SF', rentVisible(a, safe) && a.askingPrice ? `${usd(a.askingPrice / seg.size)}/SF` : 'Hidden'],
               ['Size', sf(seg.size)],
               ['Verified', <Verified key="v" at={a.verifiedAt} today={today} safe={safe} />],
             ]}

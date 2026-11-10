@@ -174,7 +174,7 @@ function FloorList({ floors, selected, onSelect, toneOf }: { floors: FloorView[]
           data-floor={f.floor.id}
           className="sp-map-floor"
           aria-pressed={f.floor.id === selected}
-          aria-label={`${f.floor.sequence} ${Math.round((f.leasable > 0 ? f.leased / f.leasable : 0) * 100)}% ${floorTip(f)}${f.available ? `, ${num(f.available)} SF available` : ''}`}
+          aria-label={`${f.floor.sequence} ${pct(f.leasable > 0 ? f.leased / f.leasable : 0)} ${floorTip(f)}${f.available ? `, ${num(f.available)} SF available` : ''}`}
           title={floorTip(f)}
           tabIndex={i === focusIndex ? 0 : -1}
           onClick={() => onSelect(f.floor.id)}
@@ -182,7 +182,7 @@ function FloorList({ floors, selected, onSelect, toneOf }: { floors: FloorView[]
         >
           <span className="sp-map-floor__swatch" style={{ background: `var(--tone-${toneOf(f)}-fill)`, borderColor: `var(--tone-${toneOf(f)}-edge)` }} aria-hidden="true" />
           <span className="sp-map-floor__num">{`${f.floor.sequence} `}</span>
-          <span className="sp-map-floor__pct">{`${Math.round((f.leasable > 0 ? f.leased / f.leasable : 0) * 100)}% `}</span>
+          <span className="sp-map-floor__pct">{`${pct(f.leasable > 0 ? f.leased / f.leasable : 0)} `}</span>
         </button>
       ))}
     </div>

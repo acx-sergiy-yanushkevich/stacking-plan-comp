@@ -130,7 +130,10 @@
   .sp-map__canvas, .sp-map .maplibregl-map { position: relative; height: 380px; order: 0; }
   .sp-map .maplibregl-canvas { height: 100% !important; }
   .sp-map-info { display: none; }
-  .sp-map-overlay.sp-map-legend { position: static; order: 1; margin: 8px; }
+  .sp-map-overlay.sp-map-legend { position: static; order: -1; margin: 0 0 6px; max-width: none; padding: 6px 8px; }
+  .sp-map-legend .sp-legend { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; }
+  .sp-map-legend .sp-legend__item { white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .sp-map-legend .sp-legend__num { display: none; }
   .sp-map-floors { position: static; transform: none; order: 2; display: flex; flex-direction: row; flex-wrap: wrap; gap: 4px; margin: 0 8px 8px; padding: 4px; }
   .sp-map-floor { min-height: 28px; min-width: 32px; }
   .sp-map-controls { top: 8px; bottom: auto; right: 8px; }

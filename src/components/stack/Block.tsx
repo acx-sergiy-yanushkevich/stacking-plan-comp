@@ -1,7 +1,7 @@
 import type { KeyboardEvent } from 'react';
 import type { Segment } from '../../domain/derive';
 import { textTier } from '../../domain/layout';
-import { fitParts, wrapWords, fits, measure } from '../../lib/textFit';
+import { fitParts, fitWords, wrapWords, fits, measure } from '../../lib/textFit';
 import { PATTERN_IDS } from '../plan/Patterns';
 import type { SegmentText } from '../plan/segmentText';
 
@@ -104,8 +104,15 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   // Too many lines: drop the second name line before any SF / lens line (the tooltip keeps the full name).
   while (lines.length > maxLines) {
     const nameIdx = lines.map((l) => l.cls).lastIndexOf('sp-seg__name');
-    if (nameIdx > 0 && lines.filter((l) => l.cls === 'sp-seg__name').length > 1) lines.splice(nameIdx, 1);
-    else lines.length = maxLines;
+    if (nameIdx > 0 && lines.filter((l) => l.cls === 'sp-seg__name').length > 1) {
+      lines.splice(nameIdx, 1);
+      // The surviving line is a fragment: mark it so (the tooltip and accessible name keep the full name).
+      const first = lines[nameIdx - 1];
+      const marked = `${first.t}…`;
+      const cut = fits(marked, inner, first.font) ? marked : fitWords(first.t, inner - measure('…', first.font), first.font);
+      if (cut && cut !== '…') first.t = cut.endsWith('…') ? cut : `${cut}…`;
+      else lines.splice(nameIdx - 1, 1);
+    } else lines.length = maxLines;
   }
   // SF alone says nothing about state: prefix the state word when the only line is the SF figure.
   if (lines.length === 1 && lines[0].cls === 'sp-seg__sf') {

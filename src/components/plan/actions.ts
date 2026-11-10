@@ -30,7 +30,7 @@ export const backToStack = (patch: Patch) => patch({ view: 'stack' });
 export const toggleBucket = (patch: Patch, current: number | null, key: number) => patch({ bucket: current === key ? null : key, select: null });
 
 /** Record actions that would call Salesforce; the prototype shows a toast. */
-export type RecordAction = 'open-lease' | 'open-availability' | 'open-deal' | 'open-inquiry' | 'open-account' | 'new-deal' | 'log-call' | 'new-availability' | 'start-renewal' | 'add-unit' | 'assign-floor' | 'verify' | 'fix-availability' | 'review-floor' | 'mark-reviewed';
+export type RecordAction = 'open-lease' | 'open-availability' | 'open-deal' | 'open-inquiry' | 'open-account' | 'new-deal' | 'log-call' | 'new-availability' | 'start-renewal' | 'add-unit' | 'assign-floor' | 'verify' | 'fix-availability' | 'review-floor' | 'mark-reviewed' | 'create-listing';
 
 export const RECORD_ACTION_LABEL: Record<RecordAction, string> = {
   'open-lease': 'Open lease',
@@ -48,6 +48,7 @@ export const RECORD_ACTION_LABEL: Record<RecordAction, string> = {
   'fix-availability': 'Fix availability',
   'review-floor': 'Review floor',
   'mark-reviewed': 'Mark reviewed',
+  'create-listing': 'Create listing',
 };
 
 /** Text for the toast stub describing what Salesforce would do. */
@@ -71,6 +72,8 @@ export function recordActionToast(action: RecordAction, recordLabel: string): st
       return `Would open ${recordLabel} to correct its flags`;
     case 'review-floor':
       return `Would open ${recordLabel} with its units and availabilities`;
+    case 'create-listing':
+      return `Would create a Listing from ${recordLabel} and publish it to the marketing feed`;
     case 'mark-reviewed':
       return `Would mark the issue on ${recordLabel} as reviewed and hide it until the record changes`;
     default:

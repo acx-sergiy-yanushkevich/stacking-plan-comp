@@ -78,7 +78,7 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
         <p className="sp-ins__note">
           Lease SF ending in rolling 12-month periods from {fmtDate(asOf)}; “{tail.label}” collects everything later. Click a bar to highlight those leases in the plan.
         </p>
-        {roll.overAllocated.length > 0 && (
+        {roll.overAllocated.length > 0 && !safe && (
           <p className="sp-ins__note sp-ins__warn">
             {roll.overAllocated.map((o) => `${o.floor} is over-allocated by ${sf(o.sf)}`).join('; ')}: lease SF is shown as recorded, so the periods can exceed the leasable area.
           </p>
@@ -185,6 +185,10 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
         {safe ? (
           <p className="sp-ins__explain">Deal activity is withheld in prospect-safe mode.</p>
         ) : (
+        <>
+        <p className="sp-ins__explain">
+          {plural(model.kpis.pipeline.deals, 'live deal')} · {num(model.kpis.pipeline.sf)} SF in play · {model.kpis.pipeline.onVacancy} on vacancies
+        </p>
         <ul className="sp-ins__list">
           {byStage.map((row) => (
             <li key={row.stage}>
@@ -204,9 +208,11 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
             </li>
           ))}
         </ul>
+        </>
         )}
       </Section>
 
+      {!safe && (
       <Section title="Data issues" aside={<Button size="sm" variant="ghost" iconRight="chevron-right" onClick={() => patch({ mode: 'issues' })}>Review issues</Button>}>
         <div className="sp-ins__counts">
           <Chip tone={counts.error ? 'error' : 'neutral'} icon="warning" count={counts.error}>
@@ -220,6 +226,7 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
           </Chip>
         </div>
       </Section>
+      )}
 
       <Section title="Recent changes">
         {changes.length === 0 ? (

@@ -148,7 +148,8 @@ export function toneFor(seg: Segment, lens: LensId, prospectSafe: boolean): Tone
       return statusTone(seg, prospectSafe);
     case 'expiry':
       if (seg.kind === 'forsale') return 'muted';
-      if (seg.kind === 'holdover' || seg.kind === 'mtm') return prospectSafe ? 'neutral' : 'risk';
+      // Prospect-safe: no bucket of their own (that would single them out); they join the longest one.
+      if (seg.kind === 'holdover' || seg.kind === 'mtm') return prospectSafe ? 'exp-5' : 'risk';
       if (seg.kind === 'leased' || seg.kind === 'sublease') return expiryTone(seg.monthsToExpiry);
       if (seg.kind === 'committed') return 'committed';
       if (seg.kind === 'projected') return 'projected';
@@ -204,8 +205,8 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
         { tone: 'exp-2', label: '1–2 yr' },
         { tone: 'exp-3', label: '2–3 yr' },
         { tone: 'exp-4', label: '3–5 yr' },
-        { tone: 'exp-5', label: '5+ yr' },
-        ...(prospectSafe ? [{ tone: 'neutral' as Tone, label: 'Leased (term withheld)' }] : [{ tone: 'risk' as Tone, label: 'Holdover / MTM' }]),
+        { tone: 'exp-5', label: prospectSafe ? '5+ yr or undisclosed' : '5+ yr' },
+        ...(prospectSafe ? [] : [{ tone: 'risk' as Tone, label: 'Holdover / MTM' }]),
         { tone: 'committed', label: 'Committed', pattern: 'hatch' },
         { tone: 'projected', label: 'Projected vacancy', pattern: 'dashed' },
         { tone: 'empty', label: 'Vacant', pattern: 'dashed' },

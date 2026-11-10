@@ -1,7 +1,7 @@
 import type { Segment } from '../../domain/derive';
 import type { ISODate } from '../../domain/types';
 import { fmtDate, fmtMonthYear, fmtMonthYearShort, fmtMonths } from '../../domain/dates';
-import { compactRate, num, rate, sf, usd0 } from '../../domain/format';
+import { compactRate, num, rate, sf, usd, usd0 } from '../../domain/format';
 import { dealCount, rentType, rentValue, topDeal, toneFor, type LensId, type Tone } from '../../domain/lenses';
 import { prospectLabel, rentVisible, tenantLabel } from '../../domain/safe';
 import type { PatternKind } from './Patterns';
@@ -128,7 +128,7 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
     }
     case 'forsale': {
       name = 'For sale';
-      meta = a?.askingPrice ? `${usd0(a.askingPrice)} · ${usd0(Math.round(a.askingPrice / seg.size))}/SF` : 'Condo unit';
+      meta = a?.askingPrice ? `${usd0(a.askingPrice)} · ${usd(a.askingPrice / seg.size)}/SF` : 'Condo unit';
       badges.push({ kind: 'sale', text: 'Sale' });
       break;
     }

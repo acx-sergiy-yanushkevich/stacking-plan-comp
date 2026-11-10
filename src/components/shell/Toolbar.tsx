@@ -24,7 +24,7 @@ export function Toolbar({ state, patch }: ToolbarProps) {
     }
   };
   return (
-    <div className="sp-card sp-toolbar sp-no-print">
+    <section className="sp-card sp-toolbar sp-no-print" aria-label="Views and filters">
       <Segmented aria-label="View" size="lg" options={VIEWS} value={view} onChange={(v) => patch({ view: v, floor: v === 'stack' ? null : state.floor })} />
       <div className="sp-toolbar__group sp-toolbar__lens">
         <span className="sp-toolbar__label">Colour by</span>
@@ -58,6 +58,6 @@ export function Toolbar({ state, patch }: ToolbarProps) {
           Worklist
         </Button>
       </div>
-    </div>
+    </section>
   );
 }
