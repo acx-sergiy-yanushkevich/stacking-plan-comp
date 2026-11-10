@@ -28,3 +28,12 @@
 /* Compact: beside a suite's details. */
 .sp-hero--compact svg { height: 150px; width: auto; margin: 0 auto; }
 .sp-hero--compact .sp-hero__cap { min-height: 0; text-align: center; align-items: center; }
+
+/* Stage: the model as a view of its own (BuildingView). No panel chrome; lifted floors stay reachable. */
+.sp-hero--stage { margin: 0; padding: 0; border-bottom: 0; }
+.sp-hero--stage .sp-hero__tag { font-size: 12px; }
+.sp-hero--stage .sp-hero__tag.is-hot { font-size: 15px; }
+.sp-hero--stage .sp-hero__face { stroke-width: 0.9; }
+.sp-hero--stage .sp-hero__floor.is-hot .sp-hero__face, .sp-hero--stage .sp-hero__floor.is-focus .sp-hero__face { stroke-width: 2.2; }
+.sp-hero--stage .sp-hero__floor.is-above { pointer-events: auto; opacity: 0.38; }
+.sp-hero--stage .sp-hero__floor.is-above.is-hot { opacity: 0.8; }

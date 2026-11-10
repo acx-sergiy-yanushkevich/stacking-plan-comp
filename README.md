@@ -1,46 +1,124 @@
 # Stacking Plan v2
 
-A from-scratch rebuild of the AscendixRE Stacking Plan as a standalone web app. A stacking plan draws a building floor by floor, with each suite's width proportional to its square footage, so a leasing team can see at a glance what is leased, what is available, who expires when, and where the data is wrong.
+An interactive stacking plan that lets a broker see a building's availability, expirations and leasing options in one screen, and share a safe version of it with a prospect.
 
-This repository is a prototype: React, TypeScript and Vite, running on mock data for one building (Preston Park Financial Center, 12 floors). There is no backend, no authentication and no persistence.
+Built for the Ascendix Tech Challenge, November 2026. It is a prototype on mock data, not a production application.
 
-![Stack view, status lens](docs/shots/round-10/00-stack-status.png)
+![Building view: the model, the floor plan and the floor's details](docs/shots/vice/33-building.png)
 
-| Timeline | 3D map | Floor plate |
+## The problem
+
+A stacking plan draws a building floor by floor, with each suite as wide as its square footage. Brokers use it to answer a handful of questions, and today most of those answers take a spreadsheet, a rent roll and several clicks:
+
+- **Where is the space?** How much is vacant, on which floors, and what is the largest contiguous block?
+- **What is coming?** Who expires in the next 12 to 24 months, and what is already committed but not yet moved in?
+- **Does a requirement fit?** Is there 12,000 SF available by a given date, direct or sublease?
+- **Can I trust it?** Is space double-counted, is a lease missing its floor, is a record stale?
+- **Can I show it?** A prospect or buyer should see the availability without seeing who the other tenants are or what they pay.
+
+The existing AscendixRE stacking plan is a picture of the building: one colour scheme, several lines of text in every block, no analytics, no way to look ahead in time, and no version that is safe to hand to someone outside the brokerage.
+
+## The solution
+
+One model of the building, shown four ways, with the answers to the questions above one click away.
+
+| Stack | Timeline | 3D map |
 |---|---|---|
-| ![Lease timeline](docs/shots/round-10/16-timeline.png) | ![3D building on the map](docs/shots/round-10/18-map.png) | ![Floor plate drill-in](docs/shots/round-10/21-floor-6.png) |
+| ![Stack view](docs/shots/vice/00-stack-status.png) | ![Lease timeline](docs/shots/vice/16-timeline.png) | ![3D building on the map](docs/shots/vice/18-map.png) |
 
-## What it does
+**For the broker**
 
-- **Four views of one model.** Stack (the 2D plan), lease timeline, 3D building on an OpenStreetMap basemap, and a floor-plate drill-in.
-- **Four colour lenses.** Status, expiration (months from the as-of date), deal stage, and rent.
-- **Time travel.** Move the as-of date and the plan, KPIs and rollover chart recompute; projected vacancies and committed leases are drawn as such.
-- **Space finder.** Search for contiguous blocks by size, date and direct/sublease, or match an open inquiry to space.
-- **Renewal worklist.** Leases at risk or expiring within 90 days, 180 days, 12 or 24 months.
-- **Data issues.** Leases without a floor, over-allocated floors, unaccounted area, holdover and month-to-month leases, stale deals.
-- **Prospect-safe mode.** Hides tenant names, contacts and in-place rents on screen and in every export.
-- **Exports.** Print/PDF report, PNG of the plan, CSV rent roll, and a copyable link to the exact state.
-- **Accessibility and layout.** Keyboard grid navigation, screen-reader names, light and dark themes, phone layout.
+- **Building view.** The landing screen: a model of the building cut into suites and coloured by the lens. Point at a floor and its floor plan appears beside the model, with that floor's numbers, suites, deals, inquiries and issues below it. A click pins the floor and lifts the floors above it.
+- **Stack view.** The classic plan with six KPIs above it (leased %, available SF, largest block, expiring in 12 months, WALT, pipeline) and an inspector beside it. Clicking a floor or suite expands it with the detail from every lens.
+- **Four colour lenses.** Status, expiration, deal stage and rent. Every state also has a pattern or label, so colour is never the only cue.
+- **Time travel.** Move the as-of date and the plan, KPIs and rollover chart recompute. Future vacancies and signed-but-not-commenced leases are drawn as what they are.
+- **Space finder.** Enter a size, a date and direct or sublease; matching blocks light up, including pairs of adjacent floors and near misses. An open inquiry can be matched to space the same way.
+- **Renewal worklist.** Leases at risk or expiring within 90 days, 180 days, 12 or 24 months, with the last touch on each.
+- **Data issues.** Over-allocated floors, unaccounted area, leases without a floor, holdover and month-to-month leases and stale deals are listed and marked on the plan.
+- **Timeline and 3D map.** Every lease as a bar against time; the building extruded floor by floor on a real map with nearby demographics and amenities.
 
-Record actions (open record, new deal, log call and so on) are stubs: they show a toast describing the Salesforce action they would take.
+**For the prospect, tenant or buyer**
 
-## Getting started
+- **Prospect-safe mode.** One switch hides tenant names, contacts, in-place rents and the deal pipeline everywhere, including exports. Asking rents stay visible because they are marketing information. An automated check confirms nothing leaks.
+- **Something to send.** A print-ready PDF report, a PNG of the plan for a slide, a CSV rent roll, and a link that reopens the exact view.
+- **Space for sale.** For-sale units appear on the plan as their own state, and a building sale listing shows as a banner.
+- **Present mode.** The 3D building orbits while the as-of date advances, and can be recorded as a video.
 
-Requires Node `^20.19.0` or `>=22.12.0`. On older Node versions `npm install` silently skips the native binaries for the linter and bundler, and `npm run lint` fails with "Cannot find native binding".
+It works with a keyboard and a screen reader, and on a phone. The colours follow the challenge's Vice City theme: neon on deep purple by default, with a daytime version behind the theme switch.
+
+![Daytime theme](docs/shots/vice/26-light-building.png)
+
+## Tools used
+
+**AI**
+
+- **Claude Code** with Claude Fable 5.1 and 5.2 wrote the design specification, the code and the tests, working from a written brief.
+- **An AI review council.** After each build, three independent AI reviewers (two Claude Opus 5.5 sessions and Grok 4.7) scored screenshots and the running app against a fixed UI and UX rubric, and the fixes at least two of them agreed on went into the next round. There were eleven rounds; the reports are in `docs/judging/`. The last round averaged 37 out of 40 against a self-set bar of 38. The Vice City colours and the Building view were added after that round and have not been scored.
+- **AI-assisted research** for the competitor analysis in `docs/COMPETITORS.md`, from public vendor pages, help centres and review sites.
+
+**Application**
+
+- React 19, TypeScript and Vite
+- MapLibre GL with OpenFreeMap tiles for the 3D map
+- Plain CSS on design tokens, with no UI framework
+
+**Quality**
+
+- Vitest for unit tests of the domain logic
+- Playwright for screenshots, PDFs and smoke checks
+- axe-core for accessibility checks
+- oxlint for linting
+
+**Public data**
+
+- OpenStreetMap, through the Overpass API, for the building footprint and nearby amenities
+- US Census Bureau ACS 5-year data for demographics (live mode only)
+
+## Assumptions
+
+**Data**
+
+- All leases, tenants, contacts, rents, deals, inquiries and the sale listing are mock data written for this prototype. No company, customer or personal data is used.
+- The building name, address and footprint are a real, public location in Plano, Texas, used only to place the model on the map. The footprint comes from OpenStreetMap. Nothing shown reflects the real building's tenants, floors or pricing.
+- The mock data is shaped like the AscendixRE objects (Property, Floor, Lease, Unit, Availability, Deal, Inquiry), so the same screens can later read real records.
+- The mock building contains each awkward case at least once: holdover, month-to-month, a committed future lease, occupied-but-marketed space, a sublease, an over-allocated floor, a multi-floor tenant, a confidential lease, records with no floor, and a for-sale unit.
+- "Today" is fixed at November 9, 2026, so screenshots are reproducible.
+- Demographics are sample figures unless live mode is on. Floor plates are schematic, derived from the footprint, and are not real floor plans.
+
+**Domain**
+
+- Areas are rentable square feet. Rents are always shown with their unit and lease type, for example $/SF/yr FSG.
+- Availability is not vacancy: a space can be occupied and marketed for a later date.
+- A lease past its expiration with no termination date is a holdover; a lease with no expiration date is month-to-month.
+- Confidential leases never show their rent.
+- Nothing is shown that AscendixRE does not store, such as lease options or notice dates.
+
+**Scope**
+
+- One building. No sign-in and no saving of changes.
+- Record actions (open record, new deal, log call, start renewal) show a message describing what they would do in the CRM.
+- Built and checked in desktop Chrome. Video recording needs Chrome or Edge.
+
+## Development plan
+
+How this prototype could become a product feature is described in [`docs/PLAN.md`](docs/PLAN.md): the feature inventory by priority, the Salesforce architecture (Lightning Web Components and Apex), the data mapping to AscendixRE objects, external services, phases with estimates, and risks.
+
+## Run it
+
+Requires Node `^20.19.0` or `>=22.12.0`.
 
 ```bash
 npm install
-npm run dev        # dev server on http://localhost:5173
+npm run dev        # http://localhost:5173
 ```
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Vite dev server with hot reload |
-| `npm test` | Unit tests (Vitest) |
-| `npm run lint` | Lint with oxlint |
+| `npm run dev` | Dev server with hot reload |
+| `npm test` | Unit tests |
+| `npm run lint` | Lint |
 | `npm run build` | Type-check and build to `dist/` |
 | `npm run preview` | Serve the `dist-judge/` build on http://localhost:4180 |
-| `npm run preview:next` | Serve the `dist-next/` build on http://localhost:4181 |
 
 `npm run preview` does not serve `dist/`. Build into the folder it serves first:
 
@@ -49,88 +127,70 @@ npx vite build --outDir dist-judge
 npm run preview
 ```
 
-`dist-next` works the same way and exists so a candidate build can run next to the current one.
+On an older Node version `npm install` silently skips the native binaries for the linter and bundler, and `npm run lint` fails with "Cannot find native binding".
 
-## Browser checks
+### Browser checks
 
-These scripts drive the preview build with Playwright. They need Google Chrome installed and the preview running on port 4180; set `BASE` to point them at another URL.
+These drive the preview build with Playwright. They need Google Chrome installed and the preview running on port 4180; set `BASE` to use another URL.
 
 | Command | What it checks or produces |
 |---|---|
-| `npm run verify` | Smoke checks: structure, keyboard grid, time travel, no console errors |
-| `npm run a11y` | axe-core on the main views; fails on serious or critical violations |
-| `npm run leakcheck` | No tenant, contact or prospect name and no in-place rent anywhere in prospect-safe mode |
-| `npm run shots -- <outDir>` | PNG of every reviewed state (default `docs/shots/latest`) |
-| `npm run pdf -- <outDir>` | PDFs of the print layout (default `docs/shots/latest/pdf`) |
+| `npm run verify` | Smoke checks: structure, keyboard navigation, time travel, no console errors |
+| `npm run a11y` | Accessibility; fails on serious or critical violations |
+| `npm run leakcheck` | No tenant, contact or prospect name and no in-place rent in prospect-safe mode |
+| `npm run shots -- <outDir>` | A PNG of every reviewed state |
+| `npm run pdf -- <outDir>` | PDFs of the print layout |
 
-`node scripts/one.mjs "<query>" out.png [width] [height] [dark]` takes a single screenshot of any state.
+### Jump to any view
 
-## URL parameters
-
-All state lives in the query string, so any view can be linked to or scripted. Defaults are omitted from the URL.
+All state lives in the URL, so every view can be linked to.
 
 | Parameter | Values | Meaning |
 |---|---|---|
-| `view` | `stack`, `timeline`, `map`, `floor` | Which view is shown (default `stack`) |
-| `lens` | `status`, `expiry`, `deals`, `rent` | What the colours encode (default `status`) |
-| `asOf` | `YYYY-MM-DD` | As-of date (default: today) |
+| `view` | `building`, `stack`, `timeline`, `map`, `floor` | Which view is shown (default `building`; on a narrow screen the stack stands in for it) |
+| `lens` | `status`, `expiry`, `deals`, `rent` | What the colours encode |
+| `asOf` | `YYYY-MM-DD` | As-of date |
 | `select` | block id, e.g. `L13-U1`, `A02` | Selected suite or availability |
-| `floor` | floor id, e.g. `F6` | Focused floor |
+| `floor` | floor id, e.g. `F6` | Pinned or focused floor |
 | `safe` | `1` | Prospect-safe mode |
 | `req`, `max` | SF | Space finder: minimum and maximum size |
 | `by` | `YYYY-MM-DD` | Space finder: needed-by date |
 | `fit` | `any`, `direct`, `sublease` | Space finder: availability type |
 | `inquiry` | inquiry id, e.g. `I02` | Match an inquiry to space |
 | `window` | `risk`, `90`, `180`, `12`, `24` | Renewal worklist window |
-| `bucket` | `0`, `1`, … | Highlight one 12-month rollover bucket |
+| `bucket` | `0`, `1`, … | Highlight one 12-month rollover period |
 | `q` | text | Search tenant, suite or prospect |
-| `mode` | `building`, `block`, `floor`, `find`, `worklist`, `issues`, `area` | Inspector panel (normally derived from the other parameters) |
-| `theme` | `light`, `dark` | Force a theme |
-| `skin` | `classic` | Flat Lightning look instead of the default glass skin |
-| `print` | `1` | Show the print layout |
-| `live` | `1` | Fetch footprint and area data live (see below) |
+| `mode` | `issues`, `area`, … | Inspector panel, when not implied by the above |
+| `theme` | `light`, `dark` | Theme (default `dark`) |
+| `skin` | `aurora`, `classic` | The original blue palette, or the flat Salesforce Lightning look, instead of the default Vice City palette |
+| `print` | `1` | Print layout |
+| `live` | `1` | Fetch footprint and area data live |
 | `census` | API key | US Census API key for live demographics |
 
-Example: `/?view=stack&lens=expiry&window=12` opens the 12-month renewal worklist on the expiration lens.
+Examples: `/?floor=F8` pins floor 8; `/?req=12000` finds 12,000 SF; `/?safe=1` is the prospect-safe plan; `/?view=stack` is the classic stacking plan; `/?view=map&mode=area` is the 3D map with the area panel.
 
-## Data
-
-Everything comes from `src/data/mock/`. "Today" is fixed at 2026-11-09 so screenshots are reproducible. The mock building includes each edge case at least once: holdover, month-to-month, a committed future lease, occupied-but-marketed space, a sublease, an over-allocated floor, a multi-floor tenant, a confidential lease, records with no floor, and a for-sale unit.
-
-The app calls these external services:
-
-- **Always:** Google Fonts (Inter), and OpenFreeMap tiles in the map view.
-- **Only with `?live=1`:** the Overpass API for the building footprint and the US Census API for demographics. Either falls back to the cached mock on failure; demographics need a key in `census`.
-
-## Project layout
+### Project layout
 
 ```
 src/
-  domain/       Pure TypeScript: types, dates, derivation, lenses, rollover, finder,
-                issues, timeline, geometry, CSV export. No React. Unit-tested.
-  state/        URL-synced plan state and the focus and hover stores
-  model/        usePlanModel: derives everything the views render from property + state
-  data/         mock/ (property, footprint, area) and sources/ (Mock, Overpass, Census)
-  components/   shell, kpis, stack, timeline, map, floor, inspector, hero, plan, print, ui
-  lib/          Export helpers, text fitting, media and width hooks
-  styles/       Design tokens, base styles, glass skin, print
+  domain/       Pure TypeScript, no React, unit-tested: derivation, lenses, rollover,
+                space finder, data issues, timeline, geometry, CSV export
+  state/        URL-synced plan state
+  model/        Derives everything the views render from the property and the state
+  data/         Mock building, and the OpenStreetMap and Census sources
+  components/   Building, stack, timeline, map, floor, inspector, KPIs, print, UI primitives
+  styles/       Design tokens, base styles, skins, print
 scripts/        Playwright checks and screenshot/PDF generators
-docs/           Brief, design spec, product plan, competitor analysis, review rounds
+docs/           Brief, design spec, development plan, competitor analysis, review rounds
 ```
 
-Styling is one plain CSS file per component on shared tokens, with no CSS-in-JS, so the styles can be carried over to a Lightning Web Component port.
-
-## Documentation
+### More documentation
 
 | File | Contents |
 |---|---|
-| [`docs/BRIEF.md`](docs/BRIEF.md) | What the product is, personas, top jobs, domain rules, scoring rubric |
+| [`docs/BRIEF.md`](docs/BRIEF.md) | Personas, their top jobs, domain rules, the review rubric |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Screen-by-screen design specification |
-| [`docs/PLAN.md`](docs/PLAN.md) | Feature inventory, prototype scope, Salesforce implementation roadmap |
-| [`docs/COMPETITORS.md`](docs/COMPETITORS.md) | Competitor analysis (VTS, Yardi, Prophia and others) |
-| [`docs/JUDGE_PROMPT.md`](docs/JUDGE_PROMPT.md) | Brief given to the reviewers each round |
-| `docs/judging/round-N/` | Reviewer reports per round |
-| `docs/shots/round-N/` | Screenshots of every reviewed state per round |
-| `docs/reference/` | The legacy 2015 widget and the v1 redesign, for comparison |
-
-The prototype was iterated through eleven review rounds (0–10), each scored by three independent reviewers against the rubric in `docs/BRIEF.md`. Round 10 averaged UI 18.0/20 and UX 19.0/20 (37.0/40 against a target of 38); the fixes made after that round have not been re-scored.
+| [`docs/PLAN.md`](docs/PLAN.md) | Feature inventory and development plan |
+| [`docs/COMPETITORS.md`](docs/COMPETITORS.md) | Competitor analysis |
+| `docs/judging/` | AI reviewer reports for each round |
+| `docs/shots/` | Screenshots of every reviewed state for each round |

@@ -6,10 +6,12 @@ export interface MiniStackProps {
   floors: FloorView[];
   currentId: string;
   onPick: (floorId: string) => void;
+  /** Pointing at or focusing a row previews that floor; null when it ends. */
+  onPreview?: (floorId: string | null) => void;
 }
 
 /** Thin vertical floor picker: one tinted row per floor, the current floor outlined. */
-export function MiniStack({ floors, currentId, onPick }: MiniStackProps) {
+export function MiniStack({ floors, currentId, onPick, onPreview }: MiniStackProps) {
   return (
     <nav className="sp-mini" aria-label="Floors">
       <ol className="sp-mini__list">
@@ -25,6 +27,10 @@ export function MiniStack({ floors, currentId, onPick }: MiniStackProps) {
                 aria-current={current ? 'true' : undefined}
                 title={`${f.floor.name} · ${pct(share)} leased`}
                 onClick={() => onPick(f.floor.id)}
+                onPointerEnter={onPreview && (() => onPreview(f.floor.id))}
+                onPointerLeave={onPreview && (() => onPreview(null))}
+                onFocus={onPreview && (() => onPreview(f.floor.id))}
+                onBlur={onPreview && (() => onPreview(null))}
               >
                 <span className="sp-mini__fill" style={{ height: `${Math.max(8, Math.round(share * 100))}%`, top: "auto" }} aria-hidden="true" />
                 <span className="sp-mini__num">{`${f.floor.sequence} `}</span>

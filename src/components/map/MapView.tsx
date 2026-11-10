@@ -8,7 +8,7 @@ import { num, pct } from '../../domain/format';
 import { suiteExtrusionFeatures } from '../../domain/geometry';
 import { toneFor } from '../../domain/lenses';
 import type { PlanModel } from '../../model/usePlanModel';
-import type { PlanState } from '../../state/planState';
+import { isDark, type PlanState } from '../../state/planState';
 import { usePrefersDark, usePrefersReducedMotion } from '../../lib/useMedia';
 import { openFloor, openFloorPlate } from '../plan/actions';
 import { Legend } from '../plan/Legend';
@@ -201,7 +201,7 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
   const containerRef = useRef<HTMLDivElement>(null);
   const prefersDark = usePrefersDark();
   const reducedMotion = usePrefersReducedMotion();
-  const dark = state.theme ? state.theme === 'dark' : prefersDark;
+  const dark = isDark(state, prefersDark);
   const toast = useToast();
 
   // Live footprint (OSM via Overpass) when ?live=1; otherwise the cached polygon.

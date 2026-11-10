@@ -1,0 +1,129 @@
+/* Vice City palette for the glass skin (the default look; `?skin=aurora` returns to the original
+   blue glass, `?skin=classic` to the flat Lightning look).
+   Token overrides on top of glass.css: the rules there only read tokens, so layout and behaviour
+   are unchanged. This palette is dark by default (App sets data-theme when the URL names none);
+   light is the same sunset by day. Screen only: print and PDF keep the plain white report. */
+@media screen {
+  /* ── Night: neon on deep purple ───────────────────────── */
+  :root[data-skin='glass'][data-palette='vice'][data-theme='dark'] {
+    color-scheme: dark;
+    --sp-color-page: #120a26;
+    --sp-color-card: rgba(36, 22, 70, 0.66);
+    --sp-color-card-2: rgba(255, 255, 255, 0.06);
+    --sp-color-border: rgba(255, 255, 255, 0.1);
+    --sp-color-border-strong: rgba(255, 255, 255, 0.26);
+    --sp-color-text: #f8f4ff; --sp-color-text-weak: #cbc1e3; --sp-color-text-faint: #aca1c9;
+    --sp-color-brand: #ff7ab8; --sp-color-brand-strong: #ffb0d5; --sp-color-pill-deal: #a3267a;
+    --sp-color-brand-soft: rgba(255, 110, 180, 0.16); --sp-color-on-brand: #2a0b2e; --sp-color-focus: #ffd166;
+    --sp-color-warn: #ffb86b; --sp-color-warn-soft: #45291a; --sp-color-error: #ff8f8f; --sp-color-error-soft: #4a1c22;
+    --sp-color-success: #6fe0b0; --sp-color-success-soft: #153a33; --sp-color-dim: rgba(24, 14, 48, 0.72);
+    --sp-shadow-pop: 0 20px 56px rgba(6, 2, 20, 0.66), 0 2px 6px rgba(6, 2, 20, 0.45);
+
+    /* Status lens: teal is space you can lease, amber is leaving soon, red is at risk. */
+    --tone-leased-fill: rgba(52, 46, 92, 0.86); --tone-leased-text: #efeaff; --tone-leased-edge: rgba(255, 255, 255, 0.18);
+    --tone-neutral-fill: rgba(52, 46, 92, 0.86); --tone-neutral-text: #efeaff; --tone-neutral-edge: rgba(255, 255, 255, 0.18);
+    --tone-muted-fill: rgba(40, 30, 74, 0.7); --tone-muted-text: #aba1c6; --tone-muted-edge: rgba(255, 255, 255, 0.12);
+    --tone-leased-solid: #443c76; --tone-neutral-solid: #443c76; --tone-muted-solid: #30265a;
+    --tone-expiring-fill: #6e3a12; --tone-expiring-text: #ffeacc; --tone-expiring-edge: #ffb347;
+    --tone-risk-fill: #531c24; --tone-risk-text: #ffdad6; --tone-risk-edge: #ff6259;
+    --tone-available-fill: #1bcbb3; --tone-available-text: #04231e; --tone-available-edge: #86f3e2;
+    --tone-available-later-fill: #123f46; --tone-available-later-text: #adf2e5; --tone-available-later-edge: #2fd1b8;
+    --tone-sublease-fill: #164a50; --tone-sublease-text: #b9f4e9; --tone-sublease-edge: #2fd1b8;
+    --tone-committed-fill: #26316c; --tone-committed-text: #d0dbff; --tone-committed-edge: #7d9cff;
+    --tone-forsale-fill: #4b2a86; --tone-forsale-text: #ead9ff; --tone-forsale-edge: #c9a0ff;
+    --tone-empty-fill: transparent; --tone-empty-text: #b7adcf; --tone-empty-edge: #746a98;
+    --tone-projected-fill: #14343a; --tone-projected-text: #adf2e5; --tone-projected-edge: #2fd1b8;
+    --tone-confidential-fill: #37304b; --tone-confidential-text: #cfc8df; --tone-confidential-edge: #625a7c;
+
+    /* Expiration lens: a sunset, lightness ordered (soonest is brightest). */
+    --tone-exp-0-fill: #ffb95c; --tone-exp-0-text: #2a1203; --tone-exp-0-edge: #ffdba6;
+    --tone-exp-1-fill: #f47a42; --tone-exp-1-text: #2a1203; --tone-exp-1-edge: #ffae85;
+    --tone-exp-2-fill: #c0453f; --tone-exp-2-text: #ffffff; --tone-exp-2-edge: #e98580;
+    --tone-exp-3-fill: #8a3352; --tone-exp-3-text: #ffe6ee; --tone-exp-3-edge: #bd6c8a;
+    --tone-exp-4-fill: #5a2a55; --tone-exp-4-text: #f2e0f0; --tone-exp-4-edge: #92608c;
+    --tone-exp-5-fill: #33213f; --tone-exp-5-text: #dbd0e6; --tone-exp-5-edge: #6c5a7c;
+
+    /* Rent lens: night-sky blue to neon cyan (gross scale). */
+    --tone-rent-0-fill: #1c2748; --tone-rent-0-text: #d6e4ff; --tone-rent-0-edge: #33426e;
+    --tone-rent-1-fill: #1d3d66; --tone-rent-1-text: #d9ecff; --tone-rent-1-edge: #37608f;
+    --tone-rent-2-fill: #1b5a86; --tone-rent-2-text: #e6f5ff; --tone-rent-2-edge: #3a85b5;
+    --tone-rent-3-fill: #17769e; --tone-rent-3-text: #ffffff; --tone-rent-3-edge: #52b0d6;
+    --tone-rent-4-fill: #4fd0ee; --tone-rent-4-text: #04202e; --tone-rent-4-edge: #a5ecfb;
+    --tone-rent-net-fill: #2b2748; --tone-rent-net-text: #e9e6f5; --tone-rent-net-edge: #4fd0ee;
+
+    /* Deals lens: the further a deal has gone, the hotter the pink. */
+    --tone-deal-0-fill: #3a2148; --tone-deal-0-text: #f3d9ee; --tone-deal-0-edge: #6a3a7a;
+    --tone-deal-1-fill: #6a2a6a; --tone-deal-1-text: #ffe3f5; --tone-deal-1-edge: #a04c9c;
+    --tone-deal-2-fill: #b83585; --tone-deal-2-text: #ffffff; --tone-deal-2-edge: #ee7cba;
+    --tone-deal-3-fill: #ff7fbf; --tone-deal-3-text: #33061f; --tone-deal-3-edge: #ffc0e0;
+    --tone-deal-none-fill: transparent; --tone-deal-none-text: #b7adcf; --tone-deal-none-edge: #746a98;
+
+    --sp-glass-edge: rgba(255, 255, 255, 0.14);
+    --sp-glass-float: rgba(28, 17, 56, 0.985);
+    --sp-glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 16px 40px rgba(6, 2, 20, 0.5);
+    --sp-glass-lift: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 22px 48px rgba(6, 2, 20, 0.6);
+    --sp-glass-active: linear-gradient(180deg, rgba(255, 110, 180, 0.26), rgba(255, 159, 74, 0.12));
+    --sp-glass-active-ring: inset 0 0 0 1.5px #ff7ab8, 0 14px 34px rgba(255, 95, 168, 0.3);
+    --sp-glass-control: rgba(255, 255, 255, 0.07);
+    --sp-glass-control-on: rgba(255, 255, 255, 0.18);
+    --sp-glass-gloss: rgba(255, 255, 255, 0.2);
+    --sp-glass-pane-shadow: drop-shadow(0 1px 2px rgba(6, 2, 20, 0.45));
+    --sp-brand-grad: linear-gradient(135deg, #ff6fb1, #ffa24c);
+    --sp-brand-glow: 0 8px 22px rgba(255, 95, 168, 0.4);
+    --sp-title-grad: linear-gradient(90deg, #ffd166, #ff9a5c 45%, #ff7ab8);
+    --sp-aurora:
+      radial-gradient(900px 560px at 84% -14%, rgba(255, 184, 92, 0.42), transparent 60%),
+      radial-gradient(1200px 720px at 22% -12%, rgba(255, 84, 140, 0.44), transparent 62%),
+      radial-gradient(1000px 760px at 102% 46%, rgba(140, 70, 230, 0.3), transparent 62%),
+      radial-gradient(1000px 760px at -4% 100%, rgba(34, 211, 190, 0.18), transparent 60%),
+      radial-gradient(900px 640px at 60% 108%, rgba(255, 120, 80, 0.14), transparent 60%);
+  }
+
+  /* ── Day: the same sunset, on the light glass ─────────── */
+  :root[data-skin='glass'][data-palette='vice'][data-theme='light'] {
+    color-scheme: light;
+    --sp-color-page: #f8edf3;
+    --sp-color-brand: #c2187a; --sp-color-brand-strong: #8c1259; --sp-color-pill-deal: #8c1259;
+    --sp-color-brand-soft: rgba(214, 51, 132, 0.12); --sp-color-focus: #c2187a;
+    --sp-glass-active: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 226, 240, 0.8));
+    --sp-glass-active-ring: inset 0 0 0 1.5px #c2187a, 0 14px 34px rgba(214, 51, 132, 0.22);
+    --sp-brand-grad: linear-gradient(135deg, #c2187a, #c2410c);
+    --sp-brand-glow: 0 8px 20px rgba(214, 51, 132, 0.34);
+    --sp-title-grad: linear-gradient(90deg, #b3400a, #c2187a 55%, #6d28d9);
+    --sp-aurora:
+      radial-gradient(1100px 700px at 86% -10%, rgba(255, 176, 92, 0.6), transparent 62%),
+      radial-gradient(1200px 780px at 8% -6%, rgba(255, 110, 160, 0.42), transparent 62%),
+      radial-gradient(1000px 760px at 100% 100%, rgba(168, 108, 255, 0.4), transparent 62%),
+      radial-gradient(900px 660px at -2% 100%, rgba(45, 212, 191, 0.3), transparent 62%);
+  }
+
+  /* ── The few rules a token cannot reach ───────────────── */
+  /* The property name carries the sunset, like the challenge title. */
+  :root[data-skin='glass'][data-palette='vice'] .sp-header__title h1 {
+    background: var(--sp-title-grad); -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+  }
+  /* Text on the brand colour follows the token: the night brand is light, so its text is dark. */
+  :root[data-skin='glass'][data-palette='vice'] .sp-skip,
+  :root[data-skin='glass'][data-palette='vice'] .sp-header__icon,
+  :root[data-skin='glass'][data-palette='vice'][data-theme='dark'] .sp-btn__count { color: var(--sp-color-on-brand); }
+  /* Neutral badges sit on the brightest fills of the night ramps: give them a solid ground. */
+  :root[data-skin='glass'][data-palette='vice'][data-theme='dark'] .sp-badge--info rect { fill: var(--sp-glass-float); }
+  :root[data-skin='glass'][data-palette='vice'][data-theme='dark'] .sp-pbadge--info { background: var(--sp-glass-float); }
+  :root[data-skin='glass'][data-palette='vice'][data-theme='dark'] .sp-segmented__opt[aria-checked='true'] { box-shadow: 0 2px 8px rgba(6, 2, 20, 0.4); }
+  :root[data-skin='glass'][data-palette='vice'][data-theme='dark'] .sp-stack .sp-seg:hover .sp-seg__rect { filter: drop-shadow(0 3px 8px rgba(255, 95, 168, 0.35)); }
+
+  /* Less transparency / more contrast / forced colours: solid panels, no blur, no backdrop, plain title. */
+  @media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
+    :root[data-skin='glass'][data-palette='vice'][data-theme='dark'] {
+      --sp-glass-blur: none; --sp-aurora: none;
+      --sp-color-card: #1c1238; --sp-color-card-2: #241845; --sp-glass-float: #1c1238; --sp-glass-control: #241845; --sp-glass-control-on: #35265e;
+      --sp-color-border: #35285a; --sp-glass-edge: #463770;
+      --tone-leased-fill: #2f2a52; --tone-neutral-fill: #2f2a52; --tone-muted-fill: #251c44;
+    }
+    :root[data-skin='glass'][data-palette='vice'][data-theme='light'] { --sp-aurora: none; }
+    :root[data-skin='glass'][data-palette='vice'] .sp-header__title h1 {
+      background: none; -webkit-text-fill-color: currentColor; color: var(--sp-color-text);
+    }
+  }
+}

@@ -7,6 +7,9 @@ const base = process.env.BASE ?? 'http://localhost:4180/';
 mkdirSync(out, { recursive: true });
 
 export const STATES = [
+  ['33-building', '?view=building'],
+  ['34-building-pinned', '?view=building&floor=F8'],
+  ['35-building-find', '?view=building&req=12000'],
   ['00-stack-status', '?view=stack'],
   ['01-stack-expiry', '?view=stack&lens=expiry'],
   ['02-stack-deals', '?view=stack&lens=deals'],

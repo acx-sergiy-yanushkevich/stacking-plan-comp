@@ -4,7 +4,7 @@ import { segmentText } from './components/plan/segmentText';
 import { property, TODAY } from './data/mock/property';
 import { usePlanModel } from './model/usePlanModel';
 import { usePlanState, useDocumentTitle } from './state/usePlanState';
-import { deriveMode } from './state/planState';
+import { deriveMode, isVice } from './state/planState';
 import { rentRollRows, toCsv } from './domain/exportCsv';
 import { Header, type ExportKind } from './components/shell/Header';
 import { Toolbar } from './components/shell/Toolbar';
@@ -13,6 +13,7 @@ import { ToastProvider, useToast, Sheet } from './components/ui';
 import StackView from './components/stack/StackView';
 import Inspector from './components/inspector/Inspector';
 import FloorView from './components/floor/FloorView';
+import BuildingView from './components/building/BuildingView';
 import TimelineView from './components/timeline/TimelineView';
 import { MiniTimeline } from './components/timeline/MiniTimeline';
 import { createDataSource } from './data/sources';
@@ -70,13 +71,32 @@ function Shell() {
   // Labels are fitted by measuring text: fit them again once the web font has loaded.
   const fontTick = useSyncExternalStore(subscribeFonts, getFontEpoch, () => 0);
 
+  // The Vice City palette is dark unless the URL names a theme; the print preview keeps the white report.
+  const vice = isVice(state);
+  const theme = state.theme ?? (vice && !PRINT_PREVIEW ? 'dark' : null);
   useEffect(() => {
-    if (state.theme) document.documentElement.dataset.theme = state.theme;
-    else delete document.documentElement.dataset.theme;
-  }, [state.theme]);
+    const root = document.documentElement;
+    const apply = (t: string | null) => {
+      if (t) root.dataset.theme = t;
+      else delete root.dataset.theme;
+    };
+    apply(theme);
+    // Paper is white: a dark screen theme must not reach the printed report.
+    const before = () => apply('light');
+    const after = () => apply(theme);
+    window.addEventListener('beforeprint', before);
+    window.addEventListener('afterprint', after);
+    return () => {
+      window.removeEventListener('beforeprint', before);
+      window.removeEventListener('afterprint', after);
+    };
+  }, [theme]);
   useEffect(() => {
-    document.documentElement.dataset.skin = state.skin === 'classic' ? 'classic' : 'glass';
-  }, [state.skin]);
+    const root = document.documentElement;
+    root.dataset.skin = state.skin === 'classic' ? 'classic' : 'glass';
+    if (vice) root.dataset.palette = 'vice';
+    else delete root.dataset.palette;
+  }, [state.skin, vice]);
 
   const onExport = useCallback(
     async (kind: ExportKind) => {
@@ -167,11 +187,15 @@ function Shell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [model, state, patch, mode, dataSource],
   );
+  // The building model needs width: below the desktop layout the stack stands in for it.
+  const view = narrow && state.view === 'building' ? 'stack' : state.view;
+  // The building view shows a floor itself; the inspector joins it for a suite, a search, the worklist or issues.
+  const showInspector = view === 'building' ? mode !== 'building' && mode !== 'floor' : view !== 'floor' || mode === 'block';
   const sheetOpen = narrow && mode !== 'building';
   const sheetTitle = mode === 'block' ? 'Suite' : mode === 'floor' ? 'Floor' : mode === 'find' ? 'Find space' : mode === 'worklist' ? 'Renewal worklist' : mode === 'issues' ? 'Data issues' : 'Area';
 
   return (
-    <div className="sp-app" data-view={state.view} data-mode={mode}>
+    <div className="sp-app" data-view={view} data-mode={mode}>
       <svg className="sp-defs" width="0" height="0" aria-hidden="true" focusable="false">
         <Patterns />
       </svg>
@@ -184,24 +208,25 @@ function Shell() {
       <Header model={model} state={state} patch={patch} onExport={onExport} miniTimeline={<MiniTimeline model={model} asOf={state.asOf} onChange={(asOf) => patch({ asOf })} width={312} height={64} />} />
       <KpiStrip model={model} state={state} onAction={onKpi} />
       <Toolbar state={state} patch={patch} />
-      <main className={`sp-main sp-no-print ${state.view === 'floor' && mode !== 'block' ? 'sp-main--wide' : ''}`} id="sp-plan" tabIndex={-1}>
-        <div className="sp-stage" key={state.view === 'map' ? 'map' : `fonts-${fontTick}`}>
-          {state.view === 'stack' && <StackView model={model} state={state} patch={patch} />}
-          {state.view === 'floor' && <FloorView model={model} state={state} patch={patch} />}
-          {state.view === 'timeline' && <TimelineView model={model} state={state} patch={patch} />}
-          {state.view === 'map' && (
+      <main className={`sp-main sp-no-print ${showInspector ? '' : 'sp-main--wide'}`} id="sp-plan" tabIndex={-1}>
+        <div className="sp-stage" key={view === 'map' ? 'map' : `fonts-${fontTick}`}>
+          {view === 'building' && <BuildingView model={model} state={state} patch={patch} />}
+          {view === 'stack' && <StackView model={model} state={state} patch={patch} />}
+          {view === 'floor' && <FloorView model={model} state={state} patch={patch} />}
+          {view === 'timeline' && <TimelineView model={model} state={state} patch={patch} />}
+          {view === 'map' && (
             <Suspense fallback={<section className="sp-card sp-map-loading" aria-busy="true">Loading map…</section>}>
               <MapView model={model} state={state} patch={patch} dataSource={dataSource} />
             </Suspense>
           )}
         </div>
-        {!narrow && (state.view !== 'floor' || mode === 'block') && (
+        {!narrow && showInspector && (
           <aside className="sp-inspector sp-card" aria-label="Inspector">
             {inspector}
           </aside>
         )}
       </main>
-      {narrow && (state.view !== 'floor' || mode === 'block') && (
+      {narrow && showInspector && (
         <Sheet
           open={sheetOpen}
           onClose={() => {

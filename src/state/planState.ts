@@ -6,7 +6,7 @@ import type { ISODate } from '../domain/types';
  * omitted when serialising so a fresh plan is just `/`.
  */
 
-export type View = 'stack' | 'timeline' | 'map' | 'floor';
+export type View = 'building' | 'stack' | 'timeline' | 'map' | 'floor';
 export type Lens = 'status' | 'expiry' | 'deals' | 'rent';
 export type InspectorMode = 'building' | 'block' | 'floor' | 'find' | 'worklist' | 'issues' | 'area';
 export type WindowKey = 'risk' | '90' | '180' | '12' | '24';
@@ -32,11 +32,14 @@ export interface PlanState {
   live: boolean;
   census: string | null;
   theme: Theme | null;
-  /** Visual skin: frosted glass (default) or the flat Lightning look. */
-  skin?: 'glass' | 'classic';
+  /**
+   * Visual skin. Absent (the default) is frosted glass in the Vice City palette; `aurora` is the
+   * same glass in its original blue palette; `classic` is the flat Lightning look.
+   */
+  skin?: 'aurora' | 'classic';
 }
 
-const VIEWS: readonly View[] = ['stack', 'timeline', 'map', 'floor'];
+const VIEWS: readonly View[] = ['building', 'stack', 'timeline', 'map', 'floor'];
 const LENSES: readonly Lens[] = ['status', 'expiry', 'deals', 'rent'];
 const MODES: readonly InspectorMode[] = ['building', 'block', 'floor', 'find', 'worklist', 'issues', 'area'];
 const WINDOWS: readonly WindowKey[] = ['risk', '90', '180', '12', '24'];
@@ -52,7 +55,7 @@ export function defaultState(today: ISODate): PlanState {
 
 /** Static defaults. `asOf: ''` means "today"; use `defaultState(today)` for a concrete date. */
 export const DEFAULT_STATE: PlanState = {
-  view: 'stack',
+  view: 'building',
   lens: 'status',
   asOf: '',
   select: null,
@@ -124,7 +127,7 @@ export function parseState(search: string, today: ISODate): PlanState {
     live: p.get('live') === '1',
     census: text(p.get('census')),
     theme: oneOfOrNull(THEMES, p.get('theme')),
-    ...(p.get('skin') === 'classic' ? { skin: 'classic' as const } : {}),
+    ...(p.get('skin') === 'classic' ? { skin: 'classic' as const } : p.get('skin') === 'aurora' ? { skin: 'aurora' as const } : {}),
   };
 }
 
@@ -149,9 +152,22 @@ export function serializeState(s: PlanState, today: ISODate): string {
   if (s.live) p.set('live', '1');
   if (s.census) p.set('census', s.census);
   if (s.theme) p.set('theme', s.theme);
-  if (s.skin === 'classic') p.set('skin', 'classic');
+  if (s.skin) p.set('skin', s.skin);
   const qs = p.toString();
   return qs ? `?${qs}` : '';
+}
+
+/** The Vice City palette is the default look; `aurora` and `classic` opt out of it. */
+export function isVice(s: Pick<PlanState, 'skin'>): boolean {
+  return s.skin === undefined;
+}
+
+/**
+ * Effective theme. An explicit `theme` wins; the Vice City palette is dark unless told otherwise;
+ * the other skins follow the operating system.
+ */
+export function isDark(s: Pick<PlanState, 'skin' | 'theme'>, prefersDark: boolean): boolean {
+  return s.theme ? s.theme === 'dark' : isVice(s) || prefersDark;
 }
 
 /**
