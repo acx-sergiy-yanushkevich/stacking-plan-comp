@@ -63,31 +63,36 @@ export function timelineModel(p: Property, floors: FloorView[], asOf: ISODate, t
 function barFor(s: FloorView['segments'][number], asOf: ISODate): TimelineBar[] {
   const isLeaseBar = isLeaseKind(s.kind) || s.kind === 'committed' || s.kind === 'projected';
   if (isLeaseBar && s.lease) {
+    // Prospect-safe (`safeFloors` marks the segment): the lease's end is withheld, so its bar is the
+    // chart's open-ended lease bar (`mtm`, no end), which runs past the as-of line and fades. Every
+    // lease in place is drawn that way, so the bars say nothing about which lease ends when.
+    const withheld = !!s.termWithheld;
+    const headEnd = withheld ? null : leaseEnd(s.lease);
     const bars: TimelineBar[] = [
       {
         key: `tl-${s.key}`,
         segKey: s.key,
         label: s.lease.tenant,
         start: s.lease.commencement,
-        end: leaseEnd(s.lease),
+        end: headEnd,
         // the head lease stays a lease bar; the sublease itself is drawn as its own bar below
-        kind: s.kind === 'sublease' ? 'leased' : s.kind,
+        kind: withheld ? 'mtm' : s.kind === 'sublease' ? 'leased' : s.kind,
         sublease: false,
         committed: s.kind === 'committed',
       },
     ];
     // Sublease: its own bar from the availability date to the sublease expiration. When it runs to the
     // head lease's own end, the head bar simply becomes the (dotted) sublease bar: one suite, one bar.
-    const subEnd = s.availability ? (s.availability.subleaseExpiration ?? leaseEnd(s.lease)) : null;
+    const subEnd = s.availability ? (s.availability.subleaseExpiration ?? headEnd) : null;
     if (s.kind === 'sublease' && s.availability && subEnd === leaseEnd(s.lease)) {
-      bars[0] = { ...bars[0], kind: 'sublease', sublease: true };
+      bars[0] = { ...bars[0], end: subEnd, kind: 'sublease', sublease: true };
     } else if (s.kind === 'sublease' && s.availability) {
       bars.push({
         key: `tl-${s.key}-sub`,
         segKey: s.key,
         label: `Sublease · Ste ${s.suite ?? '—'}`,
         start: s.availability.availableFrom ?? asOf,
-        end: s.availability.subleaseExpiration ?? leaseEnd(s.lease),
+        end: subEnd,
         kind: 'sublease',
         sublease: true,
         committed: false,

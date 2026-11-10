@@ -1,9 +1,10 @@
-import { useMemo, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, type KeyboardEvent } from 'react';
 import type { FloorView as FloorViewModel } from '../../domain/derive';
 import { num, pct } from '../../domain/format';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
-import { backToStack, openFloorPlate } from '../plan/actions';
+import { backFromFloor, openFloorPlate } from '../plan/actions';
+import { floorOrigin, takeFloorFocus } from '../../state/focusStore';
 import { Button } from '../ui';
 import { FloorPlate } from './FloorPlate';
 import { MiniStack } from './MiniStack';
@@ -28,12 +29,22 @@ export default function FloorView({ model, state, patch }: FloorViewProps) {
   const aspect = useMemo(() => plateAspect(property.footprint), [property.footprint]);
   const [plateRef, size] = usePlateSize(aspect);
 
+  // Opened by a control ("Full floor plan", "Open floor plate"): that control is gone with its view, so
+  // focus moves to this view's heading, which names the floor. Opened by a link, the page keeps its focus.
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (takeFloorFocus()) headingRef.current?.focus();
+  }, []);
+  // Back returns to the view this one was opened from.
+  const origin = floorOrigin();
+  const backLabel = origin === 'building' ? 'Building' : 'Stack';
+
   if (!floor) {
     return (
       <section className="sp-floor sp-card" aria-label="Floor plate">
         <div className="sp-floor__bar">
-          <Button variant="ghost" icon="arrow-left" onClick={() => backToStack(patch)}>
-            Stack
+          <Button variant="ghost" icon="arrow-left" onClick={() => backFromFloor(patch, state.floor)}>
+            {backLabel}
           </Button>
         </div>
         <p className="sp-floor__empty">This floor is not on the plan.</p>
@@ -70,8 +81,8 @@ export default function FloorView({ model, state, patch }: FloorViewProps) {
         <nav className="sp-floor__crumb" aria-label="Breadcrumb">
           <ol>
             <li>
-              <button type="button" className="sp-floor__crumb-link" onClick={() => backToStack(patch)}>
-                Stack
+              <button type="button" className="sp-floor__crumb-link" onClick={() => backFromFloor(patch, floor.floor.id)}>
+                {backLabel}
               </button>
             </li>
             <li aria-hidden="true" className="sp-floor__crumb-sep">
@@ -105,7 +116,9 @@ export default function FloorView({ model, state, patch }: FloorViewProps) {
       </div>
 
       <div className="sp-floor__title">
-        <h2 className="sp-floor__h">{floor.floor.name}</h2>
+        <h2 className="sp-floor__h" ref={headingRef} tabIndex={-1}>
+          {floor.floor.name}
+        </h2>
         <p className="sp-floor__facts">
           {num(floor.leasable)} RSF leasable · {pct(leasedShare)} leased · {availabilityFact(floor, model.asOf, model.safe)}
         </p>

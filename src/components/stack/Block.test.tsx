@@ -22,10 +22,10 @@ const text = (o: Partial<SegmentText> = {}): SegmentText => ({
   ...o,
 });
 
-function draw(t: SegmentText, w: number, h = 72, s: Segment = seg()) {
+function draw(t: SegmentText, w: number, h = 72, s: Segment = seg(), keepSuite = false) {
   const html = renderToString(
     <svg>
-      <Block seg={s} text={t} x={0} y={0} w={w} h={h} selected={false} dim={false} focusable enlarged={false} onSelect={() => undefined} onFocus={() => undefined} onKeyDown={() => undefined} />
+      <Block seg={s} text={t} x={0} y={0} w={w} h={h} selected={false} dim={false} focusable enlarged={false} keepSuite={keepSuite} onSelect={() => undefined} onFocus={() => undefined} onKeyDown={() => undefined} />
     </svg>,
   );
   const lines = [...html.matchAll(/<text class="(sp-seg__[a-z-]+)" x="([\d.]+)" y="([\d.]+)"[^>]*>([^<]*)</g)].map((m) => ({ cls: m[1].replace('sp-seg__', ''), y: Number(m[3]), t: m[4].trim().replace(/&#x27;/g, "'").replace(/&amp;/g, '&') }));
@@ -145,5 +145,33 @@ describe('Block text, short rows and narrow blocks', () => {
       const { lines } = draw(text(), w);
       if (lines.some((l) => l.t.includes('Conner'))) expect(lines.some((l) => l.t.includes('2,400 SF')), `${w}`).toBe(true);
     }
+  });
+});
+
+describe('Block text in print: a narrow block keeps its suite number', () => {
+  const cafe = text({ tone: 'expiring', name: 'Preston Park Café', sub: 'Ste 100 · 2,400 SF', sfShort: '2,400', meta: 'Exp Feb 2027 · 3 mo', lensShort: "Feb '27", aria: 'Floor 1, Preston Park Café' });
+
+  it('on screen a 110 px block in a 48 px row shows name, SF and date, without the suite', () => {
+    const { lines } = draw(cafe, 110, 48);
+    expect(lines.map((l) => l.t).join(' ')).toContain('Preston Park');
+    expect(lines.some((l) => l.t.includes('Ste 100'))).toBe(false);
+    expect(lines.some((l) => l.t.includes('2,400 SF'))).toBe(true);
+  });
+
+  it('in print the same block keeps "Ste 100 · 2,400 SF", the whole name and the SF figure', () => {
+    const { lines, label } = draw(cafe, 110, 48, seg(), true);
+    const drawn = lines.map((l) => l.t);
+    expect(drawn.some((t) => t.startsWith('Ste 100 · 2,400 SF'))).toBe(true);
+    // The name is still whole (on one line or two), never a fragment.
+    expect(drawn.join(' ')).toContain('Preston Park Café');
+    expect(label).toContain('Preston Park Café');
+  });
+
+  it('changes nothing where the suite was already drawn, or where it cannot fit at all', () => {
+    const wide = draw(cafe, 200, 48, seg(), true).lines.map((l) => l.t);
+    expect(wide).toEqual(draw(cafe, 200, 48).lines.map((l) => l.t));
+    const sliver = draw(cafe, 60, 48, seg(), true).lines.map((l) => l.t);
+    expect(sliver).toEqual(draw(cafe, 60, 48).lines.map((l) => l.t));
+    expect(sliver.join(' ')).toContain('2,400');
   });
 });

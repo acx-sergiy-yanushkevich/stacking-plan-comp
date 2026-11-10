@@ -4,7 +4,7 @@ import { fmtDate, fmtMonths } from '../../domain/dates';
 import { num, pct, rate, sf } from '../../domain/format';
 import { rentRollDisplay, unplacedLeases } from '../../domain/exportCsv';
 import { comingSupply } from '../../domain/kpis';
-import { canShowDeals, canShowInPlaceRent, canShowIssues, canShowTenantRisk, rentVisible, tenantLabel } from '../../domain/safe';
+import { canShowDeals, canShowInPlaceRent, canShowIssues, canShowLeaseTerm, canShowTenantRisk, rentVisible, tenantLabel } from '../../domain/safe';
 import { Legend } from '../plan/Legend';
 import StackView from '../stack/StackView';
 import './print.css';
@@ -24,7 +24,9 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
   const { property: p, kpis: k, safe } = model;
   // The rent roll, the worklist and the supply figures each arrive already passed through the prospect-safe policy.
   const rows = rentRollDisplay(p, model.floors, model.asOf, safe);
-  const worklist: WorklistRow[] = model.worklist('12');
+  // The worklist names single leases by their term: a prospect-safe report has none (and no lease shows a term at all).
+  const showTerms = canShowLeaseTerm(safe);
+  const worklist: WorklistRow[] = showTerms ? model.worklist('12') : [];
   // Without the at-risk row, a share of leased SF would let a reader work the at-risk SF out: shares are then of the SF listed.
   const showRisk = canShowTenantRisk(safe);
   const atRisk: WorklistRow[] = showRisk ? model.worklist('risk') : [];
@@ -65,7 +67,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
           <StackView model={model} state={state} patch={noop} bare rowHeight={48} />
         </div>
         <footer className="sp-print__foot">
-          Floor width is proportional to gross floor area; suite width to RSF. Figures are exact RSF from AscendixRE records. {safe ? 'Tenant names, contacts and in-place rents are withheld.' : ''}
+          Floor width is proportional to gross floor area; suite width to RSF. Figures are exact RSF from AscendixRE records. {safe ? 'Tenant names, contacts, in-place rents and lease terms are withheld.' : ''}
         </footer>
       </section>
 
@@ -115,7 +117,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
         <div className="sp-print__two">
           <div>
             <h2>Lease rollover</h2>
-            <p className="sp-print__note">SF of leases ending in each 12-month period from {fmtDate(model.asOf)}.{showRisk ? '' : ' Shares are of the SF listed here.'}</p>
+            <p className="sp-print__note">SF of leases ending in each 12-month period from {fmtDate(model.asOf)}.{showRisk ? '' : ' Shares are of the SF listed here. Building totals only: no suite shows its lease term.'}</p>
             <table className="sp-print__table sp-print__table--tight">
               <thead>
                 <tr>
@@ -187,8 +189,9 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
               </tbody>
             </table>
           </div>
+          {showTerms && (
           <div>
-            <h2>{!showRisk ? 'Lease expirations · next 12 months' : atRisk.length ? 'Renewal worklist · at risk and next 12 months' : 'Renewal worklist · next 12 months'}</h2>
+            <h2>{atRisk.length ? 'Renewal worklist · at risk and next 12 months' : 'Renewal worklist · next 12 months'}</h2>
             <table className="sp-print__table sp-print__table--tight">
               <thead>
                 <tr>
@@ -236,6 +239,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       </section>
     </div>

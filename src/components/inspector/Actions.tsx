@@ -11,10 +11,14 @@ export interface ActionItem {
   label?: string;
 }
 
-/** The prototype has no Salesforce behind it: every record action shows what it would do. */
+/**
+ * The prototype has no Salesforce behind it: every record action shows what it would do. The message
+ * names the record (a tenant, a prospect, a deal), so it is pushed as `named`: the toast layer refuses
+ * it in prospect-safe mode and removes it if the mode is turned on while it is showing.
+ */
 export function useRecordAction() {
   const toast = useToast();
-  return useCallback((action: RecordAction, record: string) => toast.push(recordActionToast(action, record), { icon: 'external' }), [toast]);
+  return useCallback((action: RecordAction, record: string) => toast.push(recordActionToast(action, record), { icon: 'external', named: true }), [toast]);
 }
 
 /** Footer of record actions (2–4 buttons) for a block panel. */

@@ -60,3 +60,44 @@
   .sp-kpi:nth-child(2n) { border-right: 0; }
   .sp-kpi:nth-child(-n + 4) { border-bottom: 1px solid var(--sp-color-border); }
 }
+
+/*
+ * Column variant (Building view, the model standing alone): the same six figures as a list, one row
+ * each: label and figure on a line, the note under them. Rows are quiet panels inside the plan card,
+ * not six cards of their own. The selectors carry `:root[data-skin] section` to outrank the skin's
+ * tile rules, which are written for the strip.
+ */
+:root[data-skin] section.sp-kpis--col { display: flex; flex-direction: column; gap: 6px; overflow: visible; }
+:root[data-skin] section.sp-kpis--col .sp-kpi,
+:root[data-skin] section.sp-kpis--col .sp-kpi:last-child {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'label value' 'context context';
+  align-items: baseline; gap: 1px var(--sp-space-3); padding: 7px 12px 8px;
+  background: var(--sp-color-card-2); border: 1px solid var(--sp-color-border); border-radius: 10px;
+  box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none;
+  transition: background var(--sp-ease), border-color var(--sp-ease);
+}
+/* No lift on hover here: nothing in this column may move under the pointer. */
+:root[data-skin] section.sp-kpis--col button.sp-kpi:hover { transform: none; box-shadow: none; border-color: var(--sp-color-border-strong); background: var(--sp-color-card-2); }
+:root[data-skin] section.sp-kpis--col .sp-kpi.is-active { background: var(--sp-color-brand-soft); border-color: var(--sp-color-brand); box-shadow: inset 3px 0 0 var(--sp-color-brand); }
+:root[data-skin] section.sp-kpis--col .sp-kpi--static:hover { background: var(--sp-color-card-2); }
+.sp-kpis--col .sp-kpi__label { grid-area: label; }
+:root[data-skin] section.sp-kpis--col .sp-kpi__value { grid-area: value; justify-content: flex-end; flex-direction: row-reverse; font-size: var(--sp-text-18); letter-spacing: -0.02em; line-height: 1.25; gap: 2px 8px; }
+.sp-kpis--col .sp-kpi__context { grid-area: context; display: block; overflow: visible; -webkit-line-clamp: none; line-height: 1.35; }
+
+/* A short window: the rows tighten so the six figures and what follows them stay on the first screen. */
+@media (max-height: 840px) {
+  :root[data-skin] section.sp-kpis--col { gap: 4px; }
+  :root[data-skin] section.sp-kpis--col .sp-kpi,
+  :root[data-skin] section.sp-kpis--col .sp-kpi:last-child { padding: 5px 12px 6px; }
+}
+
+/* Given a wide box instead of a column (the Building view in one column), the list becomes one row of six
+   tiles: label over figure, the note in the tooltip. It asks its own container, not the window. */
+@container (min-width: 600px) {
+  :root[data-skin] section.sp-kpis--col { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+  :root[data-skin] section.sp-kpis--col .sp-kpi,
+  :root[data-skin] section.sp-kpis--col .sp-kpi:last-child { display: flex; flex-direction: column; gap: 1px; padding: 6px 8px 7px; }
+  :root[data-skin] section.sp-kpis--col .sp-kpi__value { flex-direction: row; justify-content: flex-start; font-size: var(--sp-text-15); }
+  .sp-kpis--col .sp-kpi__context { display: none; }
+  .sp-kpis--col .sp-kpi__label { font-size: 10px; letter-spacing: 0.02em; }
+}

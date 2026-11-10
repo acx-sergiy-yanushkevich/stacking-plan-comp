@@ -1,7 +1,9 @@
 import type { ExpressionSpecification } from 'maplibre-gl';
 import type { FloorView } from '../../domain/derive';
 import type { ExtrusionCollection, ExtrusionProperties } from '../../domain/geometry';
-import { toneFor, type Tone } from '../../domain/lenses';
+import { num } from '../../domain/format';
+import { toneFor, toneShort, type Tone } from '../../domain/lenses';
+import { canShowIssues } from '../../domain/safe';
 import type { GeoPolygon } from '../../domain/types';
 import type { Lens } from '../../state/planState';
 
@@ -40,6 +42,29 @@ export function dominantTone(f: FloorView, lens: Lens, safe: boolean): Tone {
     }
   }
   return best ?? 'empty';
+}
+
+/**
+ * What the floor list writes after a floor's leased share. One word for the dominant state ("Leased")
+ * hid a third of Floor 8 standing empty, so the list says what is true instead, in exact SF: the
+ * space on offer, a unit for sale, an area with no record. The dominant state keeps its word when it
+ * is anything but plain leased ("At risk", "Expiring", or the band in the other lenses), because that
+ * word explains the swatch. Prospect-safe wording follows the plan's: a gap is "not on the market".
+ */
+export function floorState(f: FloorView, lens: Lens, safe: boolean): string {
+  const sum = (kind: FloorView['segments'][number]['kind']) => f.segments.filter((s) => s.kind === kind).reduce((t, s) => t + s.size, 0);
+  const word = toneShort(dominantTone(f, lens, safe), lens, safe);
+  const facts: string[] = [];
+  if (lens !== 'status' || word !== 'Leased') facts.push(word);
+  if (f.available > 0) {
+    const onlySublease = sum('sublease') === f.available;
+    facts.push(`${num(f.available)} SF ${onlySublease ? 'sublease ' : ''}available`);
+  }
+  const forSale = sum('forsale');
+  if (forSale > 0) facts.push(`${num(forSale)} SF for sale`);
+  const gap = sum('unmarketed');
+  if (gap > 0) facts.push(`${num(gap)} SF ${canShowIssues(safe) ? 'unaccounted' : 'not on the market'}`);
+  return facts.filter(Boolean).join(' · ');
 }
 
 /** `#rgb` or `#rrggbb` (any case, surrounding space) → lowercase `#rrggbb`; anything else → null. */

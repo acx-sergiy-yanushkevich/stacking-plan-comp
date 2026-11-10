@@ -12,6 +12,7 @@ import { TimelineRows, type BarHover } from './TimelineRows';
 import { layoutRows, layoutStackedRows, rowsHeight, viewAxis } from './layout';
 import { AsOfCursor } from './AsOfCursor';
 import { RolloverChips } from './RolloverChips';
+import { canShowLeaseTerm } from '../../domain/safe';
 import { barLabel, SUB_FONT, tagWidth, wrapLabel, type LabelLine } from './barLabel';
 import { useWidth } from './useWidth';
 import { measure } from '../../lib/textFit';
@@ -89,6 +90,18 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
   const end = frozen?.end ?? axis.end;
 
   const [hover, setHover] = useState<BarHover | null>(null);
+
+  // Prospect-safe is a boundary for what is already on screen: a tip drawn before it turned on is dropped.
+
+  const [hoverSafe, setHoverSafe] = useState(model.safe);
+
+  if (hoverSafe !== model.safe) {
+
+    setHoverSafe(model.safe);
+
+    setHover(null);
+
+  }
   const onHover = useCallback((h: BarHover | null) => setHover(h), []);
   // Selecting the selected bar again (click or Escape) clears the selection.
   const onSelect = useCallback((key: string) => (key === state.select ? clearSelection(patch) : selectSegment(patch, key)), [patch, state.select]);
@@ -134,7 +147,7 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
         )}
       </div>
     <div className={`sp-timeline ${stackedMode ? 'sp-timeline--stacked' : ''}`} ref={hostRef}>
-      {stackedMode && <RolloverChips buckets={model.roll.buckets} atRisk={model.safe ? 0 : model.roll.atRisk} asOf={model.asOf} activeBucket={state.bucket} onBucket={onBucket} />}
+      {stackedMode && <RolloverChips buckets={model.roll.buckets} atRisk={model.safe ? 0 : model.roll.atRisk} asOf={model.asOf} activeBucket={state.bucket} onBucket={canShowLeaseTerm(model.safe) ? onBucket : undefined} />}
       <svg ref={svgRef} className="sp-timeline__svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="group" aria-label={`Lease timeline, ${rows.length} floors`}>
         <defs>
           <clipPath id={clipId}>
@@ -154,7 +167,7 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
           buckets={model.roll.buckets}
           atRisk={model.safe ? 0 : model.roll.atRisk}
           activeBucket={state.bucket}
-          onBucket={onBucket}
+          onBucket={canShowLeaseTerm(model.safe) ? onBucket : undefined}
         />
         <line className="sp-cursor__line sp-cursor__line--under" x1={gutter + dateToX(model.asOf, start, end, plotWidth)} x2={gutter + dateToX(model.asOf, start, end, plotWidth)} y1={0} y2={height - BOTTOM_PAD} />
         <TimelineRows

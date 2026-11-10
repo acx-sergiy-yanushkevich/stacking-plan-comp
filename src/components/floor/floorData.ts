@@ -97,10 +97,39 @@ export function fittingInquiries(floor: FloorView, inquiries: Inquiry[], asOf: I
 export function nextExpiry(floor: FloorView): Segment | null {
   let best: Segment | null = null;
   for (const s of floor.segments) {
-    if (!s.lease || !isLeaseKind(s.kind) || s.monthsToExpiry === null || s.monthsToExpiry < 0 || !s.endDate) continue;
+    // A segment whose term is withheld (prospect-safe) has no lease expiry to rank: a sublet suite's date there is the offer's.
+    if (!s.lease || !isLeaseKind(s.kind) || s.termWithheld || s.monthsToExpiry === null || s.monthsToExpiry < 0 || !s.endDate) continue;
     if (!best || s.monthsToExpiry < best.monthsToExpiry! || (s.monthsToExpiry === best.monthsToExpiry && s.endDate < best.endDate!)) best = s;
   }
   return best;
+}
+
+export interface CallTarget {
+  lease: NonNullable<Segment['lease']>;
+  seg: Segment;
+  /** Why this tenant, in a word or two for the button: "holdover", "month-to-month", "expires Feb '27". */
+  reason: string;
+  /** The same, as a clause for the tooltip: "in holdover", "the next lease to expire". */
+  why: string;
+}
+
+/**
+ * Who a floor-level "Log call" should reach: the tenant who most needs the call. A holdover tenant
+ * comes first (the lease has already expired), then a month-to-month tenant (no end date at all),
+ * then the lease ending soonest. Among several of the same urgency the largest suite wins. Null when
+ * the floor has no tenant to call. Record actions are withheld in prospect-safe mode, where the
+ * projected floors carry no lease term to rank by either.
+ */
+export function callTarget(floor: FloorView): CallTarget | null {
+  const inPlace = floor.segments.filter((s): s is Segment & { lease: NonNullable<Segment['lease']> } => !!s.lease && isLeaseKind(s.kind) && !s.termWithheld);
+  const largest = (kind: Segment['kind']) => inPlace.filter((s) => s.kind === kind).sort((a, b) => b.size - a.size)[0];
+  const holdover = largest('holdover');
+  if (holdover) return { lease: holdover.lease, seg: holdover, reason: 'holdover', why: 'in holdover, the most urgent call' };
+  const mtm = largest('mtm');
+  if (mtm) return { lease: mtm.lease, seg: mtm, reason: 'month-to-month', why: 'month-to-month, no end date' };
+  const next = nextExpiry(floor);
+  if (next?.lease && next.endDate) return { lease: next.lease, seg: next, reason: `expires ${fmtMonthYearShort(next.endDate)}`, why: 'the next lease to expire' };
+  return null;
 }
 
 /** Data issues recorded against a floor; none in prospect-safe mode. */

@@ -114,15 +114,43 @@ describe('Vice palette, night ramps', () => {
 });
 
 describe('Vice palette, day', () => {
-  it('gives the map and the model an opaque leased colour that is not a basemap grey', () => {
-    const basemap = '#cfd4da';
+  // The building model paints the `-solid` colours as they are, next to the legend, the stack and the
+  // plate, which paint the fill. The 3D map deepens each solid 45% toward the tone's edge (MapView).
+  const MAP_DEEPEN = 0.45;
+  const mix = (a: string, b: string, t: number) => `#${rgb(a).map((x, i) => Math.round(x + (rgb(b)[i] - x) * t).toString(16).padStart(2, '0')).join('')}`;
+  const hue = (hex: string) => {
+    const [r, g, b] = rgb(hex).map((c) => c / 255);
+    const max = Math.max(r, g, b);
+    const d = max - Math.min(r, g, b);
+    if (d === 0) return 0;
+    const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return (h * 60 + 360) % 360;
+  };
+
+  it('draws leased on the model in the legend\'s own colour, a step stronger', () => {
     for (const tone of ['leased', 'neutral', 'muted']) {
       const solid = day.get(`--tone-${tone}-solid`)!;
+      const fill = day.get(`--tone-${tone}-fill`)!;
       expect(solid, tone).toMatch(/^#[0-9a-f]{6}$/);
-      // Darker than a basemap building, and tinted (blue well above red), not a neutral grey.
-      expect(lightness(basemap) - lightness(solid), `${tone} lightness`).toBeGreaterThanOrEqual(10);
-      const [r, , b] = rgb(solid);
-      expect(b - r, `${tone} tint`).toBeGreaterThanOrEqual(30);
+      // Same hue as the swatch, a little darker (so the slab has body on the pale card), never far from it.
+      expect(Math.abs(hue(solid) - hue(fill)), `${tone} hue`).toBeLessThanOrEqual(12);
+      const step = lightness(fill) - lightness(solid);
+      expect(step, `${tone} lightness step`).toBeGreaterThan(0);
+      expect(step, `${tone} lightness step`).toBeLessThanOrEqual(10);
+      // The model outlines each slab in the tone's edge, which must still separate it from the card.
+      for (const card of DAY_CARDS) expect(contrast(day.get(`--tone-${tone}-edge`)!, card), `${tone} edge on ${card}`).toBeGreaterThanOrEqual(3);
+    }
+    expect(day.get('--tone-neutral-solid')).toBe(day.get('--tone-leased-solid'));
+  });
+
+  it('keeps a leased floor on the map apart from a light-grey basemap building', () => {
+    const basemap = '#cfd4da';
+    for (const tone of ['leased', 'neutral', 'muted']) {
+      const wall = mix(day.get(`--tone-${tone}-solid`)!, day.get(`--tone-${tone}-edge`)!, MAP_DEEPEN);
+      // Clearly darker than a basemap building, and tinted (blue above red), not a neutral grey.
+      expect(lightness(basemap) - lightness(wall), `${tone} lightness`).toBeGreaterThanOrEqual(10);
+      const [r, , b] = rgb(wall);
+      expect(b - r, `${tone} tint`).toBeGreaterThanOrEqual(15);
     }
   });
 

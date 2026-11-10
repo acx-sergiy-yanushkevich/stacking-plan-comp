@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../../data/mock/property';
 import { deriveFloors } from '../../domain/derive';
 import { findIssues } from '../../domain/issues';
-import { availabilityFact, comingText, fittingInquiries, floorComing, floorDeals, floorIssues, liveDeals, nextExpiry } from './floorData';
+import { safeFloors } from '../../domain/safe';
+import { availabilityFact, callTarget, comingText, fittingInquiries, floorComing, floorDeals, floorIssues, liveDeals, nextExpiry } from './floorData';
 
 const floors = deriveFloors(property, TODAY, TODAY);
 const floor = (id: string) => floors.find((f) => f.floor.id === id)!;
@@ -62,5 +63,35 @@ describe('nextExpiry', () => {
       const next = nextExpiry(f);
       if (next) expect(next.monthsToExpiry).toBeGreaterThanOrEqual(0);
     }
+  });
+});
+
+describe('callTarget: who the floor-level "Log call" reaches', () => {
+  it('prefers the holdover tenant over a lease that expires years out (Floor 3)', () => {
+    const t = callTarget(floor('F3'))!;
+    expect(t.lease.tenant).toBe('Argosy Partners');
+    expect(t.reason).toBe('holdover');
+    // The old rule picked the next dated expiry and skipped the holdover.
+    expect(nextExpiry(floor('F3'))!.lease!.tenant).toBe('S&P Enterprises');
+  });
+
+  it('prefers a month-to-month tenant when no one is in holdover', () => {
+    const mtmFloor = floors.find((f) => f.segments.some((s) => s.kind === 'mtm') && !f.segments.some((s) => s.kind === 'holdover'))!;
+    const t = callTarget(mtmFloor)!;
+    expect(t.seg.kind).toBe('mtm');
+    expect(t.reason).toBe('month-to-month');
+  });
+
+  it('otherwise goes to the lease ending soonest, and says when', () => {
+    const t = callTarget(floor('F6'))!;
+    expect(t.lease.tenant).toBe('Cirrus Energy');
+    expect(plain(t.reason)).toBe("expires Mar '27");
+    expect(t.seg.key).toBe(nextExpiry(floor('F6'))!.key);
+  });
+
+  it('is null on a floor with no tenant, and on every prospect-safe floor (no term to rank by, no record action)', () => {
+    const empty = { ...floor('F6'), segments: floor('F6').segments.filter((s) => !s.lease) };
+    expect(callTarget(empty)).toBeNull();
+    for (const f of safeFloors(floors, true)) expect(callTarget(f), f.floor.name).toBeNull();
   });
 });

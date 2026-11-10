@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import type { SegmentText } from '../plan/segmentText';
-import { linesFor } from './FloorPlate';
+import { keyText, linesFor } from './FloorPlate';
 
 // Without a canvas the text measure is the average-glyph estimate: 0.55 × font size per character
 // (13 px name 7.15, 12 px fact 6.6, 11 px 6.05). The widths below are chosen against that.
@@ -49,12 +49,29 @@ describe('floor plate label lines', () => {
     expect(drawn(ls)).toEqual(['For sale', 'Ste 130', '2,600 SF', '$1,027,000']);
   });
 
-  it('gives a narrow slice the suite and SF rather than a name stacked word by word', () => {
+  it('wraps a name onto two lines on a narrow slice rather than dropping it', () => {
     const t = text({ name: 'S&P Enterprises', sub: 'Ste 325 · 4,900 SF', sfShort: '4,900', meta: 'Exp Jun 2029 · 2 yr 7 mo', lensShort: "Jun '29", tone: 'leased' });
-    // 88 px holds neither "S&P Enterprises" at 13 px (107 px) nor at 11 px (91 px).
-    for (const mode of ['name', 'tiny', 'none'] as const) expect(drawn(linesFor(t, 2, 88, 180, mode)), mode).toEqual(['Ste 325', '4,900 SF', "Jun '29"]);
-    // One line at 11 px is still the whole name.
-    expect(drawn(linesFor(t, 2, 92, 180, 'tiny'))).toEqual(['S&P Enterprises', 'Ste 325', '4,900 SF', "Jun '29"]);
+    // 88 px does not hold "S&P Enterprises" on one line at 13 px (107 px), but it holds "S&P" / "Enterprises".
+    const ls = linesFor(t, 2, 88, 180, 'name');
+    expect(drawn(ls)).toEqual(['S&P', 'Enterprises', 'Ste 325', '4,900 SF', "Jun '29"]);
+    expect(px(ls).slice(0, 2)).toEqual([13, 13]);
+    const cafe = text({ name: 'Preston Park Café', sub: 'Ste 100 · 2,400 SF', sfShort: '2,400', meta: 'Exp Feb 2027 · 3 mo', lensShort: "Feb '27", tone: 'expiring' });
+    expect(drawn(linesFor(cafe, 2, 90, 180, 'name'))).toEqual(['Preston Park', 'Café', 'Ste 100', '2,400 SF', "Feb '27"]);
+  });
+
+  it('draws no part of a name that cannot be held on two lines: the suite, SF and lens fact stay (the key under the plate carries the name)', () => {
+    const t = text({ name: 'S&P Enterprises', sub: 'Ste 325 · 4,900 SF', sfShort: '4,900', meta: 'Exp Jun 2029 · 2 yr 7 mo', lensShort: "Jun '29", tone: 'leased' });
+    // 60 px holds "Enterprises" at neither 13 px (79 px) nor 11 px (67 px): a word is never split.
+    for (const mode of ['name', 'tiny', 'none'] as const) expect(drawn(linesFor(t, 2, 60, 180, mode)), mode).toEqual(['Ste 325', '4,900 SF', "Jun '29"]);
+    // 70 px holds it at 11 px: still the whole name.
+    expect(drawn(linesFor(t, 2, 70, 180, 'tiny'))).toEqual(['S&P', 'Enterprises', 'Ste 325', '4,900 SF', "Jun '29"]);
+    expect(keyText(t)).toBe('S&P Enterprises · Ste 325 · 4,900 SF');
+  });
+
+  it('breaks "Tenant · sublease" at its separator, never leaving the dot at the end or start of a line', () => {
+    const t = text({ name: 'Infinity Info Systems · sublease', sub: 'Ste 720 · 7,000 SF', sfShort: '7,000', meta: 'Sublease thru Sep 2030', tone: 'sublease' });
+    expect(drawn(linesFor(t, 1, 160, 200, 'name')).slice(0, 2)).toEqual(['Infinity Info Systems', 'sublease']);
+    expect(drawn(linesFor(t, 0, 260, 200, 'name'))[0]).toBe('Infinity Info Systems · sublease');
   });
 
   it('wraps a name once at most on a wide slice', () => {

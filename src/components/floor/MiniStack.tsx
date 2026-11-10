@@ -1,24 +1,39 @@
-import { useRef, type KeyboardEvent } from 'react';
+import { useRef, useState, type KeyboardEvent } from 'react';
 import type { FloorView } from '../../domain/derive';
-import { pct } from '../../domain/format';
+import { num, pct } from '../../domain/format';
 
 export interface MiniStackProps {
   /** Top floor first (as `PlanModel.floors`). */
   floors: FloorView[];
+  /** The open floor (outlined, `aria-current`); empty when none is open. */
   currentId: string;
+  /** The floor under the pointer elsewhere (on the building model, say): lit, but not current. */
+  hotId?: string | null;
   onPick: (floorId: string) => void;
-  /** Pointing at or focusing a row previews that floor; null when it ends. */
+  /** Pointing at or focusing a row lights that floor; null when it ends. It never opens the floor. */
   onPreview?: (floorId: string | null) => void;
+  /** A row's accessible name and tooltip. Default: "Floor 8, 65.4% leased, 7,400 SF available". */
+  describe?: (floor: FloorView) => string;
+}
+
+const leasedShare = (f: FloorView) => (f.leasable > 0 ? f.leased / f.leasable : 0);
+
+/** "Floor 8, 65.4% leased, 7,400 SF available": what a row says when no lens adds to it. */
+export function miniStackLabel(f: FloorView): string {
+  return `${f.floor.name}, ${pct(leasedShare(f))} leased${f.available > 0 ? `, ${num(f.available)} SF available` : ''}`;
 }
 
 /**
- * Thin vertical floor picker: one tinted row per floor, the current floor outlined. It is the
- * keyboard equivalent of the building model, so it is one tab stop: ↑ ↓ move between floors (and
- * preview each), Home and End jump to the top and bottom, Enter or Space pins.
+ * Thin vertical floor picker: one row per floor, the open floor outlined. It is the keyboard
+ * equivalent of the building model, so it is one tab stop: ↑ ↓ move between floors (lighting each on
+ * the model), Home and End jump to the top and bottom, Enter or Space opens the floor.
  */
-export function MiniStack({ floors, currentId, onPick, onPreview }: MiniStackProps) {
+export function MiniStack({ floors, currentId, hotId, onPick, onPreview, describe = miniStackLabel }: MiniStackProps) {
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
-  const stop = Math.max(0, floors.findIndex((f) => f.floor.id === currentId));
+  // The tab stop is the open floor; with none open, the row last focused (the top floor at first).
+  const [lastId, setLastId] = useState<string | null>(null);
+  const at = (id: string | null) => floors.findIndex((f) => f.floor.id === id);
+  const stop = at(currentId) >= 0 ? at(currentId) : Math.max(0, at(lastId));
   const onKey = (e: KeyboardEvent<HTMLButtonElement>, i: number) => {
     const to = e.key === 'ArrowDown' ? i + 1 : e.key === 'ArrowUp' ? i - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? floors.length - 1 : null;
     if (to === null) return;
@@ -29,28 +44,34 @@ export function MiniStack({ floors, currentId, onPick, onPreview }: MiniStackPro
     <nav className="sp-mini" aria-label="Floors">
       <ol className="sp-mini__list">
         {floors.map((f, i) => {
-          const share = f.leasable > 0 ? f.leased / f.leasable : 0;
-          const current = f.floor.id === currentId;
+          const share = leasedShare(f);
+          const id = f.floor.id;
+          const current = id === currentId;
+          const label = describe(f);
           return (
-            <li key={f.floor.id}>
+            <li key={id}>
               <button
                 type="button"
                 ref={(el) => {
                   refs.current[i] = el;
                 }}
+                data-floor={id}
                 tabIndex={i === stop ? 0 : -1}
                 onKeyDown={(e) => onKey(e, i)}
-                className={`sp-mini__row ${current ? 'is-current' : ''} ${share > 0.6 ? 'is-strong' : ''}`}
-                aria-label={`${f.floor.name}, ${pct(share)} leased`}
+                className={`sp-mini__row ${current ? 'is-current' : ''} ${!current && id === hotId ? 'is-hot' : ''} ${share > 0.6 ? 'is-strong' : ''}`}
+                aria-label={label}
                 aria-current={current ? 'true' : undefined}
-                title={`${f.floor.name} · ${pct(share)} leased`}
-                onClick={() => onPick(f.floor.id)}
-                onPointerEnter={onPreview && (() => onPreview(f.floor.id))}
+                title={label}
+                onClick={() => onPick(id)}
+                onPointerEnter={onPreview && (() => onPreview(id))}
                 onPointerLeave={onPreview && (() => onPreview(null))}
-                onFocus={onPreview && (() => onPreview(f.floor.id))}
+                onFocus={() => {
+                  setLastId(id);
+                  onPreview?.(id);
+                }}
                 onBlur={onPreview && (() => onPreview(null))}
               >
-                <span className="sp-mini__fill" style={{ height: `${Math.max(8, Math.round(share * 100))}%`, top: "auto" }} aria-hidden="true" />
+                <span className="sp-mini__fill" style={{ height: `${Math.max(8, Math.round(share * 100))}%`, top: 'auto' }} aria-hidden="true" />
                 <span className="sp-mini__num">{`${f.floor.sequence} `}</span>
                 <span className="sp-mini__pct">{`${pct(share)} `}</span>
               </button>

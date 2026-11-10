@@ -9,7 +9,8 @@ export interface RolloverChartProps {
   atRisk: number;
   atRiskLeases: number;
   activeBucket: number | null;
-  onBucket: (key: number | null) => void;
+  /** Highlight the leases in a period. Left out, the chart is read-only totals (prospect-safe: no lease is singled out by its term). */
+  onBucket?: (key: number | null) => void;
   onAtRisk?: () => void;
   /** Draw the at-risk row (holdover and month-to-month). The caller decides: it is withheld from prospects. */
   showRisk?: boolean;
@@ -59,7 +60,7 @@ export function RolloverChart({ buckets, atRisk, atRiskLeases, activeBucket, onB
     } else if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       fn();
-    } else if (e.key === 'Escape' && activeBucket !== null) {
+    } else if (e.key === 'Escape' && activeBucket !== null && onBucket) {
       e.preventDefault();
       onBucket(null);
     }
@@ -79,14 +80,14 @@ export function RolloverChart({ buckets, atRisk, atRiskLeases, activeBucket, onB
           <g
             key={b.key}
             className={cls}
-            role="button"
-            data-roll
-            tabIndex={i === Math.min(focusIdx, rows - 1) ? 0 : -1}
-            onFocus={() => setFocusIdx(i)}
-            aria-pressed={active}
+            role={onBucket ? 'button' : 'img'}
+            data-roll={onBucket ? '' : undefined}
+            tabIndex={onBucket ? (i === Math.min(focusIdx, rows - 1) ? 0 : -1) : undefined}
+            onFocus={onBucket ? () => setFocusIdx(i) : undefined}
+            aria-pressed={onBucket ? active : undefined}
             aria-label={label}
-            onClick={() => onBucket(b.key)}
-            onKeyDown={(e) => onKey(e, () => onBucket(b.key))}
+            onClick={onBucket ? () => onBucket(b.key) : undefined}
+            onKeyDown={onBucket ? (e) => onKey(e, () => onBucket(b.key)) : undefined}
           >
             <title>{label}</title>
             {/* hit target: the whole row, not just the mark */}

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ISODate } from '../domain/types';
 import { SAFE_TITLE, TITLE } from '../domain/safe';
-import { parseState, serializeState, type PlanState } from './planState';
+import { applyPatch, parseState, serializeState, type PlanState } from './planState';
 
 /**
  * One state object for the whole plan, mirrored into the URL with
@@ -11,8 +11,10 @@ import { parseState, serializeState, type PlanState } from './planState';
 export function usePlanState(today: ISODate): [PlanState, (patch: Partial<PlanState>) => void] {
   const [state, setState] = useState<PlanState>(() => parseState(window.location.search, today));
 
+  // `applyPatch` holds the prospect-safe invariants on every change: turning the mode on drops a search in
+  // progress, and no control can open the worklist or an expiry highlight while it is on.
   const patch = useCallback((p: Partial<PlanState>) => {
-    setState((prev) => ({ ...prev, ...p }));
+    setState((prev) => applyPatch(prev, p));
   }, []);
 
   // Write every change to the URL (also normalises an initial URL with invalid params).

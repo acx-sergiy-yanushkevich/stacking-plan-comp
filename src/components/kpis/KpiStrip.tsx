@@ -3,6 +3,7 @@ import type { PlanState } from '../../state/planState';
 import { fmtMonthYearShort } from '../../domain/dates';
 import { num, pct, plural, sfDelta } from '../../domain/format';
 import { waltCard, waltTitle } from './walt';
+import { canShowLeaseTerm } from '../../domain/safe';
 
 export type KpiAction = 'status' | 'find' | 'find-largest' | 'expiry-worklist' | 'timeline' | 'deals';
 
@@ -10,6 +11,11 @@ export interface KpiStripProps {
   model: PlanModel;
   state: PlanState;
   onAction: (a: KpiAction) => void;
+  /**
+   * `strip` (default) is the row of six tiles above the plan. `column` is the same six figures as a
+   * compact list, one row each (label, figure, note), for the Building view while the model stands alone.
+   */
+  variant?: 'strip' | 'column';
 }
 
 interface Card {
@@ -25,7 +31,7 @@ interface Card {
   static?: boolean;
 }
 
-export function KpiStrip({ model, state, onAction }: KpiStripProps) {
+export function KpiStrip({ model, state, onAction, variant = 'strip' }: KpiStripProps) {
   const { kpis: k, deltas: d, safe } = model;
   // Leased is capped per floor while the parts are recorded SF: name the gap so the context reconciles.
   const overAlloc = k.committed + k.availableSublease - (k.leased - Math.round(k.physical * k.leasable));
@@ -67,7 +73,9 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
       context: `${k.leased ? pct(k.expiring12 / k.leased) : '0%'} of leased · ${plural(k.expiring12Leases, 'lease')}`,
       delta: d ? { text: sfDelta(d.expiring12), good: d.expiring12 <= 0 } : null,
       active: state.window === '12' || (state.lens === 'expiry' && state.mode === 'building' && state.bucket === null),
-      title: 'Lease SF ending within 12 months of the as-of date. Click for the expiration lens and the 12-month worklist.',
+      title: canShowLeaseTerm(model.safe) ? 'Lease SF ending within 12 months of the as-of date. Click for the expiration lens and the 12-month worklist.' : 'Lease SF ending within 12 months of the as-of date.',
+      // Prospect-safe withholds which leases end when, so there is nothing to open: a figure, not a button.
+      static: !canShowLeaseTerm(model.safe),
     },
     {
       id: 'timeline',
@@ -102,7 +110,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
         },
   ];
   return (
-    <section className="sp-card sp-kpis sp-no-print" aria-label="Key figures">
+    <section className={variant === 'column' ? 'sp-kpis sp-kpis--col sp-no-print' : 'sp-card sp-kpis sp-no-print'} aria-label="Key figures">
       {cards.map((c) => c.static ? (
         <div key={c.id} className="sp-kpi sp-kpi--static" title={c.title}>
           <span className="sp-kpi__label sp-label">{c.label}</span>

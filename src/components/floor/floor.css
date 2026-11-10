@@ -21,14 +21,18 @@
 }
 
 /* Mini stack */
-.sp-mini { width: 76px; }
+/* The picker is as wide as the column it is given: a row can never be wider than its column and run
+   under what stands beside it. A column under 64 px shows the floor numbers alone (no room for the share). */
+.sp-mini { width: 76px; container-type: inline-size; }
 .sp-mini__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .sp-mini__row {
-  position: relative; display: flex; align-items: center; justify-content: flex-start; gap: 4px; width: 76px; height: 22px; padding-left: 9px;
+  position: relative; display: flex; align-items: center; justify-content: flex-start; gap: 4px; width: 100%; height: 22px; padding-left: 9px;
   border: 1px solid var(--sp-color-border); border-radius: 3px; overflow: hidden; background: var(--sp-color-card);
   font-size: var(--sp-text-11); font-weight: 600; color: var(--sp-color-text); transition: border-color var(--sp-ease);
 }
-.sp-mini__row:hover { border-color: var(--sp-color-border-strong); }
+.sp-mini__row:hover, .sp-mini__row.is-hot { border-color: var(--sp-color-border-strong); }
+.sp-mini__row.is-hot { background: var(--sp-color-card-2); }
+@container (max-width: 63px) { .sp-mini__pct { display: none; } }
 .sp-mini__row.is-current { border-color: var(--sp-color-brand); box-shadow: inset 0 0 0 1px var(--sp-color-brand); }
 .sp-mini__fill { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--sp-color-brand); pointer-events: none; opacity: 1 !important; }
 .sp-mini__num { position: relative; }
@@ -36,7 +40,12 @@
 
 /* Plate */
 .sp-floor__plate { min-width: 0; }
-.sp-plate { width: 100%; min-width: 0; display: flex; justify-content: center; }
+.sp-plate { width: 100%; min-width: 0; display: flex; flex-wrap: wrap; justify-content: center; }
+/* Names the plate had no room for: a numbered marker on the slice, the name written out under the plate. */
+.sp-plate .sp-seg__key text { font: 600 11px var(--sp-font); font-variant-numeric: tabular-nums; }
+.sp-plate__key { flex: 0 0 100%; list-style: none; margin: var(--sp-space-2) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: var(--sp-text-12); color: var(--sp-color-text); font-variant-numeric: tabular-nums; }
+.sp-plate__key li { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.sp-plate__key-n { flex: none; display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--sp-color-text); color: var(--sp-color-card); font-size: 11px; font-weight: 600; line-height: 1; }
 .sp-plate__svg { max-width: 100%; height: auto; font-family: var(--sp-font); }
 .sp-plate .sp-seg__ring { fill: none; stroke: none; }
 .sp-plate .sp-seg__rect { stroke-width: 1; }
@@ -98,7 +107,7 @@
 }
 @media (max-width: 760px) {
   .sp-floor__grid { grid-template-columns: minmax(0, 1fr); padding: var(--sp-space-3); }
-  .sp-mini { width: auto; }
+  .sp-mini { width: auto; container-type: normal; }
   .sp-mini__list { flex-direction: row; flex-wrap: wrap; }
   .sp-mini__row { width: 40px; }
   .sp-floor__side { grid-column: auto; }

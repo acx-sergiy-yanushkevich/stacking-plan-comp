@@ -5,13 +5,28 @@
 .sp-hero__floor { cursor: pointer; transition: transform var(--sp-ease-slow), opacity var(--sp-ease-slow), filter var(--sp-ease); }
 .sp-hero__face { stroke: var(--sp-color-card); stroke-width: 0.6; stroke-linejoin: round; stroke-opacity: 0.85; }
 .sp-hero__shade { fill: #0b1020; pointer-events: none; }
+/* Vice by day: the slabs are pale, like the legend's swatches. Each face is outlined in its tone's edge
+   colour (the swatch's own border) instead of the card's white, so the building keeps a firm silhouette
+   and every state is the same fill-and-edge pair it is in the legend, the stack and the plate.
+   `:where` keeps this as weak as the rule above, so the hover, focus, lifted and dimmed states below still win. */
+:where(:root[data-palette='vice'][data-theme='light']) .sp-hero__face { stroke: currentColor; stroke-opacity: 0.7; }
+:where(:root[data-palette='vice'][data-theme='light']) .sp-hero__shade { fill: #2a2f55; }
 .sp-hero__floor.is-hot { filter: brightness(1.07) saturate(1.15); }
 .sp-hero__floor.is-hot .sp-hero__face, .sp-hero__floor.is-focus .sp-hero__face { stroke: var(--sp-color-brand); stroke-opacity: 1; stroke-width: 1.8; }
 .sp-hero__floor.is-hot .sp-hero__shade { fill: var(--sp-color-brand); fill-opacity: 0.3; }
 .sp-hero__pattern { pointer-events: none; }
 .sp-hero__face.is-dashed { stroke: currentColor; stroke-dasharray: 3 2; stroke-opacity: 1; }
-.sp-hero__tag { font-size: 10px; font-weight: 600; fill: var(--sp-color-text-faint); font-variant-numeric: tabular-nums; pointer-events: none; }
-.sp-hero__tag.is-hot { font-size: 12px; font-weight: 700; fill: var(--sp-color-brand-strong); }
+/* The drawing and its floor numbers. The numbers are HTML laid over the SVG (placed in % of its box), so
+   they are 11 px or more on screen however small the model is drawn. */
+.sp-hero__canvas { position: relative; }
+.sp-hero__tags { position: absolute; inset: 0; pointer-events: none; }
+.sp-hero__tag {
+  position: absolute; transform: translateY(-50%); margin-left: 5px; white-space: nowrap; line-height: 1;
+  font-size: var(--sp-text-11); font-weight: 600; color: var(--sp-color-text-weak); font-variant-numeric: tabular-nums;
+  transition: top var(--sp-ease-slow);
+}
+.sp-hero__tag.is-hot { font-weight: 700; color: var(--sp-color-brand-strong); }
+@media (prefers-reduced-motion: reduce) { .sp-hero__tag { transition: none; } }
 /* Floors above the focused one lift and fade, so its plate (suite by suite) shows. */
 .sp-hero__floor.is-above { opacity: 0.2; }
 .sp-hero__floor.is-above.is-hot { opacity: 0.6; }
@@ -26,18 +41,22 @@
 /* Lifted floors are click-through: the exposed plate of the focused floor is the target for the second click. */
 .sp-hero__floor.is-above { pointer-events: none; }
 /* Compact: beside a suite's details. */
-.sp-hero--compact svg { height: 150px; width: auto; margin: 0 auto; }
+.sp-hero--compact .sp-hero__canvas { width: fit-content; margin: 0 auto; }
+.sp-hero--compact svg { height: 150px; width: auto; }
 .sp-hero--compact .sp-hero__cap { min-height: 0; text-align: center; align-items: center; }
 
 /* Stage: the model as a view of its own (BuildingView). No panel chrome; lifted floors stay reachable. */
-.sp-hero--stage { margin: 0; padding: 0; border-bottom: 0; }
-.sp-hero--stage .sp-hero__tag { font-size: 15px; }
-.sp-hero--stage .sp-hero__tag.is-hot { font-size: 18px; }
+.sp-hero--stage { margin: 0; padding: 0; border-bottom: 0; display: flex; align-items: stretch; gap: var(--sp-hero-gap, var(--sp-space-4)); }
+/* What stands beside the drawing (the floor picker) is as tall as the drawing, centred unless its owner places it. */
+.sp-hero__beside { flex: none; position: relative; display: flex; flex-direction: column; justify-content: center; }
+/* The labels stand to the right of the drawing, in room the component reserves for the longest of them.
+   The canvas is exactly the drawing's box (never stretched to a taller picker): the labels are placed in % of it. */
+.sp-hero--stage .sp-hero__canvas { flex: none; align-self: center; width: fit-content; margin-right: var(--sp-hero-room, 28px); }
+.sp-hero--stage .sp-hero__tag { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }
 /* With a fact after each number the tags are the model's legend: set them at reading size. */
-.sp-hero--facts .sp-hero__tag { font-size: 15px; }
-.sp-hero--facts .sp-hero__tag.is-hot { font-size: 17px; }
-.sp-hero__fact { font-weight: 500; fill: var(--sp-color-text-weak); }
-.sp-hero__tag.is-hot .sp-hero__fact { fill: var(--sp-color-text); }
+.sp-hero--facts .sp-hero__tag { font-size: var(--sp-text-13); color: var(--sp-color-text); }
+.sp-hero__fact { font-weight: 500; color: var(--sp-color-text-weak); }
+.sp-hero__tag.is-hot .sp-hero__fact { color: var(--sp-color-text); }
 .sp-hero--stage .sp-hero__face { stroke-width: 0.9; }
 .sp-hero--stage .sp-hero__floor.is-hot .sp-hero__face, .sp-hero--stage .sp-hero__floor.is-focus .sp-hero__face { stroke-width: 2.2; }
 .sp-hero--stage .sp-hero__floor.is-above { pointer-events: auto; }

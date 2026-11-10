@@ -139,3 +139,6 @@
 @media (min-width: 620px) and (max-width: 760px) {
   .sp-tl-card .sp-stack__head .sp-legend { grid-template-columns: 1fr 1fr; column-gap: 28px; }
 }
+
+/* Prospect-safe: the rollover periods are figures, not buttons. */
+.sp-tl-roll__col--static { cursor: default; }

@@ -35,6 +35,11 @@ export interface BlockProps {
   extra?: string[];
   /** A focused (tall) row: use the roomier text tier so the suite number stays. */
   roomy?: boolean;
+  /**
+   * Print: a narrow block keeps its suite number ("Ste 100 · 2,400 SF"), at 11 or 10 px if it must. On
+   * paper there is no tooltip or inspector to ask, and the rent roll is keyed by suite.
+   */
+  keepSuite?: boolean;
 }
 
 const PAD = 8;
@@ -47,7 +52,7 @@ const GLYPH: Partial<Record<Segment['kind'], string>> = { available: 'A', sublea
 const STATE_WORD: Partial<Record<Segment['kind'], string[]>> = { available: ['Available'], sublease: ['Sublease'], committed: ['Signed'], forsale: ['For sale'], unmarketed: ['Unaccounted'], projected: ['Vacant'] };
 
 /** One suite on the plan: tone fill, pattern, accent bar, adaptive text, badges. */
-export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelect, onFocus, onKeyDown, enlarged, compact, related, partial, extra, roomy }: BlockProps) {
+export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelect, onFocus, onKeyDown, enlarged, compact, related, partial, extra, roomy, keepSuite }: BlockProps) {
   const tone = text.tone;
   const fill = `var(--tone-${tone}-fill)`;
   const edge = `var(--tone-${tone}-edge)`;
@@ -74,7 +79,6 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   const accentLeft = tone === 'expiring' || tone === 'risk';
   const accentPad = accentLeft ? 3 : 0;
   const sfUnit = `${text.sfShort} SF`;
-  const sfLens = text.lensShort ? `${sfUnit} · ${text.lensShort}` : null;
   const isSmall = (l: Line) => l.cls === 'sp-seg__tiny' || l.cls === 'sp-seg__micro';
   const nameLine = (t: string): Line => ({ t, cls: 'sp-seg__name', font: FONT_NAME });
   /** Placeholder for a variant that does not fit at this pitch (keeps variants index-aligned across pitches). */
@@ -90,8 +94,11 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   //     too short for a wrapped 13 px name, use 11 px (and 10 px) as a last resort before the name is given up;
   //  5. a block with no room for its name says its state in a word, so colour is never the only cue.
   /** The layout with the first badge in the top-right corner, on a row of its own, or left out. */
-  const solve = (place: 'corner' | 'row' | 'none') => {
+  const solve = (place: 'corner' | 'row' | 'none', suite = false) => {
     const ownRow = place === 'row';
+    // `suite`: the SF figure travels with its suite number on a narrow block (print, see `keepSuite`).
+    const unit = suite ? text.sub : sfUnit;
+    const unitLens = text.lensShort ? `${unit} · ${text.lensShort}` : null;
     // Line budgets: the regular 15 px pitch under 8 px of padding, and a tighter setting used only when it
     // lets a whole name keep its facts. A badge row leaves the text the regular pitch.
     const textH = ownRow ? h - 24 : h;
@@ -130,7 +137,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
     /** A fact on line i at 12 px; narrow blocks (under 120 px) may step down to 11 and 10 px. */
     const sized = (t: string, i: number, cls: string, compact: boolean): Line | null => {
       if (fits(t, roomWide(i, compact), FONT_SUB)) return { t, cls, font: FONT_SUB };
-      if (tier <= 1 || !compact) return null;
+      if ((tier <= 1 && !suite) || !compact) return null;
       if (fits(t, room(i, FONT_TINY, true), FONT_TINY)) return { t, cls: 'sp-seg__tiny', font: FONT_TINY };
       if (fits(t, room(i, FONT_MICRO, true), FONT_MICRO)) return { t, cls: 'sp-seg__micro', font: FONT_MICRO };
       return null;
@@ -151,7 +158,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
         return alt && fits(alt, r, FONT_SUB) && (isRate || alt.length >= 4) ? { t: alt, cls: 'sp-seg__meta', font: FONT_SUB } : null;
       };
       // Short rows: SF and the lens fact share one line rather than repeat a date on two.
-      const oneLine = (cls: string): Line[] => (sfLens && fits(sfLens, room(n, FONT_SUB, compact), FONT_SUB) ? [{ t: sfLens, cls, font: FONT_SUB }] : NONE);
+      const oneLine = (cls: string): Line[] => (unitLens && fits(unitLens, room(n, FONT_SUB, compact), FONT_SUB) ? [{ t: unitLens, cls, font: FONT_SUB }] : NONE);
       if (tier === 0) {
         const first: Line = subLine() ?? { t: sfUnit, cls: 'sp-seg__sub', font: FONT_SUB };
         const m = metaLine(room(n + 1, FONT_SUB, compact));
@@ -160,7 +167,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
         sfOnly.push([first]);
       } else {
         const sub = tier === 1 ? subLine() : null;
-        const sfL = sized(sfUnit, n, 'sp-seg__sf', compact);
+        const sfL = sized(unit, n, 'sp-seg__sf', compact);
         // 120 px and up: the suite stays, with the lens fact (or its short form) on the line below.
         const m = sub ? metaLine(roomWide(n + 1, compact)) : null;
         full.push(sub && m ? [sub, m] : NONE);
@@ -170,7 +177,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
         const l = sfL && text.lensShort ? sized(text.lensShort, n + 1, 'sp-seg__meta', compact) : null;
         // When the fact only fits on the line above the deal pill, SF takes the line beside the pill.
         const up = sfL && text.lensShort && !l ? sized(text.lensShort, n, 'sp-seg__meta', compact) : null;
-        const sfDown = up ? sized(sfUnit, n + 1, 'sp-seg__sf', compact) : null;
+        const sfDown = up ? sized(unit, n + 1, 'sp-seg__sf', compact) : null;
         full.push(sfL && l ? [sfL, l] : up && sfDown ? [up, sfDown] : NONE);
         // Last resort for a rate that is too long for one line: the lease type goes on the next line
         // ("$31–$33/SF/yr" / "FSG"), so the rent keeps its unit and its type.
@@ -201,8 +208,9 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
       const tiny = h >= 48 ? wrapWordsVar(text.name, (i) => room(i, FONT_TINY, true), FONT_TINY, 3) : [];
       if (tiny.length && tiny.join(' ') === text.name) smallSets.push(tiny.map((t) => ({ t, cls: 'sp-seg__tiny', font: FONT_TINY })));
       // Narrow tiles: the whole name at 10 px before giving it up.
-      const micro = tier >= 2 && h >= 48 && seg.kind !== 'unmarketed' ? wrapWords(text.name, room(0, FONT_MICRO, true), FONT_MICRO, 2) : [];
-      if (micro.length && micro.join(' ') === text.name && !(tiny.length && tiny.join(' ') === text.name)) smallSets.push(micro.map((t) => ({ t, cls: 'sp-seg__micro', font: FONT_MICRO })));
+      const micro = (tier >= 2 || suite) && h >= 48 && seg.kind !== 'unmarketed' ? wrapWords(text.name, room(0, FONT_MICRO, true), FONT_MICRO, 2) : [];
+      // With the suite kept, the 10 px name is offered as well as the 11 px one: on one line it leaves room for the suite and the lens fact.
+      if (micro.length && micro.join(' ') === text.name && (suite || !(tiny.length && tiny.join(' ') === text.name))) smallSets.push(micro.map((t) => ({ t, cls: 'sp-seg__micro', font: FONT_MICRO })));
     }
     /** The state in a word, for a block that cannot hold its name. */
     const wordLine = (): Line[] => {
@@ -262,7 +270,12 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   const place: 'corner' | 'row' | 'none' = row && onScale(row) ? 'row' : onScale(corner) ? 'corner' : bare && onScale(bare) ? 'none' : row?.picked?.named ? 'row' : 'corner';
   const ownRow = place === 'row';
   const drawOther = showOther && place !== 'none';
-  const { picked, cap15, innerBody, pitch, top } = place === 'row' && row ? row : place === 'none' && bare ? bare : corner;
+  const plain = place === 'row' && row ? row : place === 'none' && bare ? bare : corner;
+  // Print, narrow block: the same placement with the suite number kept, when that still shows the name (or
+  // the plain layout had none to lose) and the suite really is drawn.
+  const suited = keepSuite && tier >= 1 && text.sub.startsWith('Ste ') && !plain.picked?.lines.some((l) => l.t.startsWith(text.sub)) ? solve(place, true) : null;
+  const useSuited = !!suited?.picked && suited.picked.lines.some((l) => l.t.startsWith(text.sub)) && (suited.picked.named || !plain.picked?.named);
+  const { picked, cap15, innerBody, pitch, top } = useSuited && suited ? suited : plain;
   const lines: Line[] = picked?.lines ?? [];
   const compactPitch = picked?.compact ?? false;
   if (extra && picked && !compactPitch) {

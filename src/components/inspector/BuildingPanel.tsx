@@ -7,7 +7,7 @@ import { fmtDate, fmtMonthYear } from '../../domain/dates';
 import { num, plural, sf } from '../../domain/format';
 import type { Change } from '../../domain/types';
 import { comingSupply } from '../../domain/kpis';
-import { canShowActivity, canShowDeals, canShowInPlaceRent, canShowIssues, canShowTenantRisk, listingVisible } from '../../domain/safe';
+import { canShowActivity, canShowDeals, canShowInPlaceRent, canShowIssues, canShowLeaseTerm, canShowTenantRisk, listingVisible } from '../../domain/safe';
 import { Button, Chip, Icon } from '../ui';
 import { selectSegment, toggleBucket, type Patch } from '../plan/actions';
 import { RolloverChart } from './RolloverChart';
@@ -105,12 +105,13 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
           atRisk={roll.atRisk}
           atRiskLeases={holdover.leases + mtm.leases}
           activeBucket={activeBucket}
-          onBucket={(key) => key !== null && toggleBucket(patch, state.bucket, key)}
+          onBucket={canShowLeaseTerm(safe) ? (key) => key !== null && toggleBucket(patch, state.bucket, key) : undefined}
           onAtRisk={openRisk}
           showRisk={canShowTenantRisk(safe)}
         />
         <p className="sp-ins__note">
-          Lease SF ending in rolling 12-month periods from {fmtDate(asOf)}; “{tail.label}” collects everything later. Click a bar to highlight those leases in the plan.
+          Lease SF ending in rolling 12-month periods from {fmtDate(asOf)}; “{tail.label}” collects everything later.{' '}
+          {canShowLeaseTerm(safe) ? 'Click a bar to highlight those leases in the plan.' : 'Building totals only: no suite shows its lease term in prospect-safe mode.'}
         </p>
         {roll.overAllocated.length > 0 && canShowIssues(safe) && (
           <p className="sp-ins__note sp-ins__warn">

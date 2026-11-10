@@ -1,5 +1,5 @@
 import type { PlanState } from '../../state/planState';
-import { takeReturnMode } from '../../state/focusStore';
+import { floorOrigin, noteFloorEntry, refocusFloorTrigger, takeReturnMode } from '../../state/focusStore';
 
 export type Patch = (p: Partial<PlanState>) => void;
 
@@ -20,11 +20,23 @@ export const clearSelection = (patch: Patch) => {
 /** Show a floor's summary in the inspector (from the floor label or a map floor). */
 export const openFloor = (patch: Patch, floorId: string) => patch({ floor: floorId, select: null, mode: 'building' });
 
-/** Drill into the floor plate view. */
-export const openFloorPlate = (patch: Patch, floorId: string) => patch({ view: 'floor', floor: floorId, select: null, mode: 'building' });
+/**
+ * Drill into the floor plate view. The entry is noted first (`focusStore`), so the Floor view can take
+ * keyboard focus on its heading when it opens and Back can return to where the user was.
+ */
+export const openFloorPlate = (patch: Patch, floorId: string) => {
+  noteFloorEntry();
+  patch({ view: 'floor', floor: floorId, select: null, mode: 'building' });
+};
 
-/** Back from the floor plate to the stack, keeping the floor summary open. */
-export const backToStack = (patch: Patch) => patch({ view: 'stack' });
+/**
+ * Back from the floor plate to the view it was opened from (Building or Stack; Stack when it was
+ * opened by a link), keeping the floor open there, and return focus to the control that opened it.
+ */
+export const backFromFloor = (patch: Patch, floorId: string | null) => {
+  patch({ view: floorOrigin() });
+  if (floorId) refocusFloorTrigger(floorId);
+};
 
 /** Toggle a rollover bucket filter (0 = next 12 months). */
 export const toggleBucket = (patch: Patch, current: number | null, key: number) => patch({ bucket: current === key ? null : key, select: null });

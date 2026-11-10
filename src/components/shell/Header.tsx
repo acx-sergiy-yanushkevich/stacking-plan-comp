@@ -3,7 +3,7 @@ import type { PlanModel } from '../../model/usePlanModel';
 import { isDark, type PlanState } from '../../state/planState';
 import { daysBetween, fmtDate } from '../../domain/dates';
 import { num, pct, usd, usd0 } from '../../domain/format';
-import { Button, Chip, Icon, Menu, Switch } from '../ui';
+import { Button, Chip, Icon, Menu, Switch, useToastBoundary } from '../ui';
 import { AsOfPopover } from './AsOfPopover';
 import { rememberTrigger } from '../../state/focusStore';
 import { usePrefersDark } from '../../lib/useMedia';
@@ -29,6 +29,8 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
   const standalone = state.skin !== 'classic';
   const prefersDark = usePrefersDark();
   const dark = isDark(state, prefersDark);
+  // A toast may name a tenant or a prospect ("Would open Deal D8 (Vantage Robotics)…"): none survives the mode turning on.
+  useToastBoundary(state.safe);
   return (
     <header className="sp-card sp-header sp-no-print">
       <div className="sp-header__icon" aria-hidden="true">
@@ -92,8 +94,8 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
       </div>
       <div className="sp-header__actions">
         <AsOfPopover asOf={state.asOf} today={today} onChange={(asOf) => patch({ asOf })} miniTimeline={miniTimeline} />
-        {/* Turning it on also clears a search in progress: the query may be a tenant name. */}
-        <Switch checked={state.safe} onChange={(safe) => patch(safe ? { safe, q: '' } : { safe })} label="Prospect-safe" title="Hide tenant names, contacts, rents and prospects" />
+        {/* Turning it on drops a search in progress, the worklist and any toast: the state layer (applyPatch) and useToastBoundary do it, not this handler. */}
+        <Switch checked={state.safe} onChange={(safe) => patch({ safe })} label="Prospect-safe" title="Hide tenant names, contacts, rents, lease terms and prospects" />
         {!state.safe && (
         <Button
           icon="warning"

@@ -72,7 +72,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
   const rentText = lease ? (rentVisible(lease, safe) && lease.rate !== null ? rate(lease.rate, lease.rateUnit, lease.leaseType) : !canShowInPlaceRent(safe) ? 'Hidden' : lease.confidential ? 'Confidential' : 'Not on record') : undefined;
   const remaining = (() => {
     if (!lease) return undefined;
-    if (termHidden(seg.kind, safe)) return '—';
+    if (termHidden(seg.kind, safe)) return undefined;
     if (seg.kind === 'mtm') return 'Month-to-month';
     if (seg.kind === 'holdover') return `Holdover · expired ${seg.endDate ? fmtDate(seg.endDate) : ''}`;
     if (seg.kind === 'committed') return `Moves in ${fmtDate(lease.commencement)}`;
@@ -128,7 +128,8 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
               canShowTenant(safe) && ['Tenant', <strong key="t">{lease.tenant}</strong>],
               ['Contact', contactLabel(lease.tenantContact, safe)],
               canShowTenant(safe) && ['Industry', lease.industry],
-              ['Term', termHidden(seg.kind, safe) ? `${fmtDate(lease.commencement)} – not disclosed` : `${fmtDate(lease.commencement)} – ${seg.endDate ? fmtDate(seg.endDate) : 'open (MTM)'}`],
+              // Prospect-safe: no lease in place shows its term; every one says "Leased" and nothing more.
+              termHidden(seg.kind, safe) ? ['Status', 'Leased'] : ['Term', `${fmtDate(lease.commencement)} – ${seg.endDate ? fmtDate(seg.endDate) : 'open (MTM)'}`],
               ['Remaining', remaining],
               ['Rent', rentText],
               ['Broker', brokerLabel(lease.owner, safe)],

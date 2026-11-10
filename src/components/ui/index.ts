@@ -11,7 +11,7 @@ export type { PopoverTriggerProps } from './Popover';
 export { Menu } from './Menu';
 export type { MenuItem } from './Menu';
 export { Tooltip } from './Tooltip';
-export { ToastProvider, useToast } from './Toast';
+export { ToastProvider, useToast, useToastBoundary } from './Toast';
 export { Sheet } from './Sheet';
 export { Icon } from './Icon';
 export type { IconName } from './Icon';

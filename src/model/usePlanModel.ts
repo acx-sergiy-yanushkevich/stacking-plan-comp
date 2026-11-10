@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { Deal, ISODate, Property, Touch } from '../domain/types';
-import { safeFloors } from '../domain/safe';
+import { canShowLeaseTerm, publishedFloors, safeFloors } from '../domain/safe';
 import { deriveFloors, isLeaseKind, segmentIndex, activeDeals, type FloorView, type Segment } from '../domain/derive';
 import { computeKpis, kpiDeltas, type Kpis } from '../domain/kpis';
 import { rollover, bucketOf, type RolloverBucket } from '../domain/rollover';
@@ -141,16 +141,19 @@ function search(floors: FloorView[], q: string, safe: boolean): Map<string, stri
 
 export function usePlanModel(property: Property, state: PlanState, today: ISODate): PlanModel {
   const { asOf, safe, lens } = state;
-  // One projection for every view: in prospect-safe mode the floors no longer carry a quiet (unpublished)
-  // listing, so no KPI, bar, finder option or label built from them can show it.
-  const floors = useMemo(() => safeFloors(deriveFloors(property, asOf, today), safe), [property, asOf, today, safe]);
-  const floorsToday = useMemo(() => (asOf === today ? floors : safeFloors(deriveFloors(property, today, today), safe)), [property, floors, asOf, today, safe]);
+  // Two projections, one policy (domain/safe.ts). `totals` keeps the real lease terms and feeds only
+  // building-wide figures (KPIs, the rollover, issue detection), which name no suite. `floors` is what every
+  // view draws and lists: in prospect-safe mode it carries no quiet listing and no lease term, so no block,
+  // bar, row, finder option or label built from it can show either.
+  const totals = useMemo(() => publishedFloors(deriveFloors(property, asOf, today), safe), [property, asOf, today, safe]);
+  const totalsToday = useMemo(() => (asOf === today ? totals : publishedFloors(deriveFloors(property, today, today), safe)), [property, totals, asOf, today, safe]);
+  const floors = useMemo(() => safeFloors(totals, safe), [totals, safe]);
   const segIndex = useMemo(() => segmentIndex(floors), [floors]);
-  const kpis = useMemo(() => computeKpis(property, floors, asOf), [property, floors, asOf]);
-  const kpisToday = useMemo(() => (asOf === today ? kpis : computeKpis(property, floorsToday, today)), [property, floorsToday, kpis, asOf, today]);
+  const kpis = useMemo(() => computeKpis(property, totals, asOf), [property, totals, asOf]);
+  const kpisToday = useMemo(() => (asOf === today ? kpis : computeKpis(property, totalsToday, today)), [property, totalsToday, kpis, asOf, today]);
   const deltas = useMemo(() => (asOf === today ? null : kpiDeltas(kpis, kpisToday)), [kpis, kpisToday, asOf, today]);
-  const roll = useMemo(() => rollover(floors, asOf, 'rolling', 8), [floors, asOf]);
-  const issues = useMemo(() => findIssues(property, floors, today), [property, floors, today]);
+  const roll = useMemo(() => rollover(totals, asOf, 'rolling', 8), [totals, asOf]);
+  const issues = useMemo(() => findIssues(property, totals, today), [property, totals, today]);
   const counts = useMemo(() => issueCounts(issues), [issues]);
   const changes = useMemo(() => recentChanges(property, today, 30), [property, today]);
   const legend = useMemo(() => legendFor(lens, safe, floors), [lens, safe, floors]);
@@ -185,19 +188,20 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
       return rows;
     };
   }, [floors, asOf]);
-  const effectiveWindow: WindowKey | null = state.window === 'risk' && safe ? '12' : state.window;
+  // Prospect-safe has no worklist and no expiry highlight: both point at single leases by their term.
+  const effectiveWindow: WindowKey | null = canShowLeaseTerm(safe) ? state.window : null;
   const activeWorklist = effectiveWindow ? worklist(effectiveWindow) : null;
 
   const searchReasons = useMemo(() => (state.q ? search(floors, state.q, safe) : null), [floors, state.q, safe]);
   const searchMatches = useMemo(() => (searchReasons ? new Set(searchReasons.keys()) : null), [searchReasons]);
 
   const bucketKeys = useMemo(() => {
-    if (state.bucket === null) return null;
+    if (state.bucket === null || !canShowLeaseTerm(safe)) return null;
     const tail = roll.buckets[roll.buckets.length - 1].key;
     const out = new Set<string>();
     for (const f of floors) for (const s of f.segments) if (s.lease && bucketOf(s, 'rolling', tail) === state.bucket) out.add(s.key);
     return out;
-  }, [floors, roll, state.bucket]);
+  }, [floors, roll, state.bucket, safe]);
 
   let highlight: Set<string> | null = null;
   let filterLabel: string | null = null;

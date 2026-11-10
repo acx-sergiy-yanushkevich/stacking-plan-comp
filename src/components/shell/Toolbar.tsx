@@ -1,4 +1,5 @@
 import { LENSES, type LensId } from '../../domain/lenses';
+import { canShowLeaseTerm } from '../../domain/safe';
 import { shownView, type PlanState, type View } from '../../state/planState';
 import { Button, Segmented, SelectField, TextField } from '../ui';
 import { rememberTrigger } from '../../state/focusStore';
@@ -43,6 +44,9 @@ export function Toolbar({ state, patch }: ToolbarProps) {
           ))}
         </SelectField>
       </div>
+      {/* Search and its tool buttons travel together: on one row they sit at the right; when the toolbar
+          wraps they take the second row whole, the search filling it from the left edge. */}
+      <div className="sp-toolbar__find">
       <div className="sp-toolbar__search">
         <TextField
           label="Find tenant, suite or prospect"
@@ -58,9 +62,12 @@ export function Toolbar({ state, patch }: ToolbarProps) {
         <Button icon="filter" active={state.mode === 'find'} onClick={() => toggleMode('find')} title="Find contiguous space by size and date">
           Find space
         </Button>
-        <Button icon="clock" active={state.mode === 'worklist'} onClick={() => toggleMode('worklist')} title="Renewal sweep: leases ending in a window">
-          Worklist
-        </Button>
+        {/* The renewal worklist lists leases by their term: not offered in prospect-safe mode. */}
+        {canShowLeaseTerm(state.safe) && (
+          <Button icon="clock" active={state.mode === 'worklist'} onClick={() => toggleMode('worklist')} title="Renewal sweep: leases ending in a window">
+            Worklist
+          </Button>
+        )}
         {view === 'map' && (
           <Button
             icon="people"
@@ -77,6 +84,7 @@ export function Toolbar({ state, patch }: ToolbarProps) {
             Area
           </Button>
         )}
+      </div>
       </div>
     </section>
   );
