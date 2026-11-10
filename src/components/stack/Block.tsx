@@ -60,8 +60,8 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   const showDeal = !!deal && w >= 64 && !compact;
   const showOther = !!other && w >= 150 && h >= 40;
   const showSecond = !!second && w >= 300 && h >= 40;
-  const badgeW = other ? Math.ceil(other.text.length * 6.2) + 12 : 0;
-  const badge2W = second ? Math.ceil(second.text.length * 6.2) + 12 : 0;
+  const badgeW = other ? Math.ceil(measure(other.text, FONT_BADGE)) + 12 : 0;
+  const badge2W = second ? Math.ceil(measure(second.text, FONT_BADGE)) + 12 : 0;
   // Text on the first line must clear the badges in the top-right corner. On narrow blocks the deal
   // pill moves to the bottom-right so the tenant name keeps the full width.
   const pillBottom = tier >= 2;
@@ -110,7 +110,8 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   const whole = (ls: string[]) => ls.length > 0 && ls.join(' ') === text.name;
   const one = fits(text.name, inner, FONT_NAME) ? [text.name] : [];
   const two = one.length ? [] : wrapWords(text.name, inner, FONT_NAME, 2);
-  const tiny = one.length ? [] : wrapWords(text.name, Math.max(inner, w - 8), FONT_TINY, 3);
+  // Tiny lines may use the full width only when no badge sits in the corner.
+  const tiny = one.length ? [] : wrapWords(text.name, reserved ? inner : Math.max(inner, w - 8), FONT_TINY, 3);
   const chosen =
     (one.length ? attempt(one, 'sp-seg__name', FONT_NAME) : null) ??
     (whole(two) ? attempt(two, 'sp-seg__name', FONT_NAME) : null) ??
