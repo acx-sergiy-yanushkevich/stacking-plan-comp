@@ -1,6 +1,6 @@
-# Judge brief: Stacking Plan v2 council
+# Judge brief: Storyline council
 
-You are one of four independent judges scoring the Stacking Plan v2 prototype for AscendixRE. Be rigorous and skeptical: the target is 95/100 and it must be earned. **This is a read-only review: do not modify, create or delete any file in the repository, and do not run any build that writes inside it.**
+You are one of four independent judges scoring the Storyline prototype for AscendixRE. Be rigorous and skeptical: the target is 95/100 and it must be earned. **This is a read-only review: do not modify, create or delete any file in the repository, and do not run any build that writes inside it.**
 
 Repo root: the root of this repository (if the path contains a space, quote it).
 
