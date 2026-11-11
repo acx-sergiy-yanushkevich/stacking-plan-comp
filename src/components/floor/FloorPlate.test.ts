@@ -119,6 +119,14 @@ describe('floor plate label lines', () => {
     expect(sliceName(t)).toBe('Floor 8, Meridian Health Partners, Ste 800, 14,000 SF, Exp Dec 2033 · 7 yr 1 mo, 2 live deals');
   });
 
+  it('reads the short fact a narrow slice draws, so the drawn words are in its name (round 19)', () => {
+    const t = text({ name: 'Conner CPA Group', sub: 'Ste 740 · 2,400 SF', meta: 'Expires Apr 30, 2028 · 1 yr 5 mo', lensShort: "Apr '28", aria: 'Floor 7, Conner CPA Group', tone: 'leased' });
+    expect(sliceName(t)).toContain("Apr '28");
+    // Not twice when the full fact already holds it.
+    const same = text({ meta: 'Exp Dec 2033', lensShort: 'Dec 2033' });
+    expect(sliceName(same).match(/Dec 2033/g)).toHaveLength(1);
+  });
+
   it('breaks "Tenant · sublease" at its separator, never leaving the dot at the end or start of a line', () => {
     const t = text({ name: 'Infinity Info Systems · sublease', sub: 'Ste 720 · 7,000 SF', sfShort: '7,000', meta: 'Sublease thru Sep 2030', tone: 'sublease' });
     expect(drawn(linesFor(t, 1, 160, 200, 'name')).slice(0, 2)).toEqual(['Infinity Info Systems', 'sublease']);

@@ -118,7 +118,10 @@ function chord(pts: Pt[], y: number): [number, number] | null {
  */
 export function sliceName(text: SegmentText): string {
   const floorName = text.aria.split(',')[0];
-  return [floorName, text.name, ...text.sub.split(' · '), text.meta, ...text.badges.map(badgeLabel)].filter(Boolean).join(', ');
+  // The short form a narrow slice draws ("Apr '28") is read too, so the drawn words are always in the name
+  // (round 19: axe label-content-name-mismatch on Floor 7).
+  const short = text.lensShort && !text.meta.includes(text.lensShort) ? text.lensShort : '';
+  return [floorName, text.name, ...text.sub.split(' · '), text.meta, short, ...text.badges.map(badgeLabel)].filter(Boolean).join(', ');
 }
 
 type NameMode = 'name' | 'tiny' | 'none';

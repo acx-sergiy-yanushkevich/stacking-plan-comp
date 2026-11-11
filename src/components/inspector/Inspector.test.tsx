@@ -315,3 +315,12 @@ describe('Inspector', () => {
     }
   });
 });
+
+describe('prospect-safe availability records (round 19)', () => {
+  it('shows no verified stamp on an availability or the for-sale condo; the owner still sees it', () => {
+    for (const sel of ['A02', 'A10']) {
+      expect(render(`?safe=1&select=${sel}`).html, sel).not.toMatch(/Verified/);
+      expect(render(`?select=${sel}`).html, sel).toMatch(/Verified/);
+    }
+  });
+});

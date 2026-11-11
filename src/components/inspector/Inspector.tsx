@@ -173,7 +173,7 @@ export default function Inspector({ model, state, patch, mode, areaPanel, areaPr
       {/* The part that scrolls: the bottom sheet sizes itself to what this holds (ui/Sheet.tsx). */}
       {/* The brief holds no control: its scroller takes a tab stop of its own (with a name), so a keyboard can
           scroll it where it scrolls (a phone or tablet sheet). */}
-      <div className="sp-ins__body" ref={bodyRef} data-sheet-scroll="" {...(wide ? { tabIndex: 0, role: 'region', 'aria-label': 'Location brief' } : {})}>
+      <div className="sp-ins__body" ref={bodyRef} data-sheet-scroll="" {...(wide ? { tabIndex: 0, role: 'region', 'aria-label': 'Area panel' } : {})}>
         {(mode === 'building' || mode === 'floor' || mode === 'block') && state.view !== 'map' && <BuildingHero model={model} state={state} patch={patch} compact={mode === 'block'} />}
         <div key={bodyKey} className="sp-ins__content">
           {body}

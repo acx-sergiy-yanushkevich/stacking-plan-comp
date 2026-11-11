@@ -14,7 +14,7 @@ import { focusFacts } from '../plan/focusFacts';
 import { useWidth } from '../../lib/useWidth';
 import { wrapWords } from '../../lib/textFit';
 import { clearSelection, openFloor, selectSegment } from '../plan/actions';
-import { Legend } from '../plan/Legend';
+import { Legend, sharesNote } from '../plan/Legend';
 import { segmentText } from '../plan/segmentText';
 import { availabilityFact } from '../floor/floorData';
 import { spaceOf } from '../building/floorFact';
@@ -221,7 +221,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
     rampNote(state.lens, state.safe) ?? '',
     anyEnlarged ? `Small suites are drawn at a minimum width for legibility; other suites on that floor shrink to compensate.` : '',
     rows.some((r) => r.focused && r.f.segments.length > 1) ? 'The focused floor is drawn at full width.' : '',
-    over.length ? `${over.map((f) => `${f.floor.name} records exceed its leasable area by ${num(f.overAllocatedBy)} SF`).join('; ')}; legend shares use recorded SF.` : '',
+    sharesNote(model.legend, model.kpis.leasable, over.map((f) => ({ name: f.floor.name, by: f.overAllocatedBy }))) ?? '',
   ]
     .filter(Boolean)
     .join(' ') || null;

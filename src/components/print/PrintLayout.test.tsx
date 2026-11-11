@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { pct } from '../../domain/format';
 import { describe, expect, it } from 'vitest';
 import { renderToString } from 'react-dom/server';
 import { property, TODAY } from '../../data/mock/property';
@@ -225,7 +226,7 @@ describe('PrintLayout', () => {
     expect(open.model.kpis.walt).toBeGreaterThan(0);
     expect(open.html).toContain(`WALT</div><div class="sp-print__kpi-value">${open.model.kpis.walt.toFixed(2)} yr`);
     const { html, model } = render('?print=1&safe=1');
-    expect(html).toMatch(/WALT<\/div><div class="sp-print__kpi-value">Withheld<\/div><div class="sp-print__kpi-note">Prospect-safe/);
+    expect(html).toMatch(/WALT<\/div><div class="sp-print__kpi-value">Withheld<\/div><div class="sp-print__kpi-note">(<[^>]+>)*Prospect-safe/);
     expect(html).not.toMatch(/\d(\.\d+)? yr\b|SF-weighted/);
     expect(html).not.toContain(open.model.kpis.walt.toFixed(2));
     // The model itself hands the report no figure to print.
@@ -274,5 +275,35 @@ describe('PrintLayout brand', () => {
       expect(head, q).toContain('Stax');
       expect(head, q).toContain('by Ascendix');
     }
+  });
+});
+
+describe('report cover (round 19)', () => {
+  it('says why the legend shares add up to more than 100%: the floor to the owner, the totals to a prospect', () => {
+    const owner = render('').html;
+    expect(owner).toContain('Shares are of 245,400 RSF leasable; the suites on record add up to 245,900 SF, 100.2% (Floor 7 records exceed its leasable area by 500 SF).');
+    const safe = render('?safe=1').html;
+    expect(safe).toContain('Shares are of 245,400 RSF leasable; the suites on record add up to 245,900 SF, 100.2%.');
+    expect(safe).not.toContain('Floor 7 records exceed');
+  });
+
+  it('withholds the owner from a prospect when it is the sale listing broker', () => {
+    const { model, html } = render('?safe=1');
+    const broker = model.property.saleListing?.broker;
+    if (broker && model.property.owner === broker) expect(html).not.toContain(broker);
+    expect(render('').html).toContain(model.property.owner);
+  });
+});
+
+describe('legend shares (round 19)', () => {
+  it('rounds each share once, as the KPI bar does, so one SF figure reads the same in every lens and mode', () => {
+    for (const q of ['', '?lens=expiry', '?lens=rent', '?lens=deals', '?safe=1']) {
+      const { model } = render(q);
+      for (const i of model.legend.filter((x) => !x.overlay && x.sf > 0)) expect(i.share, `${q} ${i.label}`).toBeCloseTo(i.sf / model.kpis.leasable, 9);
+    }
+    // The prospect-safe Occupied share is the KPI's occupied figure.
+    const { model } = render('?safe=1');
+    const occupied = model.legend.find((i) => /^Occupied/.test(i.label));
+    if (occupied) expect(pct(occupied.share)).toBe(pct(model.kpis.physical));
   });
 });

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { WINDOW_LABEL, type PlanModel, type WorklistRow } from '../../model/usePlanModel';
+import { WINDOW_LABEL, worklistLeaseCount, type PlanModel, type WorklistRow } from '../../model/usePlanModel';
 import type { PlanState, WindowKey } from '../../state/planState';
 import { daysBetween, fmtDate, fmtMonths, fmtMonthYearShort } from '../../domain/dates';
 import { rentRollRows, toCsv } from '../../domain/exportCsv';
@@ -52,7 +52,7 @@ export function WorklistPanel({ model, state, patch }: WorklistPanelProps) {
     const all = rentRollRows(model.property, model.floors, model.asOf, safe);
     // rentRollRows emits one row per non-gap segment in plan order; zip it back to segments to filter.
     const segs = model.floors.flatMap((f) => f.segments).filter((s) => s.kind !== 'unmarketed');
-    const keep = new Set(rows.map((r) => r.segKey));
+    const keep = new Set(rows.flatMap((r) => r.segKeys));
     const out = [all[0], ...all.slice(1).filter((_, i) => keep.has(segs[i]?.key))];
     download(new Blob([toCsv(out)], { type: 'text/csv;charset=utf-8' }), 'renewal-worklist.csv');
   };
@@ -141,7 +141,7 @@ export function WorklistPanel({ model, state, patch }: WorklistPanelProps) {
 
       <div className="sp-ins__footer">
         <span>
-          <strong>{sf(total)}</strong> · {plural(rows.length, 'lease')}
+          <strong>{sf(total)}</strong> · {plural(worklistLeaseCount(rows), 'lease')}
         </span>
         <Button size="sm" icon="download" onClick={exportCsv} disabled={rows.length === 0}>
           Export CSV

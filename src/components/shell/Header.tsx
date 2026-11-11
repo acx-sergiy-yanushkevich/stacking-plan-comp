@@ -4,11 +4,13 @@ import { isDark, paletteOf, type PlanState } from '../../state/planState';
 import { daysBetween, fmtDate } from '../../domain/dates';
 import { num, pct, usd, usd0 } from '../../domain/format';
 import { Button, Chip, Icon, Menu, Switch, useToastBoundary } from '../ui';
+import type { MenuItem } from '../ui/Menu';
 import { paletteMenuItems } from './paletteMenu';
 import { switcherItems } from './switcher';
 import { MiniStack, StaxLockup } from './Brand';
 import { LIVE_STACK } from '../../data/mock/portfolio';
-import { canTimeTravel, planDate } from '../../domain/safe';
+import { canShowIssues, canTimeTravel, planDate } from '../../domain/safe';
+import { STALE_DAYS, unverifiedRecords } from '../../domain/issues';
 import { AsOfPopover } from './AsOfPopover';
 import { useIsPhone, useMedia, usePrefersDark } from '../../lib/useMedia';
 
@@ -41,10 +43,20 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
   // A phone of 420 px or less: one row of controls. The date is an icon and the date, the switch says
   // "Safe" and Export drops its chevron, because the full-size controls do not fit 352 px, nor 322 at 360.
   const compact = useMedia('(max-width: 420px)');
+  const moreLabel = compact ? 'Export, colors and theme' : 'Colors and theme';
   const themeLabel = dark ? 'Switch to light theme' : 'Switch to dark theme';
   const toggleTheme = () => patch({ theme: dark ? 'light' : 'dark' });
   // A toast may name a tenant or a prospect ("Would open Deal D8 (Vantage Robotics)…"): none survives the mode turning on.
   useToastBoundary(state.safe);
+
+  const exportItems: MenuItem[] = [
+    { id: 'pdf', label: 'PDF report', icon: 'file', hint: 'Letter, landscape', onSelect: () => onExport('pdf') },
+    { id: 'png', label: 'PNG of the plan', icon: 'image', hint: '2× for slides', onSelect: () => onExport('png') },
+    { id: 'csv', label: 'Rent roll (CSV)', icon: 'table', hint: 'Opens in Excel', onSelect: () => onExport('csv') },
+    { id: 'sep', kind: 'separator' },
+    { id: 'video', label: 'Record video', icon: 'video', hint: 'Map view', disabled: state.view !== 'map', onSelect: () => onExport('video') },
+    { id: 'link', label: 'Copy link to this view', icon: 'link', onSelect: () => onExport('link') },
+  ];
 
   const actions = (
     <div className="sp-header__actions">
@@ -59,7 +71,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
           {compact ? (
             <>
               <span className="sp-sr-only">Prospect-safe</span>
-              <span aria-hidden="true">Safe</span>
+              <span className="sp-safe__word" aria-hidden="true">Safe</span>
             </>
           ) : (
             'Prospect-safe'
@@ -79,28 +91,26 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
           )}
         </div>
       )}
-      <Menu
-        label="Export"
-        trigger={(p) => (
-          <Button {...p} icon={standalone && !compact ? undefined : 'download'} iconRight={compact ? undefined : standalone ? 'caret-down' : 'chevron-down'}>
-            <span className="sp-header__export-label">Export</span>
-          </Button>
-        )}
-        items={[
-          { id: 'pdf', label: 'PDF report', icon: 'file', hint: 'Letter, landscape', onSelect: () => onExport('pdf') },
-          { id: 'png', label: 'PNG of the plan', icon: 'image', hint: '2× for slides', onSelect: () => onExport('png') },
-          { id: 'csv', label: 'Rent roll (CSV)', icon: 'table', hint: 'Opens in Excel', onSelect: () => onExport('csv') },
-          { id: 'sep', kind: 'separator' },
-          { id: 'video', label: 'Record video', icon: 'video', hint: 'Map view', disabled: state.view !== 'map', onSelect: () => onExport('video') },
-          { id: 'link', label: 'Copy link to this view', icon: 'link', onSelect: () => onExport('link') },
-        ]}
-      />
-      {/* A phone: the same two controls as a menu, on the row the other controls already take. */}
+      {/* A phone of 420 px or less: Export is in the "…" menu, so the bar is one row. */}
+      {!(standalone && compact) && (
+        <Menu
+          label="Export"
+          trigger={(p) => (
+            <Button {...p} icon={standalone && !compact ? undefined : 'download'} iconRight={compact ? undefined : standalone ? 'caret-down' : 'chevron-down'}>
+              <span className="sp-header__export-label">Export</span>
+            </Button>
+          )}
+          items={exportItems}
+        />
+      )}
+      {/* A phone: the look controls as a menu, on the row the other controls already take; at 420 px and
+          under, Export joins them, so the bar is one row (round 19). */}
       {standalone && phone && (
         <Menu
-          label="Colors and theme"
-          trigger={(p) => <Button {...p} iconOnly icon="more" aria-label="Colors and theme" title="Colors and theme" />}
+          label={moreLabel}
+          trigger={(p) => <Button {...p} iconOnly icon="more" aria-label={moreLabel} title={moreLabel} />}
           items={[
+            ...(compact ? [{ kind: 'heading' as const, id: 'export-head', label: 'Export' }, ...exportItems, { kind: 'separator' as const, id: 'export-sep' }] : []),
             ...(palette ? [...paletteMenuItems(palette, patch), { kind: 'separator' as const, id: 'look-sep' }] : []),
             { id: 'theme', label: themeLabel, icon: dark ? ('sun' as const) : ('moon' as const), onSelect: toggleTheme },
           ]}
@@ -116,6 +126,20 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
       {palette && <Menu label="Colors" trigger={(p) => <Button {...p} iconOnly icon="palette" aria-label="Colors" title="Colors" />} items={paletteMenuItems(palette, patch)} />}
       <Button iconOnly icon={dark ? 'sun' : 'moon'} aria-label={themeLabel} title={dark ? 'Light theme' : 'Dark theme'} onClick={toggleTheme} />
     </div>
+  );
+
+  // The newest change alone would say the plan is fresh while a record has gone unverified for months: the
+  // owner is told how many records are past STALE_DAYS, and since when (round 19). A prospect is told neither.
+  const unverified = canShowIssues(state.safe) ? unverifiedRecords(model.issues) : [];
+  const stale = staleDays > 30 || unverified.length > 0;
+  const verified = (
+    <span
+      className={`sp-header__verified ${stale ? 'sp-header__verified--stale' : ''}`}
+      title={unverified.length ? `Most recent change ${fmtDate(verifiedAt)}. Not verified for ${STALE_DAYS}+ days: ${unverified.map((i) => i.recordLabel).join(', ')}.. The issues panel (toolbar) lists them.` : 'Most recent change to a lease or availability on this plan'}
+    >
+      <Icon name={stale ? 'clock' : 'check'} size={12} /> Latest change {fmtDate(verifiedAt)}
+      {unverified.length > 0 && <span className="sp-header__unverified"> · {unverified.length} unverified since {fmtDate(unverified[0].unverifiedSince!).replace(/, \d{4}$/, '')}</span>}
+    </span>
   );
 
   const facts = (
@@ -142,9 +166,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
             {property.saleListing.capRate !== null ? ` · ${pct(property.saleListing.capRate)} cap` : ''}
           </span>
         ))}
-      <span className={`sp-header__verified ${staleDays > 30 ? 'sp-header__verified--stale' : ''}`} title="Most recent change to a lease or availability on this plan">
-        <Icon name={staleDays > 30 ? 'clock' : 'check'} size={12} /> Latest change {fmtDate(verifiedAt)}
-      </span>
+      {!standalone && verified}
     </div>
   );
 
@@ -173,7 +195,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
     <>
       {/* The product bar: who made this, which building is open (and that there are others), and the controls. */}
       {/* An expanded bottom sheet stops under the bar, so its controls are never cut in half (ui/Sheet.tsx). */}
-      <div className="sp-card sp-topbar sp-no-print" data-sheet-keep-clear="">
+      <section className="sp-card sp-topbar sp-no-print" data-sheet-keep-clear="" aria-label="Product bar">
         <StaxLockup />
         <span className="sp-topbar__divider" aria-hidden="true" />
         <Menu
@@ -192,7 +214,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
           {actions}
           {look}
         </div>
-      </div>
+      </section>
       <header className="sp-card sp-header sp-no-print">
         <div className="sp-header__icon" aria-hidden="true">
           <Icon name="building" size={22} />
@@ -200,6 +222,9 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
         <div className="sp-header__text">
           <div className="sp-header__title">
             <h1>{property.name}</h1>
+            {/* When the plan last changed stands apart from the building's facts, at the right of the title's
+                line: it takes room from the title, never from the facts, which keep their lines in both modes. */}
+            <div className="sp-header__aside">{verified}</div>
           </div>
           {facts}
         </div>

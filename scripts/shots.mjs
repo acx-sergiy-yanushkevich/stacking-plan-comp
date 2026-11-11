@@ -87,6 +87,10 @@ for (const [name, qs, w] of [
   ['41-light-map', '?view=map&theme=light', 1440],
   ['42-tablet-building', '?view=building', 1024],
   ['43-tablet-building-pinned', '?view=building&floor=F8', 1024],
+  ['44-vice-building', '?view=building&palette=vice', 1440],
+  ['45-vice-stack', '?view=stack&palette=vice', 1440],
+  ['52-issues', '?view=stack&mode=issues&theme=light', 1440],
+  ['53-light-expiry', '?view=stack&lens=expiry&theme=light', 1440],
   ['50-light-header-safe', '?view=stack&safe=1&theme=light', 1440],
   ['51-tablet-floor-area', '?view=floor&floor=F6&mode=area&theme=light', 1024],
 ]) {

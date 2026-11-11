@@ -109,7 +109,9 @@ button.sp-chip[aria-pressed='true'] { background: var(--sp-color-brand-strong); 
   font-size: var(--sp-text-13); color: var(--sp-color-text);
 }
 .sp-menu__item:hover, .sp-menu__item:focus-visible { background: var(--sp-color-card-2); outline: none; }
-.sp-menu__item[aria-disabled='true'] { opacity: 0.5; cursor: default; }
+.sp-menu__item[aria-disabled='true'] { opacity: 0.5; cursor: not-allowed; }
+/* A disabled entry does not light up under the pointer: nothing would happen. */
+.sp-menu__item[aria-disabled='true']:hover { background: transparent; }
 .sp-menu__item .sp-icon { color: var(--sp-color-text-weak); flex: none; }
 .sp-menu__hint { margin-left: auto; font-size: var(--sp-text-11); color: var(--sp-color-text-faint); }
 /* The chosen one of a choice (a radio item): a tick at the end of its row, and its name in semibold, so it is not told by colour. */

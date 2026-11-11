@@ -19,7 +19,8 @@ function render(query: string) {
   const model = { property, kpis, issues, counts: issueCounts(issues), today: TODAY } as unknown as PlanModel;
   const html = renderToString(<Header model={model} state={parseState(query, TODAY)} patch={() => {}} onExport={() => {}} />);
   // The sale fact alone: the span that carries it on the facts row.
-  const sale = /<span class="sp-header__sale"[^>]*>(.*?)<\/span>(?=<span class="sp-header__verified)/.exec(html)?.[1] ?? '';
+  // The facts row ends with it in the product skins; "Latest change" follows it in the embedded one.
+  const sale = /<span class="sp-header__sale"[^>]*>(.*?)<\/span>(?=<span class="sp-header__verified|<\/div>)/.exec(html)?.[1] ?? '';
   return { html, sale, kpis };
 }
 
@@ -86,7 +87,8 @@ describe('Header with Prospect-safe on and off: the same controls in the same pl
       expect(render(q).html, q).not.toContain('sp-header__stale');
     }
     // The chip is in the slot and nowhere else: the title row is the same with the mode on and off.
-    const title = (query: string) => { const { html } = render(query); return text(html.slice(html.indexOf('class="sp-header__title"'), html.indexOf('class="sp-header__facts"'))); };
+    // The title's line, without the freshness chip beside it (which tells the owner more than a prospect).
+    const title = (query: string) => { const { html } = render(query); return text(html.slice(html.indexOf('class="sp-header__title"'), html.indexOf('class="sp-header__facts"')).replace(/<div class="sp-header__aside">.*?<\/div>/, '')); };
     expect(title('?safe=1')).toBe(title(''));
     expect(render('?skin=classic&safe=1').html.match(/Prospect-safe on/g)).toHaveLength(1);
   });
@@ -150,8 +152,8 @@ describe('Header on a phone: the palette and the theme are a menu, not a row of 
     }
   };
 
-  it('760 px and under: one menu button beside Export, and no look controls in the header', () => {
-    for (const width of [320, 390, 760]) {
+  it('421 to 760 px: one menu button beside Export, and no look controls in the header', () => {
+    for (const width of [421, 600, 760]) {
       const html = at(width);
       expect(html, `${width}`).not.toContain('class="sp-header__look"');
       expect(html, `${width}`).not.toContain('aria-label="Colors"');
@@ -180,7 +182,7 @@ describe('Header on a phone: the palette and the theme are a menu, not a row of 
 });
 
 describe('Header product bar and building card', () => {
-  const bar = (query: string) => /<div class="sp-card sp-topbar sp-no-print"[^>]*>(.*?)<\/div><header/.exec(render(query).html)?.[1] ?? null;
+  const bar = (query: string) => /<section class="sp-card sp-topbar sp-no-print"[^>]*>(.*?)<\/section><header/.exec(render(query).html)?.[1] ?? null;
   const strip = (html: string) => html.replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
   it('standalone: the bar carries the lockup, the switcher, the controls and the look, in that order', () => {
@@ -205,7 +207,7 @@ describe('Header product bar and building card', () => {
     expect(card).toContain('class="sp-header__icon"');
     expect(card).not.toContain('<img');
     expect(card).not.toContain('sp-header__actions');
-    expect(strip(card.slice(card.indexOf('<div class="sp-header__title"'), card.indexOf('<div class="sp-header__facts"')))).toBe('Preston Park Financial Center');
+    expect(strip(card.slice(card.indexOf('<div class="sp-header__title"'), card.indexOf('<div class="sp-header__facts"')).replace(/<div class="sp-header__aside">.*?<\/div>/, ''))).toBe('Preston Park Financial Center');
   });
 
   it('aurora gets the bar too; the embedded skin gets none of it', () => {
@@ -267,30 +269,54 @@ describe('Header at 420 px and under: the title and one row of controls (round 1
     for (const query of ['', '?safe=1']) {
       const html = sw(at(390, query));
       expect(html).toContain('<span class="sp-sr-only">Prospect-safe</span>');
-      expect(html).toContain('<span aria-hidden="true">Safe</span>');
+      expect(html).toContain('<span class="sp-safe__word" aria-hidden="true">Safe</span>');
     }
     // Embedded: the switch keeps the width of its bold word.
     expect(sw(at(390, '?skin=classic'))).toContain('<span class="sp-switch__label" aria-hidden="true"><span>Safe</span><span class="sp-switch__label-hold">Safe</span></span>');
   });
 
-  it('no slot and no Data issues; Export keeps its word without a chevron; the same controls with prospect-safe on and off', () => {
+  it('no slot and no Data issues; Export is in the menu; the same controls with prospect-safe on and off', () => {
     const own = at(390);
     const safe = at(390, '?safe=1');
     for (const html of [own, safe]) {
       expect(html).not.toContain('class="sp-header__slot"');
       expect(html).not.toContain('Data issues');
-      expect(html).toContain('aria-label="Colors and theme"');
-      expect(html).toContain('<span class="sp-header__export-label">Export</span>');
+      // Export is in the "…" menu, with the colors and the theme (round 19: the bar is one row).
+      expect(html).toContain('aria-label="Export, colors and theme"');
+      expect(html).not.toContain('<span class="sp-header__export-label">Export</span>');
     }
-    // The same controls in the same order with the mode on and off: the date, the switch, Export, the menu.
+    // The same controls in the same order with the mode on and off: the date, the switch, the menu.
     const order = (html: string) => [...actions(html).matchAll(/<button[^>]*>/g)].map(([tag]) => (tag.includes('role="switch"') ? 'switch' : tag.includes('aria-haspopup="menu"') && tag.includes('aria-label=') ? 'menu' : 'button'));
     expect(order(own)).toEqual(order(safe));
-    expect(order(own)).toEqual(['button', 'switch', 'button', 'menu']);
+    expect(order(own)).toEqual(['button', 'switch', 'menu']);
   });
 
   it('from 421 px the embedded slot is back, and the menu holds only the colors and the theme', () => {
     expect(at(421, '?skin=classic')).toContain('class="sp-header__slot"');
     const html = at(421);
     expect(html).toContain('aria-label="Colors and theme"');
+  });
+});
+
+describe('Header building card: the facts, then when the plan last changed at the right (round 19)', () => {
+  it('standalone: "Latest change" is beside the facts, not in them; embedded: it stays the last fact', () => {
+    const { html } = render('');
+    const card = html.slice(html.indexOf('<header'));
+    const facts = /<div class="sp-header__facts">(.*?)<\/div>/.exec(card)![1];
+    expect(facts).not.toContain('Latest change');
+    expect(card).toMatch(/<div class="sp-header__aside"><span class="sp-header__verified[^"]*"[^>]*>.*Latest change/);
+    const classic = render('?skin=classic').html;
+    expect(/<div class="sp-header__facts">(.*?)<\/div>/.exec(classic)![1]).toContain('Latest change');
+  });
+});
+
+describe('Header freshness chip (round 19)', () => {
+  it('counts the records unverified for 120+ days, for the owner only', () => {
+    const own = render('').html.replace(/<!-- -->/g, '');
+    expect(own).toMatch(/sp-header__verified--stale/);
+    expect(own).toMatch(/<span class="sp-header__unverified"> · \d+ unverified since [A-Z][a-z]{2} \d{1,2}<\/span>/);
+    const safe = render('?safe=1').html;
+    expect(safe).not.toContain('sp-header__unverified');
+    expect(safe).not.toContain('unverified');
   });
 });

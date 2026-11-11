@@ -77,6 +77,7 @@ function worklistRows(floors: FloorView[], window: WindowKey): WorklistRow[] {
       if (!inWindow) continue;
       rows.push({
         segKey: s.key,
+        segKeys: [s.key],
         floorId: f.floor.id,
         floorName: f.floor.name,
         suite: s.suite ?? '',
