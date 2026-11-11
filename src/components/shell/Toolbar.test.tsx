@@ -44,7 +44,8 @@ describe('Toolbar with prospect-safe on and off: what stays keeps its place', ()
     it(`${view}: the tool buttons keep their order, and Worklist leaves an empty place behind, last`, () => {
       const normal = tools(render(`?view=${view}`));
       const safe = tools(render(`?view=${view}&safe=1`));
-      expect(normal).toEqual(view === 'map' ? ['Find space', 'Area', 'Worklist'] : ['Find space', 'Worklist']);
+      // Area is offered in every view, not the Map alone: the team review found it too hidden there.
+      expect(normal).toEqual(['Find space', 'Area', 'Worklist']);
       expect(safe).toEqual(normal.map((label) => (label === 'Worklist' ? '(slot)' : label)));
     });
   }

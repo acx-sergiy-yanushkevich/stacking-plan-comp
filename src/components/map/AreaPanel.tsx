@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
 import type { DataSource } from '../../data/sources/DataSource';
 import { num, pct, usd0 } from '../../domain/format';
-import type { Area, AreaRing } from '../../domain/types';
+import type { AreaRing } from '../../domain/types';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { Chip, Icon } from '../ui';
+import { useArea } from './useArea';
 import './map.css';
 
 export interface AreaPanelProps {
@@ -38,28 +38,7 @@ function Skeleton() {
  */
 export function AreaPanel({ model, state, dataSource }: AreaPanelProps) {
   const { property } = model;
-  const [area, setArea] = useState<Area | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let alive = true;
-    setLoading(true);
-    dataSource
-      .getArea(property, { censusKey: state.census })
-      .then((a) => {
-        if (!alive) return;
-        setArea(a);
-        setLoading(false);
-      })
-      .catch(() => {
-        if (!alive) return;
-        setArea(property.area);
-        setLoading(false);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [dataSource, property, state.census]);
+  const area = useArea(dataSource, property, state.census);
 
   const rings = area ? [...area.rings].sort((a, b) => a.miles - b.miles) : [];
 
@@ -76,7 +55,7 @@ export function AreaPanel({ model, state, dataSource }: AreaPanelProps) {
         )}
       </header>
 
-      {loading || !area ? (
+      {!area ? (
         <Skeleton />
       ) : (
         <>

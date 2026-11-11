@@ -273,4 +273,24 @@ describe('Inspector', () => {
     expect(renderToString(<Inspector model={model} state={state} patch={() => {}} mode="area" />)).toContain('Area');
     expect(renderToString(<Inspector model={model} state={state} patch={() => {}} mode="area" areaPanel={<div>Demographics here</div>} />)).toContain('Demographics here');
   });
+
+  it('Building mode leads with the area preview, for a prospect too (team review: Area was too hidden)', () => {
+    for (const query of ['?view=stack', '?view=map', '?view=stack&safe=1']) {
+      const state = parseState(query, TODAY);
+      const model = buildModel(state);
+      const html = renderToString(<Inspector model={model} state={state} patch={() => {}} mode="building" areaPreview={<div>Around here</div>} />);
+      expect(html, query).toContain('Around here');
+      // First in the panel's content: above the rollover (or, for a prospect, the first section shown).
+      expect(html.indexOf('Around here'), query).toBeLessThan(html.indexOf('sp-ins__section'));
+    }
+  });
+
+  it('the area preview is the Building panel\'s alone: not on a suite, a floor or a tool panel', () => {
+    for (const query of ['?select=L13-U1', '?floor=F6&view=stack', '?mode=find', '?mode=area']) {
+      const state = parseState(query, TODAY);
+      const model = buildModel(state);
+      const html = renderToString(<Inspector model={model} state={state} patch={() => {}} mode={deriveMode(state)} areaPreview={<div>Around here</div>} />);
+      expect(html, query).not.toContain('Around here');
+    }
+  });
 });

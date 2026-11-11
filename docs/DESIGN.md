@@ -82,7 +82,7 @@ View tabs (Stack, Timeline, Map), lens segmented control, search field ("Find te
 - The property footprint (OSM polygon, cached in mock data; `?live=1` fetches from Overpass) is extruded floor by floor as separate fill-extrusion features: base and height from floor index × floor height; colour from the active lens using the floor's dominant state, with a second thin ring showing available share. Surrounding buildings extrude in muted grey from the tiles' building layer.
 - Hover highlights a floor and shows a floor tooltip; click selects the floor (inspector Floor mode). The camera starts pitched 55°, bearing −20°, 17.5 zoom.
 - Controls (bottom right): zoom, compass, pitch, "Present" (slow orbit plus a time-lapse of the as-of date across the next five years, pausing at each expiration), "Record" (MediaRecorder captures the canvas to WebM; the download appears in a toast). Reduced-motion disables orbit and time-lapse.
-- **Area panel** (inspector mode "Area"): demographics rings at 1, 3 and 5 miles (population, households, median household income, median age, bachelor's share, mean commute), source "US Census Bureau ACS 5-year, 2024", plus nearby transit stops and amenity counts from OSM within half a mile. Cached for the demo property; live behind the flag.
+- **Area panel** (inspector mode "Area", opened from the toolbar in every view, not the Map alone): demographics rings at 1, 3 and 5 miles (population, households, median household income, median age, bachelor's share, mean commute), source "US Census Bureau ACS 5-year, 2024", plus nearby transit stops and amenity counts from OSM within half a mile. Cached for the demo property; live behind the flag.
 - If WebGL or the tile server is unavailable, the view shows a static footprint SVG with the same colouring and a notice.
 
 ### 2.7 Floor plate (drill-in)
@@ -93,13 +93,13 @@ View tabs (Stack, Timeline, Map), lens segmented control, search field ("Find te
 ### 2.8 Inspector (right, 360 px, reflow)
 Modes, each with a title row and a Close that returns to Building:
 
-- **Building** (default): rollover chart (8 rolling buckets from as-of plus "8+ yr"; click a bucket to highlight those leases in the plan), At risk (holdover and MTM SF), Coming supply (occupied but marketed), Pipeline by stage, Data issues summary with a link, Recent changes (30-day change log from record history).
+- **Building** (default): "Around the building" first (1-mile population, median household income and the nearest transit stop, with "See area details" opening Area), then the rollover chart (8 rolling buckets from as-of plus "8+ yr"; click a bucket to highlight those leases in the plan), At risk (holdover and MTM SF), Coming supply (occupied but marketed), Pipeline by stage, Data issues summary with a link, Recent changes (30-day change log from record history).
 - **Block**: tenant or availability detail. Lease: term, remaining, rent with unit and type (hidden when confidential), contact, broker owner, last touch, other floors, open renewal deals, marketed-for-later notice. Availability: type (direct, sublease, for sale), available from, asking rent or price, divisible, inquiries that fit, live deals by stage. Footer actions as toast stubs: Open record, New deal, Log call, Create availability, Start renewal.
 - **Floor**: floor KPIs, suites list, "Open floor plate".
 - **Find space**: Need SF (min, max), by date, direct / sublease / any, match an open Inquiry (pre-fills). Results ranked: on time first, sooner, closest size; each shows floors, SF, type, from date, inquiry fits and live deals; selecting a result highlights its blocks. Shows "Largest block now" and suggests two-floor combinations.
 - **Worklist**: window chips (At risk, 90 d, 180 d, 12 mo, 24 mo). Rows: tenant, suite, SF, months left, rent, broker, last touch, open renewal. Sorted by end date. Export CSV. Clicking a row selects the block.
 - **Issues**: errors, warnings, info with a fix action and a locate link.
-- **Area**: demographics and amenities (Map view).
+- **Area**: demographics and amenities, from any view; the Building panel previews it (§2.6).
 
 On < 1100 px the inspector is a bottom sheet with a handle (snap at 45 % and 90 %); on ≥ 1100 px it reflows beside the plan and never overlays it.
 

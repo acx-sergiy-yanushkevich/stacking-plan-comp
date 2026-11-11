@@ -31,8 +31,10 @@ export interface InspectorProps {
   state: PlanState;
   patch: (p: Partial<PlanState>) => void;
   mode: InspectorMode;
-  /** The Area panel (Map view) is supplied by the map task. */
+  /** The Area panel, opened from any view; supplied by the app, which owns the data source. */
   areaPanel?: ReactNode;
+  /** "Around the building", first in the Building panel: the way the area is found (AreaPreview). */
+  areaPreview?: ReactNode;
 }
 
 interface Head {
@@ -74,7 +76,7 @@ function headFor(mode: InspectorMode, model: PlanModel, state: PlanState, patch:
  * Right-hand detail panel. The container is sticky and clips; only the body scrolls.
  * The body remounts (and fades in) when the mode or the thing it describes changes.
  */
-export default function Inspector({ model, state, patch, mode, areaPanel }: InspectorProps) {
+export default function Inspector({ model, state, patch, mode, areaPanel, areaPreview }: InspectorProps) {
   const head = headFor(mode, model, state, patch);
   const bodyKey = `${mode}:${mode === 'block' ? state.select : mode === 'floor' ? state.floor : mode === 'worklist' ? state.window : ''}`;
   // The scroll container outlives a panel change (the building model stays mounted), so reset it by hand.
@@ -117,10 +119,15 @@ export default function Inspector({ model, state, patch, mode, areaPanel }: Insp
       body = <IssuesPanel model={model} state={state} patch={patch} />;
       break;
     case 'area':
-      body = areaPanel ?? <p className="sp-ins__placeholder">Area demographics and amenities appear here in Map view.</p>;
+      body = areaPanel ?? <p className="sp-ins__placeholder">Area demographics and amenities appear here.</p>;
       break;
     default:
-      body = <BuildingPanel model={model} state={state} patch={patch} />;
+      body = (
+        <>
+          {areaPreview}
+          <BuildingPanel model={model} state={state} patch={patch} />
+        </>
+      );
   }
 
   return (

@@ -15,6 +15,7 @@ import { KpiStrip, type KpiAction } from './components/kpis/KpiStrip';
 import { ToastProvider, useToast, Sheet } from './components/ui';
 import StackView from './components/stack/StackView';
 import Inspector from './components/inspector/Inspector';
+import { AreaPreview } from './components/inspector/AreaPreview';
 import FloorView from './components/floor/FloorView';
 import BuildingView from './components/building/BuildingView';
 import TimelineView from './components/timeline/TimelineView';
@@ -256,6 +257,7 @@ function Shell() {
       <AreaPanel model={model} state={state} dataSource={dataSource} />
     </Suspense>
   );
+  const areaPreview = <AreaPreview model={model} state={state} patch={patch} dataSource={dataSource} />;
   // Escape on the page itself (no panel, popover or block focused) clears the active filter and returns to the plan.
   // In the Building view the plan's own controls do not use the key, so it works from them as well: the
   // view closes its open floor first (BuildingView), and the next Escape clears the filter here.
@@ -274,7 +276,7 @@ function Shell() {
   }, [state.bucket, state.q, state.window, state.req, state.inquiry, patch, stageOwnsEscape]);
 
   const inspector = useMemo(
-    () => <Inspector model={model} state={state} patch={patch} mode={mode} areaPanel={areaPanel} />,
+    () => <Inspector model={model} state={state} patch={patch} mode={mode} areaPanel={areaPanel} areaPreview={areaPreview} />,
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [model, state, patch, mode, dataSource],
   );
