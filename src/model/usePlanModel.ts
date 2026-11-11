@@ -14,7 +14,10 @@ import { num, sf } from '../domain/format';
 import { daysBetween, fmtDate } from '../domain/dates';
 
 export interface WorklistRow {
+  /** The row's first suite: what selecting the row opens. */
   segKey: string;
+  /** Every suite of the lease on this floor in the window: what the row highlights and exports. */
+  segKeys: string[];
   floorId: string;
   floorName: string;
   suite: string;
@@ -85,24 +88,35 @@ export const WINDOW_DAYS: Partial<Record<WindowKey, number>> = { '90': 90, '180'
 export const WINDOW_MONTHS: Partial<Record<WindowKey, number>> = { '12': 12, '24': 24 };
 export const WINDOW_LABEL: Record<WindowKey, string> = { risk: 'At risk', '90': '90 days', '180': '180 days', '12': '12 months', '24': '24 months' };
 
-function buildWorklist(floors: FloorView[], window: WindowKey, asOf: ISODate): WorklistRow[] {
+/** The distinct leases a worklist lists (its rows are one per lease per floor). */
+export const worklistLeaseCount = (rows: ReadonlyArray<WorklistRow>): number => new Set(rows.map((r) => r.seg.lease?.id ?? r.segKey)).size;
+
+export function buildWorklist(floors: FloorView[], window: WindowKey, asOf: ISODate): WorklistRow[] {
   const rows: WorklistRow[] = [];
-  const seen = new Set<string>();
+  const byId = new Map<string, WorklistRow>();
   for (const f of floors) {
     for (const s of f.segments) {
       if (!s.lease || !isLeaseKind(s.kind)) continue;
       // one row per lease per floor (multi-floor tenants appear once per floor they occupy)
+      // A lease with several suites on one floor is one row with all of them: their SF summed, every key kept
+      // (round 19: the second suite fell out of the total, the highlight and the CSV).
       const id = `${s.lease.id}:${f.floor.id}`;
-      if (seen.has(id)) continue;
       const risk = s.kind === 'holdover' || s.kind === 'mtm';
       const months = s.kind === 'sublease' ? (s.headMonths ?? s.monthsToExpiry) : s.monthsToExpiry;
       const days = WINDOW_DAYS[window];
       const within = days !== undefined ? !!s.endDate && daysBetween(asOf, s.endDate) <= days : months !== null && months < (WINDOW_MONTHS[window] ?? 0);
       const inWindow = window === 'risk' ? risk : !risk && within;
       if (!inWindow) continue;
-      seen.add(id);
-      rows.push({
+      const known = byId.get(id);
+      if (known) {
+        known.size += s.size;
+        known.segKeys.push(s.key);
+        if (s.suite && !known.suite.split(', ').includes(s.suite)) known.suite = known.suite ? `${known.suite}, ${s.suite}` : s.suite;
+        continue;
+      }
+      const row: WorklistRow = {
         segKey: s.key,
+        segKeys: [s.key],
         floorId: f.floor.id,
         floorName: f.floor.name,
         suite: s.suite ?? '',
@@ -115,7 +129,9 @@ function buildWorklist(floors: FloorView[], window: WindowKey, asOf: ISODate): W
         lastTouch: s.lease.lastTouch,
         renewal: activeDeals(s.lease.deals).find((d) => d.kind === 'Renewal') ?? null,
         seg: s,
-      });
+      };
+      byId.set(id, row);
+      rows.push(row);
     }
   }
   return rows.sort((a, b) => {
@@ -245,9 +261,11 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
     const detail = reasons.length === 1 ? `: ${reasons[0][1] === 'Tenant' ? 'tenant name' : reasons[0][1]} on ${floors.find((f) => f.segments.some((s) => s.key === reasons[0][0]))?.floor.name ?? ''}${segIndex.get(reasons[0][0])?.suite ? ` Ste ${segIndex.get(reasons[0][0])!.suite}` : ''}` : '';
     filterLabel = `${safe ? 'Search' : `Search “${state.q}”`} · ${searchMatches.size} match${searchMatches.size === 1 ? '' : 'es'}${detail}`;
   } else if (activeWorklist && effectiveWindow) {
-    highlight = new Set(activeWorklist.map((r) => r.segKey));
+    highlight = new Set(activeWorklist.flatMap((r) => r.segKeys));
     const total = activeWorklist.reduce((s, r) => s + r.size, 0);
-    filterLabel = `${effectiveWindow === 'risk' ? 'Leases at risk (holdover,\u00a0month-to-month)' : `Leases ending within ${WINDOW_LABEL[effectiveWindow]}`} · ${activeWorklist.length}\u00a0lease${activeWorklist.length === 1 ? '' : 's'} · ${sf(total).replace(' ', '\u00a0')}`;
+    // Leases, not rows: a tenant on two floors is two rows and one lease.
+    const leases = worklistLeaseCount(activeWorklist);
+    filterLabel = `${effectiveWindow === 'risk' ? 'Leases at risk (holdover,\u00a0month-to-month)' : `Leases ending within ${WINDOW_LABEL[effectiveWindow]}`} · ${leases}\u00a0lease${leases === 1 ? '' : 's'} · ${sf(total).replace(' ', '\u00a0')}`;
   } else if (bucketKeys && state.bucket !== null) {
     highlight = bucketKeys;
     const b: RolloverBucket | undefined = roll.buckets.find((x) => x.key === state.bucket);
