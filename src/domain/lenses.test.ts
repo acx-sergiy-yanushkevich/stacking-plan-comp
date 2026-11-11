@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { legendFor as legendForJargon, stageLabel } from './lenses';
+import { deriveFloors as deriveForJargon } from './derive';
 import { property, TODAY } from '../data/mock/property';
 import { deriveFloors, segmentIndex, type FloorView } from './derive';
 import { LENSES, dealCount, isVacantKind, legendFor, rentType, rentValue, stageRank, toneFor, toneLabel, topDeal, type LensId, type Tone } from './lenses';
@@ -237,3 +239,25 @@ describe('prospect-safe: no lease can be told apart by its term', () => {
     expect(legend[0].sf).toBe(leases.reduce((t, s) => t + s.size, 0));
   });
 });
+
+describe('plain words in the legend and on the plan', () => {
+  const floors = deriveForJargon(property, TODAY, TODAY);
+  it('no lens names a state in shorthand a tenant would not know', () => {
+    for (const lens of ['status', 'expiry', 'deals', 'rent'] as const)
+      for (const safe of [false, true]) {
+        const labels = legendForJargon(lens, safe, floors).map((i) => i.label).join(' | ');
+        for (const jargon of ['MTM', 'FSG', 'NNN', 'unaccounted', 'Lease out', 'off the gross scale', 'Committed']) expect(labels, `${lens}${safe ? ' safe' : ''}`).not.toContain(jargon);
+      }
+    const status = legendForJargon('status', false, floors).map((i) => i.label);
+    expect(status).toEqual(expect.arrayContaining(['Signed, not yet in', 'Holdover / month-to-month', 'Vacant, not listed']));
+    const rent = legendForJargon('rent', false, floors).map((i) => i.label);
+    expect(rent).toEqual(expect.arrayContaining(['Gross < $28', 'Net or modified gross']));
+  });
+
+  it('a deal at its last stage is "Lease drafted" wherever a stage is shown', () => {
+    expect(stageLabel('Lease Out')).toBe('Lease drafted');
+    expect(stageLabel('LOI')).toBe('LOI');
+    expect(legendForJargon('deals', false, floors).map((i) => i.label)).toContain('Lease drafted');
+  });
+});
+

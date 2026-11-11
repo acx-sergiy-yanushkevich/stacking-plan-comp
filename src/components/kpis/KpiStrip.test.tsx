@@ -82,7 +82,7 @@ describe('KpiStrip', () => {
     expect(open?.[2].match(/class="sp-kpi sp-kpi--open"/g)?.length).toBe(4);
     expect(open?.[2]).not.toContain('sp-kpi__dot');
     expect(html.match(/class="sp-kpi__label sp-label"/g)?.length).toBe(6);
-    for (const label of ['Leased', 'Available', 'Largest block', 'Expiring 12 mo', 'WALT', 'Pipeline']) expect(html).toContain(`>${label}</span>`);
+    for (const label of ['Leased', 'Available', 'Largest block', 'Expiring 12 mo', 'Avg lease term', 'Pipeline']) expect(html).toContain(`>${label}</span>`);
   });
 
   it('gives each figure one short note and keeps the whole note in the tooltip and the accessible name', () => {
@@ -206,7 +206,7 @@ describe('KpiStrip', () => {
     expect(noteOf(walt)).toBe('Lease terms not shown');
     expect(attr(walt, 'title')).toContain('Lease terms are not shown in prospect-safe mode');
     // The same value and the same reason as the figure beside it: one style, one sentence.
-    const strip = (c: string) => c.replace(/data-kpi="[^"]*"/, '').replace(/title="[^"]*"/, '').replace(/>(WALT|Expiring 12 mo)</, '><');
+    const strip = (c: string) => c.replace(/data-kpi="[^"]*"/, '').replace(/title="[^"]*"/, '').replace(/>(Avg lease term|Expiring 12 mo)</, '><');
     expect(strip(walt)).toBe(strip(kpiOf(html, 'expiry-worklist')));
     // The average itself is nowhere: not on the bar, not in a tooltip or a name, not with a unit.
     expect(html).not.toContain(figure);

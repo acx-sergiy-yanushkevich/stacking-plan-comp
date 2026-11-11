@@ -146,7 +146,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
     canShowWalt(safe)
       ? {
           id: 'timeline',
-          label: 'WALT',
+          label: 'Avg lease term',
           value: waltCard(k.walt),
           unit: 'yr',
           note: 'SF-weighted',
@@ -160,7 +160,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
           // The weighted average of the lease terms is a lease-term figure: it is withheld with the terms it averages,
           // in the same words as "Expiring 12 mo" beside it.
           id: 'timeline',
-          label: 'WALT',
+          label: 'Avg lease term',
           value: 'Withheld',
           note: 'Lease terms not shown',
           detail: 'Lease terms are not shown in prospect-safe mode',

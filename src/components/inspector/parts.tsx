@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { Deal } from '../../domain/types';
 import { fmtDate } from '../../domain/dates';
 import { sf } from '../../domain/format';
-import { stageRank } from '../../domain/lenses';
+import { stageRank, stageLabel } from '../../domain/lenses';
 
 /**
  * Running text with its dates kept whole: "Nov 9, 2026" does not break after the comma, so a line of a
@@ -46,7 +46,7 @@ export function StageChip({ stage }: { stage: Deal['stage'] }) {
   const n = stageRank(stage);
   return (
     <span className="sp-ins__stage" style={{ background: `var(--tone-deal-${n}-fill)`, color: `var(--tone-deal-${n}-text)`, borderColor: `var(--tone-deal-${n}-edge)` }}>
-      {stage}
+      {stageLabel(stage)}
     </span>
   );
 }

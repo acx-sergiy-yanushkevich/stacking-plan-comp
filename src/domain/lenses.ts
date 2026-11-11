@@ -192,7 +192,7 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
     return [
       { tone: 'available', label: 'Available (direct)' },
       { tone: 'sublease', label: 'Sublease', pattern: 'dots' },
-      { tone: 'committed', label: 'Committed', pattern: 'hatch' },
+      { tone: 'committed', label: 'Signed, not yet in', pattern: 'hatch' },
       { tone: 'available-later', label: 'Available later', pattern: 'dashed' },
       { tone: 'projected', label: 'Projected vacancy', pattern: 'dashed' },
       { tone: 'forsale', label: 'For sale' },
@@ -207,13 +207,13 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
         { tone: 'available', label: 'Available (direct)' },
         { tone: 'available-later', label: 'Available later', pattern: 'dashed' },
         { tone: 'sublease', label: 'Sublease', pattern: 'dots' },
-        { tone: 'committed', label: 'Committed, not yet in', pattern: 'hatch' },
+        { tone: 'committed', label: 'Signed, not yet in', pattern: 'hatch' },
         { tone: 'forsale', label: 'For sale' },
         { tone: 'leased', label: 'Leased, > 12 mo' },
         { tone: 'expiring', label: 'Expires < 12 mo' },
-        { tone: 'risk', label: 'Holdover / MTM' },
+        { tone: 'risk', label: 'Holdover / month-to-month' },
         { tone: 'projected', label: 'Projected vacancy', pattern: 'dashed' },
-        { tone: 'empty', label: 'Vacant / unaccounted', pattern: 'dashed' },
+        { tone: 'empty', label: 'Vacant, not listed', pattern: 'dashed' },
       ];
     case 'expiry':
       // Prospect-safe: lease terms are withheld, so the legend has no ramp to explain.
@@ -221,7 +221,7 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
         return [
           { tone: 'leased', label: 'Leased' },
           { tone: 'sublease', label: 'Sublease', pattern: 'dots' },
-          { tone: 'committed', label: 'Committed', pattern: 'hatch' },
+          { tone: 'committed', label: 'Signed, not yet in', pattern: 'hatch' },
           { tone: 'projected', label: 'Projected vacancy', pattern: 'dashed' },
           { tone: 'empty', label: 'Vacant', pattern: 'dashed' },
           { tone: 'muted', label: 'For sale' },
@@ -233,8 +233,8 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
         { tone: 'exp-3', label: '2–3 yr' },
         { tone: 'exp-4', label: '3–5 yr' },
         { tone: 'exp-5', label: '5+ yr' },
-        { tone: 'risk', label: 'Holdover / MTM' },
-        { tone: 'committed', label: 'Committed', pattern: 'hatch' },
+        { tone: 'risk', label: 'Holdover / month-to-month' },
+        { tone: 'committed', label: 'Signed, not yet in', pattern: 'hatch' },
         { tone: 'projected', label: 'Projected vacancy', pattern: 'dashed' },
         { tone: 'empty', label: 'Vacant', pattern: 'dashed' },
         { tone: 'muted', label: 'For sale (no lease term)' },
@@ -247,7 +247,7 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
             { tone: 'forsale', label: 'For sale' },
           ]
         : [
-            { tone: 'deal-3', label: 'Lease out' },
+            { tone: 'deal-3', label: 'Lease drafted' },
             { tone: 'deal-2', label: 'LOI' },
             { tone: 'deal-1', label: 'Proposal' },
             { tone: 'deal-0', label: 'Tour' },
@@ -257,12 +257,12 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
           ];
     case 'rent':
       return [
-        { tone: 'rent-0', label: 'FSG < $28' },
+        { tone: 'rent-0', label: 'Gross < $28' },
         { tone: 'rent-1', label: '$28–30.99' },
         { tone: 'rent-2', label: '$31–33.99' },
         { tone: 'rent-3', label: '$34–37.99' },
         { tone: 'rent-4', label: '$38+' },
-        { tone: 'rent-net', label: 'NNN / MG, off the gross scale', pattern: 'topbar' },
+        { tone: 'rent-net', label: 'Net or modified gross', pattern: 'topbar' },
         { tone: 'empty', label: 'Asking rent (vacancy)', pattern: 'asking' },
         { tone: 'confidential', label: 'Confidential' },
         { tone: 'muted', label: prospectSafe ? 'Rent withheld' : 'No rent on record' },
@@ -318,3 +318,6 @@ export function toneShort(tone: Tone, lens: LensId, prospectSafe: boolean): stri
 
 /** The lens's name, as the toolbar and the legend's title both say it. */
 export const lensName = (id: LensId): string => LENSES.find((l) => l.id === id)!.label;
+
+/** A deal stage as people read it: the CRM's "Lease Out" (lease out for signature) is "Lease drafted". */
+export const stageLabel = (stage: DealStage): string => (stage === 'Lease Out' ? 'Lease drafted' : stage);

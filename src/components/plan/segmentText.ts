@@ -2,7 +2,7 @@ import type { Segment } from '../../domain/derive';
 import type { ISODate } from '../../domain/types';
 import { fmtDate, fmtMonthYear, fmtMonthYearShort, fmtMonths } from '../../domain/dates';
 import { compactRate, num, rate, sf, usd, usd0 } from '../../domain/format';
-import { dealCount, rentType, rentValue, topDeal, toneFor, type LensId, type Tone } from '../../domain/lenses';
+import { dealCount, rentType, rentValue, topDeal, toneFor, type LensId, type Tone, stageLabel } from '../../domain/lenses';
 import { canShowActivity, canShowDeals, canShowInPlaceRent, canShowIssues, canShowLeaseTerm, canShowListingStatus, canShowTenant, canShowTenantRisk, leaseDatesHidden, marketedFor, rentVisible, tenantLabel, termHidden } from '../../domain/safe';
 import type { PatternKind } from './Patterns';
 
@@ -221,7 +221,7 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
   }
   if (lens === 'deals' && canShowDeals(safe)) {
     const d = topDeal(seg);
-    if (d) lensShort = d.stage === 'Lease Out' ? 'Lease out' : d.stage;
+    if (d) lensShort = stageLabel(d.stage);
   }
   if (kind === 'committed' && lens === 'status' && lease && !leaseDatesHidden(kind, safe)) lensShort = `In ${fmtMonthYearShort(lease.commencement)}`;
   let term = '';
