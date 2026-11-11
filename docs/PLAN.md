@@ -108,6 +108,8 @@ Everything marked P0 above, on mock data for one building (Preston Park Financia
 
 ## 4. Future implementation plan (Salesforce)
 
+This section describes a full port to Lightning Web Components. The alternative, the current app hosted on a CDN and shown in an iframe on the Property page, is described with its running cost in `INFRASTRUCTURE.md`.
+
 ### 4.1 Architecture
 ```
 Property record page
