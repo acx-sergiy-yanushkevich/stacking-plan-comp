@@ -1,9 +1,22 @@
 import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Icon, type IconName } from './Icon';
 import { Popover, type PopoverTriggerProps } from './Popover';
+import { focused } from '../../lib/host';
 
 export type MenuItem =
-  | { kind?: 'item'; id: string; label: string; icon?: IconName; hint?: string; disabled?: boolean; onSelect: () => void }
+  | {
+      kind?: 'item';
+      id: string;
+      label: string;
+      icon?: IconName;
+      /** Decoration drawn where the icon would be (a colour swatch). */
+      adornment?: ReactNode;
+      hint?: string;
+      disabled?: boolean;
+      /** Set (true or false) on an item that is one of a choice: it is then a radio item, and the chosen one carries a tick. */
+      checked?: boolean;
+      onSelect: () => void;
+    }
   | { kind: 'separator'; id: string }
   | { kind: 'heading'; id: string; label: string };
 
@@ -19,9 +32,9 @@ export function Menu({ label, items, trigger, align = 'end' }: MenuProps) {
   const listRef = useRef<HTMLUListElement | null>(null);
 
   const move = (dir: 1 | -1) => {
-    const els = Array.from(listRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not([aria-disabled="true"])') ?? []);
+    const els = Array.from(listRef.current?.querySelectorAll<HTMLButtonElement>(':is([role="menuitem"], [role="menuitemradio"]):not([aria-disabled="true"])') ?? []);
     if (!els.length) return;
-    const i = els.indexOf(document.activeElement as HTMLButtonElement);
+    const i = els.indexOf(focused() as HTMLButtonElement);
     const next = i === -1 ? (dir === 1 ? 0 : els.length - 1) : (i + dir + els.length) % els.length;
     els[next].focus();
   };
@@ -50,7 +63,8 @@ export function Menu({ label, items, trigger, align = 'end' }: MenuProps) {
             <li key={it.id} role="none">
               <button
                 type="button"
-                role="menuitem"
+                role={it.checked === undefined ? 'menuitem' : 'menuitemradio'}
+                aria-checked={it.checked}
                 className="sp-menu__item"
                 aria-disabled={it.disabled || undefined}
                 onClick={() => {
@@ -60,8 +74,10 @@ export function Menu({ label, items, trigger, align = 'end' }: MenuProps) {
                 }}
               >
                 {it.icon && <Icon name={it.icon} size={16} />}
+                {it.adornment}
                 <span>{it.label}</span>
                 {it.hint && <span className="sp-menu__hint">{it.hint}</span>}
+                {it.checked && <Icon name="check" size={16} className="sp-menu__check" />}
               </button>
             </li>
           );

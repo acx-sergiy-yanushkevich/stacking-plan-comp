@@ -7,6 +7,7 @@ import { setHoverFloor, useHoverFloor } from '../../state/hoverStore';
 import { openFloor, openFloorPlate } from '../plan/actions';
 import { buildingUse, Legend } from '../plan/Legend';
 import { BuildingHero } from '../hero/BuildingHero';
+import { DotJoin, DotSep } from '../hero/DotJoin';
 import { FloorPlate } from '../floor/FloorPlate';
 import { FloorSummary } from '../floor/FloorSummary';
 import { MiniStack } from '../floor/MiniStack';
@@ -15,7 +16,8 @@ import { FilterBar } from '../stack/FilterBar';
 import { rampNote } from '../stack/rampNote';
 import { Button } from '../ui';
 import { useMedia, usePrefersReducedMotion } from '../../lib/useMedia';
-import { floorHeading, floorLabel, floorLabelParts, floorSentence, labelNote, lensFact } from './floorFact';
+import { find, focused, on } from '../../lib/host';
+import { floorHeading, floorLabel, floorLabelParts, floorSentence, labelNote, lensDetail } from './floorFact';
 import { FloorLabels, type FloorLabelRow } from './FloorLabels';
 import { clearFrom, cubicBezier, type Box, type Glide } from './glide';
 import { openFloorOf } from './openFloor';
@@ -106,7 +108,8 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
           // The floor's one label (floorFact): the Map view's floor list prints the same parts.
           parts: floorLabelParts(f, state.lens, safe, largest),
           name: floorLabel(f, state.lens, safe, largest),
-          title: `${f.floor.name} · ${floorSentence(f, model.asOf, safe)}${largest ? ' · the largest block in the building' : ''}`,
+          // The tooltip of the label and of the floor on the model: the floor's sentence, then what the lens says of it, in full.
+          title: [f.floor.name, floorSentence(f, model.asOf, safe), lensDetail(f, state.lens, safe), largest ? 'the largest block in the building' : ''].filter(Boolean).join(' · '),
         };
       }),
     [floors, state.lens, safe, model.asOf, largestId],
@@ -129,8 +132,7 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
     if (!el) return;
     const fit = () => el.parentElement?.style.setProperty('--sp-bview-top', `${Math.round(layoutTop(el))}px`);
     fit();
-    window.addEventListener('resize', fit);
-    return () => window.removeEventListener('resize', fit);
+    return on('resize', fit);
   }, [docked, model.filterLabel, state.lens, safe, under]);
   useLayoutEffect(() => {
     const col = stageRef.current?.parentElement;
@@ -218,8 +220,8 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
   const shownBefore = useRef({ docked, openId });
   /** Before a change of floor: the floor whose control takes the keyboard after it. Not from a control outside this view, which stays on screen and keeps its focus. */
   const aim = (id: string) => {
-    const el = typeof document === 'undefined' ? null : (document.activeElement as HTMLElement | null);
-    refocus.current = { id, force: !el || el === document.body || el.id === 'sp-plan' || !!el.closest('.sp-bview') };
+    const el = focused();
+    refocus.current = { id, force: !el || el.id === 'sp-plan' || !!el.closest('.sp-bview') };
   };
   useLayoutEffect(() => {
     // Read on every commit: an aim that no change followed (a click that changed nothing) is dropped here.
@@ -231,8 +233,8 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
     if (before.docked === docked && before.openId === openId) return;
     const id = want?.id ?? openId ?? before.openId;
     if (!id) return;
-    const active = document.activeElement;
-    const lost = !active || active === document.body || !active.isConnected;
+    const active = focused();
+    const lost = !active || !active.isConnected;
     if (!lost && !want?.force) return;
     stageRef.current?.querySelector<HTMLElement>(`:is(.sp-mini, .sp-flabels) [data-floor="${id}"]`)?.focus({ preventScroll: true });
   });
@@ -248,15 +250,14 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
     if (!pinned || !openId) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
-      const el = document.activeElement as HTMLElement | null;
-      if (el && el !== document.body && el.closest(ESCAPE_OWNERS)) return;
-      if (document.querySelector('.sp-sheet')) return;
+      const el = focused();
+      if (el && el.closest(ESCAPE_OWNERS)) return;
+      if (find('.sp-sheet')) return;
       e.preventDefault();
       aimRef.current(openId);
       patch({ floor: null, select: null });
     };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    return on('keydown', onKey);
   }, [pinned, openId, patch]);
 
   const aspect = useMemo(() => plateAspect(property.footprint), [property.footprint]);
@@ -285,7 +286,8 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
       <Legend items={model.legend} extras={lobby ? [lobby] : undefined} compact id="sp-legend" note={rampNote(state.lens, safe)} />
       {over.length > 0 && canShowIssues(model.safe) && (
         <p className="sp-legend__note">
-          {over.map((f) => `${f.floor.name} records exceed its leasable area by ${num(f.overAllocatedBy)} SF`).join('; ')}; legend shares use recorded SF, leased occupancy is capped.
+          {/* A no-break space after the comma: where the note wraps, the line does not end on it. */}
+          {over.map((f) => `${f.floor.name} records exceed its leasable area by ${num(f.overAllocatedBy)} SF`).join('; ')}; legend shares use recorded SF,{'\u00a0'}leased occupancy is capped.
         </p>
       )}
     </div>
@@ -311,9 +313,11 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
     patch({ floor: null, select: null });
   };
   const plateCaption =
-    'Schematic: suite positions are proportional to RSF along the floor plate, not surveyed. ' +
+    // A no-break space after the comma: where the caption wraps, the line does not end on it.
+    'Schematic: suite positions are proportional to RSF along the floor plate,\u00a0not surveyed. ' +
     (property.footprintSource === 'demo' ? 'Demo footprint.' : 'Footprint © OpenStreetMap contributors.');
-  const hoveredFact = hovered ? lensFact(hovered, state.lens, safe) : '';
+  // The caption line as facts with a "·" between them: it breaks between facts, never with a separator at either end (DotJoin).
+  const hoveredParts = hovered ? [...floorSentence(hovered, model.asOf, safe).split(' · '), ...lensDetail(hovered, state.lens, safe).split(' · ')] : [];
   const noteParts = labelNote(state.lens, safe).split(' · ');
 
   return (
@@ -330,22 +334,17 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
               <span>
                 {hovered ? (
                   <>
-                    <strong>{hovered.floor.name}</strong> · {floorSentence(hovered, model.asOf, safe)}
-                    {hoveredFact ? ` · ${hoveredFact}` : ''}
-                    <span className="sp-bview__caption-more"> · click to open its plan</span>
+                    <DotJoin parts={[<strong>{hovered.floor.name}</strong>, ...hoveredParts]} />
+                    <span className="sp-bview__caption-more">
+                      <DotSep />
+                      <span className="sp-nb">click to open its plan</span>
+                    </span>
                   </>
                 ) : (
                   <>
-                    <span className="sp-nb">Click a floor or its label to open its plan.</span> <span className="sp-nb">Labels:</span>{' '}
+                    <span className="sp-nb">Click a floor or its label to open its plan.</span>{' '}
                     {/* Each thing the labels show stays in one piece: a narrow card breaks the line between them, never inside one. */}
-                    {noteParts.map((part, i) => (
-                      <span key={part}>
-                        <span className="sp-nb">
-                          {part}
-                          {i < noteParts.length - 1 ? ' ·' : '.'}
-                        </span>{' '}
-                      </span>
-                    ))}
+                    <DotJoin parts={noteParts.map((part, i) => `${i === 0 ? 'Labels: ' : ''}${part}${i === noteParts.length - 1 ? '.' : ''}`)} />
                   </>
                 )}
               </span>

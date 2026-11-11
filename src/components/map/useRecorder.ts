@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Map as MapLibreMap } from 'maplibre-gl';
+import { hasPage, saveFile } from '../../lib/host';
 
 export const RECORD_MAX_MS = 20_000;
 export const RECORD_FILE = 'stacking-plan';
@@ -13,7 +14,7 @@ export interface UseRecorderOptions {
 
 /** Does this browser expose `MediaRecorder` and `canvas.captureStream`? */
 export function recordingSupported(canvas?: HTMLCanvasElement | null): boolean {
-  if (typeof window === 'undefined' || typeof MediaRecorder === 'undefined') return false;
+  if (!hasPage() || typeof MediaRecorder === 'undefined') return false;
   const proto = (canvas ?? (typeof HTMLCanvasElement !== 'undefined' ? HTMLCanvasElement.prototype : null)) as { captureStream?: unknown } | null;
   return !!proto && typeof proto.captureStream === 'function';
 }
@@ -31,12 +32,12 @@ export function useRecorder({ map, onStart, onStop, notify }: UseRecorderOptions
   const [recording, setRecording] = useState(false);
   const recRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const timerRef = useRef<number>(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const cbRef = useRef({ onStart, onStop, notify });
   cbRef.current = { onStart, onStop, notify };
 
   const stop = useCallback(() => {
-    window.clearTimeout(timerRef.current);
+    clearTimeout(timerRef.current);
     const rec = recRef.current;
     if (rec && rec.state !== 'inactive') rec.stop();
     else setRecording(false);
@@ -76,14 +77,7 @@ export function useRecorder({ map, onStart, onStop, notify }: UseRecorderOptions
         cbRef.current.notify('Nothing was recorded', 'warning');
         return;
       }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${RECORD_FILE}.${ext}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      saveFile(blob, `${RECORD_FILE}.${ext}`);
       cbRef.current.notify(`Video saved: ${RECORD_FILE}.${ext}`, 'download');
     };
     recRef.current = rec;
@@ -92,14 +86,14 @@ export function useRecorder({ map, onStart, onStop, notify }: UseRecorderOptions
     setRecording(true);
     cbRef.current.onStart?.();
     cbRef.current.notify('Recording the map for 20 seconds. Click Record again to stop early.', 'video');
-    timerRef.current = window.setTimeout(stop, RECORD_MAX_MS);
+    timerRef.current = setTimeout(stop, RECORD_MAX_MS);
   }, [map, stop]);
 
   const toggle = useCallback(() => (recRef.current ? stop() : start()), [start, stop]);
 
   useEffect(
     () => () => {
-      window.clearTimeout(timerRef.current);
+      clearTimeout(timerRef.current);
       const rec = recRef.current;
       if (rec && rec.state !== 'inactive') {
         rec.onstop = null;

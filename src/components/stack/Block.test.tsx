@@ -189,7 +189,8 @@ describe('Block text in print: a narrow block keeps its suite number', () => {
     expect(drawn.some((t) => t.startsWith('Ste 100 · 2,400 SF'))).toBe(true);
     // The name is still whole (on one line or two), never a fragment.
     expect(drawn.join(' ')).toContain('Preston Park Café');
-    expect(label).toContain('Preston Park Café');
+    // On paper the name wraps at 13 px; the accessible name joins the drawn lines with line breaks.
+    expect(label.replace(/\n/g, ' ')).toContain('Preston Park Café');
   });
 
   it('changes nothing where the suite was already drawn, or where it cannot fit at all', () => {
@@ -198,5 +199,55 @@ describe('Block text in print: a narrow block keeps its suite number', () => {
     const sliver = draw(cafe, 60, 48, seg(), true).lines.map((l) => l.t);
     expect(sliver).toEqual(draw(cafe, 60, 48).lines.map((l) => l.t));
     expect(sliver.join(' ')).toContain('2,400');
+  });
+});
+
+describe('Block text: a separator never ends or begins a line', () => {
+  it('leaves out the "·" of a name where the name wraps at it (round 16: "Infinity Info Systems ·" over "sublease")', () => {
+    const t = text({ name: 'Infinity Info Systems · sublease', aria: 'Floor 7, Infinity Info Systems · sublease', tooltip: 'Infinity Info Systems · sublease' });
+    let wrapped = 0;
+    for (let w = 60; w <= 320; w += 4) {
+      for (const h of [48, 72, 109]) {
+        const { lines, html } = draw(t, w, h, seg('sublease'));
+        for (const l of lines) {
+          expect(l.t, `${w}×${h}: "${l.t}"`).not.toMatch(/^[·|,]/);
+          expect(l.t, `${w}×${h}: "${l.t}"`).not.toMatch(/[·|,]$/);
+        }
+        const name = lines.filter((l) => l.cls === 'name' || l.cls === 'tiny' || l.cls === 'micro').map((l) => l.t);
+        if (name.includes('sublease') && name.some((n) => n.endsWith('Systems'))) wrapped += 1;
+        // The whole name, separator included, is still what the tooltip says.
+        expect(html).toContain('Infinity Info Systems · sublease');
+      }
+    }
+    // The case under test did occur: the name wrapped exactly at its separator.
+    expect(wrapped).toBeGreaterThan(0);
+  });
+});
+
+describe('Block text on paper: one name size', () => {
+  // The report's rows are 48 px high. Estimated widths: "Conner CPA Group" is 114 px at 13 px, more than the 116 px block leaves beside a badge-free edge once the suite line is kept.
+  it('wraps a name at 13 px before setting it smaller (round 16: "Conner CPA Group" at 11 px, "Preston Park Café" at 10 px on the cover)', () => {
+    for (const name of ['Conner CPA Group Ltd', 'Preston Park Café Bar']) {
+      const t = text({ name, aria: `Floor 7, ${name}`, sub: 'Ste 740 · 2,400 SF' });
+      for (let w = 120; w <= 150; w += 2) {
+        const printed = draw(t, w, 48, seg(), true);
+        // The lines above the suite line are the name's.
+        const names = printed.lines.slice(0, printed.lines.findIndex((l) => l.t.startsWith('Ste 740')));
+        expect(names.length, `${name} at ${w} px`).toBeGreaterThan(0);
+        expect(names.map((l) => l.cls), `${name} at ${w} px`).toEqual(names.map(() => 'name'));
+        expect(names.map((l) => l.t).join(' '), `${name} at ${w} px`).toBe(name);
+        // The suite and its SF stay under the name.
+        expect(printed.lines.some((l) => l.t.startsWith('Ste 740 · 2,400 SF')), `${name} at ${w} px`).toBe(true);
+        // Every line is inside the 48 px row.
+        for (const l of printed.lines) expect(l.y).toBeLessThanOrEqual(44);
+      }
+    }
+  });
+
+  it('on screen the same block keeps its rule: a wrapped 13 px name needs a 14 px pitch', () => {
+    const t = text({ name: 'Conner CPA Group Ltd', aria: 'Floor 7, Conner CPA Group Ltd' });
+    const screen = draw(t, 132, 48);
+    const wrapped13 = screen.lines.filter((l) => l.cls === 'name').length > 1;
+    expect(wrapped13).toBe(false);
   });
 });

@@ -7,7 +7,7 @@ import { Button, Chip, Icon, Menu, Segmented, Switch, useToastBoundary } from '.
 import { canTimeTravel, planDate } from '../../domain/safe';
 import { AsOfPopover } from './AsOfPopover';
 import { rememberTrigger } from '../../state/focusStore';
-import { usePrefersDark } from '../../lib/useMedia';
+import { useIsPhone, usePrefersDark } from '../../lib/useMedia';
 
 export type ExportKind = 'pdf' | 'png' | 'csv' | 'link' | 'video';
 
@@ -32,6 +32,10 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
   const dark = isDark(state, prefersDark);
   // The two palettes belong to the default skin; `skin=aurora` has colours of its own and offers no choice.
   const palette = paletteOf(state);
+  // A phone has no row to spare for how the plan looks: there the palette and the theme are a menu beside Export.
+  const phone = useIsPhone();
+  const themeLabel = dark ? 'Switch to light theme' : 'Switch to dark theme';
+  const toggleTheme = () => patch({ theme: dark ? 'light' : 'dark' });
   // A toast may name a tenant or a prospect ("Would open Deal D8 (Vantage Robotics)…"): none survives the mode turning on.
   useToastBoundary(state.safe);
   return (
@@ -134,10 +138,33 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
             { id: 'link', label: 'Copy link to this view', icon: 'link', onSelect: () => onExport('link') },
           ]}
         />
+        {/* A phone: the same two controls as a menu, on the row the other controls already take. */}
+        {standalone && phone && (
+          <Menu
+            label="Colours and theme"
+            trigger={(p) => <Button {...p} iconOnly icon="more" aria-label="Colours and theme" title="Colours and theme" />}
+            items={[
+              ...(palette
+                ? [
+                    { kind: 'heading' as const, id: 'palette', label: 'Colours' },
+                    ...PALETTES.map((p) => ({
+                      id: `palette-${p.id}`,
+                      label: p.label,
+                      adornment: <span className={`sp-palette__dot sp-palette__dot--${p.id}`} aria-hidden="true" />,
+                      checked: p.id === palette,
+                      onSelect: () => patch(palettePatch(p.id)),
+                    })),
+                    { kind: 'separator' as const, id: 'look-sep' },
+                  ]
+                : []),
+              { id: 'theme', label: themeLabel, icon: dark ? ('sun' as const) : ('moon' as const), onSelect: toggleTheme },
+            ]}
+          />
+        )}
       </div>
       {/* How the plan looks, apart from what it shows: the palette and the theme. Both are state like any
           other, written to the URL, so a link opens in the colours it was copied in. */}
-      {standalone && (
+      {standalone && !phone && (
         <div className="sp-header__look">
           {palette && (
             <Segmented
@@ -148,7 +175,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
               onChange={(id) => patch(palettePatch(id))}
             />
           )}
-          <Button iconOnly icon={dark ? 'sun' : 'moon'} aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'} title={dark ? 'Light theme' : 'Dark theme'} onClick={() => patch({ theme: dark ? 'light' : 'dark' })} />
+          <Button iconOnly icon={dark ? 'sun' : 'moon'} aria-label={themeLabel} title={dark ? 'Light theme' : 'Dark theme'} onClick={toggleTheme} />
         </div>
       )}
     </header>

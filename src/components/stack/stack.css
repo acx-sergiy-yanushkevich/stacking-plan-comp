@@ -9,6 +9,10 @@
 /* Filter bar */
 .sp-filterbar { display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: var(--sp-color-brand-soft); border-bottom: 1px solid var(--sp-color-border); font-size: var(--sp-text-13); color: var(--sp-color-brand-strong); }
 .sp-filterbar strong { font-weight: 600; }
+/* The icon keeps its size when the sentence beside it wraps (a phone squeezed it to a few pixels). */
+.sp-filterbar > .sp-icon { flex: none; }
+/* A fact of the label may be longer than a phone is wide: it wraps inside. */
+.sp-filterbar .sp-dotjoin__part { white-space: normal; }
 .sp-filterbar .sp-btn { margin-left: auto; }
 
 /* Gutter */

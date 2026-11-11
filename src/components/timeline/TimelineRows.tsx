@@ -8,8 +8,9 @@ import { num, sf } from '../../domain/format';
 import { fmtDate, fmtMonths, monthsBetween } from '../../domain/dates';
 import { PATTERN_IDS } from '../plan/Patterns';
 import { measure } from '../../lib/textFit';
+import { requestFrame } from '../../lib/host';
 import { BAR_HEIGHT, STACK_BAR_H, STACK_LABEL_GAP, STACK_LINE_H, stackedLaneHeight, type LaidOutRow } from './layout';
-import { barLabel, labelText, NAME_FONT, SUB_FONT, TAG_FONT, tagWidth, type LabelLine } from './barLabel';
+import { BAR_PAD, barLabel, EXT_PAD, labelText, MIN_NAMED_BAR, NAME_FONT, SUB_FONT, TAG_FONT, tagWidth, tenantOfEnded, VACATED, type LabelLine } from './barLabel';
 
 const FADE_PX = 120;
 /** The stacked chart is a third as wide, so an open-ended bar fades out over a shorter run. */
@@ -90,7 +91,7 @@ export function TimelineRows({ rows, segIndex, start, end, asOf, today, lens, sa
   const activeKey = focusKey && allKeys.includes(focusKey) ? focusKey : (selectedBar ?? allKeys[0] ?? null);
   const focusBar = (key: string) => {
     setFocusKey(key);
-    requestAnimationFrame(() => rootRef.current?.querySelector<SVGGElement>(`[data-bar="${CSS.escape(key)}"]`)?.focus());
+    requestFrame(() => rootRef.current?.querySelector<SVGGElement>(`[data-bar="${CSS.escape(key)}"]`)?.focus());
   };
   const navigate = (key: string, dir: 'left' | 'right' | 'up' | 'down' | 'home' | 'end') => {
     const ri = order.findIndex((r) => r.some((b) => b.key === key));
@@ -360,63 +361,99 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
 
   // Tags sit at the bar's start; the label moves right to make room.
   let tagText: string | null = risk === 'MTM' ? 'MTM' : risk === 'Holdover' && extW > 0 ? 'Holdover' : null;
-  // The tenant name outranks the tag: if both cannot fit, drop the tag (the rose extension and the
-  // tooltip still say holdover / MTM) rather than leave an unnamed at-risk bar.
+  const labelPad = BAR_PAD / 2;
+  // A label is written inside the bar itself and never across its end. A holdover and a lease that has
+  // ended are drawn on to the as-of line as a second box (the extension); a label that ran from one box
+  // into the other had the bar's end edge drawn through its words ("Argosy|Partners").
+  const barEnd = (isMtm || safeRisk ? x1 - FADE_PX / 2 : x1) - labelPad;
+  const nameW = measure(name, NAME_FONT);
+  const sepW = measure(' · ', SUB_FONT);
+  // The extension is the bar's own ground (rose for a holdover, a dashed box for an ended lease).
+  const extRoom = Math.max(0, extW - EXT_PAD);
+  // The tag must fit the bar; and the tenant name outranks it: if both cannot fit, drop the tag (the
+  // rose extension, the trailing tag and the tooltip still say holdover / MTM) rather than leave an
+  // unnamed at-risk bar. A holdover counts its extension as room here: its tag stays at the start of the
+  // bar while the two fit the bar and the extension together, and the name is then placed below.
   {
-    const labelPad0 = 8;
-    const end0 = (isMtm || safeRisk ? x1 - FADE_PX / 2 : x1 + (isHoldover ? extW : 0)) - labelPad0;
+    const end0 = barEnd + (isHoldover ? extW : 0);
     const tagW0 = tagText ? Math.ceil(measure(tagText, TAG_FONT)) + 10 : 0;
-    const roomWithTag = end0 - (visibleX0 + labelPad0 + (tagText ? tagW0 + 4 : 0));
-    const roomWithout = end0 - (visibleX0 + labelPad0);
+    const roomWithTag = end0 - (visibleX0 + labelPad + (tagText ? tagW0 + 4 : 0));
+    const roomWithout = end0 - (visibleX0 + labelPad);
     const nm = isAvail ? bar.label : text.name;
-    if (tagText && measure(nm, NAME_FONT) > roomWithTag && measure(nm, NAME_FONT) <= roomWithout) tagText = null; // the trailing tag below keeps the state visible
+    if (tagText && isHoldover && visibleW < tagW0 + 8) tagText = null;
+    else if (tagText && measure(nm, NAME_FONT) > roomWithTag && measure(nm, NAME_FONT) <= roomWithout) tagText = null; // the trailing tag below keeps the state visible
   }
   const tagW = tagText ? Math.ceil(measure(tagText, TAG_FONT)) + 10 : 0;
   const tagX = tagText ? visibleX0 + 4 : 0;
-  const labelPad = 8;
   const textX = visibleX0 + labelPad + (tagText ? tagW + 4 : 0);
-  const textEnd = (isMtm || safeRisk ? x1 - FADE_PX / 2 : x1 + (isHoldover ? extW : 0)) - labelPad;
-  const textRoom = textEnd - textX;
+  const textRoom = barEnd - textX;
 
   // Label tiers by visible width: the <title> and aria-label always carry the full text.
-  // Names with digits ("Vacates Apr '27", "Available · Ste 1250") are shown whole or not at all.
-  // Whole name or nothing: a partial tenant name misleads (the <title> carries the full text).
-  const fitName = (room: number) => (measure(name, NAME_FONT) <= room ? name : fitParts(name, room, NAME_FONT));
+  // The name is shown whole or not at all: a partial tenant name misleads, and a name that says a state
+  // ("Kinetic Ventures · vacated", "Infinity Info Systems · sublease") must not lose the state's word.
+  // The facts after it (suite, SF) are whole " · " parts, as many as fit.
+  const subFor = (room: number) => {
+    const rest = room - nameW - sepW;
+    return rest > 24 ? fitParts(sub, rest, SUB_FONT) : '';
+  };
   const sfOnly = measure(`${text.sfShort} SF`, NAME_FONT) <= textRoom ? `${text.sfShort} SF` : measure(text.sfShort, NAME_FONT) <= textRoom ? text.sfShort : '';
+  // Where the label goes: inside the bar, inside its extension, or in the free lane to its right.
+  let place: 'bar' | 'ext' | 'outside' = 'bar';
   let nameText = '';
   let subText = '';
-  if (visibleW >= 90 && textRoom > 0) {
-    nameText = fitName(textRoom) || sfOnly;
-    const rest = textRoom - measure(nameText, NAME_FONT) - measure(' · ', SUB_FONT);
-    subText = nameText && nameText !== sfOnly && rest > 24 ? fitParts(sub, rest, SUB_FONT) : '';
-  } else if (visibleW >= 48 && textRoom > 0) {
-    nameText = sfOnly;
-  }
-  // A tagged bar (Holdover / MTM) must always say who: prefer the tenant name over the SF figure.
-  if (tagText && nameText === sfOnly && name && measure(name, NAME_FONT) <= textRoom) nameText = name;
-
-  // A bar too narrow for its name spills the label into the free space to its right.
-  let outside = false;
-  // Room to the right must also hold the trailing Holdover / MTM tag, which is drawn there first.
-  const trailingNeed = !tagText && !safe && (isHoldover || isMtm) ? Math.ceil(measure(isMtm ? 'MTM' : 'Holdover', TAG_FONT)) + 16 : 0;
-  // A label that fits inside only without its suite or SF moves out whole when the lane to the right is free.
-  const insideShort = plotRight >= 800 && nameText === name && subText !== sub;
-  if (!isAvail && (!nameText || nameText === sfOnly || insideShort) && name) {
-    const room = freeRight - (x1 + extW) - 10 - trailingNeed;
-    const need = measure(name, NAME_FONT) + (insideShort ? measure(' · ', SUB_FONT) + measure(sub, SUB_FONT) : 0);
-    if (room > 0 && need <= room) {
-      nameText = name;
-      outside = true;
-      const rest = room - measure(name, NAME_FONT) - measure(' · ', SUB_FONT);
-      subText = rest > 24 ? fitParts(sub, rest, SUB_FONT) : '';
-    }
+  if (visibleW >= MIN_NAMED_BAR && nameW <= textRoom) {
+    nameText = name;
+    subText = subFor(textRoom);
   }
   // The trailing tag needs free lane to its right; otherwise the rose extension and the tooltip carry the state.
   const trailingWord = isMtm ? 'MTM' : 'Holdover';
   const trailingW = Math.ceil(measure(trailingWord, TAG_FONT)) + 10;
+  // Room to the right must also hold the trailing Holdover / MTM tag, which is drawn there first.
+  const trailingNeed = !tagText && !safe && (isHoldover || isMtm) ? trailingW + 6 : 0;
+  const outsideRoom = isAvail ? 0 : freeRight - (x1 + extW) - 10 - trailingNeed;
+  // A label that fits inside only without its suite or SF moves out whole when the lane to the right is free.
+  const cut = nameText === name && subText !== sub;
+  if (name && !isAvail && (!nameText || (cut && plotRight >= 800))) {
+    const wholeW = nameW + sepW + measure(sub, SUB_FONT);
+    // An ended lease keeps its label where its neighbours have theirs, right of the as-of line; a holdover
+    // keeps its name beside its tag, on the rose extension, when the whole label fits there.
+    const order: Array<'ext' | 'outside'> = isHoldover ? ['ext', 'outside'] : ['outside', 'ext'];
+    const roomOf = (where: 'ext' | 'outside') => (where === 'ext' ? extRoom : outsideRoom);
+    // First a place that holds the whole label; failing that, when the bar holds no name at all, the roomiest place that holds the name.
+    const whole = order.find((where) => wholeW <= roomOf(where));
+    const named = nameText ? undefined : order.filter((where) => nameW <= roomOf(where)).sort((a, b) => roomOf(b) - roomOf(a))[0];
+    const where = whole ?? named;
+    if (where) {
+      place = where;
+      nameText = name;
+      subText = subFor(roomOf(where));
+    }
+  }
+  // An ended lease whose whole name fits nowhere: the tenant in the bar and the word in the dashed box
+  // after it, which is the time since the tenant left. The bar's end stands between the two, not in one.
+  // (Where not even that fits, the bar has kept its lane and the label is on the right: `endedNameFits`.)
+  const tenantOnly = isProjected ? tenantOfEnded(name) : null;
+  let extWord = '';
+  if (!nameText && tenantOnly !== null && visibleW >= MIN_NAMED_BAR && measure(tenantOnly, NAME_FONT) <= textRoom && measure(VACATED, NAME_FONT) <= extRoom) {
+    nameText = tenantOnly;
+    extWord = VACATED;
+  }
+  // Last resort, a bar too narrow for any of that: as much of the name as fits in whole parts, else the SF.
+  if (!nameText && textRoom > 0) {
+    if (visibleW >= MIN_NAMED_BAR) nameText = fitParts(name, textRoom, NAME_FONT) || sfOnly;
+    else if (visibleW >= 48) nameText = sfOnly;
+    // A tagged bar (Holdover / MTM) must always say who: prefer the tenant name over the SF figure.
+    if (tagText && nameText === sfOnly && name && nameW <= textRoom) nameText = name;
+  }
+  const outside = place === 'outside';
   const trailingTag = !tagText && !safe && (isHoldover || isMtm) && freeRight - (x1 + extW) >= trailingW + 8 ? trailingWord : null;
+  const labelX = place === 'outside' ? x1 + extW + 6 + (trailingTag ? trailingW + 6 : 0) : place === 'ext' ? x1 + 6 : textX;
+  // On the card (right of the bar, or in an ended lease's dashed box) the label is in the card's text colour; on a fill it is in the tone's.
+  const onCard = outside || (place === 'ext' && isProjected);
   // DOM order: the (trailing) tag group is rendered before the label text, so the accessible name must match that order.
-  const visibleText = [tagText ?? trailingTag, [nameText, subText].filter(Boolean).join(' · ')].filter(Boolean).join(' ');
+  // It says the whole name whenever any of it is on screen, so an ended lease is "vacated" to a screen reader as well.
+  const visibleLabel = extWord || (nameText && nameText !== sfOnly && nameText !== name) ? [name, subText].filter(Boolean).join(' · ') : [nameText, subText].filter(Boolean).join(' · ');
+  const visibleText = [tagText ?? trailingTag, visibleLabel || (isProjected ? name : '')].filter(Boolean).join(' ');
   const aria = `${visibleText ? `${visibleText}. ` : ''}${text.aria}. ${dates}`;
 
   return (
@@ -439,13 +476,18 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
           </text>
         </g>
       )}
-      {nameText && !outside && (bar.committed || bar.sublease) && (
+      {nameText && place === 'bar' && (bar.committed || bar.sublease) && (
         <rect x={textX - 4} y={y + 3} width={Math.ceil(measure(nameText, NAME_FONT) + (subText ? measure(` · ${subText}`, SUB_FONT) : 0)) + 8} height={BAR_HEIGHT - 6} rx={3} fill="var(--sp-color-card)" fillOpacity={0.92} pointerEvents="none" />
       )}
       {nameText && (
-        <text className={`sp-tl-bar__text ${outside ? 'sp-tl-bar__text--outside' : ''}`} x={outside ? x1 + extW + 6 + (trailingTag ? trailingW + 6 : 0) : textX} y={y + BAR_HEIGHT / 2 + 4} fill={outside ? 'var(--sp-color-text)' : ink} style={{ paintOrder: 'stroke', stroke: outside ? 'var(--sp-color-card)' : fill, strokeWidth: 3, strokeLinejoin: 'round' }}>
+        <text className={`sp-tl-bar__text ${onCard ? 'sp-tl-bar__text--outside' : ''}`} data-place={place} x={labelX} y={y + BAR_HEIGHT / 2 + 4} fill={onCard ? 'var(--sp-color-text)' : ink} style={{ paintOrder: 'stroke', stroke: onCard ? 'var(--sp-color-card)' : place === 'ext' ? 'var(--tone-risk-fill)' : fill, strokeWidth: 3, strokeLinejoin: 'round' }}>
           <tspan className="sp-tl-bar__name">{nameText}</tspan>
           {subText && <tspan className="sp-tl-bar__sub"> · {subText}</tspan>}
+        </text>
+      )}
+      {extWord && (
+        <text className="sp-tl-bar__text sp-tl-bar__text--outside" data-place="ext" x={x1 + 6} y={y + BAR_HEIGHT / 2 + 4} fill="var(--sp-color-text)" style={{ paintOrder: 'stroke', stroke: 'var(--sp-color-card)', strokeWidth: 3, strokeLinejoin: 'round' }}>
+          <tspan className="sp-tl-bar__name">{extWord}</tspan>
         </text>
       )}
     </g>

@@ -2,13 +2,15 @@
  * Text measurement for SVG labels. Uses one shared canvas; results are memoised per font+text.
  * Falls back to an average-glyph estimate when canvas is unavailable (tests, SSR).
  */
+import { attach, createElement, onFontsLoaded } from './host';
+
 const cache = new Map<string, number>();
 let ctx: CanvasRenderingContext2D | null | undefined;
 
 function context(): CanvasRenderingContext2D | null {
   if (ctx !== undefined) return ctx;
   try {
-    ctx = typeof document !== 'undefined' ? document.createElement('canvas').getContext('2d') : null;
+    ctx = createElement('canvas')?.getContext('2d') ?? null;
   } catch {
     ctx = null;
   }
@@ -34,11 +36,11 @@ function tabularDelta(c: CanvasRenderingContext2D, font: string, ch: string): nu
   let d = 0;
   try {
     if (probe === undefined) {
-      probe = typeof document !== 'undefined' && document.body ? document.createElement('span') : null;
+      probe = createElement('span');
       if (probe) {
         probe.setAttribute('aria-hidden', 'true');
         probe.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;white-space:pre;pointer-events:none';
-        document.body.appendChild(probe);
+        attach(probe);
       }
     }
     if (probe) {
@@ -57,6 +59,7 @@ function tabularDelta(c: CanvasRenderingContext2D, font: string, ch: string): nu
 }
 
 export function measure(text: string, font: string): number {
+  watchFonts();
   const key = font + '\u0000' + text;
   const hit = cache.get(key);
   if (hit !== undefined) return hit;
@@ -153,12 +156,20 @@ let fontEpoch = 0;
 const fontListeners = new Set<() => void>();
 export const getFontEpoch = () => fontEpoch;
 export function subscribeFonts(cb: () => void): () => void {
+  watchFonts();
   fontListeners.add(cb);
   return () => fontListeners.delete(cb);
 }
-if (typeof document !== 'undefined' && document.fonts) {
+/**
+ * Started by the first measurement or subscriber, not when this file is loaded, so that a page which
+ * supplies its own host (`setHost`) is the one asked about fonts.
+ */
+let watchingFonts = false;
+function watchFonts(): void {
+  if (watchingFonts) return;
+  watchingFonts = true;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const bump = () => {
+  onFontsLoaded(() => {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
       cache.clear();
@@ -166,7 +177,5 @@ if (typeof document !== 'undefined' && document.fonts) {
       fontEpoch += 1;
       fontListeners.forEach((l) => l());
     }, 30);
-  };
-  document.fonts.ready.then(bump).catch(() => undefined);
-  document.fonts.addEventListener?.('loadingdone', bump);
+  });
 }

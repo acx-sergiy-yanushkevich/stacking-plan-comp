@@ -39,7 +39,7 @@ interface Kpi {
 
 /** How long the pointer rests on a KPI before the plan answers: crossing the bar on the way to the header lights nothing. */
 const HOVER_MS = 90;
-let hoverTimer: number | undefined;
+let hoverTimer: ReturnType<typeof setTimeout> | undefined;
 
 /**
  * Lights a KPI's suites on the plan while it is pointed at or has the keyboard. Focus lights at once; the
@@ -48,14 +48,14 @@ let hoverTimer: number | undefined;
 function lightOn(keys: string[]) {
   const on = () => setHoverKeys(new Set(keys));
   const off = () => {
-    window.clearTimeout(hoverTimer);
+    clearTimeout(hoverTimer);
     setHoverKeys(null);
   };
   return {
     onPointerEnter: (e: PointerEvent<HTMLButtonElement>) => {
       if (e.pointerType === 'touch') return;
-      window.clearTimeout(hoverTimer);
-      hoverTimer = window.setTimeout(on, HOVER_MS);
+      clearTimeout(hoverTimer);
+      hoverTimer = setTimeout(on, HOVER_MS);
     },
     onPointerLeave: off,
     onFocus: on,

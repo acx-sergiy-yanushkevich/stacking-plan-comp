@@ -240,18 +240,29 @@ describe('BuildingView', () => {
     expect(labelNames(render(''))).toContain('Floor 7, 100.0% leased, 7,000 SF sublease available');
     expect(labelTexts('')).toContain('7 · 100.0% leased · 7,000 SF sublease available');
     expect(labelNames(render('?lens=deals'))).toContain('Floor 6, 100.0% leased, 2 live deals · LOI');
-    expect(labelNames(render('?lens=rent'))).toContain('Floor 5, 100.0% leased, $30–$31/SF/yr FSG · $26.50/SF/yr MG');
+    expect(labelNames(render('?lens=rent'))).toContain('Floor 5, 100.0% leased, in place $30–$31/SF/yr FSG · in place $26.50/SF/yr MG');
+    expect(labelNames(render('?lens=rent'))).toContain('Floor 12, 50.0% leased, 9,300 SF available, asking $38–$40/SF/yr FSG, largest block');
+    // Every floor with a lease says when it expires, however far off; holdover and month-to-month by name.
+    const expiry = labelNames(render('?lens=expiry')).map((n) => n.replace(/\u00a0/g, ' '));
+    expect(expiry).toContain("Floor 11, 100.0% leased, expires May '30 – Jan '32");
+    expect(expiry).toContain("Floor 3, 74.3% leased, 5,500 SF available, holdover · expires Jun '29");
+    expect(expiry).toContain("Floor 2, 74.8% leased, month-to-month · expires Dec '31");
     // The same names on the compact picker beside a docked model.
-    expect(pickerNames(render('?floor=F8&lens=rent'))).toContain('Floor 5, 100.0% leased, $30–$31/SF/yr FSG · $26.50/SF/yr MG');
+    expect(pickerNames(render('?floor=F8&lens=rent'))).toContain('Floor 5, 100.0% leased, in place $30–$31/SF/yr FSG · in place $26.50/SF/yr MG');
     expect(pickerNames(render('?floor=F8'))).toContain('Floor 12, 50.0% leased, 9,300 SF available, largest block');
   });
 
   it('prints the space on offer and the lens fact on each label, and says in the caption what the labels show', () => {
-    expect(labelTexts('?lens=rent')).toContain('1 · 54.8% leased · 4,000 SF available · $42/SF/yr NNN · $3.25/SF/mo NNN');
-    expect(render('?lens=rent')).toContain('in-place rent by lease type (confidential leases left out)');
+    // The rent beside space on offer is its asking rent, by name (round 16: an in-place rent stood there unmarked).
+    expect(labelTexts('?lens=rent')).toContain('1 · 54.8% leased · 4,000 SF available · asking $34–$36/SF/yr NNN');
+    expect(labelTexts('?lens=rent')).toContain('11 · 100.0% leased · in place $31/SF/yr FSG');
+    expect(render('?lens=rent')).toContain('else the in-place rent (confidential leases left out)');
+    // The tooltip of the label (and of the floor on the model) gives both rents, each by name.
+    expect(render('?lens=rent')).toContain('title="Floor 1 · 14,600 RSF leasable · 54.8% leased · 4,000 SF available · asking $34–$36/SF/yr NNN · in place $42/SF/yr NNN · in place $3.25/SF/mo NNN"');
     expect(labelTexts('?lens=deals')).toContain('3 · 74.3% leased · 5,500 SF available · 3 live deals · LOI');
     expect(render('?lens=deals')).toContain('live deals and the furthest stage reached');
-    expect(render('?lens=expiry')).toContain('the next lease expiry within 24 months');
+    expect(render('?lens=expiry')).toContain('lease expiry, first to last');
+    expect(labelTexts('?lens=expiry').map((t) => t.replace(/\u00a0/g, ' '))).toContain("9 · 100.0% leased · expires May '30");
     expect(labelTexts('')).toContain('3 · 74.3% leased · 5,500 SF available · holdover');
     expect(render('')).toContain('holdover, month-to-month or an expiry within 12 months');
     // No figure is rounded and none is cut: every label holds the floor's exact leased share and available SF.

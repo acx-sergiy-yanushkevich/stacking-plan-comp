@@ -51,6 +51,13 @@ const GLYPH: Partial<Record<Segment['kind'], string>> = { available: 'A', sublea
 /** The state in a word, for blocks too narrow for their name; same vocabulary as the legend. */
 const STATE_WORD: Partial<Record<Segment['kind'], string[]>> = { available: ['Available'], sublease: ['Sublease'], committed: ['Signed'], forsale: ['For sale'], unmarketed: ['Unaccounted'], projected: ['Vacant'] };
 
+/**
+ * A wrapped line as it is drawn. Where the wrap falls at a "·" ("Infinity Info Systems · sublease" on two
+ * lines), the separator is left out: the line break separates the two parts, and no line ends or begins
+ * with a separator. The whole name, separator included, stays in the tooltip.
+ */
+export const lineText = (line: string): string => line.replace(/^·\s+/, '').replace(/\s+·$/, '');
+
 /** One suite on the plan: tone fill, pattern, accent bar, adaptive text, badges. */
 export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelect, onFocus, onKeyDown, enlarged, compact, related, partial, extra, roomy, keepSuite }: BlockProps) {
   const tone = text.tone;
@@ -209,13 +216,13 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
     if (fits(text.name, inner, FONT_NAME)) nameSets.push([nameLine(text.name)]);
     else {
       const two = wrapWordsVar(text.name, (i) => (i === 0 ? inner : innerBody), FONT_NAME, 2);
-      if (two.length && two.join(' ') === text.name) nameSets.push(two.map(nameLine));
+      if (two.length && two.join(' ') === text.name) nameSets.push(two.map(lineText).map(nameLine));
       const tiny = h >= 48 ? wrapWordsVar(text.name, (i) => room(i, FONT_TINY, true), FONT_TINY, 3) : [];
-      if (tiny.length && tiny.join(' ') === text.name) smallSets.push(tiny.map((t) => ({ t, cls: 'sp-seg__tiny', font: FONT_TINY })));
+      if (tiny.length && tiny.join(' ') === text.name) smallSets.push(tiny.map((t) => ({ t: lineText(t), cls: 'sp-seg__tiny', font: FONT_TINY })));
       // Narrow tiles: the whole name at 10 px before giving it up.
       const micro = (tier >= 2 || suite) && h >= 48 && seg.kind !== 'unmarketed' ? wrapWords(text.name, room(0, FONT_MICRO, true), FONT_MICRO, 2) : [];
       // With the suite kept, the 10 px name is offered as well as the 11 px one: on one line it leaves room for the suite and the lens fact.
-      if (micro.length && micro.join(' ') === text.name && (suite || !(tiny.length && tiny.join(' ') === text.name))) smallSets.push(micro.map((t) => ({ t, cls: 'sp-seg__micro', font: FONT_MICRO })));
+      if (micro.length && micro.join(' ') === text.name && (suite || !(tiny.length && tiny.join(' ') === text.name))) smallSets.push(micro.map((t) => ({ t: lineText(t), cls: 'sp-seg__micro', font: FONT_MICRO })));
     }
     /** The state in a word, for a block that cannot hold its name. */
     const wordLine = (): Line[] => {
@@ -238,7 +245,10 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
             const fs = sets[compact ? 1 : 0][i];
             if (!fs || fs.length === 0 || lead.length + fs.length > maxLines) continue;
             // A wrapped 13 px name needs a pitch of 14 px or more; under that the 11 px name is used instead.
-            if (compact && lead.length > 1 && lead[0].font === FONT_NAME && geomFor(lead.length + fs.length, true).pitch < 14) continue;
+            // Not on paper: the report's plan sets every name at one size, so there a name wraps at 13 px at
+            // the row's own pitch (12.5 px in its 48 px rows, the pitch of the facts under it) before it is
+            // ever set smaller.
+            if (compact && lead.length > 1 && lead[0].font === FONT_NAME && !keepSuite && geomFor(lead.length + fs.length, true).pitch < 14) continue;
             const r = fit([...lead, ...fs], named);
             if (r && r.compact === compact) return r;
           }
@@ -248,9 +258,11 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
     const cats = (leads: Line[][], named: boolean) => tryCat('full', leads, named) ?? tryCat('split', leads, named, named ? 4 : 99) ?? tryCat('sfOnly', leads, named);
     const pick = () => {
       // 120 px and up: every layout with the 13 px name (down to name and SF) before any with the small one.
-      // Narrower blocks keep the lens fact first, at whichever name size carries it.
+      // Narrower blocks keep the lens fact first, at whichever name size carries it. On paper every block
+      // puts the 13 px name first: one name size across the plan matters more there than one more fact,
+      // which the rent roll on the next page has.
       const all = [...nameSets, ...smallSets];
-      const withName = tier <= 1 ? (cats(nameSets, true) ?? cats(smallSets, true)) : (tryCat('full', all, true) ?? tryCat('split', all, true, 4) ?? tryCat('sfOnly', all, true));
+      const withName = tier <= 1 || keepSuite ? (cats(nameSets, true) ?? cats(smallSets, true)) : (tryCat('full', all, true) ?? tryCat('split', all, true, 4) ?? tryCat('sfOnly', all, true));
       if (withName) return withName;
       // No name fits together with its SF line: the state word (when there is one), SF and the lens fact.
       const wl = wordLine();
@@ -291,7 +303,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
       else {
         // Too long for one line: two whole lines, or not at all.
         const two = wrapWords(e, innerBody, FONT_SUB, 2);
-        if (two.join(' ') === e && lines.length + two.length <= cap15) for (const t of two) lines.push({ t, cls: 'sp-seg__meta', font: FONT_SUB });
+        if (two.join(' ') === e && lines.length + two.length <= cap15) for (const t of two) lines.push({ t: lineText(t), cls: 'sp-seg__meta', font: FONT_SUB });
       }
     }
   }

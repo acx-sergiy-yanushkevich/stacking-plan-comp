@@ -11,13 +11,13 @@ export interface TooltipProps {
 export function Tooltip({ content, children, placement = 'top', delay = 300 }: TooltipProps) {
   const id = useId();
   const [show, setShow] = useState(false);
-  const timer = useRef<number | undefined>(undefined);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const open = () => {
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setShow(true), delay);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setShow(true), delay);
   };
   const close = () => {
-    window.clearTimeout(timer.current);
+    clearTimeout(timer.current);
     setShow(false);
   };
   const child = cloneElement(children, {

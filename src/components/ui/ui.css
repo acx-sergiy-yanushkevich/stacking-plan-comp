@@ -82,7 +82,8 @@ button.sp-chip[aria-pressed='true'] { background: var(--sp-color-brand-strong); 
 }
 .sp-input::placeholder { color: var(--sp-color-text-faint); }
 .sp-input:hover, .sp-select:hover { border-color: var(--sp-color-text-faint); }
-.sp-input:focus-visible, .sp-select:focus-visible { border-color: var(--sp-color-brand); box-shadow: 0 0 0 1px var(--sp-color-brand); outline: none; }
+/* Focus: the ring every other control has (base.css): 2 px in the focus colour, 2 px clear of the field. */
+.sp-input:focus-visible, .sp-select:focus-visible { outline: 2px solid var(--sp-color-focus); outline-offset: 2px; }
 .sp-input[aria-invalid='true'] { border-color: var(--sp-color-error); box-shadow: 0 0 0 1px var(--sp-color-error); }
 .sp-input--search { padding-left: 30px; }
 .sp-input-wrap { position: relative; display: flex; align-items: center; }
@@ -111,6 +112,9 @@ button.sp-chip[aria-pressed='true'] { background: var(--sp-color-brand-strong); 
 .sp-menu__item[aria-disabled='true'] { opacity: 0.5; cursor: default; }
 .sp-menu__item .sp-icon { color: var(--sp-color-text-weak); flex: none; }
 .sp-menu__hint { margin-left: auto; font-size: var(--sp-text-11); color: var(--sp-color-text-faint); }
+/* The chosen one of a choice (a radio item): a tick at the end of its row, and its name in semibold, so it is not told by colour. */
+.sp-menu__item .sp-menu__check { margin-left: auto; color: var(--sp-color-brand-strong); }
+.sp-menu__item[aria-checked='true'] { font-weight: 600; }
 .sp-menu__sep { height: 1px; margin: 4px 6px; background: var(--sp-color-border); }
 .sp-menu__heading { padding: 6px 10px 2px; font-size: var(--sp-text-11); text-transform: uppercase; letter-spacing: .04em; color: var(--sp-color-text-faint); font-weight: 600; }
 .sp-pop__panel--menu { padding: 0; }
@@ -138,6 +142,9 @@ button.sp-chip[aria-pressed='true'] { background: var(--sp-color-brand-strong); 
 @keyframes sp-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 /* ── Sheet (mobile bottom sheet) ────────────────────────── */
+/* Half the window, or expanded. The expanded height is set by Sheet.tsx: the content's height, capped at
+   92% of the window and short of the selection the sheet was opened for (ui/sheetHeight.ts). The 92vh
+   here is only what an expanded sheet has before it is measured. */
 .sp-sheet {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; background: var(--sp-color-card);
   border-radius: 16px 16px 0 0; box-shadow: 0 -8px 28px rgba(0,0,0,.18); display: flex; flex-direction: column;

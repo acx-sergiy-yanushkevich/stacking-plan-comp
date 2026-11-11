@@ -1,5 +1,6 @@
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { refocusTrigger } from '../../state/focusStore';
+import { find, requestFrame } from '../../lib/host';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { InspectorMode, PlanState } from '../../state/planState';
 import { sf } from '../../domain/format';
@@ -8,6 +9,7 @@ import { clearSelection, type Patch } from '../plan/actions';
 import { segmentText } from '../plan/segmentText';
 import { canShowIssues, canShowTenantRisk } from '../../domain/safe';
 import { BuildingHero } from '../hero/BuildingHero';
+import { DotJoin } from '../hero/DotJoin';
 import { BuildingPanel } from './BuildingPanel';
 import { BlockPanel } from './BlockPanel';
 import { FloorPanel } from './FloorPanel';
@@ -21,7 +23,7 @@ function closeAndRefocus(patch: Patch, key: string | null, floorId: string | nul
   clearSelection(patch);
   const sel = key ? `.sp-stage [data-key="${CSS.escape(key)}"], .sp-stage [data-bar^="tl-${CSS.escape(key)}"]` : floorId ? `.sp-stage [data-floor="${CSS.escape(floorId)}"]` : null;
   if (!sel) return;
-  requestAnimationFrame(() => document.querySelector<HTMLElement>(sel)?.focus());
+  requestFrame(() => find(sel)?.focus());
 }
 
 export interface InspectorProps {
@@ -86,7 +88,7 @@ export default function Inspector({ model, state, patch, mode, areaPanel }: Insp
   const prevMode = useRef(mode);
   useEffect(() => {
     const toolModes: InspectorMode[] = ['find', 'worklist', 'issues', 'area'];
-    if (mode !== prevMode.current && toolModes.includes(mode)) requestAnimationFrame(() => titleRef.current?.focus());
+    if (mode !== prevMode.current && toolModes.includes(mode)) requestFrame(() => titleRef.current?.focus());
     prevMode.current = mode;
   }, [mode]);
 
@@ -128,11 +130,19 @@ export default function Inspector({ model, state, patch, mode, areaPanel }: Insp
           <h2 className="sp-ins__title" ref={titleRef} tabIndex={-1}>
             {head.title}
           </h2>
-          {head.subtitle && <p className="sp-ins__subtitle">{head.subtitle}</p>}
+          {/* The subtitle is facts with a "·" between them ("Leases ending within 12 months · 4 leases ·
+              35,300 SF"): it wraps between facts, or inside a long one, and never leaves a separator at
+              the end of a line or the start of the next (DotJoin). */}
+          {head.subtitle && (
+            <p className="sp-ins__subtitle">
+              <DotJoin parts={head.subtitle.split(' · ')} />
+            </p>
+          )}
         </div>
         {head.close && <Button variant="ghost" size="sm" icon="close" iconOnly aria-label="Close" title="Close (Esc)" onClick={head.close} />}
       </div>
-      <div className="sp-ins__body" ref={bodyRef}>
+      {/* The part that scrolls: the bottom sheet sizes itself to what this holds (ui/Sheet.tsx). */}
+      <div className="sp-ins__body" ref={bodyRef} data-sheet-scroll="">
         {(mode === 'building' || mode === 'floor' || mode === 'block') && state.view !== 'map' && <BuildingHero model={model} state={state} patch={patch} compact={mode === 'block'} />}
         <div key={bodyKey} className="sp-ins__content">
           {body}

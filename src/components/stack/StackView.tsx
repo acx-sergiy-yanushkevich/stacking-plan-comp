@@ -6,6 +6,7 @@ import { num, pct } from '../../domain/format';
 import { fmtDate } from '../../domain/dates';
 import { matchingInquiries } from '../../domain/finder';
 import { useIsPhone } from '../../lib/useMedia';
+import { requestFrame, scrollBy } from '../../lib/host';
 import { useHoverKeys, usePinnedKeys, setHoverFloor, useHoverFloor } from '../../state/hoverStore';
 import type { FloorView, Segment } from '../../domain/derive';
 import { PhoneStack } from './PhoneStack';
@@ -138,7 +139,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
     if (!a || Date.now() - a.at > 1500 || !svgRef.current) return;
     const el = svgRef.current.querySelector(`[data-row="${CSS.escape(a.id)}"]`);
     const d = el ? el.getBoundingClientRect().top - a.top : 0;
-    if (Math.abs(d) > 1) window.scrollBy(0, d);
+    if (Math.abs(d) > 1) scrollBy(d);
   }, [focusId]);
 
   // Roving tabindex across the grid
@@ -149,10 +150,12 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
 
   const focusBlock = useCallback((key: string) => {
     setFocusKey(key);
-    requestAnimationFrame(() => {
-      const el = svgRef.current?.querySelector<SVGGElement>(`[data-key="${CSS.escape(key)}"]`);
-      el?.focus();
-    });
+    // At once, not a frame later: the block is in the page already, and a key pressed straight after an
+    // arrow (Enter) must go to the block the keyboard moved to, not to the one it is leaving.
+    const find = () => svgRef.current?.querySelector<SVGGElement>(`[data-key="${CSS.escape(key)}"]`);
+    const el = find();
+    if (el) el.focus();
+    else requestFrame(() => find()?.focus());
   }, []);
 
   const onKeyDown = (e: KeyboardEvent<SVGGElement>, rowIdx: number, boxIdx: number) => {

@@ -15,8 +15,9 @@ import { MiniTimeline } from './MiniTimeline';
 import { TimelineRows } from './TimelineRows';
 import { TimelineAxis } from './TimelineAxis';
 import { RolloverChips } from './RolloverChips';
-import { barLabel, labelText, NAME_FONT, SUB_FONT, tagWidth, wrapLabel, type LabelLine } from './barLabel';
-import { layoutStackedRows, stackedLaneHeight, STACK_LANE_GAP, viewAxis } from './layout';
+import { BAR_PAD, barLabel, endedNameFits, EXT_PAD, labelText, MIN_NAMED_BAR, NAME_FONT, SUB_FONT, tagWidth, tenantOfEnded, VACATED, wrapLabel, type LabelLine } from './barLabel';
+import { layoutStackedRows, packLanes, stackedLaneHeight, STACK_LANE_GAP, viewAxis } from './layout';
+import type { TimelineBar } from '../../domain/timeline';
 import { measure } from '../../lib/textFit';
 import { buildModel as planModel } from '../inspector/testModel';
 import { fmtDate } from '../../domain/dates';
@@ -155,6 +156,169 @@ describe('TimelineView', () => {
     const bars = [...html.matchAll(/<g class="([^"]*sp-tl-bar[^"]*)"[^>]*data-seg="([^"]+)"/g)].map((m) => ({ cls: m[1], seg: m[2] }));
     expect(bars.length).toBeGreaterThan(largest.length);
     for (const b of bars) expect(b.cls.includes('is-dim'), b.seg).toBe(!largest.includes(b.seg));
+  });
+});
+
+/**
+ * Round 16, as of Jul 2029: the Floor 3 holdover's name ran from the bar into its extension, so the bar's
+ * end edge was drawn through it ("Argosy|Partners"); and leases that had ended by then read "Preston Park
+ * Café" and "BeachBody Workouts" beside neighbours that read "· vacated". A label is now written inside
+ * one box or to the right of both, and an ended lease always carries the word.
+ */
+describe('timeline labels when the as-of date has moved on', () => {
+  interface DrawnBar {
+    cls: string;
+    key: string;
+    aria: string;
+    /** The bar's own rectangle and, where it has one, its extension to the as-of line. */
+    rect: { x: number; y: number; w: number };
+    ext: { x: number; w: number } | null;
+    texts: Array<{ place: string; x: number; name: string; sub: string }>;
+  }
+  const plain = (t: string) => t.replace(/<!-- -->/g, '').replace(/<[^>]+>/g, '').replace(/&#x27;/g, "'").replace(/&amp;/g, '&');
+  /** Every bar of the wide chart as drawn: its boxes and its labels, read from the markup. */
+  function drawn(asOf: string, query = ''): DrawnBar[] {
+    const html = renderToString(<TimelineView model={buildModel(asOf, false)} state={parseState(`?asOf=${asOf}${query}`, TODAY)} patch={() => {}} />);
+    return html
+      .split('<g class="sp-seg sp-tl-bar')
+      .slice(1)
+      .map((chunk) => {
+        const rect = /<rect class="sp-seg__rect" x="([\d.-]+)" y="([\d.-]+)" width="([\d.-]+)"/.exec(chunk)!;
+        const ext = /<rect class="sp-tl-bar__ext[^"]*" x="([\d.-]+)" y="[\d.-]+" width="([\d.-]+)"/.exec(chunk);
+        return {
+          cls: chunk.slice(0, chunk.indexOf('"')),
+          key: /data-bar="([^"]+)"/.exec(chunk)![1],
+          aria: plain(/aria-label="([^"]*)"/.exec(chunk)![1]),
+          rect: { x: Number(rect[1]), y: Number(rect[2]), w: Number(rect[3]) },
+          ext: ext ? { x: Number(ext[1]), w: Number(ext[2]) } : null,
+          texts: [...chunk.matchAll(/<text class="sp-tl-bar__text[^"]*" data-place="(\w+)" x="([\d.-]+)"[^>]*>(.*?)<\/text>/g)].map((m) => ({
+            place: m[1],
+            x: Number(m[2]),
+            name: plain(/<tspan class="sp-tl-bar__name">(.*?)<\/tspan>/.exec(m[3])?.[1] ?? ''),
+            sub: plain(/<tspan class="sp-tl-bar__sub">(.*?)<\/tspan>/.exec(m[3])?.[1] ?? ''),
+          })),
+        };
+      });
+  }
+  const widthOf = (t: { name: string; sub: string }) => measure(t.name, NAME_FONT) + (t.sub ? measure(t.sub, SUB_FONT) : 0);
+  const DATES = ['2027-03-01', '2027-05-01', '2027-11-01', '2028-07-01', '2029-07-01', '2030-01-01', '2031-01-01', '2031-11-01'];
+
+  it('says "vacated" on every lease that has ended, in what is drawn and in its accessible name', () => {
+    let ended = 0;
+    for (const asOf of DATES) {
+      for (const bar of drawn(asOf).filter((b) => b.cls.includes('sp-tl-bar--projected'))) {
+        ended += 1;
+        const shown = bar.texts.map((t) => `${t.name}${t.sub}`).join(' ');
+        expect(shown, `${asOf} ${bar.key}`).toMatch(/vacated/);
+        expect(bar.aria, `${asOf} ${bar.key}`).toMatch(/ · vacated/);
+        // The tenant is named with it: the word is never alone, and a name is never shown in part.
+        expect(bar.texts[0].name, `${asOf} ${bar.key}`).not.toBe(VACATED);
+      }
+    }
+    // The leases the judge named are among them.
+    expect(ended).toBeGreaterThan(30);
+    const jul29 = drawn('2029-07-01');
+    const text = (key: string) => jul29.find((b) => b.key === key)!.texts.map((t) => `${t.name}${t.sub}`).join(' ');
+    expect(text('tl-L12-U1')).toContain('BeachBody Workouts · vacated');
+    expect(text('tl-L01-U1')).toMatch(/^Preston Park Café( · | )vacated/);
+    expect(text('tl-hist-L13-U1')).toContain('Cirrus Energy · vacated');
+  });
+
+  it('writes a label inside the bar, inside its extension or to the right of both: never across the bar\'s end', () => {
+    let checked = 0;
+    for (const asOf of DATES) {
+      for (const bar of drawn(asOf).filter((b) => b.ext)) {
+        const barEnd = bar.rect.x + bar.rect.w;
+        const extEnd = bar.ext!.x + bar.ext!.w;
+        for (const t of bar.texts) {
+          checked += 1;
+          const right = t.x + widthOf(t);
+          if (t.place === 'bar') expect(right, `${asOf} ${bar.key} "${t.name}" ends inside the bar`).toBeLessThanOrEqual(barEnd);
+          else if (t.place === 'ext') {
+            expect(t.x, `${asOf} ${bar.key} "${t.name}" starts inside the extension`).toBeGreaterThanOrEqual(bar.ext!.x);
+            expect(right, `${asOf} ${bar.key} "${t.name}" ends inside the extension`).toBeLessThanOrEqual(extEnd);
+          } else expect(t.x, `${asOf} ${bar.key} "${t.name}" starts after the extension`).toBeGreaterThanOrEqual(extEnd);
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(40);
+    // Floor 3's holdover as of Jul 2029: its whole label, to the right of the rose extension.
+    const argosy = drawn('2029-07-01').find((b) => b.key === 'tl-L06-U1')!;
+    expect(argosy.texts).toHaveLength(1);
+    expect(argosy.texts[0]).toMatchObject({ place: 'outside', name: 'Argosy Partners', sub: ' · Ste 300 · 11,000 SF' });
+    expect(argosy.aria).toMatch(/^Holdover Argosy Partners · Ste 300 · 11,000 SF\. /);
+  });
+
+  it('keeps the lane to the right of an ended lease free when its bar is too short to say so on itself', () => {
+    // As of May 2027 the café has been gone two months: its bar holds "Preston Park Café" and the dashed box
+    // after it is a few px wide. The label goes right of the as-of line, and the for-sale bar takes another lane.
+    const bars = drawn('2027-05-01');
+    const cafe = bars.find((b) => b.key === 'tl-L01-U1')!;
+    const forSale = bars.find((b) => b.key === 'tl-A10')!;
+    expect(cafe.texts[0]).toMatchObject({ place: 'outside', name: 'Preston Park Café · vacated' });
+    expect(forSale.rect.y).not.toBe(cafe.rect.y);
+  });
+
+  it('where the bar holds the tenant and the dashed box after it holds the word, writes one in each', () => {
+    // Which date shows it depends on the chart's width, so every month is looked at: wherever a label is
+    // in two pieces, the first is the tenant in the bar and the second is the word in the extension.
+    let split = 0;
+    for (let y = 2027; y <= 2031; y += 1)
+      for (const m of ['01', '04', '07', '10'])
+        for (const bar of drawn(`${y}-${m}-01`)) {
+          if (bar.texts.length < 2) continue;
+          split += 1;
+          expect(bar.cls).toContain('sp-tl-bar--projected');
+          expect(bar.texts.map((t) => t.place)).toEqual(['bar', 'ext']);
+          expect(bar.texts[1].name).toBe(VACATED);
+          expect(bar.texts[0].name).toBe(tenantOfEnded(`${bar.texts[0].name} · ${VACATED}`));
+          expect(bar.aria).toContain(`${bar.texts[0].name} · ${VACATED}`);
+          // Each piece inside its own box.
+          expect(bar.texts[0].x + measure(bar.texts[0].name, NAME_FONT)).toBeLessThanOrEqual(bar.rect.x + bar.rect.w);
+          expect(bar.texts[1].x).toBeGreaterThanOrEqual(bar.ext!.x);
+          expect(bar.texts[1].x + measure(VACATED, NAME_FONT)).toBeLessThanOrEqual(bar.ext!.x + bar.ext!.w);
+        }
+    expect(split).toBeGreaterThan(0);
+  });
+
+  it('endedNameFits: whole in the bar, whole in the extension, or the tenant in the bar and the word after it', () => {
+    const name = `Preston Park Café · ${VACATED}`;
+    const nameW = measure(name, NAME_FONT);
+    const tenantW = measure('Preston Park Café', NAME_FONT);
+    const wordW = measure(VACATED, NAME_FONT);
+    expect(tenantOfEnded(name)).toBe('Preston Park Café');
+    expect(tenantOfEnded('Preston Park Café')).toBeNull();
+    // (Half a pixel of slack on the side that fits: the widths are fractions.)
+    expect(endedNameFits(name, nameW + BAR_PAD + 0.5, 0)).toBe(true);
+    expect(endedNameFits(name, nameW + BAR_PAD - 1, 0)).toBe(false);
+    expect(endedNameFits(name, 0, nameW + EXT_PAD + 0.5)).toBe(true);
+    expect(endedNameFits(name, 0, nameW + EXT_PAD - 1)).toBe(false);
+    // Split: the bar holds the tenant, the extension holds the word.
+    expect(tenantW + BAR_PAD).toBeGreaterThanOrEqual(MIN_NAMED_BAR);
+    expect(endedNameFits(name, tenantW + BAR_PAD + 0.5, wordW + EXT_PAD + 0.5)).toBe(true);
+    expect(endedNameFits(name, tenantW + BAR_PAD + 0.5, wordW + EXT_PAD - 1)).toBe(false);
+    expect(endedNameFits(name, tenantW + BAR_PAD - 1, wordW + EXT_PAD + 0.5)).toBe(false);
+    // A bar too narrow to carry any name does not count, however short the name.
+    expect(endedNameFits(`AB · ${VACATED}`, MIN_NAMED_BAR - 1, 0)).toBe(false);
+  });
+
+  it('packLanes: a bar that keeps its lane shares it with nothing that starts later', () => {
+    const bar = (key: string, start: string, end: string | null, kind: TimelineBar['kind']): TimelineBar => ({ key, segKey: key, label: key, start, end, kind, sublease: false, committed: false });
+    const ended = bar('ended', '2022-03-01', '2027-02-28', 'projected');
+    const next = bar('next', '2029-07-01', null, 'available');
+    const asOf = '2029-07-01';
+    // An ended lease is drawn out to the as-of line; what starts there shares its lane.
+    expect(packLanes([ended, next], asOf).map((l) => l.map((b) => b.key))).toEqual([['ended', 'next']]);
+    expect(packLanes([ended, next], asOf, false, (b) => b.key === 'ended').map((l) => l.map((b) => b.key))).toEqual([['ended'], ['next']]);
+    expect(packLanes([ended, next], asOf, false, () => false).map((l) => l.map((b) => b.key))).toEqual([['ended', 'next']]);
+  });
+
+  it('changes nothing as of today: no lease has ended, and the holdover is labelled as before', () => {
+    const today = drawn(TODAY);
+    expect(today.filter((b) => b.cls.includes('sp-tl-bar--projected'))).toHaveLength(0);
+    const argosy = today.find((b) => b.key === 'tl-L06-U1')!;
+    expect(argosy.texts.map((t) => `${t.name}${t.sub}`)).toEqual(['Argosy Partners · Ste 300 · 11,000 SF']);
+    expect(argosy.texts[0].place).toBe('outside');
   });
 });
 

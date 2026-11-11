@@ -146,24 +146,30 @@
 
     /* Daytime expiration lens: the same rule as at night, "the stronger the colour, the sooner". On a
        white card strong means dark, so the lightness runs the other way (soonest is darkest) while the
-       steps keep the night ramp's order and hues: red-orange, deep orange, Primary Orange for the three
-       steps that need attention, then lavender, periwinkle and pale steel blue. Holdover / MTM (a pale pink) stands beside
-       the ramp: every warm step is 12 L* or more below it, every cool step a different hue family.
-       Every step is 8 L* or more above the one before (L* 42, 57, 73, 81, 89, 98) and a different hue: in
-       round 15 lavender and periwinkle were 5.5 L* apart, and the deep orange was the Primary Orange's own
-       hue. Primary Orange is fixed, so the three cool steps are pale; each is outlined at 3:1 or more, and
-       the edges step in lightness as well, so the 3D map (which deepens a fill toward its edge) keeps the
-       six walls 8 L* apart too. */
+       steps keep the night ramp's order and hues: red-orange, deep orange and the Primary Orange's hue for
+       the three steps that need attention, then lavender, periwinkle and steel blue. Holdover / MTM (a pale
+       pink) stands beside the ramp: every warm step is 12 L* or more below it, every cool step a different
+       hue family.
+       Every step is 8 L* or more above the one before (L* 42, 57, 66, 74, 82, 90) and a different hue, and
+       the last one, 5+ yr, is a fill in its own right: 7 L* or more below the card wherever the glow puts
+       it (in round 16 it was #f3f9fc, L* 98, the card's own white, and a 5+ yr block read as an empty
+       outline). The six steps cannot fit above the Primary Orange itself (L* 73: three more steps of 8 end
+       at L* 97), so by day the 1–2 yr step is that orange deepened to L* 66, the same hue; the orange as
+       the brand gives it stays in the night ramp, the status lens and the deals lens. Each step is
+       outlined at 3:1 or more, and the edges step in lightness as well, so the 3D map (which deepens a
+       fill toward its edge) keeps the six walls 7 L* apart too. */
     --tone-exp-0-fill: #b03a16; --tone-exp-0-text: #ffffff; --tone-exp-0-edge: #7d260c;
     --tone-exp-1-fill: #dc6618; --tone-exp-1-text: #1f0e00; --tone-exp-1-edge: #7a3306;
-    --tone-exp-2-fill: #ff9c00; --tone-exp-2-text: #1f0e00; --tone-exp-2-edge: #6b3c00;
-    --tone-exp-3-fill: #cfc3f2; --tone-exp-3-text: #292d3b; --tone-exp-3-edge: #6650b4;
-    --tone-exp-4-fill: #d6e1fa; --tone-exp-4-text: #292d3b; --tone-exp-4-edge: #4f72c4;
-    --tone-exp-5-fill: #f3f9fc; --tone-exp-5-text: #292d3b; --tone-exp-5-edge: #5a91b3;
+    --tone-exp-2-fill: #e28b00; --tone-exp-2-text: #1f0e00; --tone-exp-2-edge: #804800;
+    --tone-exp-3-fill: #bcaced; --tone-exp-3-text: #292d3b; --tone-exp-3-edge: #6c56bc;
+    --tone-exp-4-fill: #b9ccf6; --tone-exp-4-text: #292d3b; --tone-exp-4-edge: #4f72c4;
+    --tone-exp-5-fill: #cfe7f4; --tone-exp-5-text: #292d3b; --tone-exp-5-edge: #5a91b3;
 
-    /* Rent lens by day: the same company blues, lightest to darkest. */
-    --tone-rent-0-fill: #e6f5fd; --tone-rent-0-text: #292d3b; --tone-rent-0-edge: #5a89a8;
-    --tone-rent-1-fill: #b5e0f7; --tone-rent-1-text: #292d3b; --tone-rent-1-edge: #4a84ab;
+    /* Rent lens by day: the same company blues, lightest to darkest. The lowest step is a blue a reader
+       can see on the white card (it was #e6f5fd, 5 ΔE from the card where the glow tints it, the same
+       fault as the old 5+ yr step), and the step after it keeps 8 L* below it. */
+    --tone-rent-0-fill: #d1eefe; --tone-rent-0-text: #292d3b; --tone-rent-0-edge: #5a89a8;
+    --tone-rent-1-fill: #a1daf7; --tone-rent-1-text: #292d3b; --tone-rent-1-edge: #4a84ab;
     --tone-rent-2-fill: #5cc3f2; --tone-rent-2-text: #04202e; --tone-rent-2-edge: #2a79a8;
     --tone-rent-3-fill: #2491dd; --tone-rent-3-text: #04182a; --tone-rent-3-edge: #17629c;
     --tone-rent-4-fill: #284058; --tone-rent-4-text: #ffffff; --tone-rent-4-edge: #16293c;

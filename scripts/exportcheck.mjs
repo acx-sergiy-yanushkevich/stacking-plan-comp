@@ -99,7 +99,7 @@ const measure = (page) =>
     let plan = null;
     if (!onScreen) {
       let answer = null;
-      window.dispatchEvent(new CustomEvent('sp:plan-svg', { detail: { provide: (p) => (answer = p) } }));
+      window.__spPlanSvg?.emit({ provide: (p) => (answer = p) });
       if (!answer) return { error: 'no plan on screen and nothing answered the request for one' };
       plan = await answer;
     }

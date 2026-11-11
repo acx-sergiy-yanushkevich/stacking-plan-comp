@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../../data/mock/property';
 import { deriveFloors } from '../../domain/derive';
-import { toneFor } from '../../domain/lenses';
-import { accentTone, dominantTone, floorAlso, floorColorExpression, guardedFilter, inflatePolygon, mixHex, normalizeHex, resolveToneHex, toneColorExpression } from './mapStyle';
+import { toneFor, toneLabel, type LensId } from '../../domain/lenses';
+import { safeFloors } from '../../domain/safe';
+import { askingSegments, expirySpan, lensFact } from '../building/floorFact';
+import { dominantTone, floorAlso, floorColorExpression, guardedFilter, inflatePolygon, mixHex, normalizeHex, resolveToneHex, swatchTones, toneColorExpression } from './mapStyle';
 
 describe('dominantTone', () => {
   const floors = deriveFloors(property, TODAY, TODAY);
@@ -87,12 +89,100 @@ describe('what the map floor list adds to a floor\'s label', () => {
   });
 
   it('gives the swatch a second colour for a holdover, month-to-month or soon-expiring lease, never in prospect-safe mode', () => {
-    const tone = (id: string, lens: 'status' | 'expiry' = 'status', safe = false) => accentTone(floor(id), lens, safe);
+    const tone = (id: string, lens: 'status' | 'expiry' = 'status', safe = false) => swatchTones(floor(id), lens, safe).accent;
     expect(tone('F2')).toBe('risk');
     expect(tone('F1')).toBe('expiring');
     expect(tone('F10')).toBeNull();
     expect(tone('F2', 'expiry')).toBe('risk');
-    for (const f of floors) for (const lens of ['status', 'expiry'] as const) expect(accentTone(f, lens, true), `${f.floor.name}, ${lens}`).toBeNull();
+    for (const f of safeFloors(floors, true)) for (const lens of ['status', 'expiry'] as const) expect(swatchTones(f, lens, true).accent, `${f.floor.name}, ${lens}`).toBeNull();
+  });
+});
+
+/**
+ * Round 16: on the expiration lens the swatch of a row showed the colour of most of the floor while the
+ * words beside it named the soonest expiry (Floor 5: a "1–2 yr" swatch beside "expires Apr '27"). The
+ * swatch now shows the fact the words name, in every lens; the 3D floors keep each suite's own colour.
+ */
+describe('the swatch of a row in the map floor list and the words beside it say the same thing', () => {
+  const floors = deriveFloors(property, TODAY, TODAY);
+  const floor = (id: string) => floors.find((f) => f.floor.id === id)!;
+  const months = (iso: string) => (Number(iso.slice(0, 4)) - Number(TODAY.slice(0, 4))) * 12 + Number(iso.slice(5, 7)) - Number(TODAY.slice(5, 7)) - (Number(iso.slice(8, 10)) < Number(TODAY.slice(8, 10)) ? 1 : 0);
+  /** The legend step a number of months falls in, in the legend's words. */
+  const step = (m: number) => (m < 6 ? '< 6 mo' : m < 12 ? '6–12 mo' : m < 24 ? '1–2 yr' : m < 36 ? '2–3 yr' : m < 60 ? '3–5 yr' : '5+ yr');
+
+  it('expiration: the swatch is the legend step of the first date the label gives', () => {
+    for (const f of floors) {
+      const span = expirySpan(f);
+      const { tone, accent } = swatchTones(f, 'expiry', false);
+      const words = lensFact(f, 'expiry', false);
+      if (span) expect(toneLabel(tone, 'expiry', false), `${f.floor.name}: "${words}"`).toBe(step(months(span.first)));
+      else expect(tone, f.floor.name).toBe(dominantTone(f, 'expiry', false));
+      // The second colour is the at-risk tone exactly where the words say holdover or month-to-month.
+      expect(accent === 'risk' || tone === 'risk', `${f.floor.name}: "${words}"`).toBe(/holdover|month-to-month/.test(words));
+    }
+    // The two rows the judge named: both expire within 6 months first, and most of each floor is a later step.
+    expect(toneLabel(swatchTones(floor('F5'), 'expiry', false).tone, 'expiry', false)).toBe('< 6 mo');
+    expect(toneLabel(dominantTone(floor('F5'), 'expiry', false), 'expiry', false)).toBe('1–2 yr');
+    expect(toneLabel(swatchTones(floor('F1'), 'expiry', false).tone, 'expiry', false)).toBe('< 6 mo');
+    expect(toneLabel(dominantTone(floor('F1'), 'expiry', false), 'expiry', false)).toBe('2–3 yr');
+    // A floor with one term keeps the colour of that term, which is the colour of all its leased space.
+    expect(swatchTones(floor('F10'), 'expiry', false)).toEqual({ tone: 'exp-4', accent: null });
+    expect(swatchTones(floor('F3'), 'expiry', false)).toEqual({ tone: 'exp-3', accent: 'risk' });
+  });
+
+  it('deals: the swatch is the stage the label names, the furthest any live deal has reached', () => {
+    let named = 0;
+    for (const f of floors) {
+      const words = lensFact(f, 'deals', false);
+      const { tone, accent } = swatchTones(f, 'deals', false);
+      expect(accent, f.floor.name).toBeNull();
+      if (!words) {
+        expect(tone, f.floor.name).toBe(dominantTone(f, 'deals', false));
+        continue;
+      }
+      named += 1;
+      expect(toneLabel(tone, 'deals', false).toLowerCase(), `${f.floor.name}: "${words}"`).toBe(words.split(' · ').at(-1)!.toLowerCase());
+    }
+    expect(named).toBeGreaterThanOrEqual(4);
+  });
+
+  it('rent: the swatch is the band of the rent the label gives, asking where there is space on offer', () => {
+    const band = (tone: string) => toneLabel(tone as never, 'rent', false);
+    // Floor 12: space asked at $38–$40 beside a lease at $36. The label gives the asking rent, and so does the swatch.
+    expect(lensFact(floor('F12'), 'rent', false)).toBe('asking $38–$40/SF/yr FSG');
+    expect(band(swatchTones(floor('F12'), 'rent', false).tone)).toBe('$38+');
+    // Floor 8: most of the floor is leased at $34, the space on offer asks $31–$33.
+    expect(band(dominantTone(floor('F8'), 'rent', false))).toBe('$34–37.99');
+    expect(band(swatchTones(floor('F8'), 'rent', false).tone)).toBe('$31–33.99');
+    for (const f of floors) {
+      const asking = askingSegments(f, false);
+      const { tone } = swatchTones(f, 'rent', false);
+      if (asking.length > 0) expect(asking.map((sg) => toneFor(sg, 'rent', false)), f.floor.name).toContain(tone);
+      // A floor that gives a rent in place is never drawn as "Confidential" or "No rent on record".
+      else if (lensFact(f, 'rent', false)) expect(['confidential', 'muted', 'empty'], f.floor.name).not.toContain(tone);
+    }
+    // A prospect: the asking band where there is space, and the withheld tone elsewhere, as on the map.
+    const prospect = safeFloors(floors, true);
+    for (const f of prospect) {
+      const { tone, accent } = swatchTones(f, 'rent', true);
+      expect(accent).toBeNull();
+      if (askingSegments(f, true).length === 0) expect(tone, f.floor.name).toBe(dominantTone(f, 'rent', true));
+    }
+  });
+
+  it('status: the swatch is the state of most of the floor, and its second colour is the risk the label names', () => {
+    for (const f of floors) {
+      const words = lensFact(f, 'status', false);
+      const { tone, accent } = swatchTones(f, 'status', false);
+      expect(tone, f.floor.name).toBe(dominantTone(f, 'status', false));
+      if (/holdover|month-to-month/.test(words)) expect(accent === 'risk' || tone === 'risk', f.floor.name).toBe(true);
+      else if (/expires < 12 mo/.test(words)) expect(accent === 'expiring' || tone === 'expiring', f.floor.name).toBe(true);
+      else expect(accent, f.floor.name).toBeNull();
+    }
+  });
+
+  it('is the same function for every lens a broker or a prospect can open', () => {
+    for (const safe of [false, true]) for (const lens of ['status', 'expiry', 'deals', 'rent'] as LensId[]) for (const f of safeFloors(floors, safe)) expect(swatchTones(f, lens, safe).tone, `${f.floor.name} ${lens}`).toBeTruthy();
   });
 });
 

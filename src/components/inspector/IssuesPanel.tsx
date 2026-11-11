@@ -6,7 +6,7 @@ import { openFloor, selectSegment, type Patch, type RecordAction } from '../plan
 import { focusSegment, setReturnMode } from '../../state/focusStore';
 import { useRecordAction } from './Actions';
 import { canShowIssues } from '../../domain/safe';
-import { Section } from './parts';
+import { Section, wholeDates } from './parts';
 
 export interface IssuesPanelProps {
   model: PlanModel;
@@ -89,8 +89,8 @@ export function IssuesPanel({ model, patch }: IssuesPanelProps) {
                 <li key={i.id} className={`sp-ins__issue sp-ins__issue--${i.severity}`}>
                   <Icon name={g.icon} size={16} label={g.severity === 'error' ? 'Error' : g.severity === 'warning' ? 'Warning' : 'Info'} />
                   <div className="sp-ins__issue-body">
-                    <div className="sp-ins__issue-title">{i.title}</div>
-                    <div className="sp-ins__issue-detail">{i.detail}</div>
+                    <div className="sp-ins__issue-title">{wholeDates(i.title)}</div>
+                    <div className="sp-ins__issue-detail">{wholeDates(i.detail)}</div>
                     <div className="sp-ins__issue-actions">
                       <Button size="sm" iconRight="external" onClick={() => run(fixAction(i.fix), i.recordLabel)}>
                         {i.fix}

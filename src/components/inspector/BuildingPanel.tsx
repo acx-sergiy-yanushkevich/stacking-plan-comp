@@ -11,7 +11,7 @@ import { canShowActivity, canShowDeals, canShowInPlaceRent, canShowIssues, canSh
 import { Button, Chip, Icon } from '../ui';
 import { selectSegment, toggleBucket, type Patch } from '../plan/actions';
 import { RolloverChart } from './RolloverChart';
-import { Section, StageChip } from './parts';
+import { Section, StageChip, wholeDates } from './parts';
 
 export interface BuildingPanelProps {
   model: PlanModel;
@@ -112,7 +112,7 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
             showRisk={canShowTenantRisk(safe)}
           />
           <p className="sp-ins__note">
-            Lease SF ending in rolling 12-month periods from {fmtDate(asOf)}; “{tail.label}” collects everything later. Click a bar to highlight those leases in the plan.
+            Lease SF ending in rolling 12-month periods from {wholeDates(fmtDate(asOf))}; “{tail.label}” collects everything later. Click a bar to highlight those leases in the plan.
           </p>
           {roll.overAllocated.length > 0 && canShowIssues(safe) && (
             <p className="sp-ins__note sp-ins__warn">

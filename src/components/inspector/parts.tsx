@@ -4,6 +4,12 @@ import { fmtDate } from '../../domain/dates';
 import { sf } from '../../domain/format';
 import { stageRank } from '../../domain/lenses';
 
+/**
+ * Running text with its dates kept whole: "Nov 9, 2026" does not break after the comma, so a line of a
+ * note never ends on a date's comma with the year alone on the next line.
+ */
+export const wholeDates = (text: string): string => text.replace(/\b([A-Z][a-z]{2}) (\d{1,2}), (\d{4})\b/g, '$1\u00a0$2,\u00a0$3');
+
 /** Section with an 11 px uppercase label and an optional right-hand control. */
 export function Section({ title, aside, children, className = '' }: { title: string; aside?: ReactNode; children: ReactNode; className?: string }) {
   return (

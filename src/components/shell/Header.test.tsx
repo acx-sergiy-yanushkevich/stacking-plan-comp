@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
+import { NO_HOST, setHost } from '../../lib/host';
 import { renderToString } from 'react-dom/server';
 import { property, TODAY } from '../../data/mock/property';
 import { deriveFloors } from '../../domain/derive';
@@ -133,5 +134,45 @@ describe('Header palette control', () => {
     expect(render('?skin=aurora').html).toContain('sp-header__look');
     expect(palette('?skin=classic&palette=vice')).toBeNull();
     expect(render('?skin=classic').html).not.toContain('sp-header__look');
+  });
+});
+
+describe('Header on a phone: the palette and the theme are a menu, not a row of their own', () => {
+  /** Render with the media queries of a window `width` px wide. */
+  const at = (width: number, query = '') => {
+    const matches = (q: string) => (/max-width: (\d+)px/.test(q) ? width <= Number(/max-width: (\d+)px/.exec(q)![1]) : false);
+    const before = setHost({ ...NO_HOST, media: (q) => ({ matches: () => matches(q), onChange: () => () => {} }) });
+    try {
+      return render(query).html;
+    } finally {
+      setHost(before);
+    }
+  };
+
+  it('760 px and under: one menu button beside Export, and no look controls in the header', () => {
+    for (const width of [320, 390, 760]) {
+      const html = at(width);
+      expect(html, `${width}`).not.toContain('class="sp-header__look"');
+      expect(html, `${width}`).not.toContain('aria-label="Colour palette"');
+      const menu = /<button[^>]*aria-label="Colours and theme"[^>]*>/.exec(html)?.[0] ?? '';
+      expect(menu, `${width}`).toContain('aria-haspopup="menu"');
+      // It follows Export: the same row of controls.
+      expect(html.indexOf('aria-label="Colours and theme"')).toBeGreaterThan(html.indexOf('>Export<'));
+    }
+  });
+
+  it('wider than 760 px: the palette and the theme button stand in the header as before, and there is no menu button', () => {
+    for (const width of [761, 1024, 1440]) {
+      const html = at(width);
+      expect(html, `${width}`).toContain('class="sp-header__look"');
+      expect(html, `${width}`).toContain('aria-label="Colour palette"');
+      expect(html, `${width}`).toMatch(/aria-label="Switch to (light|dark) theme"/);
+      expect(html, `${width}`).not.toContain('aria-label="Colours and theme"');
+    }
+  });
+
+  it('the embedded skin has neither: its host page sets the theme', () => {
+    expect(at(390, '?skin=classic')).not.toContain('aria-label="Colours and theme"');
+    expect(at(1440, '?skin=classic')).not.toContain('class="sp-header__look"');
   });
 });

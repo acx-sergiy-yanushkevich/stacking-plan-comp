@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { clearlyApart, describePalette, expiryStepFaults, expirySteps, hue, loadPalette } from './paletteChecks';
+import { clearlyApart, describePalette, expiryStepFaults, expirySteps, hue, lightness, loadPalette, rampCardFaults, tokens } from './paletteChecks';
 
 /**
  * The Vice City palette, checked against the card colours painted behind the plan (sampled from the
@@ -51,5 +51,24 @@ describe('Vice palette, day: the expiration lens beside the pink of Holdover / M
       expect(Math.min(Math.abs(hue(steps[i]) - pink), 360 - Math.abs(hue(steps[i]) - pink)), `exp-${i} from pink`).toBeGreaterThanOrEqual(60);
     }
     for (const i of [0, 1, 2]) expect(hue(steps[i]), `exp-${i} stays warm`).toBeLessThanOrEqual(45);
+  });
+});
+
+describe('Vice palette, day: the pale end of a ramp is a fill a reader can see on the card', () => {
+  const cards = vice.dayCards;
+  const fill = (tone: string) => vice.day.get(`--tone-${tone}-fill`)!;
+
+  it('has teeth: the 5+ yr and the lowest rent fills they replaced were 3.5 and 3.8 ΔE from the card under the cyan glow', () => {
+    const was = (name: string, hex: string) => rampCardFaults(tokens([...vice.day].map(([k, v]) => `${k}: ${k === name ? hex : v};`).join(' ')), cards).join('\n');
+    expect(was('--tone-exp-5-fill', '#e0eef5')).toContain('exp-5 #e0eef5 is 3.5 ΔE from the card #e6f5f7');
+    expect(was('--tone-rent-0-fill', '#e3f1fa')).toContain('rent-0 #e3f1fa is 3.8 ΔE from the card #e6f5f7');
+    expect(rampCardFaults(vice.day, cards)).toEqual([]);
+    expect(rampCardFaults(vice.night, vice.nightCards)).toEqual([]);
+  });
+
+  it('keeps the steps beside them apart: 5+ yr 9 L* above 3–5 yr, and the two lowest rent steps 8 L* apart', () => {
+    expect(lightness(fill('exp-5')) - lightness(fill('exp-4'))).toBeGreaterThanOrEqual(9);
+    expect(lightness(fill('rent-0')) - lightness(fill('rent-1'))).toBeGreaterThanOrEqual(8);
+    expect(lightness(fill('rent-1')) - lightness(fill('rent-2'))).toBeGreaterThanOrEqual(7.5);
   });
 });

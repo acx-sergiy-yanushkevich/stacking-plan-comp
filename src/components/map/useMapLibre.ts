@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { Map as MapLibreMap } from 'maplibre-gl';
 import { CAMERA, STYLE_DARK, STYLE_LIGHT } from './mapStyle';
+import { createElement, expose } from '../../lib/host';
 
 export type MapStatus = 'loading' | 'ready' | 'failed';
 
@@ -16,8 +17,8 @@ export interface UseMapLibreOptions {
 /** WebGL 2 or 1 on a scratch canvas; MapLibre needs one of them. */
 export function hasWebGL(): boolean {
   try {
-    const c = document.createElement('canvas');
-    return !!(c.getContext('webgl2') ?? c.getContext('webgl'));
+    const c = createElement('canvas');
+    return !!c && !!(c.getContext('webgl2') ?? c.getContext('webgl'));
   } catch {
     return false;
   }
@@ -75,7 +76,7 @@ export function useMapLibre(containerRef: RefObject<HTMLDivElement | null>, opts
       if (!m.hasImage(e.id)) m.addImage(e.id, { width: 1, height: 1, data: new Uint8Array(4) });
     });
     // Exposed for the verification scripts (read-only inspection of layers and paint).
-    (window as unknown as { __spMap?: MapLibreMap }).__spMap = m;
+    expose('__spMap', m);
     let settled = false;
     const fail = () => {
       if (settled) return;
