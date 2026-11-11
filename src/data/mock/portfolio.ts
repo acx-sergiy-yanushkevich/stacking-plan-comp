@@ -20,8 +20,11 @@ export interface PortfolioEntry extends MiniStackDrawing {
   city: string;
 }
 
-/** The live building's icon: the brand cyan, one suite open on the second floor down, like the Stax mark. */
-export const LIVE_STACK: MiniStackDrawing = { floors: [[1], [0.62, 0.38], [0.36, 0.64], [1]], open: [1, 1], tone: '#00aff0' };
+/**
+ * The live building's icon. It is a building's icon like the others, so it is not the Stax mark: its own
+ * layout of suites and the Ascendix deep blue, never the mark's cyan and floors (portfolio.test.ts).
+ */
+export const LIVE_STACK: MiniStackDrawing = { floors: [[0.4, 0.6], [1], [0.6, 0.4], [0.5, 0.5]], open: [2, 1], tone: '#1a6fb0' };
 
 export const PORTFOLIO: ReadonlyArray<PortfolioEntry> = [
   { id: 'P002', name: 'Legacy West Tower II', city: 'Plano, TX', floors: [[0.5, 0.5], [1], [0.7, 0.3], [1]], open: [0, 1], tone: '#6366f1' },
