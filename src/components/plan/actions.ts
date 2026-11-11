@@ -38,6 +38,13 @@ export const backFromFloor = (patch: Patch, floorId: string | null) => {
   if (floorId) refocusFloorTrigger(floorId);
 };
 
+/**
+ * Open the Area panel (demographics, transit and amenities around the building), from the toolbar in any
+ * view or from the Building panel's preview. It is a tool panel: a selection and the finder's and
+ * worklist's filters close.
+ */
+export const openArea = (patch: Patch) => patch({ mode: 'area', select: null, floor: null, req: null, max: null, by: null, inquiry: null, window: null });
+
 /** Toggle a rollover bucket filter (0 = next 12 months). */
 export const toggleBucket = (patch: Patch, current: number | null, key: number) => patch({ bucket: current === key ? null : key, select: null });
 

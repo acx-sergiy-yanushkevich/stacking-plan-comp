@@ -39,6 +39,8 @@ export const STATES = [
   ['30-floor-summary', '?view=stack&floor=F8'],
   ['31-prospect-safe-block', '?view=stack&safe=1&select=L13-U1'],
   ['32-timeline-safe', '?view=timeline&safe=1'],
+  ['46-area-panel', '?view=stack&mode=area'],
+  ['47-location-brief', '?view=stack&mode=brief'],
 ];
 
 const browser = await chromium.launch({ channel: 'chrome' });
@@ -61,11 +63,12 @@ for (const [name, qs] of [
   ['24-mobile-block', '?view=stack&select=A02'],
   ['25-mobile-timeline', '?view=timeline'],
   ['25b-mobile-map', '?view=map'],
+  ['48-mobile-brief', '?view=stack&mode=brief'],
 ]) {
   await mobile.goto(base + qs, { waitUntil: 'networkidle' });
   await mobile.waitForTimeout(qs.includes('view=map') ? 2500 : 350);
   // A selected block opens the bottom sheet: capture the viewport a phone user sees, not the full page.
-  await mobile.screenshot({ path: `${out}/${name}.png`, fullPage: !qs.includes('view=map') && !qs.includes('select=') });
+  await mobile.screenshot({ path: `${out}/${name}.png`, fullPage: !qs.includes('view=map') && !qs.includes('select=') && !qs.includes('mode=') });
 }
 const dark = await browser.newPage({ viewport: { width: 1440, height: 1100 }, colorScheme: 'dark', locale: 'en-US', reducedMotion: 'reduce' });
 hook(dark, 'dark');

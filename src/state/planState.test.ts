@@ -106,6 +106,15 @@ describe('the prospect-safe boundary in the state layer', () => {
     expect(parseState('?safe=1&mode=issues', TODAY).mode).toBe('building');
     // The finder, a selection and the area panel are a prospect's own business: kept.
     expect(parseState('?safe=1&req=12000&select=A02&mode=area', TODAY)).toMatchObject({ req: 12000, select: 'A02', mode: 'area' });
+    // So is the location brief: it holds no tenant data.
+    expect(parseState('?safe=1&mode=brief', TODAY).mode).toBe('brief');
+  });
+
+  it('a link can open the location brief, and keeps it when written back', () => {
+    const s = parseState('?view=stack&mode=brief', TODAY);
+    expect(s.mode).toBe('brief');
+    expect(deriveMode(s)).toBe('brief');
+    expect(serializeState(s, TODAY)).toContain('mode=brief');
   });
 
   it('turning the mode on drops a search in progress, the worklist and the highlight in the same change', () => {

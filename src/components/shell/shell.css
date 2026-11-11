@@ -3,6 +3,12 @@
 .sp-main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: var(--sp-space-3); align-items: start; }
 .sp-main--wide { grid-template-columns: minmax(0, 1fr); }
 .sp-stage { min-width: 0; }
+/* The Area panel widened to the full page (the location brief): the plan is put away, not unmounted, so
+   it comes back as it was; the panel takes the whole row and the height its content needs. */
+.sp-main--panel-wide { grid-template-columns: minmax(0, 1fr); }
+.sp-main--panel-wide > .sp-stage { display: none; }
+.sp-main--panel-wide > .sp-inspector { position: static; max-height: none; }
+.sp-main--panel-wide .sp-ins__body { overflow: visible; -webkit-mask-image: none; mask-image: none; padding-bottom: var(--sp-space-4); }
 .sp-inspector { position: sticky; top: var(--sp-space-3); max-height: calc(100vh - 2 * var(--sp-space-3)); display: flex; flex-direction: column; overflow: hidden; }
 @media (max-width: 1099px) { .sp-main { grid-template-columns: minmax(0, 1fr); } .sp-inspector { display: none; } }
 @media (max-width: 760px) { .sp-app { padding: var(--sp-space-2); gap: var(--sp-space-2); } .sp-app:not([data-mode='building']) { padding-bottom: 50vh; } }
@@ -173,21 +179,31 @@
   :root[data-skin] .sp-header__title h1 { font-size: 16px; }
   :root[data-skin] .sp-header__property { font-size: var(--sp-text-11); }
   .sp-header__title { gap: 2px 6px; }
-  /* The controls flow as the header's own items: date and mode on one row; issues, export and the colours menu on the next. */
+  /* The controls flow as the header's own items, on the row under the title (two rows from 421 to 760 px). */
   .sp-header__actions { display: contents; }
-  .sp-header .sp-btn { height: 28px; font-size: var(--sp-text-12); padding: 0 9px; gap: 5px; }
-  .sp-header .sp-btn--icon { padding: 0; }
+  .sp-header .sp-btn, .sp-topbar .sp-btn { height: 28px; font-size: var(--sp-text-12); padding: 0 9px; gap: 5px; }
+  .sp-header .sp-btn--icon, .sp-topbar .sp-btn--icon { padding: 0; }
   .sp-toolbar { padding: 5px 8px; gap: 5px 6px; }
   :root[data-skin] .sp-toolbar .sp-segmented { padding: 2px; }
   .sp-toolbar__lens-select { flex: 1 1 150px; min-width: 0; }
   .sp-toolbar__lens-select .sp-field, .sp-toolbar__lens-select .sp-select { width: 100%; }
   .sp-toolbar__find { gap: 5px; }
 }
+/* A phone of 420 px or less: one row of controls (Header.tsx makes each one compact). */
+@media (max-width: 420px) {
+  .sp-header .sp-btn, .sp-topbar .sp-btn { padding: 0 8px; }
+  .sp-header .sp-switch, .sp-topbar .sp-switch { gap: 6px; }
+}
+/* Under 360 px (a 320 px phone) Export is its icon alone; the word is still its accessible name. */
+@media (max-width: 359px) {
+  .sp-header .sp-btn:has(.sp-header__export-label), .sp-topbar .sp-btn:has(.sp-header__export-label) { min-width: 40px; }
+  .sp-header__export-label { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
 /* Touch: 40 px rows in the phone header and 36 px tabs (the toolbar's buttons keep 44), all well over the 24 px minimum. */
 @media (max-width: 760px) and (pointer: coarse) {
-  .sp-header .sp-btn { min-height: 40px; }
-  .sp-header .sp-btn--icon { min-width: 40px; }
-  .sp-header .sp-switch { min-height: 40px; }
+  .sp-header .sp-btn, .sp-topbar .sp-btn { min-height: 40px; }
+  .sp-header .sp-btn--icon, .sp-topbar .sp-btn--icon { min-width: 40px; }
+  .sp-header .sp-switch, .sp-topbar .sp-switch { min-height: 40px; }
   .sp-toolbar .sp-segmented__opt { min-height: 36px; }
 }
 

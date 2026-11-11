@@ -1,6 +1,6 @@
 import type { Floor, ISODate, Property } from './types';
 import { addMonths, startOfMonth, yearOf } from './dates';
-import { isLeaseKind, leaseEnd, type FloorView, type SegmentKind } from './derive';
+import { isLeaseKind, leaseEnd, type FloorView, type Segment, type SegmentKind } from './derive';
 
 export interface TimelineBar {
   key: string;
@@ -18,6 +18,15 @@ export interface TimelineBar {
    * as-of date) and must never be printed as dates of the lease.
    */
   datesWithheld?: boolean;
+  /**
+   * A lease that ended before the as-of date (key `tl-hist-…`), drawn as history. The plan has no
+   * segment for it any more, and the suite may be on offer again; the bar is drawn from the lease
+   * itself, never from whatever occupies the suite now, which would give a past term today's asking
+   * rent, live deals and colour. `ended` is the lease's own segment as it stands at the as-of date
+   * (vacated), `leaseId` its record.
+   */
+  leaseId?: string;
+  ended?: Segment;
 }
 
 export interface TimelineRow {
@@ -51,7 +60,7 @@ export function timelineModel(p: Property, floors: FloorView[], asOf: ISODate, t
       const segs = views.get(floor.id)?.segments ?? [];
       const bars = segs.flatMap((s) => barFor(s, asOf));
       // History: leases on this floor that ended before the as-of date are no longer segments,
-      // but their term still happened. Draw them as ended bars on whatever occupies the suite now.
+      // but their term still happened. Each is drawn as the vacated lease it is, from its own record.
       // A prospect is shown no lease's end, an ended one included.
       const horizon = addMonths(today, -12);
       for (const l of safe ? [] : p.leases) {
@@ -59,9 +68,8 @@ export function timelineModel(p: Property, floors: FloorView[], asOf: ISODate, t
         if (!end || end >= asOf || end < horizon) continue;
         for (const u of l.units) {
           if (u.floorId !== floor.id || segs.some((s) => s.key === u.id)) continue;
-          const host = segs.find((s) => s.suite === u.suite) ?? segs[0];
-          if (!host) continue;
-          bars.push({ key: `tl-hist-${u.id}`, segKey: host.key, label: l.tenant, start: l.commencement, end, kind: 'projected', sublease: false, committed: false });
+          const ended: Segment = { key: u.id, floorId: floor.id, kind: 'projected', size: u.size, order: u.order, suite: u.suite, lease: l, unit: u, endDate: end, monthsToExpiry: null };
+          bars.push({ key: `tl-hist-${u.id}`, segKey: u.id, label: l.tenant, start: l.commencement, end, kind: 'projected', sublease: false, committed: false, leaseId: l.id, ended });
         }
       }
       return { floor, bars };
@@ -76,6 +84,16 @@ export function timelineModel(p: Property, floors: FloorView[], asOf: ISODate, t
 
   return { start, end: addMonths(asOf, 120), rows };
 }
+
+/** The segment a bar describes: an ended lease's own, otherwise the plan's segment it was drawn from. */
+export const barSegment = (bar: TimelineBar, segIndex: Map<string, Segment>): Segment | undefined => bar.ended ?? segIndex.get(bar.segKey);
+
+/**
+ * What selecting a bar selects: its segment, or nothing for an ended lease. The selection is a block on
+ * the plan as of the as-of date, and an ended lease has none; selecting the suite's current occupant
+ * instead would open an availability from a bar that names a past tenant.
+ */
+export const selectionKey = (bar: TimelineBar): string | null => (bar.ended ? null : bar.segKey);
 
 /** Placeholder start of a bar that runs in from before the axis (replaced once the axis is known). */
 const OPEN_START = '';

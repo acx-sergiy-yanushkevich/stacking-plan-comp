@@ -1,6 +1,6 @@
-# Judge brief: Stacking Plan v2 council
+# Judge brief: Stax council
 
-You are one of four independent judges scoring a from-scratch rebuild of the AscendixRE "Stacking Plan". Be rigorous and skeptical: the target is 95/100 and it must be earned. **This is a read-only review: do not modify, create or delete any file in the repository, and do not run any build that writes inside it.**
+You are one of four independent judges scoring the Stax prototype for AscendixRE. Be rigorous and skeptical: the target is 95/100 and it must be earned. **This is a read-only review: do not modify, create or delete any file in the repository, and do not run any build that writes inside it.**
 
 Repo root: the root of this repository (if the path contains a space, quote it).
 
@@ -10,37 +10,36 @@ From round 9 the app is judged as a **standalone web app** with its glass skin i
 
 Prospect-safe by design: asking rents and asking prices on availabilities (including the for-sale condo unit) are marketing information and stay visible; the building's own sale listing shows only "Listed for sale" (price, $/RSF, cap rate and broker withheld).
 
-New in round 17 (judge these as part of the product; everything from earlier rounds is still in scope, including the Ascendix company palette as the default, Vice City at `?palette=vice`, the quiet KPI bar above every view, the single floor label shared by the Building view and the Map, and the "Largest block" tag and hover):
-- **Floor labels say what each figure is.** In the rent lens a figure is "asking" (the space on offer) or "in place" (what a tenant pays); a floor with space on offer gives its asking rent, and the tooltip gives both. In the expiration lens every floor with a lease says when its leases expire ("expires Apr '27 – Sep '28"), however far off; holdover and month-to-month are named separately and the next dated expiry is still given. On the Map, a row's swatch and its words describe the same fact.
-- **Map column.** The floor list is only as wide as its labels (372–420 px), the map has the rest, rows are 24 px on low windows so all twelve floors stay on the first screen, and the info card stays on the map's top edge.
-- **Bottom sheet.** Expanded, the sheet is as tall as its content and never covers the selected suite or bar; the selection stays clear at half and full height on phone and tablet.
-- **Prospect-safe.** Every remaining toolbar control keeps its exact position when the mode is switched (the withheld Worklist keeps an invisible, inert slot; lenses a prospect may use come first). The prospect-safe PDF total no longer mentions over-allocated records.
-- **Phone header.** At 760 px and under the palette and theme controls are a "Colours and theme" menu beside Export, so the header is one title and one row of controls.
-- **Also**: the daytime Ascendix "5+ yr" step is a visible fill; separators never end or start a line (they are spaces drawn as dots); the timeline's labels do not collide at any as-of date and leases ended by the as-of date say "vacated"; the search field has the same 2 px focus ring as other controls and its placeholder shortens instead of being cut; the PDF cover keeps tenant names at one size; Stack ArrowDown then Enter opens the block the keyboard moved to.
-- **Host adapter.** All browser access (address, title, root flags and style variables, element lookup, focus, viewport, scrolling, media queries, page events, print, clipboard, file saving, fonts, frames) goes through `src/lib/host.ts`; in-app events use `src/lib/signal.ts`; `src/lib/host.boundary.test.ts` fails if any other file uses `window` or `document`.
+New in round 18 (judge these as part of the product; everything from earlier rounds is still in scope, including the Ascendix company palette as the default, Vice City at `?palette=vice`, the quiet KPI bar above every view, the single floor label shared by the Building view and the Map, the "Largest block" tag and hover, and the round-17 changes: floor labels that say what each figure is, the Map column, the bottom sheet, prospect-safe positions, the phone header and the host adapter):
+- **The area around the building is easy to find.** An internal team review found the area data (demographics, transit, amenities) worth having but hidden behind a Map-only button. The Area button is now in the toolbar in every view, after Find space. The Building panel (the default side panel in Stack, Timeline and Map) opens with "Around the building": the 1-mile population, median household income and nearest transit stop, with "See area details" opening the Area panel.
+- **Area panel as charts.** Population and households by distance; one ring, chosen with a 1 / 3 / 5 mi switch, compared with the US in median household income, bachelor's share, median age and mean commute (a bar for the ring, a tick for the US, both figures and the difference in words); amenities within half a mile as ranked bars; transit stops.
+- **Location brief.** A small toggle beside the panel's Close button (the expand icon, named "Location brief") widens the Area panel to the full page; the plan is put away, not unmounted, and comes back as it was. It is what a broker shows a client or decision maker: four headline figures, "What stands out" (a sentence for each measure at least 10% above or below the US, said as a plain fact, then the top amenities and the transit), ranked amenity bars, every ring beside the US, and the stops. Escape narrows it, a second Escape closes the panel; on a phone or tablet the sheet opens to full height; `?mode=brief` links to it. It holds no tenant data, so prospect-safe mode shows it whole. The US figures are fixed national ACS 5-year 2020–2024 figures in the same measures as the rings (`src/domain/areaBrief.ts`); the demo area figures are sample data and say so.
+- **PDF.** The location brief is the last section of the owner report and of the prospect-safe report (4 and 3 sections).
+- **KPI bar in two groups.** "Color by" switches (Leased, Pipeline) with a dot and underline; "Open" figures (Available, Largest block, Expiring 12 mo, WALT) with an arrow and no pressed state.
+- **Also since round 17**: an ended lease's timeline bar shows the lease itself (vacated tone, its own dates) and selects nothing; the phone header is one title and one row of controls at 420 px and under (Data issues in the "…" menu); the sheet handle can be dragged; floor plates stay legible with the inspector open and Floor 7 shows its 7,000 SF sublease; rent legend shares add to 100%; the prospect-safe search is named for what it finds; everything users read is in American English ("Color by", "Colors and theme"); the product is named Stax.
 
 ## Read first
 
 1. `docs/BRIEF.md`: the product, personas, top 10 jobs, domain rules, and the **scoring rubric** you must use (UI /20, UX /20, Engineering /10).
 2. `docs/DESIGN.md`: what the team intended. Score what was built against the rubric, not against this document, but use it to judge coherence.
 3. `docs/COMPETITORS.md` §4–§7: what competitors do and don't do, for X5.
-4. Reference images of what is being replaced: `docs/reference/legacy-stacking-plan.png` (2015 widget) and `docs/reference/v1-redesign-*.png` (the 2026 prototype that plateaued at UI 17.3).
-5. Screenshots of this round: `docs/shots/<ROUND>/`:
+4. Screenshots of this round: `docs/shots/<ROUND>/`:
    - 00–03: Stack view in the four lenses (status, expiration, deals, rent)
    - 04–05: a selected lease (occupied but marketed for later) and a selected divisible availability, with the inspector
    - 06: data issues · 07: as-of date moved to 2028 with KPI deltas · 08: find 12,000 SF · 09: rollover bucket 1–2 yr highlighted
    - 10: prospect-safe · 11: search "vantage" · 12: 12-month renewal worklist · 13: unaccounted area traced to a lease without units
    - 14: matching an open inquiry · 15: at-risk worklist (holdover and MTM)
    - 16–17: Timeline view (today; 2028 with the expiration lens)
-   - 18–20: Map view with the building extruded floor by floor on OpenStreetMap (status, expiration, Area panel with demographics)
+   - 18–20: Map view with the building extruded floor by floor on OpenStreetMap (status, expiration, Area panel)
    - 21–22: Floor plate drill-in (Floor 6 full-floor tenant; Floor 1 podium with retail, for-sale condo and lobby)
    - 23–25b: phone (390 px): stack, block sheet, timeline, map
    - 26: night palette, expiration lens · 27: dark map · 28: print emulation · 29: multi-floor tenant selected · 30: floor summary · 31–32: prospect-safe with a block selected, prospect-safe timeline
    - 33: Building view, no floor open · 34: Floor 8 open · 35: find 12,000 SF · 38: a suite selected (inspector open) · 39: expiration lens, no floor open
    - 36–37: daytime theme (Building, Stack) · 40: daytime, Floor 3 open · 41: daytime map · 42–43: tablet (1024 px) Building view, alone and with Floor 8 open · 44–45: the Vice City palette (Building, Stack)
-   - `pdf/`: real Chrome PDFs, landscape Letter (owner report, owner report with the expiration lens, prospect-safe report). This is the actual print output.
-6. Code: `src/domain/` (pure TypeScript, tests alongside), `src/model/usePlanModel.ts`, `src/components/**`, `src/styles/tokens.css`, `src/data/mock/property.ts` (the mock building; its edge cases are deliberate: holdover, MTM, committed, sublease, over-allocation, lease without units, lease without floor, confidential lease, for-sale condo, stale record).
-7. Live build: http://localhost:4180/. URL params: `view=building|stack|timeline|map|floor`, `lens=status|expiry|deals|rent`, `asOf=YYYY-MM-DD`, `select=<segKey>` (e.g. `L13-U1`, `A02`, `F2-gap`), `floor=F6`, `safe=1`, `req=12000&max=15000&by=2027-06-01&fit=direct`, `window=risk|90|180|12|24`, `bucket=0..8`, `inquiry=I02`, `q=text`, `mode=building|block|floor|find|worklist|issues|area`, `theme=dark`, `print=1`. You may drive it with Playwright (`node_modules/playwright`, `chromium.launch({ channel: 'chrome' })`); write scratch screenshots to `/tmp`, never into the repo. Run `npm test` if you like (read-only). Do not run `npm run build`.
+   - 46: the Area panel (charts) beside the Stack view · 47: the Area panel widened to the location brief · 48: phone (390 px), the location brief in the full-height sheet
+   - `pdf/`: real Chrome PDFs, landscape Letter (owner report, owner report with the expiration lens, prospect-safe report), each ending with the location brief. This is the actual print output.
+5. Code: `src/domain/` (pure TypeScript, tests alongside), `src/model/usePlanModel.ts`, `src/components/**`, `src/styles/tokens.css`, `src/data/mock/property.ts` (the mock building; its edge cases are deliberate: holdover, MTM, committed, sublease, over-allocation, lease without units, lease without floor, confidential lease, for-sale condo, stale record).
+6. Live build: http://localhost:4180/. URL params: `view=building|stack|timeline|map|floor`, `lens=status|expiry|deals|rent`, `asOf=YYYY-MM-DD`, `select=<segKey>` (e.g. `L13-U1`, `A02`, `F2-gap`), `floor=F6`, `safe=1`, `req=12000&max=15000&by=2027-06-01&fit=direct`, `window=risk|90|180|12|24`, `bucket=0..8`, `inquiry=I02`, `q=text`, `mode=building|block|floor|find|worklist|issues|area|brief`, `theme=dark`, `print=1`. You may drive it with Playwright (`node_modules/playwright`, `chromium.launch({ channel: 'chrome' })`); write scratch screenshots to `/tmp`, never into the repo. Run `npm test` if you like (read-only). Do not run `npm run build`.
 
 ## Return exactly this structure
 

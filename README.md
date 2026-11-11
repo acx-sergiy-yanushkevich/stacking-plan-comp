@@ -1,6 +1,6 @@
-# Stacking Plan v2
+# Stax by Ascendix
 
-An interactive stacking plan that lets a broker see a building's availability, expirations and leasing options in one screen, and share a safe version of it with a prospect.
+Stax is an interactive stacking plan that lets a broker see a building's availability, expirations and leasing options in one screen, and share a safe version of it with a prospect.
 
 Built for the Ascendix Tech Challenge, November 2026. It is a prototype on mock data, not a production application.
 
@@ -16,7 +16,7 @@ A stacking plan draws a building floor by floor, with each suite as wide as its 
 - **Can I trust it?** Is space double-counted, is a lease missing its floor, is a record stale?
 - **Can I show it?** A prospect or buyer should see the availability without seeing who the other tenants are or what they pay.
 
-The existing AscendixRE stacking plan is a picture of the building: one color scheme, several lines of text in every block, no analytics, no way to look ahead in time, and no version that is safe to hand to someone outside the brokerage.
+A typical stacking plan is a picture of the building: one color scheme, several lines of text in every block, no analytics, no way to look ahead in time, and no version that is safe to hand to someone outside the brokerage.
 
 ## The solution
 
@@ -36,7 +36,8 @@ One model of the building, shown four ways, with the answers to the questions ab
 - **Space finder.** Enter a size, a date and direct or sublease; matching blocks light up, including pairs of adjacent floors and near misses. An open inquiry can be matched to space the same way.
 - **Renewal worklist.** Leases at risk or expiring within 90 days, 180 days, 12 or 24 months, with the last touch on each.
 - **Data issues.** Over-allocated floors, unaccounted area, leases without a floor, holdover and month-to-month leases and stale deals are listed and marked on the plan.
-- **Timeline and 3D map.** Every lease as a bar against time; the building extruded floor by floor on a real map with nearby demographics and amenities.
+- **Timeline and 3D map.** Every lease as a bar against time; the building extruded floor by floor on a real map.
+- **The area around the building.** Demographics, amenities and transit as charts from the Area button in every view, compared with the US. One toggle widens the panel to the location brief, a full-width page to show a client or decision maker, which also closes the PDF report.
 
 **For the prospect, tenant or buyer**
 
@@ -56,7 +57,7 @@ It works with a keyboard and a screen reader, and on a phone. It opens in the As
 **AI**
 
 - **Claude Code** with Claude Fable 5.1 and 5.2 and Claude Opus 5.5 wrote the design specification, the code and the tests, working from a written brief.
-- **An AI review council.** After each build, independent AI reviewers scored screenshots and the running app against a fixed UI and UX rubric, and the fixes at least two of them agreed on went into the next round. Rounds 0 to 10 used three reviewers (two Claude Opus 5.5 sessions and Grok 4.7); round 10 averaged 37 out of 40. From round 11 a fourth reviewer, GPT-6.1 Sol, joined. Round 11 was the first to score the Vice City colors and the Building view and averaged about 86 out of 100 (UI, UX and engineering). Round 12 averaged 90.5 and round 13 averaged 93.5, with every reviewer at 90 or above. Round 14, the first in the Ascendix colors, averaged 93.75, round 15 averaged 93.75 and round 16 averaged 93.25. Round 17 averaged 95.25 (Grok 97, GPT-6.1 Sol 96, Opus A 95, Opus B 93), the first round to reach the 95 target with every reviewer above 90. The reports are in `docs/judging/`.
+- **An AI review council.** After each build, independent AI reviewers scored screenshots and the running app against a fixed UI and UX rubric, and the fixes at least two of them agreed on went into the next round. Rounds 0 to 10 used three reviewers (two Claude Opus 5.5 sessions and Grok 4.7); round 10 averaged 37 out of 40. From round 11 a fourth reviewer, GPT-6.1 Sol, joined. Round 11 was the first to score the Vice City colors and the Building view and averaged about 86 out of 100 (UI, UX and engineering). Round 12 averaged 90.5 and round 13 averaged 93.5, with every reviewer at 90 or above. Round 14, the first in the Ascendix colors, averaged 93.75, round 15 averaged 93.75 and round 16 averaged 93.25. Round 17 averaged 95.25 (Grok 97, GPT-6.1 Sol 96, Opus A 95, Opus B 93), the first round to reach the 95 target with every reviewer above 90. Round 18, the first to score the Area panel and the location brief, averaged 91.5 (Grok 94, GPT-6.1 Sol 93, Opus A 93, Opus B 86). The reports are in `docs/judging/`.
 - **AI-assisted research** for the competitor analysis in `docs/COMPETITORS.md`, from public vendor pages, help centers and review sites.
 
 **Application**
@@ -75,7 +76,7 @@ It works with a keyboard and a screen reader, and on a phone. It opens in the As
 **Public data**
 
 - OpenStreetMap, through the Overpass API, for the building footprint and nearby amenities
-- US Census Bureau ACS 5-year data for demographics (live mode only)
+- US Census Bureau ACS 5-year data for demographics (live mode only), and the national ACS 5-year 2020–2024 figures the area is compared with (fixed in `src/domain/areaBrief.ts`)
 
 ## Assumptions
 
@@ -105,7 +106,7 @@ It works with a keyboard and a screen reader, and on a phone. It opens in the As
 
 ## Development plan
 
-How this prototype could become a product feature is described in [`docs/PLAN.md`](docs/PLAN.md): the feature inventory by priority, the Salesforce architecture (Lightning Web Components and Apex), the data mapping to AscendixRE objects, external services, phases with estimates, and risks.
+How this prototype could become a product feature is described in [`docs/PLAN.md`](docs/PLAN.md): the feature inventory by priority, the Salesforce architecture (Lightning Web Components and Apex), the data mapping to AscendixRE objects, external services, phases with estimates, and risks. Running it as a hosted app inside an iframe on the Property page instead, with its architecture, sign-in and monthly running cost, is described in [`docs/INFRASTRUCTURE.md`](docs/INFRASTRUCTURE.md).
 
 ## Run it
 
@@ -164,7 +165,7 @@ All state lives in the URL, so every view can be linked to.
 | `window` | `risk`, `90`, `180`, `12`, `24` | Renewal worklist window |
 | `bucket` | `0`, `1`, … | Highlight one 12-month rollover period |
 | `q` | text | Search tenant, suite or prospect |
-| `mode` | `issues`, `area`, … | Inspector panel, when not implied by the above |
+| `mode` | `issues`, `area`, `brief`, … | Inspector panel, when not implied by the above (`brief`: the Area panel widened to the location brief) |
 | `theme` | `light`, `dark` | Theme (default `dark`) |
 | `palette` | `vice` | The Vice City palette instead of the default Ascendix colors |
 | `skin` | `aurora`, `classic` | The original blue glass, or the flat Salesforce Lightning look, instead of either palette |
@@ -196,6 +197,7 @@ docs/           Brief, design spec, development plan, competitor analysis, revie
 | [`docs/BRIEF.md`](docs/BRIEF.md) | Personas, their top jobs, domain rules, the review rubric |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Screen-by-screen design specification |
 | [`docs/PLAN.md`](docs/PLAN.md) | Feature inventory and development plan |
+| [`docs/INFRASTRUCTURE.md`](docs/INFRASTRUCTURE.md) | Iframe deployment: architecture, sign-in, running cost |
 | [`docs/COMPETITORS.md`](docs/COMPETITORS.md) | Competitor analysis |
 | `docs/judging/` | AI reviewer reports for each round |
 | `docs/shots/` | Screenshots of every reviewed state for each round |

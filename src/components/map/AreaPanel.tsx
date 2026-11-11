@@ -1,26 +1,20 @@
-import { useEffect, useState } from 'react';
-import type { DataSource } from '../../data/sources/DataSource';
-import { num, pct, usd0 } from '../../domain/format';
-import type { Area, AreaRing } from '../../domain/types';
+import { useState } from 'react';
+import { compareRing, US_BENCHMARK } from '../../domain/areaBrief';
+import { num } from '../../domain/format';
+import type { Area } from '../../domain/types';
 import type { PlanModel } from '../../model/usePlanModel';
-import type { PlanState } from '../../state/planState';
-import { Chip, Icon } from '../ui';
+import { LocationBrief } from '../area/LocationBrief';
+import { Chip, Icon, Segmented } from '../ui';
+import '../area/area.css';
 import './map.css';
 
 export interface AreaPanelProps {
   model: PlanModel;
-  state: PlanState;
-  dataSource: DataSource;
+  /** The area around the property (App's `useArea`): null while the data source answers. */
+  area: Area | null;
+  /** Widened to the full page (`mode=brief`): the location brief instead of the charts. */
+  expanded?: boolean;
 }
-
-const ROWS: Array<{ label: string; value: (r: AreaRing) => string }> = [
-  { label: 'Population', value: (r) => num(r.population) },
-  { label: 'Households', value: (r) => num(r.households) },
-  { label: 'Median HH income', value: (r) => usd0(r.medianIncome) },
-  { label: 'Median age', value: (r) => r.medianAge.toFixed(1) },
-  { label: "Bachelor's degree", value: (r) => pct(r.bachelorsPct) },
-  { label: 'Mean commute', value: (r) => `${r.meanCommuteMin.toFixed(1)}\u00a0min` },
-];
 
 function Skeleton() {
   return (
@@ -32,36 +26,27 @@ function Skeleton() {
   );
 }
 
+const ringName = (miles: number) => `${miles}\u00a0${miles === 1 ? 'mile' : 'miles'}`;
+
 /**
- * Inspector "Area" mode (DESIGN.md §2.6): demographics in 1/3/5-mile rings, nearby transit,
- * amenity counts, and the source line. Sample figures are flagged until a Census key is given.
+ * Inspector "Area" mode (DESIGN.md §2.6): the area around the building as charts. Population by
+ * distance; one ring compared with the US (a bar for the ring, a tick for the US, both figures in
+ * text); amenities within half a mile; nearby transit. Widened by the panel's Expand toggle, it is the
+ * location brief: the same area as a page to show a client or decision maker. Sample figures are
+ * flagged until a Census key is given.
  */
-export function AreaPanel({ model, state, dataSource }: AreaPanelProps) {
+export function AreaPanel({ model, area, expanded }: AreaPanelProps) {
   const { property } = model;
-  const [area, setArea] = useState<Area | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let alive = true;
-    setLoading(true);
-    dataSource
-      .getArea(property, { censusKey: state.census })
-      .then((a) => {
-        if (!alive) return;
-        setArea(a);
-        setLoading(false);
-      })
-      .catch(() => {
-        if (!alive) return;
-        setArea(property.area);
-        setLoading(false);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [dataSource, property, state.census]);
-
   const rings = area ? [...area.rings].sort((a, b) => a.miles - b.miles) : [];
+  const [miles, setMiles] = useState<number | null>(null);
+  const ring = rings.find((r) => r.miles === miles) ?? rings[0];
+  const mostPeople = Math.max(1, ...rings.map((r) => r.population));
+  const amenities = area ? [...area.amenities].filter((a) => a.count > 0).sort((a, b) => b.count - a.count) : [];
+  const mostAmenity = amenities[0]?.count ?? 1;
+
+  if (expanded) {
+    return <section className="sp-area sp-area--wide" aria-label="Location brief">{area ? <LocationBrief property={property} area={area} /> : <Skeleton />}</section>;
+  }
 
   return (
     <section className="sp-area" aria-label="Area demographics and amenities">
@@ -76,70 +61,105 @@ export function AreaPanel({ model, state, dataSource }: AreaPanelProps) {
         )}
       </header>
 
-      {loading || !area ? (
+      {!area || !ring ? (
         <Skeleton />
       ) : (
         <>
-          {area.sample && <p className="sp-area__sample">{area.source}</p>}
-          <table className="sp-area-table">
-            <caption className="sp-sr-only">Demographics by distance from the property</caption>
-            <thead>
-              <tr>
-                <th scope="col">
-                  <span className="sp-sr-only">Measure</span>
-                </th>
-                {rings.map((r) => (
-                  <th scope="col" key={r.miles}>
-                    {r.miles} mi
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {ROWS.map((row) => (
-                <tr key={row.label}>
-                  <th scope="row">{row.label}</th>
-                  {rings.map((r) => (
-                    <td key={r.miles} className="sp-num">
-                      {row.value(r)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <h3 className="sp-label sp-area__sub">Nearby transit</h3>
-          {area.transit.length === 0 ? (
-            <p className="sp-weak">No stops within half a mile.</p>
-          ) : (
-            <ul className="sp-area-transit">
-              {area.transit.map((t) => (
-                <li key={`${t.name}-${t.distanceMi}`}>
-                  <Icon name={t.type === 'Rail' ? 'train' : 'people'} size={14} label={t.type} />
-                  <span className="sp-area-transit__name">{t.name}</span>
-                  <span className="sp-num sp-weak">{t.distanceMi.toFixed(1)} mi</span>
+          <div>
+            <h3 className="sp-label sp-area__sub">Population by distance</h3>
+            <ul className="sp-brief__bars">
+              {rings.map((r) => (
+                <li key={r.miles} className="sp-brief__bar" title={`${num(r.population)} people and ${num(r.households)} households within ${ringName(r.miles)}`}>
+                  <span className="sp-brief__bar-name">{ringName(r.miles)}</span>
+                  <span className="sp-brief__bar-track" aria-hidden="true">
+                    <span className="sp-brief__bar-fill" style={{ width: `${(r.population / mostPeople) * 100}%` }} />
+                  </span>
+                  <span className="sp-brief__bar-value">{num(r.population)}</span>
+                  <span className="sp-area__households">{num(r.households)} households</span>
                 </li>
               ))}
             </ul>
-          )}
+          </div>
 
-          <h3 className="sp-label sp-area__sub">Amenities within ½ mile</h3>
-          {area.amenities.length === 0 ? (
-            <p className="sp-weak">None recorded.</p>
-          ) : (
-            <div className="sp-area-amenities">
-              {area.amenities.map((a) => (
-                <Chip key={a.category} count={a.count}>
-                  {a.category}
-                </Chip>
-              ))}
+          <div>
+            <div className="sp-area__compare-head">
+              <h3 className="sp-label">Compared with the US</h3>
+              <Segmented aria-label="Distance compared with the US" options={rings.map((r) => ({ id: String(r.miles), label: `${r.miles} mi` }))} value={String(ring.miles)} onChange={(id) => setMiles(Number(id))} />
             </div>
-          )}
+            <p className="sp-area__key">
+              <span>
+                <i className="sp-area__key-bar" aria-hidden="true" />
+                within {ringName(ring.miles)}
+              </span>
+              <span>
+                <i className="sp-area__key-tick" aria-hidden="true" />
+                US
+              </span>
+            </p>
+            <ul className="sp-area-meters">
+              {compareRing(ring).map((c) => {
+                const top = Math.max(c.raw, c.usRaw) * 1.2;
+                return (
+                  <li key={c.measure} className="sp-area-meter" title={`${c.label}: ${c.value} within ${ringName(ring.miles)}, US ${c.us}: ${c.delta}`}>
+                    <div className="sp-area-meter__top">
+                      <span>
+                        {c.label} <b className="sp-num">{c.value}</b>
+                      </span>
+                      <span className="sp-area-meter__us sp-num">US {c.us}</span>
+                    </div>
+                    <div className="sp-area-meter__track" aria-hidden="true">
+                      <span className="sp-area-meter__fill" style={{ width: `${(c.raw / top) * 100}%` }} />
+                      <span className="sp-area-meter__tick" style={{ left: `${(c.usRaw / top) * 100}%` }} />
+                    </div>
+                    <div className="sp-area-meter__delta">{c.delta}</div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="sp-label sp-area__sub">Amenities within ½ mile</h3>
+            {amenities.length === 0 ? (
+              <p className="sp-weak">None recorded.</p>
+            ) : (
+              <ul className="sp-brief__bars">
+                {amenities.map((a) => (
+                  <li key={a.category} className="sp-brief__bar" title={`${a.category}: ${a.count} within half a mile`}>
+                    <span className="sp-brief__bar-name">{a.category}</span>
+                    <span className="sp-brief__bar-track" aria-hidden="true">
+                      <span className="sp-brief__bar-fill" style={{ width: `${(a.count / mostAmenity) * 100}%` }} />
+                    </span>
+                    <span className="sp-brief__bar-value">{num(a.count)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div>
+            <h3 className="sp-label sp-area__sub">Nearby transit</h3>
+            {area.transit.length === 0 ? (
+              <p className="sp-weak">No stops within half a mile.</p>
+            ) : (
+              <ul className="sp-area-transit">
+                {[...area.transit]
+                  .sort((a, b) => a.distanceMi - b.distanceMi)
+                  .map((t) => (
+                    <li key={`${t.name}-${t.distanceMi}`}>
+                      <Icon name={t.type === 'Rail' ? 'train' : 'people'} size={14} label={t.type} />
+                      <span className="sp-area-transit__name">{t.name}</span>
+                      <span className="sp-num sp-weak">{t.distanceMi.toFixed(1)} mi</span>
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </div>
 
           <footer className="sp-area__foot">
             <p>Data: US Census Bureau ACS 5-year · OpenStreetMap</p>
-            {!area.sample && <p className="sp-faint">{area.source}</p>}
+            <p className="sp-faint">{area.source}</p>
+            <p className="sp-faint">{US_BENCHMARK.source}</p>
             {area.sample && (
               <p className="sp-faint">
                 Add <code>?live=1&amp;census=KEY</code> for live figures (free key at{' '}

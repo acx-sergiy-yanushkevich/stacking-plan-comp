@@ -8,7 +8,8 @@ import { canKeepSearch, canShowInquiries, canShowIssues, canShowLeaseTerm, canUs
 
 export type View = 'building' | 'stack' | 'timeline' | 'map' | 'floor';
 export type Lens = 'status' | 'expiry' | 'deals' | 'rent';
-export type InspectorMode = 'building' | 'block' | 'floor' | 'find' | 'worklist' | 'issues' | 'area';
+/** `brief` is the Area panel widened to the full page: the location brief, with the plan out of the way. */
+export type InspectorMode = 'building' | 'block' | 'floor' | 'find' | 'worklist' | 'issues' | 'area' | 'brief';
 export type WindowKey = 'risk' | '90' | '180' | '12' | '24';
 export type Theme = 'light' | 'dark';
 /** A colour palette for the glass skin. `ascendix` (the company colours) is the default. */
@@ -46,7 +47,7 @@ export interface PlanState {
 
 const VIEWS: readonly View[] = ['building', 'stack', 'timeline', 'map', 'floor'];
 const LENSES: readonly Lens[] = ['status', 'expiry', 'deals', 'rent'];
-const MODES: readonly InspectorMode[] = ['building', 'block', 'floor', 'find', 'worklist', 'issues', 'area'];
+const MODES: readonly InspectorMode[] = ['building', 'block', 'floor', 'find', 'worklist', 'issues', 'area', 'brief'];
 const WINDOWS: readonly WindowKey[] = ['risk', '90', '180', '12', '24'];
 const THEMES: readonly Theme[] = ['light', 'dark'];
 export const PALETTES: ReadonlyArray<{ id: Palette; label: string }> = [

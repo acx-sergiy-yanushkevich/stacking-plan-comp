@@ -34,6 +34,10 @@
 .sp-ins__kpi-value { font-size: var(--sp-text-18); font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; }
 .sp-ins__kpi-value small { font-size: var(--sp-text-12); font-weight: 500; color: var(--sp-color-text-weak); }
 .sp-ins__kpi-sub { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-ins__kpis--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* "Around the building" (AreaPreview): static bars while the area loads, the size of a label and a figure. */
+.sp-ins__area-skel { display: block; height: 10px; width: 70%; border-radius: 5px; background: var(--sp-color-card-2); }
+.sp-ins__area-skel--value { height: 18px; width: 85%; margin-top: 4px; }
 
 /* Rows: every list is a <ul> of <button> rows */
 .sp-ins__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }

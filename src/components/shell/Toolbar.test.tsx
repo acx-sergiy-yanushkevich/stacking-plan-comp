@@ -44,7 +44,8 @@ describe('Toolbar with prospect-safe on and off: what stays keeps its place', ()
     it(`${view}: the tool buttons keep their order, and Worklist leaves an empty place behind, last`, () => {
       const normal = tools(render(`?view=${view}`));
       const safe = tools(render(`?view=${view}&safe=1`));
-      expect(normal).toEqual(view === 'map' ? ['Find space', 'Area', 'Worklist'] : ['Find space', 'Worklist']);
+      // Area is offered in every view, not the Map alone: the team review found it too hidden there.
+      expect(normal).toEqual(['Find space', 'Area', 'Worklist']);
       expect(safe).toEqual(normal.map((label) => (label === 'Worklist' ? '(slot)' : label)));
     });
   }
@@ -59,6 +60,23 @@ describe('Toolbar with prospect-safe on and off: what stays keeps its place', ()
     // Nothing in the prospect-safe toolbar reads "Worklist", "Expiration" or "Deals".
     expect(text(html)).not.toMatch(/Worklist|Renewal|Expiration|Deals/);
     expect(html).not.toMatch(/(title|aria-label)="[^"]*(Worklist|Renewal|Expiration|Deals)/);
+  });
+});
+
+describe('Area button', () => {
+  const pressed = (query: string) => /<button[^>]*aria-pressed="(true|false)"[^>]*>(?:(?!<\/button>).)*Area<\/button>/.exec(render(query))?.[1];
+  it('is pressed while the Area panel is open, and while its location brief is open over it', () => {
+    expect(pressed('?view=stack')).toBe('false');
+    expect(pressed('?view=stack&mode=area')).toBe('true');
+    expect(pressed('?view=stack&mode=brief')).toBe('true');
+  });
+});
+
+describe('search field name', () => {
+  const name = (html: string) => /<label for="[^"]*" class="sp-sr-only">([^<]*)<\/label>/.exec(html.slice(html.indexOf('sp-toolbar__search')))?.[1];
+  it('names the search for what it finds: tenants and prospects for the owner, suites and floors for a prospect (round 17)', () => {
+    expect(name(render('?view=stack'))).toBe(SEARCH_HINTS.owner[0]);
+    expect(name(render('?view=stack&safe=1'))).toBe(SEARCH_HINTS.safe[0]);
   });
 });
 

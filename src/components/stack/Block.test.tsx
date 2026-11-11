@@ -251,3 +251,49 @@ describe('Block text on paper: one name size', () => {
     expect(wrapped13).toBe(false);
   });
 });
+
+describe('Block text in print: a narrow lease keeps its term (round 17: the Café and Conner CPA lost "Exp" on the cover)', () => {
+  const nb = ' ';
+  const conner = (name = 'Conner CPA Group') =>
+    text({ tone: 'leased', name, aria: `Floor 7, ${name}`, meta: 'Exp Apr 2028 · 1 yr 5 mo', lensShort: `Apr${nb}'28`, term: `Exp Apr${nb}'28` });
+  const leased = (): Segment => ({ ...seg(), endDate: '2028-04-30', monthsToExpiry: 17 });
+  const inRow = (lines: Array<{ y: number }>) => lines.every((l) => l.y <= 44);
+
+  it('keeps the name on one line at 13 px, running to 4 px from the edge as a fact may, to make room for suite, SF and term', () => {
+    const { lines } = draw(conner(), 128, 48, leased(), true);
+    expect(lines[0]).toMatchObject({ cls: 'name', t: 'Conner CPA Group' });
+    expect(lines.some((l) => l.t === 'Ste 740 · 2,400 SF')).toBe(true);
+    expect(lines.some((l) => l.t === `Exp Apr${nb}'28`)).toBe(true);
+    expect(inRow(lines)).toBe(true);
+  });
+
+  it('else merges suite, SF and term onto one line under a wrapped 13 px name', () => {
+    const { lines } = draw(conner('Conner CPA Group Partners'), 190, 48, leased(), true);
+    expect(lines.filter((l) => l.cls === 'name').map((l) => l.t).join(' ')).toBe('Conner CPA Group Partners');
+    expect(lines.at(-1)!.t).toBe(`Ste 740 · 2,400 SF · Exp Apr${nb}'28`);
+    expect(inRow(lines)).toBe(true);
+  });
+
+  it('else drops the "Ste" prefix, never the suite number, the SF or the term', () => {
+    const { lines } = draw(conner('Conner CPA Group Partners'), 170, 48, leased(), true);
+    expect(lines.filter((l) => l.cls === 'name').map((l) => l.t).join(' ')).toBe('Conner CPA Group Partners');
+    expect(lines.at(-1)!.t).toBe(`740 · 2,400 SF · Exp Apr${nb}'28`);
+    expect(inRow(lines)).toBe(true);
+  });
+
+  it('moves the deal pill to the bottom-right corner when that lets the name stay on one line', () => {
+    const cafe = text({ tone: 'expiring', name: 'Preston Park Café', aria: 'Floor 1, Preston Park Café', sub: 'Ste 100 · 2,400 SF', meta: 'Exp Feb 2027 · 3 mo', lensShort: `Feb${nb}'27`, term: `Exp Feb${nb}'27`, badges: [{ kind: 'deal', text: '1', title: '1 live deal' }] });
+    const { lines, html } = draw(cafe, 140, 48, { ...seg(), suite: '100', endDate: '2027-02-28', monthsToExpiry: 3 }, true);
+    expect(lines[0]).toMatchObject({ cls: 'name', t: 'Preston Park Café' });
+    expect(lines.some((l) => l.t === 'Ste 100 · 2,400 SF')).toBe(true);
+    expect(lines.some((l) => l.t === `Exp Feb${nb}'27`)).toBe(true);
+    expect(html).toContain('class="sp-badge sp-badge--deal" transform="translate(118 26)"');
+  });
+
+  it('changes nothing on screen, nor where the term is already drawn or there is none', () => {
+    for (const w of [128, 170, 190]) expect(draw(conner('Conner CPA Group Partners'), w, 48, leased()).lines.some((l) => l.t.includes(`Exp Apr${nb}'28`)), `${w}`).toBe(false);
+    const wide = conner();
+    expect(draw(wide, 300, 48, leased(), true).lines.map((l) => l.t)).toEqual(draw({ ...wide, term: '' }, 300, 48, leased(), true).lines.map((l) => l.t));
+    expect(draw(text({ term: '' }), 128, 48, seg(), true).lines.map((l) => l.t)).toEqual(draw(text(), 128, 48, seg(), true).lines.map((l) => l.t));
+  });
+});

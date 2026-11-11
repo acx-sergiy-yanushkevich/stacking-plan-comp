@@ -66,9 +66,12 @@ function lightOn(keys: string[]) {
 /**
  * The building's six key figures: one quiet bar above the toolbar, the same element in the same place in
  * every view and every state, so nothing under it moves when the view changes, a floor opens or the
- * inspector comes in. One surface with hairlines between the figures; each figure is a button (the status
- * lens, the space finder, the worklist, the timeline, the deals lens) marked by an underline when it is
- * the one in use.
+ * inspector comes in. The figures do one of two things, and they stand in two groups so the difference
+ * shows before a click:
+ * - "Color by" (Leased, Pipeline): switches. Each colors the plan by its lens (status, deals); the one in
+ *   use has a filled dot and an underline (and `aria-pressed`), as the toolbar's lens marks its own.
+ * - "Open" (Available, Largest block, Expiring 12 mo, WALT): each opens something (the space finder, the
+ *   worklist, the timeline) and carries an arrow. They are never pressed: what they open shows itself.
  *
  * Two figures are made of suites anyone can point to: "Available" and "Largest block". Pointing at one,
  * or focusing it, lights those suites on the plan (the model, the stack, the open floor's plate) through
@@ -79,17 +82,17 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
   // Leased is capped per floor while the parts are recorded SF: name the gap so the context reconciles.
   const overAlloc = k.committed + k.availableSublease - (k.leased - Math.round(k.physical * k.leasable));
   const available = `${num(k.availableDirect)} direct · ${num(k.availableSublease)} sublease`;
-  const kpis: Kpi[] = [
-    {
-      id: 'status',
-      label: 'Leased',
-      value: pct(k.occupancy),
-      note: `${pct(k.physical)} occupied`,
-      detail: `${pct(k.physical)} occupied${k.committed ? ` · ${num(k.committed)} SF signed, not in` : ''}`,
-      delta: d ? { text: `${d.occupancy >= 0 ? '+' : '−'}${Math.abs(d.occupancy * 100).toFixed(1)} pts`, good: d.occupancy >= 0 } : null,
-      active: state.lens === 'status' && state.mode === 'building' && !state.q,
-      title: `Leased share of leasable RSF, including signed leases that have not commenced.${safe ? '' : ` ${num(Math.round(k.physical * k.leasable))} SF occupied + ${num(k.committed)} signed, not in + ${num(k.availableSublease)} sublet vacant${overAlloc > 0 ? ` − ${num(overAlloc)} over-allocated (capped)` : ''} = ${num(k.leased)} SF leased.`} Click for the status lens.`,
-    },
+  const leased: Kpi = {
+    id: 'status',
+    label: 'Leased',
+    value: pct(k.occupancy),
+    note: `${pct(k.physical)} occupied`,
+    detail: `${pct(k.physical)} occupied${k.committed ? ` · ${num(k.committed)} SF signed, not in` : ''}`,
+    delta: d ? { text: `${d.occupancy >= 0 ? '+' : '−'}${Math.abs(d.occupancy * 100).toFixed(1)} pts`, good: d.occupancy >= 0 } : null,
+    active: state.lens === 'status' && state.mode === 'building' && !state.q,
+    title: `Leased share of leasable RSF, including signed leases that have not commenced.${safe ? '' : ` ${num(Math.round(k.physical * k.leasable))} SF occupied + ${num(k.committed)} signed, not in + ${num(k.availableSublease)} sublet vacant${overAlloc > 0 ? ` − ${num(overAlloc)} over-allocated (capped)` : ''} = ${num(k.leased)} SF leased.`} Click to color the plan by status.`,
+  };
+  const opens: Kpi[] = [
     {
       id: 'find',
       label: 'Available',
@@ -98,7 +101,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
       note: available,
       detail: `${available}${k.comingAvailable.sf ? ` · +${num(k.comingAvailable.sf)} ${k.comingAvailable.from ? fmtMonthYearShort(k.comingAvailable.from) : 'later'}` : ''}`,
       delta: d ? { text: sfDelta(d.availableDirect + d.availableSublease), good: d.availableDirect + d.availableSublease <= 0 } : null,
-      active: state.mode === 'find',
+      active: false,
       title: 'Space a tenant could take on the as-of date. Point at it to see it on the plan; click to find space by size.',
       lights: k.availableKeys,
     },
@@ -123,7 +126,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
           note: `${k.leased ? pct(k.expiring12 / k.leased) : '0%'} of leased · ${plural(k.expiring12Leases, 'lease')}`,
           detail: `${k.leased ? pct(k.expiring12 / k.leased) : '0%'} of leased · ${plural(k.expiring12Leases, 'lease')}`,
           delta: d ? { text: sfDelta(d.expiring12), good: d.expiring12 <= 0 } : null,
-          active: state.window === '12' || (state.lens === 'expiry' && state.mode === 'building' && state.bucket === null),
+          active: false,
           title: 'Lease SF ending within 12 months of the as-of date. Click for the expiration lens and the 12-month worklist.',
         }
       : {
@@ -164,74 +167,89 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
           title: 'The weighted average lease term is withheld in prospect-safe mode',
           static: true,
         },
-    safe
-      ? {
-          id: 'deals',
-          label: 'Pipeline',
-          value: 'Withheld',
-          note: 'Deal activity not shown',
-          detail: 'Deal activity is not shown in prospect-safe mode',
-          active: false,
-          title: 'Deal activity is withheld in prospect-safe mode',
-          static: true,
-        }
-      : {
-          id: 'deals',
-          label: 'Pipeline',
-          value: String(k.pipeline.deals),
-          unit: k.pipeline.deals === 1 ? 'deal' : 'deals',
-          note: `${num(k.pipeline.sf)} SF requested`,
-          detail: `${k.pipeline.onVacancy} on vacancies · ${plural(k.pipeline.deals - k.pipeline.onVacancy, 'renewal')} · ${num(k.pipeline.sf)} SF requested`,
-          delta: d ? { text: `${d.pipelineDeals >= 0 ? '+' : ''}${d.pipelineDeals} ${Math.abs(d.pipelineDeals) === 1 ? 'deal' : 'deals'}`, good: d.pipelineDeals >= 0 } : null,
-          active: state.lens === 'deals',
-          title: 'Live deals on this building. Click for the deals lens.',
-        },
   ];
-  return (
-    <section className="sp-card sp-kpis sp-no-print" aria-label="Key figures">
-      {kpis.map((c) => {
-        // The accessible name is the content itself: the label, the figure, the change, then the whole note
-        // (read in place of the short one on screen, which may have been dropped for want of room).
-        const body = (
-          <span className="sp-kpi__body">
-            <span className="sp-kpi__label sp-label">{c.label}</span>
-            <span className="sp-kpi__value">
-              <span className="sp-kpi__figure">
-                {c.value}
-                {c.unit && <span className="sp-kpi__unit"> {c.unit}</span>}
-              </span>
-              {c.delta && (
-                <span className={`sp-kpi__delta ${c.delta.good === null ? '' : c.delta.good ? 'sp-kpi__delta--up' : 'sp-kpi__delta--down'}`} title="Change against today">
-                  {c.delta.text}
-                  <span className="sp-sr-only"> against today</span>
-                </span>
-              )}
-            </span>
-            <span className="sp-kpi__context" aria-hidden="true">
-              <span className="sp-kpi__note">{c.note}</span>
-            </span>
-            <span className="sp-sr-only">{c.detail}</span>
+  const pipeline: Kpi = safe
+    ? {
+        id: 'deals',
+        label: 'Pipeline',
+        value: 'Withheld',
+        note: 'Deal activity not shown',
+        detail: 'Deal activity is not shown in prospect-safe mode',
+        active: false,
+        title: 'Deal activity is withheld in prospect-safe mode',
+        static: true,
+      }
+    : {
+        id: 'deals',
+        label: 'Pipeline',
+        value: String(k.pipeline.deals),
+        unit: k.pipeline.deals === 1 ? 'deal' : 'deals',
+        note: `${num(k.pipeline.sf)} SF requested`,
+        detail: `${k.pipeline.onVacancy} on vacancies · ${plural(k.pipeline.deals - k.pipeline.onVacancy, 'renewal')} · ${num(k.pipeline.sf)} SF requested`,
+        delta: d ? { text: `${d.pipelineDeals >= 0 ? '+' : '−'}${Math.abs(d.pipelineDeals)} ${Math.abs(d.pipelineDeals) === 1 ? 'deal' : 'deals'}`, good: d.pipelineDeals >= 0 } : null,
+        active: state.lens === 'deals',
+        title: 'Live deals on this building. Click to color the plan by deals.',
+      };
+  const lenses = [leased, pipeline];
+  const kpi = (c: Kpi, kind: 'lens' | 'open') => {
+    // The accessible name is the content itself: the label, the figure, the change, then the whole note
+    // (read in place of the short one on screen, which may have been dropped for want of room).
+    const body = (
+      <span className="sp-kpi__body">
+        <span className="sp-kpi__label sp-label">
+          {kind === 'lens' && !c.static && <span className="sp-kpi__dot" aria-hidden="true" />}
+          {c.label}
+        </span>
+        <span className="sp-kpi__value">
+          <span className="sp-kpi__figure">
+            {c.value}
+            {c.unit && <span className="sp-kpi__unit"> {c.unit}</span>}
           </span>
-        );
-        return c.static ? (
-          <div key={c.id} className="sp-kpi sp-kpi--static" data-kpi={c.id} title={`${c.detail}. ${c.title}.`}>
-            {body}
-          </div>
-        ) : (
-          <button
-            key={c.id}
-            type="button"
-            className={`sp-kpi ${c.active ? 'is-active' : ''}`}
-            data-kpi={c.id}
-            onClick={() => onAction(c.id)}
-            title={`${c.detail}. ${c.title}`}
-            aria-pressed={c.active}
-            {...(c.lights?.length ? lightOn(c.lights) : null)}
-          >
-            {body}
-          </button>
-        );
-      })}
+          {c.delta && (
+            <span className={`sp-kpi__delta ${c.delta.good === null ? '' : c.delta.good ? 'sp-kpi__delta--up' : 'sp-kpi__delta--down'}`} title="Change against today">
+              {c.delta.text}
+              <span className="sp-sr-only"> against today</span>
+            </span>
+          )}
+        </span>
+        <span className="sp-kpi__context" aria-hidden="true">
+          <span className="sp-kpi__note">{c.note}</span>
+        </span>
+        <span className="sp-sr-only">{c.detail}</span>
+      </span>
+    );
+    return c.static ? (
+      <div key={c.id} className="sp-kpi sp-kpi--static" data-kpi={c.id} title={`${c.detail}. ${c.title}.`}>
+        {body}
+      </div>
+    ) : (
+      <button
+        key={c.id}
+        type="button"
+        className={`sp-kpi sp-kpi--${kind}${c.active ? ' is-active' : ''}`}
+        data-kpi={c.id}
+        onClick={() => onAction(c.id)}
+        title={`${c.detail}. ${c.title}`}
+        aria-pressed={kind === 'lens' ? c.active : undefined}
+        {...(c.lights?.length ? lightOn(c.lights) : null)}
+      >
+        {body}
+      </button>
+    );
+  };
+  // The caption sits on the card's top edge, outside it, so the card can clip its corners.
+  const group = (kind: 'lens' | 'open', name: string, caption: string, items: Kpi[]) => (
+    <div className={`sp-kpis__wrap sp-kpis__wrap--${kind}`}>
+      <div role="group" className={`sp-card sp-kpis__group sp-kpis__group--${kind}`} aria-label={name}>
+        {items.map((c) => kpi(c, kind))}
+      </div>
+      <span className="sp-kpis__caption" aria-hidden="true">{caption}</span>
+    </div>
+  );
+  return (
+    <section className="sp-kpis sp-no-print" aria-label="Key figures">
+      {group('lens', 'Color the plan by', 'Color by', lenses)}
+      {group('open', 'Open a detail', 'Open', opens)}
     </section>
   );
 }

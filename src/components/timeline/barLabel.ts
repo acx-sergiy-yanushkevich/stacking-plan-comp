@@ -82,7 +82,7 @@ export const EXT_PAD = 12;
  * Whether an ended lease can say who it was and that the tenant has left on the bar itself, given the
  * width of the bar and of its extension to the as-of line (px): the whole name in the bar, or the whole
  * name in the extension, or the tenant in the bar and the word in the extension. When it cannot, the
- * label is written to the right of the as-of line, and the bar keeps that part of its lane for it
+ * label starts at the bar's end and runs on across the as-of line, and the bar keeps the rest of its lane for it
  * (TimelineView, `packLanes`): an ended lease always reads "· vacated", as its neighbours do.
  */
 export function endedNameFits(name: string, barPx: number, extPx: number): boolean {

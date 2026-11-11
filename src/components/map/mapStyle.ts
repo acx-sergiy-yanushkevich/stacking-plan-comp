@@ -79,7 +79,8 @@ export function floorAlso(f: FloorView, safe: boolean): string {
  *   deals       the furthest stage a live deal has reached, the stage the label names
  *   rent        the band of the asking rent where the label gives one (the largest space on offer),
  *               else the band of most of the rent in place that the label gives
- *   status      the state of most of the floor
+ *   status      the space on offer where the label leads with it ("9,300 SF available" is the Available
+ *               tone, "4,200 SF sublease available" the Sublease tone), else the state of most of the floor
  *
  * and, in the status and expiration lenses, a second colour: the at-risk tone where the floor holds a
  * holdover or month-to-month lease, else the expiring tone where a lease ends within 12 months, unless
@@ -87,7 +88,11 @@ export function floorAlso(f: FloorView, safe: boolean): string {
  * "expires < 12 mo"). There is none in prospect-safe mode, where those leases are drawn as plain leased
  * (`toneFor`).
  *
- * A floor whose label has no such fact (nothing leased, no deal, no rent to show) keeps its dominant tone.
+ * A floor whose label has no such fact (nothing on offer, no lease, no deal, no rent to show) keeps its
+ * dominant tone. The 3D floors are not colored by this: each suite is drawn in its own tone, so a floor
+ * with space on offer already shows it on the map. Only the flat elevation drawn when the map cannot load
+ * (FootprintFallback) gives a floor one color, the state of most of it (`dominantTone`): a band has no
+ * words beside it, and the list of floors, with these swatches, still stands next to it.
  */
 export function swatchTones(f: FloorView, lens: Lens, safe: boolean): { tone: Tone; accent: Tone | null } {
   let tone = dominantTone(f, lens, safe);
@@ -101,6 +106,10 @@ export function swatchTones(f: FloorView, lens: Lens, safe: boolean): { tone: To
     const asking = askingSegments(f, safe);
     const named = asking.length > 0 ? asking : inPlaceSegments(f, safe);
     if (named.length > 0) tone = dominantAmong(named, lens, safe);
+  } else if (lens === 'status' && f.available > 0) {
+    // The label leads with the space on offer (`spaceOf`): a sublease only where none of it is direct.
+    const direct = f.segments.some((s) => s.kind === 'available' && !s.availableFrom);
+    tone = direct ? 'available' : 'sublease';
   }
   const tones = new Set(f.segments.map((s) => toneFor(s, lens, safe)));
   const accent = (['risk', 'expiring'] as const).find((t) => tones.has(t) && tone !== t) ?? null;

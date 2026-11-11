@@ -20,6 +20,9 @@ const states = [
   '?view=timeline',
   '?view=floor&floor=F6',
   '?view=map&mode=area',
+  '?view=stack&mode=area',
+  '?view=stack&mode=brief',
+  '?view=stack&mode=brief&theme=light',
 ];
 const browser = await chromium.launch({ channel: 'chrome' });
 const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, reducedMotion: 'reduce' });

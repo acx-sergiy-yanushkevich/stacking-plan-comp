@@ -11,12 +11,16 @@ import { Legend } from '../plan/Legend';
 import StackView from '../stack/StackView';
 import { ExportStage } from './ExportStage';
 import { StaxLockup } from '../shell/Brand';
+import { LocationBrief } from '../area/LocationBrief';
+import type { Area } from '../../domain/types';
 import { PLAN_WIDTH, planRowHeight } from './pageFit';
 import './print.css';
 
 export interface PrintLayoutProps {
   model: PlanModel;
   state: PlanState;
+  /** The area around the building (App's `useArea`): the report ends with its location brief once it has arrived. */
+  area?: Area | null;
   /** Show on screen too (for the print emulation screenshot). */
   visible?: boolean;
 }
@@ -27,6 +31,7 @@ export interface PrintLayoutProps {
  *  - Prospect-safe: the cover with the plan; then one page with the rent roll beside the space on
  *    offer and the coming supply. It has no rollover, no worklist and no lease date anywhere, so what
  *    is left of the third section is short: it shares the rent roll's page instead of taking its own.
+ *  - Both end with the location brief (the area around the building), once the area has arrived.
  *
  * The cover is exactly one sheet (`pageFit`, `print.css`). Every later section starts on a new sheet
  * only if it does not fit under the one before. The running head numbers the sections that are in
@@ -35,7 +40,7 @@ export interface PrintLayoutProps {
  * It also carries the `ExportStage`: like the report, a drawing of the plan that is not on screen
  * (it appears only while an image export asks for it).
  */
-export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
+export function PrintLayout({ model, state, area = null, visible }: PrintLayoutProps) {
   const { property: p, kpis: k, safe } = model;
   // The rent roll, the worklist and the supply figures each arrive already passed through the prospect-safe policy.
   const rows = rentRollDisplay(p, model.floors, model.asOf, safe);
@@ -53,6 +58,10 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
   const showDeals = canShowDeals(safe);
   const showRent = canShowInPlaceRent(safe);
   const offers = showRollover ? [] : spaceOnOffer(model);
+  // Prospect-safe, on an over-allocated building: the rows under lease add up to more than the leased figure
+  // and a floor's suites to more than its 100%. A prospect is shown no data issue, so a neutral footnote
+  // says how the exact figures relate, with the sum of the rows as printed (`recordedUnderLease`).
+  const recorded = safe && overBy > 0 ? recordedUnderLease(rows) : 0;
   const noop = () => {};
   const comingTable = (
     <>
@@ -111,7 +120,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
         </FixedWidth>
       </div>
       <footer className="sp-print__foot">
-        Floor width is proportional to gross floor area; suite width to RSF. Figures are exact RSF from AscendixRE records. {safe ? 'Tenant names, contacts, in-place rents, lease and sublease dates, WALT and rollover are withheld.' : ''}
+        Floor width is proportional to gross floor area; suite width to RSF. Figures are exact RSF from AscendixRE records.{recorded > 0 ? ' Suite areas are as recorded; floor totals are capped at the floor’s leasable area.' : ''} {safe ? 'Tenant names, contacts, in-place rents, lease and sublease dates, WALT and rollover are withheld.' : ''}
       </footer>
     </>
   );
@@ -151,6 +160,11 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
           </tr>
         </tbody>
       </table>
+      {recorded > 0 && (
+        <p className="sp-print__note sp-print__note--recorded">
+          Suite areas are as recorded: the leased, sublease and committed rows add up to {num(recorded)} SF. Floor totals, and the {num(k.leased)} SF leased, are capped at each floor’s leasable area.
+        </p>
+      )}
       {unplaced > 0 && (
         <p className="sp-print__note">
           {unplaced} lease{unplaced === 1 ? ' is' : 's are'} not placed on the plan (no floor or unit records) and {unplaced === 1 ? 'is' : 'are'} listed above as “Not placed”; see Data issues.
@@ -342,6 +356,9 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
         },
       ];
 
+  // The location brief closes every report, owner and prospect-safe alike: it holds no tenant data.
+  if (area) sections.push({ key: 'location', body: <LocationBrief property={p} area={area} print /> });
+
   return (
     <>
     <ExportStage model={model} state={state} />
@@ -398,6 +415,16 @@ function spaceOnOffer(model: PlanModel): Offer[] {
     }
   }
   return out;
+}
+
+/** The states of a prospect-safe rent-roll row that are space under lease: in place, sublet, signed and not yet in. */
+const UNDER_LEASE = new Set(['Leased', 'Sublease', 'Committed']);
+
+/** Exact sum of the RSF of the rent-roll rows under lease, read from the rows as they are printed. */
+export function recordedUnderLease(rows: ReadonlyArray<ReadonlyArray<string>>): number {
+  const rsf = rows[0].indexOf('RSF');
+  const state = rows[0].indexOf('State');
+  return rows.slice(1).reduce((t, r) => (UNDER_LEASE.has(r[state]) ? t + (Number(r[rsf].replace(/,/g, '')) || 0) : t), 0);
 }
 
 /** In-place rent of a worklist row; a dash when it is confidential or not on record. */

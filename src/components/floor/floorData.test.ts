@@ -3,7 +3,7 @@ import { property, TODAY } from '../../data/mock/property';
 import { deriveFloors } from '../../domain/derive';
 import { findIssues } from '../../domain/issues';
 import { safeFloors } from '../../domain/safe';
-import { availabilityFact, callTarget, comingText, fittingInquiries, floorComing, floorDeals, floorIssues, liveDeals, nextExpiry } from './floorData';
+import { availabilityFact, callTarget, comingText, fittingInquiries, floorComing, floorDeals, floorIssues, largestNow, liveDeals, nextExpiry } from './floorData';
 
 const floors = deriveFloors(property, TODAY, TODAY);
 const floor = (id: string) => floors.find((f) => f.floor.id === id)!;
@@ -93,5 +93,24 @@ describe('callTarget: who the floor-level "Log call" reaches', () => {
     const empty = { ...floor('F6'), segments: floor('F6').segments.filter((s) => !s.lease) };
     expect(callTarget(empty)).toBeNull();
     for (const f of safeFloors(floors, true)) expect(callTarget(f), f.floor.name).toBeNull();
+  });
+});
+
+describe('the largest block a floor has now', () => {
+  it('is the direct run where there is one', () => {
+    expect(largestNow(floor('F8'))).toEqual({ size: 7400, kind: 'direct', suites: 2 });
+  });
+
+  it('is the sublease on a floor whose only space is sublet (Floor 7), never a zero', () => {
+    expect(largestNow(floor('F7'))).toEqual({ size: 7000, kind: 'sublease', suites: 1 });
+    // The building's "Largest block" stays direct-only: the floor's own figure does not change it.
+    expect(floor('F7').maxContiguous).toBe(0);
+    // A sublet suite is space on offer, so a prospect sees it too.
+    const safe = safeFloors(floors, true).find((f) => f.floor.id === 'F7')!;
+    expect(largestNow(safe)).toEqual({ size: 7000, kind: 'sublease', suites: 1 });
+  });
+
+  it('is nothing on a floor with no space on the market now', () => {
+    expect(largestNow(floor('F11'))).toEqual({ size: 0, kind: null, suites: 0 });
   });
 });

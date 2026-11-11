@@ -1,6 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { Button } from './Button';
-import { canExpandSheet, expandedSheetHeight } from './sheetHeight';
+import { canExpandSheet, dragSheetHeight, expandedSheetHeight, isSheetDrag, snapSheet } from './sheetHeight';
 import { focused, on, viewport as hostViewport } from '../../lib/host';
 
 export interface SheetProps {
@@ -42,6 +42,10 @@ function contentHeight(sheet: HTMLElement): number {
  * height, which is the height of the content: never more than 92% of the window, and never so much that
  * the selection the sheet was opened for is covered (`keepClear`). When the half snap already shows
  * everything, or there is no room to grow into, the handle is a plain grab bar and not a control.
+ *
+ * The handle can also be dragged, with a finger or a mouse: the sheet follows the pointer between the two
+ * heights and, let go, settles at the nearer one, or the way it was flicked. A press that barely moves is a
+ * tap and toggles, as a click or Enter does.
  */
 export function Sheet({ open, onClose, title, children, snap = 'half', hideHeader, modeless, keepClear = null }: SheetProps) {
   const [full, setFull] = useState(snap === 'full');
@@ -134,6 +138,48 @@ export function Sheet({ open, onClose, title, children, snap = 'half', hideHeade
     if (canExpand || !handleHadFocus.current) return;
     ref.current?.querySelector<HTMLElement>('.sp-sheet__body button:not([disabled]), .sp-sheet__body [tabindex="0"]')?.focus({ preventScroll: true });
   }, [canExpand]);
+  // A drag on the handle: where it started, the sheet's height then, and the last two samples, for the speed of the release.
+  const drag = useRef<{ id: number; y: number; from: number; moved: boolean; last: { y: number; t: number }; prev: { y: number; t: number } } | null>(null);
+  const [dragHeight, setDragHeight] = useState<number | null>(null);
+  // The click a browser may send after a drag's release is not a tap. A touch drag sends none, so it is the
+  // time of the release that is kept: a click straight after it is dropped, and a later one (Enter) is not.
+  const releasedAt = useRef(-Infinity);
+  const onHandleDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!ref.current || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    // The pointer is the handle's until it lets go, so the drag goes on outside the 40 px bar and never reaches the page.
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    const sample = { y: e.clientY, t: e.timeStamp };
+    drag.current = { id: e.pointerId, y: e.clientY, from: ref.current.getBoundingClientRect().height, moved: false, last: sample, prev: sample };
+  };
+  const onHandleMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    const dy = e.clientY - d.y;
+    if (!d.moved && !isSheetDrag(dy)) return;
+    d.moved = true;
+    d.prev = d.last;
+    d.last = { y: e.clientY, t: e.timeStamp };
+    setDragHeight(dragSheetHeight(d.from, dy, measured));
+  };
+  const onHandleUp = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    drag.current = null;
+    if (!d.moved) return;
+    releasedAt.current = e.timeStamp;
+    const dt = d.last.t - d.prev.t;
+    // A pause before letting go is no flick: the speed is that of the last movement, and nothing if that was long ago.
+    const velocity = dt > 0 && e.timeStamp - d.last.t < 100 ? (d.last.y - d.prev.y) / dt : 0;
+    const height = dragSheetHeight(d.from, e.clientY - d.y, measured);
+    setFull(snapSheet(height, velocity, measured) === 'full');
+    setDragHeight(null);
+  };
+  const onHandleCancel = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!drag.current || drag.current.id !== e.pointerId) return;
+    drag.current = null;
+    setDragHeight(null);
+  };
+  const dragging = dragHeight !== null && canExpand;
   if (!open) return null;
   return (
     <div
@@ -142,11 +188,24 @@ export function Sheet({ open, onClose, title, children, snap = 'half', hideHeade
       aria-modal={modeless ? undefined : 'true'}
       aria-labelledby={labelId ?? undefined}
       aria-label={labelId ? undefined : typeof title === 'string' ? title : 'Details'}
-      className={`sp-sheet ${expanded ? 'sp-sheet--full' : ''}`}
-      style={expanded ? { height: expandedSheetHeight(measured) } : undefined}
+      className={`sp-sheet ${expanded ? 'sp-sheet--full' : ''} ${dragging ? 'sp-sheet--dragging' : ''}`}
+      style={dragging ? { height: dragHeight } : expanded ? { height: expandedSheetHeight(measured) } : undefined}
     >
       {canExpand ? (
-        <button ref={handleRef} type="button" className="sp-sheet__handle" aria-label={expanded ? 'Collapse panel' : 'Expand panel'} aria-expanded={expanded} onClick={() => setFull(!expanded)}>
+        <button
+          ref={handleRef}
+          type="button"
+          className="sp-sheet__handle"
+          aria-label={expanded ? 'Collapse panel' : 'Expand panel'}
+          aria-expanded={expanded}
+          onClick={(e) => {
+            if (e.timeStamp - releasedAt.current > 300) setFull(!expanded);
+          }}
+          onPointerDown={onHandleDown}
+          onPointerMove={onHandleMove}
+          onPointerUp={onHandleUp}
+          onPointerCancel={onHandleCancel}
+        >
           <span />
         </button>
       ) : (

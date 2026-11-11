@@ -29,8 +29,8 @@ export interface MapFloorListProps {
  * beside the Building view's model (`FloorLabelText`, `floorLabelParts`): the two views show one
  * building, so a floor reads the same in both, to the letter and at the same size. What only the map
  * has is the swatch before the label: the legend's colour for the fact the label names (`swatchTones`:
- * the step of the next expiry, the furthest deal stage, the band of the rent it gives, the state of most
- * of the floor), and in its lower half the colour of an at-risk or expiring lease the floor also holds.
+ * the step of the next expiry, the furthest deal stage, the band of the rent it gives, the space on offer
+ * the status label leads with), and in its lower half the color of an at-risk or expiring lease the floor also holds.
  *
  * A row's accessible name is the Building label's name, then what the map adds: the floor's size, the
  * state of most of the floor (what colours most of it on the map) and what else is on it (a unit for

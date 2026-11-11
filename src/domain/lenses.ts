@@ -192,7 +192,9 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
       { tone: 'available-later', label: 'Available later', pattern: 'dashed' },
       { tone: 'projected', label: 'Projected vacancy', pattern: 'dashed' },
       { tone: 'forsale', label: 'For sale' },
-      { tone: 'leased', label: 'Leased, in place' },
+      // The space tenants are in (80.2%): the KPI's "occupied". "Leased" there is the larger figure that
+      // also counts signed leases not yet in and sublet space, so it is not this item's word.
+      { tone: 'leased', label: 'Occupied' },
       { tone: 'muted', label: 'Not available' },
     ];
   switch (lens) {

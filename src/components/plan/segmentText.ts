@@ -31,6 +31,13 @@ export interface SegmentText {
   sfShort: string;
   /** Short lens value for cramped blocks ("Oct '27", "$30 FSG", "LOI"); '' when none. */
   lensShort: string;
+  /**
+   * The lease's term in a few words ("Exp Feb '27", "Holdover", "Month-to-month"), in the lenses about
+   * dates (status, expiry) and only where lease terms may be shown; '' otherwise. Print only: a narrow
+   * block on paper keeps it on a merged line before it is given up (`Block`, `keepSuite`). The screen
+   * draws `meta` and `lensShort` as before.
+   */
+  term?: string;
 }
 
 export interface SegmentTextOptions {
@@ -217,11 +224,17 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
     if (d) lensShort = d.stage === 'Lease Out' ? 'Lease out' : d.stage;
   }
   if (kind === 'committed' && lens === 'status' && lease && !leaseDatesHidden(kind, safe)) lensShort = `In ${fmtMonthYearShort(lease.commencement)}`;
+  let term = '';
+  if ((lens === 'status' || lens === 'expiry') && lease && !termHidden(kind, safe)) {
+    if (kind === 'holdover') term = 'Holdover';
+    else if (kind === 'mtm') term = 'Month-to-month';
+    else if (kind === 'leased' && seg.endDate) term = `Exp ${fmtMonthYearShort(seg.endDate)}`;
+  }
   const lines = [name, sub, meta].filter(Boolean);
   const badgeText = badges.map(badgeLabel).join(', ');
   const tooltip = [...lines, badgeText].filter(Boolean).join('\n');
   const aria = `${o.floorName}, ${lines.join(', ')}${badgeText ? `, ${badgeText}` : ''}`;
-  return { tone, pattern, name, sub, meta, badges, tooltip, aria, sfShort: num(seg.size), lensShort };
+  return { tone, pattern, name, sub, meta, badges, tooltip, aria, sfShort: num(seg.size), lensShort, term };
 }
 
 export function kindLabel(kind: Segment['kind']): string {

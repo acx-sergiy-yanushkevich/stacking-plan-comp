@@ -9,7 +9,7 @@ import { switcherItems } from './switcher';
 import { StaxLockup } from './Brand';
 import { canTimeTravel, planDate } from '../../domain/safe';
 import { AsOfPopover } from './AsOfPopover';
-import { useIsPhone, usePrefersDark } from '../../lib/useMedia';
+import { useIsPhone, useMedia, usePrefersDark } from '../../lib/useMedia';
 
 export type ExportKind = 'pdf' | 'png' | 'csv' | 'link' | 'video';
 
@@ -35,6 +35,9 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
   const palette = paletteOf(state);
   // A phone has no row to spare for how the plan looks: there the palette and the theme are a menu beside Export.
   const phone = useIsPhone();
+  // A phone of 420 px or less: one row of controls. The date is an icon and the date, the switch says
+  // "Safe" and Export drops its chevron, because the full-size controls do not fit 352 px, nor 322 at 360.
+  const compact = useMedia('(max-width: 420px)');
   const themeLabel = dark ? 'Switch to light theme' : 'Switch to dark theme';
   const toggleTheme = () => patch({ theme: dark ? 'light' : 'dark' });
   // A toast may name a tenant or a prospect ("Would open Deal D8 (Vantage Robotics)…"): none survives the mode turning on.
@@ -43,23 +46,25 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
   const actions = (
     <div className="sp-header__actions">
       {/* The date the plan is drawn for: in prospect-safe mode that is today, whatever was asked for. */}
-      <AsOfPopover asOf={planDate(state.asOf, today, state.safe)} today={today} onChange={(asOf) => patch({ asOf })} miniTimeline={miniTimeline} locked={!canTimeTravel(state.safe)} />
+      <AsOfPopover asOf={planDate(state.asOf, today, state.safe)} today={today} onChange={(asOf) => patch({ asOf })} miniTimeline={miniTimeline} locked={!canTimeTravel(state.safe)} compact={compact} />
       {/* Turning it on drops a search in progress, the worklist, a projected as-of date and any toast: the state layer (applyPatch) and useToastBoundary do it, not this handler. */}
-      <Switch checked={state.safe} onChange={(safe) => patch({ safe })} label="Prospect-safe" title="Hide tenant names, contacts, rents, lease dates and prospects, and show the plan as of today" />
+      <Switch checked={state.safe} onChange={(safe) => patch({ safe })} label="Prospect-safe" shortLabel={compact ? 'Safe' : undefined} title="Hide tenant names, contacts, rents, lease dates and prospects, and show the plan as of today" />
       {/* The slot that says prospect-safe is on. It is drawn at one width whether the chip is in it or not, so the
           controls wrap at the same point and the header is the same height with the mode on and off. */}
-      <div className="sp-header__slot">
-        {state.safe && (
-          <Chip tone="brand" icon="shield" title="Tenant names, contacts, rents, lease dates and prospects are hidden">
-            Prospect-safe on
-          </Chip>
-        )}
-      </div>
+      {!compact && (
+        <div className="sp-header__slot">
+          {state.safe && (
+            <Chip tone="brand" icon="shield" title="Tenant names, contacts, rents, lease dates and prospects are hidden">
+              Prospect-safe on
+            </Chip>
+          )}
+        </div>
+      )}
       <Menu
         label="Export"
         trigger={(p) => (
-          <Button {...p} icon="download" iconRight="chevron-down">
-            Export
+          <Button {...p} icon="download" iconRight={compact ? undefined : 'chevron-down'}>
+            <span className="sp-header__export-label">Export</span>
           </Button>
         )}
         items={[

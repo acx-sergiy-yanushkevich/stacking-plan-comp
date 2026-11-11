@@ -4,6 +4,8 @@ import { renderToString } from 'react-dom/server';
 import { property, TODAY } from '../../data/mock/property';
 import { parseState } from '../../state/planState';
 import { buildModel } from '../inspector/testModel';
+import { area } from '../../data/mock/area';
+import type { Area } from '../../domain/types';
 import { PrintLayout } from './PrintLayout';
 
 class RO {
@@ -13,10 +15,10 @@ class RO {
 }
 (globalThis as unknown as { ResizeObserver: typeof RO }).ResizeObserver = RO;
 
-const render = (search: string) => {
+const render = (search: string, withArea?: Area) => {
   const state = parseState(search, TODAY);
   const model = buildModel(state);
-  const html = renderToString(<PrintLayout model={model} state={state} visible />);
+  const html = renderToString(<PrintLayout model={model} state={state} area={withArea ?? null} visible />);
   return { model, html: html.replace(/<!-- -->/g, '').replace(/&#x27;/g, "'") };
 };
 /** One table row of the report, by its first cell. */
@@ -28,6 +30,32 @@ const sectionsOf = (html: string) => {
   const heads = parts.map((part) => /<span class="sp-print__pageno">Section (\d+) of (\d+)<\/span>/.exec(part)).map((m) => (m ? [Number(m[1]), Number(m[2])] : null));
   return { parts, heads };
 };
+
+describe('PrintLayout location section', () => {
+  it('ends the owner report with the location brief: four sections, 1 to 4 of 4', () => {
+    const { parts, heads } = sectionsOf(render('?print=1', area).html);
+    expect(parts).toHaveLength(4);
+    expect(heads).toEqual([[1, 4], [2, 4], [3, 4], [4, 4]]);
+    expect(parts[3]).toContain('sp-brief--print');
+    expect(parts[3]).toContain('<h2 class="sp-brief__title">Location</h2>');
+    expect(parts[3]).toContain('What stands out');
+    expect(parts[3]).toContain('Figures by distance');
+  });
+
+  it('ends the prospect-safe report with the same brief: it holds no tenant data', () => {
+    const { parts, heads } = sectionsOf(render('?print=1&safe=1', area).html);
+    expect(parts).toHaveLength(3);
+    expect(heads).toEqual([[1, 3], [2, 3], [3, 3]]);
+    const owner = sectionsOf(render('?print=1', area).html).parts[3];
+    const strip = (part: string) => part.replace(/<div class="sp-print__running">.*?<\/div>/, '');
+    expect(strip(parts[2])).toBe(strip(owner));
+  });
+
+  it('has no location section until the area has arrived', () => {
+    expect(sectionsOf(render('?print=1').html).parts).toHaveLength(3);
+    expect(render('?print=1').html).not.toContain('sp-brief');
+  });
+});
 
 describe('PrintLayout sections', () => {
   it('owner report: three sections, numbered 1 to 3 of 3', () => {
@@ -123,7 +151,7 @@ describe('PrintLayout', () => {
     expect(pages).not.toMatch(/Not placed|over-allocated|records exceed/i);
     // The total line admits no data issue either (round 16: "rows sum to 211,700 SF; leased is capped…" told a
     // prospect that the records over-allocate). It states the leased figure, the share and the space, as on screen.
-    expect(html).not.toMatch(/rows sum to|capped|exceed/i);
+    expect(html).not.toMatch(/rows sum to|exceed|over-allocat|data issue/i);
     const total = /<tr class="sp-print__total">(.*?)<\/tr>/.exec(pages)?.[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() ?? '';
     expect(total).toMatch(/^Total · [\d,]+ RSF leasable [\d,]+ leased [\d.]+% leased · [\d,]+ SF available · [\d,]+ SF signed, not in$/);
     expect(html).not.toMatch(/\b(Tour|Proposal|LOI|Lease Out)\b/);
@@ -142,6 +170,29 @@ describe('PrintLayout', () => {
     const leased = [...roll.matchAll(/<tr>(.*?)<\/tr>/g)].map((m) => [...m[1].matchAll(/<td[^>]*>(.*?)<\/td>/g)].map((c) => c[1])).filter((r) => r[4] === 'Leased');
     expect(leased.length).toBeGreaterThan(10);
     for (const r of leased) expect(r.slice(5), `Ste ${r[1]}`).toEqual(['—', 'Withheld']);
+  });
+
+  it('prospect-safe report: the rows and the leased total reconcile, in exact figures, without naming a data issue (round 17)', () => {
+    const { html, model } = render('?print=1&safe=1');
+    const over = model.roll.overAllocated.reduce((t, o) => t + o.sf, 0);
+    expect(over).toBeGreaterThan(0);
+    const pages = html.slice(html.indexOf('<h2>Rent roll</h2>'));
+    const roll = pages.slice(0, pages.indexOf('<h2>Space on offer</h2>'));
+    // The rows of space under lease (in place, sublet, signed and not yet in), as printed.
+    const rows = [...roll.matchAll(/<tr>(.*?)<\/tr>/g)].map((m) => [...m[1].matchAll(/<td[^>]*>(.*?)<\/td>/g)].map((c) => c[1])).filter((r) => ['Leased', 'Sublease', 'Committed'].includes(r[4]));
+    const sum = rows.reduce((t, r) => t + Number(r[3].replace(/,/g, '')), 0);
+    expect(sum).toBe(model.kpis.leased + over);
+    const note = /<p class="sp-print__note sp-print__note--recorded">(.*?)<\/p>/.exec(roll)?.[1] ?? '';
+    const n = (v: number) => v.toLocaleString('en-US');
+    expect(note).toBe(`Suite areas are as recorded: the leased, sublease and committed rows add up to ${n(sum)} SF. Floor totals, and the ${n(model.kpis.leased)} SF leased, are capped at each floor’s leasable area.`);
+    // The cover, where Floor 7 reads 100.0% over suites that add up to more, says the same in brief.
+    const cover = sectionsOf(html).parts[0];
+    expect(cover).toContain('Suite areas are as recorded; floor totals are capped at the floor’s leasable area.');
+  });
+
+  it('owner report keeps its own disclosure and prints no prospect footnote', () => {
+    const { html } = render('?print=1');
+    expect(html).not.toContain('Suite areas are as recorded');
   });
 
   it('owner report: the total line explains why the rows add up to more than the leased figure', () => {

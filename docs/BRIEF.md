@@ -1,13 +1,8 @@
-# Stacking Plan v2: brief and scoring rubric
+# Stax: brief and scoring rubric
 
 ## What it is
 
 A stacking plan draws a building floor by floor. Each floor is split into suites, and each suite's width is proportional to its square footage. A suite is leased, available, committed, or unaccounted for. In AscendixRE (xRE), a Salesforce CRM for commercial real estate brokers, the plan is a tab on the Property record.
-
-This is a **from-scratch rebuild**. Two earlier versions exist for reference only:
-
-- `docs/reference/legacy-stacking-plan.png`: the 2015 jQuery widget (saturated rainbow, seven lines of text per block, no analytics).
-- `docs/reference/v1-redesign-*.png`: the 2026 "redesign" prototype, which plateaued at UI 17.3/20 and UX 18.3/20. Judges' remaining deductions: five bands of controls above the plan, an overlay panel that hid the plan, wrapped or truncated names in narrow suites, and hierarchy that did not lead the eye.
 
 The prototype is React, TypeScript and Vite with mock data shaped like the xRE objects.
 

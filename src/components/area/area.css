@@ -1,0 +1,39 @@
+/* The location brief (LocationBrief: the Area panel widened, and the report's last section); the bar
+   rows are shared with the narrow Area panel. Tokens only; print/print.css restyles it for paper. */
+
+/* Bar rows: a name, a thin bar on one baseline, the figure in text (the bar is for the eye only). */
+.sp-brief__bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.sp-brief__bar { display: grid; grid-template-columns: minmax(72px, 0.9fr) minmax(0, 2fr) minmax(48px, auto); align-items: center; gap: 2px var(--sp-space-2); font-size: var(--sp-text-12); }
+.sp-brief__bar-name { color: var(--sp-color-text-weak); overflow-wrap: anywhere; }
+.sp-brief__bar-track { position: relative; height: 8px; }
+.sp-brief__bar-fill { position: absolute; inset: 0 auto 0 0; min-width: 2px; border-radius: 0 4px 4px 0; background: var(--sp-color-brand); opacity: 0.75; }
+.sp-brief__bar-value { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+/* The brief */
+.sp-brief { display: flex; flex-direction: column; gap: var(--sp-space-4); color: var(--sp-color-text); font-size: var(--sp-text-13); }
+.sp-brief__head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-space-3); flex-wrap: wrap; }
+.sp-brief__title { font-size: var(--sp-text-18); font-weight: 650; line-height: 1.25; margin: 0; }
+.sp-brief__sub { color: var(--sp-color-text-weak); font-size: var(--sp-text-12); margin: 2px 0 0; }
+.sp-brief__label { font-size: var(--sp-text-11); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--sp-color-text-weak); margin: 0 0 var(--sp-space-2); }
+.sp-brief__heroes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-space-3); }
+.sp-brief__hero { display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--sp-color-border); border-radius: var(--sp-radius-block); padding: var(--sp-space-3); min-width: 0; }
+.sp-brief__hero .sp-brief__label { margin: 0; }
+.sp-brief__hero-value { font-size: var(--sp-text-22); font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.sp-brief__hero-note { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }
+.sp-brief__cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-space-4) calc(var(--sp-space-4) * 1.5); align-items: start; }
+.sp-brief__points { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; line-height: 1.4; }
+.sp-brief__none { color: var(--sp-color-text-weak); margin: 0; }
+.sp-brief__table { width: 100%; border-collapse: collapse; font-size: var(--sp-text-12); font-variant-numeric: tabular-nums; }
+.sp-brief__table th, .sp-brief__table td { padding: 5px 6px; border-bottom: 1px solid var(--sp-color-border); text-align: right; white-space: nowrap; }
+.sp-brief__table th[scope='row'] { text-align: left; font-weight: 400; color: var(--sp-color-text-weak); padding-left: 0; white-space: normal; }
+.sp-brief__table thead th { font-size: var(--sp-text-11); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sp-color-text-weak); }
+.sp-brief__us { color: var(--sp-color-text-weak); }
+.sp-brief__stops { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: var(--sp-text-12); }
+.sp-brief__stops li { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: var(--sp-space-2); align-items: center; }
+.sp-brief__foot { border-top: 1px solid var(--sp-color-border); padding-top: var(--sp-space-3); font-size: var(--sp-text-11); color: var(--sp-color-text-faint); display: flex; flex-direction: column; gap: 2px; }
+.sp-brief__foot p { margin: 0; }
+
+@media (max-width: 760px) {
+  .sp-brief__heroes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sp-brief__cols { grid-template-columns: minmax(0, 1fr); }
+}
