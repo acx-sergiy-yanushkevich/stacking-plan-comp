@@ -217,7 +217,7 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
           </ul>
         )}
         <p className="sp-ins__note">
-          Annualised and weighted by each lease’s recorded SF, so the SF beside a type is the sum of its rent-roll rows{roll.overAllocated.length > 0 ? ' (the over-allocation cap on leased SF is not applied)' : ''}. Confidential leases excluded; never blended across lease types.
+          Annualized and weighted by each lease’s recorded SF, so the SF beside a type is the sum of its rent-roll rows{roll.overAllocated.length > 0 ? ' (the over-allocation cap on leased SF is not applied)' : ''}. Confidential leases excluded; never blended across lease types.
         </p>
       </Section>
       )}
