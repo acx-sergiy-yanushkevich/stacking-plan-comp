@@ -138,7 +138,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
       title={unverified.length ? `Most recent change ${fmtDate(verifiedAt)}. Not verified for ${STALE_DAYS}+ days: ${unverified.map((i) => i.recordLabel).join(', ')}.. The issues panel (toolbar) lists them.` : 'Most recent change to a lease or availability on this plan'}
     >
       <Icon name={stale ? 'clock' : 'check'} size={12} /> Latest change {fmtDate(verifiedAt)}
-      {unverified.length > 0 && ` · ${unverified.length} record${unverified.length === 1 ? '' : 's'} unverified since ${fmtDate(unverified[0].unverifiedSince!)}`}
+      {unverified.length > 0 && <span className="sp-header__unverified"> · {unverified.length} unverified since {fmtDate(unverified[0].unverifiedSince!).replace(/, \d{4}$/, '')}</span>}
     </span>
   );
 
@@ -222,12 +222,12 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
         <div className="sp-header__text">
           <div className="sp-header__title">
             <h1>{property.name}</h1>
+            {/* When the plan last changed stands apart from the building's facts, at the right of the title's
+                line: it takes room from the title, never from the facts, which keep their lines in both modes. */}
+            <div className="sp-header__aside">{verified}</div>
           </div>
           {facts}
         </div>
-        {/* When the plan was last changed stands apart from the building's facts, at the card's right: the
-            facts keep one line from 1024 px (round 19: "Latest change" wrapped them onto a second). */}
-        <div className="sp-header__aside">{verified}</div>
       </header>
     </>
   );

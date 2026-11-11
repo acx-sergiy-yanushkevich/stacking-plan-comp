@@ -87,7 +87,8 @@ describe('Header with Prospect-safe on and off: the same controls in the same pl
       expect(render(q).html, q).not.toContain('sp-header__stale');
     }
     // The chip is in the slot and nowhere else: the title row is the same with the mode on and off.
-    const title = (query: string) => { const { html } = render(query); return text(html.slice(html.indexOf('class="sp-header__title"'), html.indexOf('class="sp-header__facts"'))); };
+    // The title's line, without the freshness chip beside it (which tells the owner more than a prospect).
+    const title = (query: string) => { const { html } = render(query); return text(html.slice(html.indexOf('class="sp-header__title"'), html.indexOf('class="sp-header__facts"')).replace(/<div class="sp-header__aside">.*?<\/div>/, '')); };
     expect(title('?safe=1')).toBe(title(''));
     expect(render('?skin=classic&safe=1').html.match(/Prospect-safe on/g)).toHaveLength(1);
   });
@@ -206,7 +207,7 @@ describe('Header product bar and building card', () => {
     expect(card).toContain('class="sp-header__icon"');
     expect(card).not.toContain('<img');
     expect(card).not.toContain('sp-header__actions');
-    expect(strip(card.slice(card.indexOf('<div class="sp-header__title"'), card.indexOf('<div class="sp-header__facts"')))).toBe('Preston Park Financial Center');
+    expect(strip(card.slice(card.indexOf('<div class="sp-header__title"'), card.indexOf('<div class="sp-header__facts"')).replace(/<div class="sp-header__aside">.*?<\/div>/, ''))).toBe('Preston Park Financial Center');
   });
 
   it('aurora gets the bar too; the embedded skin gets none of it', () => {
@@ -306,5 +307,16 @@ describe('Header building card: the facts, then when the plan last changed at th
     expect(card).toMatch(/<div class="sp-header__aside"><span class="sp-header__verified[^"]*"[^>]*>.*Latest change/);
     const classic = render('?skin=classic').html;
     expect(/<div class="sp-header__facts">(.*?)<\/div>/.exec(classic)![1]).toContain('Latest change');
+  });
+});
+
+describe('Header freshness chip (round 19)', () => {
+  it('counts the records unverified for 120+ days, for the owner only', () => {
+    const own = render('').html.replace(/<!-- -->/g, '');
+    expect(own).toMatch(/sp-header__verified--stale/);
+    expect(own).toMatch(/<span class="sp-header__unverified"> · \d+ unverified since [A-Z][a-z]{2} \d{1,2}<\/span>/);
+    const safe = render('?safe=1').html;
+    expect(safe).not.toContain('sp-header__unverified');
+    expect(safe).not.toContain('unverified');
   });
 });
