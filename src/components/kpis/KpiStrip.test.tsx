@@ -171,53 +171,23 @@ describe('KpiStrip', () => {
     expect(chips.join(' ')).toMatch(/−\d+ deals?/);
   });
 
-  it('withholds the pipeline in prospect-safe mode', () => {
-    const { html } = render(TODAY, true);
-    expect(html).toContain('Withheld');
-    expect(html).not.toContain('on vacancies');
-    expect(html).not.toContain('SF requested');
-  });
-
-  it('withholds Expiring 12 mo in prospect-safe mode: no SF, no share, no lease count, even from a model that carries them', () => {
+  it('prospect-safe: the strip is what a prospect can use (Leased, Available, Largest block); the withheld figures are not shown at all', () => {
     const open = render(TODAY);
-    const figure = open.kpis.expiring12.toLocaleString('en-US');
-    expect(open.kpis.expiring12).toBeGreaterThan(0);
-    expect(open.html).toContain(`>${figure}<span class="sp-kpi__unit">`);
-    expect(open.html).toMatch(/of leased · \d+ leases?/);
-    // `render` hands the strip the broker's KPIs: the figure itself asks the policy.
     const { html } = render(TODAY, true);
-    const card = kpiOf(html, 'expiry-worklist');
-    expect(card).toMatch(/^<div class="sp-kpi sp-kpi--static"/);
-    expect(card).toContain('<span class="sp-kpi__figure">Withheld</span>');
-    expect(html).not.toContain(figure);
-    expect(html).not.toMatch(/\d+ leases?\b|of leased/);
-    // A figure, not a button: there is nothing to open. Expiring, WALT and Pipeline are all withheld.
-    expect(html.match(/<button type="button" class="sp-kpi/g)?.length).toBe(3);
-    expect(html.match(/<div class="sp-kpi sp-kpi--static"/g)?.length).toBe(3);
-  });
-
-  it('withholds WALT in prospect-safe mode, in the same words as Expiring 12 mo', () => {
-    const open = render(TODAY);
-    const figure = waltCard(open.kpis.walt);
-    expect(open.html).toContain(`>${figure}<span class="sp-kpi__unit">`);
-    const { html } = render(TODAY, true);
-    const walt = kpiOf(html, 'timeline');
-    expect(walt).toContain('<span class="sp-kpi__figure">Withheld</span>');
-    expect(noteOf(walt)).toBe('Lease terms not shown');
-    expect(attr(walt, 'title')).toContain('Lease terms are not shown in prospect-safe mode');
-    // The same value and the same reason as the figure beside it: one style, one sentence.
-    const strip = (c: string) => c.replace(/data-kpi="[^"]*"/, '').replace(/title="[^"]*"/, '').replace(/>(Avg lease term|Expiring 12 mo)</, '><');
-    expect(strip(walt)).toBe(strip(kpiOf(html, 'expiry-worklist')));
-    // The average itself is nowhere: not on the bar, not in a tooltip or a name, not with a unit.
-    expect(html).not.toContain(figure);
+    expect([...html.matchAll(/data-kpi="([^"]+)"/g)].map((m) => m[1])).toEqual(['status', 'find', 'find-largest']);
+    // No "Withheld" placeholders: a prospect sees a clean strip, not a list of what is hidden from them.
+    expect(html).not.toContain('Withheld');
+    expect(html).not.toContain('sp-kpi--static');
+    for (const gone of ['Pipeline', 'Expiring 12 mo', 'Avg lease term', 'SF-weighted', 'of leased']) expect(html, gone).not.toContain(gone);
+    // Nor do their figures leak through a tooltip or a name.
+    expect(html).not.toContain(waltCard(open.kpis.walt));
     expect(html).not.toContain(open.kpis.walt.toFixed(4));
-    expect(html).not.toMatch(/\d yr\b|> <!-- -->yr</);
-    expect(html).not.toContain('SF-weighted');
+    expect(html).not.toMatch(/\d+ leases?\b|\d+ deals?\b/);
   });
 
   it('names each figure for the action it stands for, so focus and the checks can find it', () => {
     const { html } = render(TODAY);
     expect([...html.matchAll(/data-kpi="([^"]+)"/g)].map((m) => m[1])).toEqual(['status', 'deals', 'find', 'find-largest', 'expiry-worklist', 'timeline']);
-    expect([...render(TODAY, true).html.matchAll(/data-kpi="([^"]+)"/g)].length).toBe(6);
+    expect([...render(TODAY, true).html.matchAll(/data-kpi="([^"]+)"/g)].length).toBe(3);
   });
 });

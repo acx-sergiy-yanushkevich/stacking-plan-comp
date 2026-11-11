@@ -191,7 +191,11 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
         active: state.lens === 'deals',
         title: 'Live deals on this building. Click to color the plan by pipeline.',
       };
-  const lenses = [leased, pipeline];
+  // A prospect is shown what they can use: a figure withheld from them (Pipeline, Expiring 12 mo, Avg lease
+  // term) is left out of the strip, not printed as "Withheld", so the bar reads as a clean summary.
+  const shown = (c: Kpi) => !c.static;
+  const lenses = [leased, pipeline].filter(shown);
+  const openFigures = opens.filter(shown);
   const kpi = (c: Kpi, kind: 'lens' | 'open') => {
     // The accessible name is the content itself: the label, the figure, the change, then the whole note
     // (read in place of the short one on screen, which may have been dropped for want of room).
@@ -250,7 +254,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
   return (
     <section className="sp-kpis sp-no-print" aria-label="Key figures">
       {group('lens', 'Color the plan by', 'Color by', lenses)}
-      {group('open', 'Open a detail', 'Details', opens)}
+      {group('open', 'Open a detail', 'Details', openFigures)}
     </section>
   );
 }
