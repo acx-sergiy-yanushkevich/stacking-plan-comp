@@ -84,7 +84,10 @@
 .sp-map-floor > .sp-flabel__fact > .sp-flabel__sep { position: absolute; color: transparent; pointer-events: none; }
 /* An empty spacer (a flex item keeps its width): a zero-width space here would be read by axe as text between
    the share and the first fact, so the row's words would no longer match its name. */
-.sp-map-floor .sp-dotrun__in::before { content: ''; flex: none; width: calc(var(--sp-map-pct) + 0.8em); }
+/* It is one line tall: when the first fact does not fit beside it, the fact wraps to a line of its own under
+   the share, instead of onto an empty line of no height, where it was drawn over the share (round 18:
+   Floor 12 at 1180–1320 px). */
+.sp-map-floor .sp-dotrun__in::before { content: ''; flex: none; width: calc(var(--sp-map-pct) + 0.8em); height: 1lh; }
 .sp-map-floor .sp-dotrun__in > .sp-dotrun__part:first-child::before,
 .sp-map-floor .sp-dotrun__in > .sp-flabel__last:first-child > .sp-dotrun__part:first-child::before {
   content: '·' / ''; position: absolute; left: 0; top: 0; width: 0.8em; text-align: center;
