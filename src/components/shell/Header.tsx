@@ -6,7 +6,8 @@ import { num, pct, usd, usd0 } from '../../domain/format';
 import { Button, Chip, Icon, Menu, Switch, useToastBoundary } from '../ui';
 import { paletteMenuItems } from './paletteMenu';
 import { switcherItems } from './switcher';
-import { BuildingThumb, StaxLockup } from './Brand';
+import { MiniStack, StaxLockup } from './Brand';
+import { LIVE_STACK } from '../../data/mock/portfolio';
 import { canTimeTravel, planDate } from '../../domain/safe';
 import { AsOfPopover } from './AsOfPopover';
 import { useIsPhone, useMedia, usePrefersDark } from '../../lib/useMedia';
@@ -179,7 +180,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
           align="start"
           trigger={(p) => (
             <Button {...p} iconRight="caret-down" aria-label={`Switch building: ${property.name}`} title="Switch building" className="sp-switcher">
-              <BuildingThumb />
+              <MiniStack drawing={LIVE_STACK} />
               <span className="sp-switcher__name">{property.name}</span>
             </Button>
           )}

@@ -92,13 +92,23 @@
 .sp-topbar .sp-safe[aria-checked='true'] { background: var(--sp-color-brand-soft); border-color: var(--sp-color-brand); color: var(--sp-color-brand-strong); }
 .sp-safe .sp-icon { color: currentColor; }
 .sp-switcher { gap: 8px; padding-left: 6px; }
-/* The switcher's thumbnail: one picture in both themes, like a photo. */
-.sp-thumb { flex: none; display: block; }
-.sp-thumb__sky { fill: #cfe3ff; }
-.sp-thumb__tower { fill: #ffffff; }
-.sp-thumb__floor { fill: #1e2d3c; }
+/* A building's mini stack: the bars carry their own colours; the tile follows the theme. */
+.sp-ministack { flex: none; display: block; }
+.sp-ministack__tile { fill: var(--sp-color-card-2); stroke: var(--sp-color-border-strong); stroke-width: 1; }
 /* The portfolio list is wide enough for a long building name and its city on one line each. */
-.sp-pop:has(> .sp-switcher) .sp-pop__panel { min-width: min(380px, calc(100vw - 16px)); }
+.sp-pop:has(> .sp-switcher) .sp-pop__panel { min-width: min(400px, calc(100vw - 16px)); }
+/* The switcher's list, after the mock: the icon, the name, the city at the right in the body size; the open
+   building is the highlighted row (and keeps its tick); the samples are quieter text with full-colour icons,
+   so the list reads as a portfolio rather than a page of disabled controls. Ten rows fit; more scroll. */
+.sp-pop:has(> .sp-switcher) .sp-menu { max-height: min(460px, calc(100vh - 120px)); overflow-y: auto; }
+.sp-pop:has(> .sp-switcher) .sp-menu__item { gap: 10px; min-height: 36px; }
+.sp-pop:has(> .sp-switcher) .sp-menu__item[aria-disabled='true'] { opacity: 1; color: var(--sp-color-text-weak); }
+.sp-pop:has(> .sp-switcher) .sp-menu__item[aria-disabled='true'] .sp-ministack { opacity: 0.85; }
+.sp-pop:has(> .sp-switcher) .sp-menu__item[aria-checked='true'] { background: var(--sp-color-brand-soft); color: var(--sp-color-text); }
+.sp-pop:has(> .sp-switcher) .sp-menu__hint { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); white-space: nowrap; padding-left: 12px; }
+.sp-pop:has(> .sp-switcher) .sp-menu__item[aria-checked='true'] .sp-menu__hint { color: var(--sp-color-text); font-weight: 500; }
+.sp-pop:has(> .sp-switcher) .sp-menu__item[aria-checked='true'] .sp-menu__check { margin-left: 8px; }
+.sp-pop:has(> .sp-switcher) .sp-menu__heading:last-child { text-transform: none; letter-spacing: 0; font-weight: 500; padding-bottom: 6px; }
 .sp-switcher__name { font-weight: 600; color: var(--sp-color-text); max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* The building card: the icon, the name and the facts. In the embedded skin it also keeps the controls. */

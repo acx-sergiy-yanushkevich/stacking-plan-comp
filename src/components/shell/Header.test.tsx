@@ -190,10 +190,10 @@ describe('Header product bar and building card', () => {
     expect(strip(b)).toMatch(/^Stax by Ascendix Preston Park Financial Center/);
     // The accessible name keeps the visible text (WCAG 2.5.3): a screen reader hears which building is open.
     expect(b).toMatch(/<button(?=[^>]*aria-label="Switch building: Preston Park Financial Center")(?=[^>]*aria-haspopup="menu")/);
-    // The switcher is a drawn thumbnail, the building's name and a caret: no photo.
+    // The switcher is the building's mini stack, the building's name and a caret: no photo.
     expect(b).not.toContain('<img');
     const sw = /<button[^>]*aria-label="Switch building: [^"]*"[^>]*>(.*?)<\/button>/.exec(b)![1];
-    expect(sw.indexOf('class="sp-thumb"')).toBeLessThan(sw.indexOf('sp-switcher__name'));
+    expect(sw.indexOf('class="sp-ministack"')).toBeLessThan(sw.indexOf('sp-switcher__name'));
     expect(sw.lastIndexOf('<svg')).toBeGreaterThan(sw.indexOf('sp-switcher__name'));
     // The controls and the look are one group, so they wrap together.
     expect(b.indexOf('sp-topbar__controls')).toBeLessThan(b.indexOf('sp-header__actions'));
@@ -217,15 +217,21 @@ describe('Header product bar and building card', () => {
     expect(classic).toContain('sp-header__actions');
   });
 
-  it('the switcher menu lists the live building checked, three disabled sample entries and a count of the rest', () => {
+  it('the switcher menu lists the live building checked, then every sample entry disabled, each with its own mini stack', () => {
     // Menu renders its items only when open: test the items through the helper the header builds them with.
     const items = switcherItems(property);
-    const labels = items.filter((i) => !('kind' in i) || i.kind === 'item').map((i) => (i as { label: string }).label);
-    expect(labels[0]).toBe('Preston Park Financial Center');
-    expect(labels.slice(1)).toEqual(['Legacy West Tower II', 'Galleria Commerce Plaza', 'Trinity Riverfront Offices', '+ 2 more · sample entries']);
-    expect(items[0]).toMatchObject({ kind: 'heading', label: 'Portfolio · 6 buildings' });
-    expect(items[1]).toMatchObject({ checked: true });
-    for (const i of items.slice(2)) expect(i).toMatchObject({ disabled: true });
+    const rows = items.filter((i) => !('kind' in i) || i.kind === 'item') as Array<{ label: string; adornment?: unknown; disabled?: boolean; checked?: boolean }>;
+    expect(items[0]).toMatchObject({ kind: 'heading', label: 'Portfolio · 10 buildings' });
+    expect(rows).toHaveLength(10);
+    expect(rows[0]).toMatchObject({ label: 'Preston Park Financial Center', checked: true });
+    expect(rows.slice(1, 4).map((r) => r.label)).toEqual(['Legacy West Tower II', 'Galleria Commerce Plaza', 'Trinity Riverfront Offices']);
+    for (const r of rows.slice(1)) expect(r).toMatchObject({ disabled: true });
+    for (const r of rows) expect(r.adornment, r.label).toBeTruthy();
+    expect(items.at(-1)).toMatchObject({ kind: 'heading', label: 'Sample entries · only Preston Park Financial Center opens' });
+    // Each mini stack is drawn: four floors, one suite open in orange, in the building's own tone.
+    const html = renderToString(<>{rows.map((r, i) => <span key={i}>{r.adornment as never}</span>)}</>);
+    expect(html.match(/class="sp-ministack"/g)).toHaveLength(10);
+    expect(html.match(/fill="#ff9c00"/g)).toHaveLength(10);
   });
 });
 
