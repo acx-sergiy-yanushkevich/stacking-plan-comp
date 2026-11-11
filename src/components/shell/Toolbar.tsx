@@ -4,6 +4,7 @@ import { canShowLeaseTerm, canUseLens } from '../../domain/safe';
 import { shownView, type PlanState, type View } from '../../state/planState';
 import { Button, Icon, Segmented, SelectField, TextField } from '../ui';
 import { rememberTrigger } from '../../state/focusStore';
+import { openArea } from '../plan/actions';
 import { useIsPhone } from '../../lib/useMedia';
 import { measure } from '../../lib/textFit';
 import { SEARCH_HINTS, hintThatFits, prospectFirst } from './toolbarRules';
@@ -30,7 +31,7 @@ const CLEAR_ROOM = 16;
 
 /**
  * The room the search field has for its placeholder, in px, and the font it is set in: read from the
- * field itself and again whenever it changes width (the window, the Map view's extra button).
+ * field itself and again whenever it changes width (the window, a view's change of buttons).
  */
 function useHintRoom(): [React.RefObject<HTMLDivElement | null>, { room: number; font: string } | null] {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -95,28 +96,26 @@ export function Toolbar({ state, patch }: ToolbarProps) {
           {/* The field is named for the search it does: a prospect-safe search finds no tenant or prospect. */}
           <TextField label={state.safe ? SEARCH_HINTS.safe[0] : SEARCH_HINTS.owner[0]} hideLabel kind="search" placeholder={hint} value={state.q} onChange={(e) => patch({ q: e.target.value })} onClear={() => patch({ q: '' })} />
         </div>
-        {/* The buttons that every mode and view has come first; the one a view adds (Area) and the one
-            prospect-safe withholds (Worklist) follow, so neither moves the others. */}
+        {/* Every view has Find space and Area (the area around the building was too hidden as a Map-only
+            button); the one prospect-safe withholds (Worklist) comes last, so its empty place moves nothing. */}
         <div className="sp-toolbar__group">
           <Button icon="filter" active={state.mode === 'find'} onClick={() => toggleMode('find')} title="Find contiguous space by size and date">
             Find space
           </Button>
-          {view === 'map' && (
-            <Button
-              icon="people"
-              active={state.mode === 'area'}
-              onClick={() => {
-                if (state.mode === 'area') patch({ mode: 'building' });
-                else {
-                  rememberTrigger();
-                  patch({ mode: 'area', select: null, floor: null, req: null, max: null, by: null, inquiry: null, window: null });
-                }
-              }}
-              title="Demographics, transit and amenities around the property"
-            >
-              Area
-            </Button>
-          )}
+          <Button
+            icon="people"
+            active={state.mode === 'area'}
+            onClick={() => {
+              if (state.mode === 'area') patch({ mode: 'building' });
+              else {
+                rememberTrigger();
+                openArea(patch);
+              }
+            }}
+            title="Demographics, transit and amenities around the property"
+          >
+            Area
+          </Button>
           {/* The renewal worklist lists leases by their term: not offered in prospect-safe mode. Its place
               is kept, empty: a box the size of the button, with nothing in it to read, focus or press, so
               the search field and the buttons before it stand where they do with the mode off. */}
