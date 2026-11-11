@@ -180,7 +180,7 @@ describe('Header on a phone: the palette and the theme are a menu, not a row of 
 });
 
 describe('Header product bar and building card', () => {
-  const bar = (query: string) => /<div class="sp-card sp-topbar sp-no-print">(.*?)<\/div><header/.exec(render(query).html)?.[1] ?? null;
+  const bar = (query: string) => /<div class="sp-card sp-topbar sp-no-print"[^>]*>(.*?)<\/div><header/.exec(render(query).html)?.[1] ?? null;
   const strip = (html: string) => html.replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
   it('standalone: the bar carries the lockup, the switcher, the controls and the look, in that order', () => {

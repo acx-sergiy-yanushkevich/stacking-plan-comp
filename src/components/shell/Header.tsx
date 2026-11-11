@@ -172,7 +172,8 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
   return (
     <>
       {/* The product bar: who made this, which building is open (and that there are others), and the controls. */}
-      <div className="sp-card sp-topbar sp-no-print">
+      {/* An expanded bottom sheet stops under the bar, so its controls are never cut in half (ui/Sheet.tsx). */}
+      <div className="sp-card sp-topbar sp-no-print" data-sheet-keep-clear="">
         <StaxLockup />
         <span className="sp-topbar__divider" aria-hidden="true" />
         <Menu

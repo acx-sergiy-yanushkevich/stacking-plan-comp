@@ -95,6 +95,7 @@ export interface HostEvents {
   resize: UIEvent;
   beforeprint: Event;
   afterprint: Event;
+  scroll: Event;
 }
 
 export interface HostMedia {

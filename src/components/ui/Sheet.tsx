@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { Button } from './Button';
 import { canExpandSheet, dragSheetHeight, expandedSheetHeight, isSheetDrag, snapSheet } from './sheetHeight';
-import { focused, on, viewport as hostViewport } from '../../lib/host';
+import { findAll, focused, on, viewport as hostViewport } from '../../lib/host';
 
 export interface SheetProps {
   open: boolean;
@@ -47,10 +47,31 @@ function contentHeight(sheet: HTMLElement): number {
  * heights and, let go, settles at the nearer one, or the way it was flicked. A press that barely moves is a
  * tap and toggles, as a click or Enter does.
  */
+/** Air between what stays clear at the top of the window and an expanded sheet, px. */
+const SHEET_TOP_AIR = 6;
+
 export function Sheet({ open, onClose, title, children, snap = 'half', hideHeader, modeless, keepClear = null }: SheetProps) {
   const [full, setFull] = useState(snap === 'full');
   const [content, setContent] = useState<number | null>(null);
   const [viewport, setViewport] = useState(() => hostViewport().height);
+  // What the page marks to stay whole above an expanded sheet (`data-sheet-keep-clear`: the product bar),
+  // as the window's top strip it takes now. The sheet stops under it, with air, instead of at a fixed share
+  // of the window that cut its buttons in half (round 18: 68 px from the top at 390 px).
+  const [topClear, setTopClear] = useState(0);
+  useLayoutEffect(() => {
+    if (!open) return;
+    const measureTop = () => {
+      const bottom = findAll('[data-sheet-keep-clear]').reduce((b, el) => Math.max(b, el.getBoundingClientRect().bottom), 0);
+      setTopClear(bottom > 0 ? Math.ceil(bottom) + SHEET_TOP_AIR : 0);
+    };
+    measureTop();
+    const stopScroll = on('scroll', measureTop, { passive: true });
+    const stopResize = on('resize', measureTop);
+    return () => {
+      stopScroll();
+      stopResize();
+    };
+  }, [open, full]);
   const [labelId, setLabelId] = useState<string | null>(null);
   // The dialog takes its name from the panel's own heading ("Floor 12 · Suite 1210"), when there is one.
   useEffect(() => {
@@ -127,7 +148,8 @@ export function Sheet({ open, onClose, title, children, snap = 'half', hideHeade
       swaps.disconnect();
     };
   }, [open]);
-  const measured = { viewport, content, keepClear };
+  const clear = Math.max(keepClear ?? 0, topClear);
+  const measured = { viewport, content, keepClear: clear > 0 ? clear : null };
   const canExpand = viewport > 0 && canExpandSheet(measured);
   const expanded = full && canExpand;
   // A handle that held the keyboard and stops being a control hands it to the panel, not to the page.
