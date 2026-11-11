@@ -340,7 +340,7 @@ function Shell() {
       {/* The KPI bar: always here, above the toolbar, in every view and every state. Nothing shows, hides or
           resizes it, so the toolbar and the plan under it never move when the view or the selection changes. */}
       <KpiStrip model={model} state={state} onAction={onKpi} />
-      <Toolbar state={state} patch={patch} />
+      <Toolbar state={state} patch={patch} issueCount={model.issues.length} />
       <main className={`sp-main sp-no-print ${showInspector ? '' : 'sp-main--wide'} ${showInspector && wide ? 'sp-main--panel-wide' : ''}`} id="sp-plan" tabIndex={-1}>
         <Stage epoch={view === 'map' ? 'map' : `fonts-${fontTick}`}>
           {view === 'building' && <BuildingView model={model} state={state} patch={patch} />}

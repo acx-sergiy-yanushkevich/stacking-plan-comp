@@ -8,6 +8,7 @@ import { comingSupply } from '../../domain/kpis';
 import { canShowDeals, canShowInPlaceRent, canShowIssues, canShowLeaseTerm, canShowRollover, canShowTenantRisk, canShowWalt, marketedFor, rentVisible, tenantLabel } from '../../domain/safe';
 import { FixedWidth } from '../../lib/useWidth';
 import { Legend, sharesNote } from '../plan/Legend';
+import { DotJoin } from '../hero/DotJoin';
 import StackView from '../stack/StackView';
 import { ExportStage } from './ExportStage';
 import { StaxLockup } from '../shell/Brand';
@@ -453,7 +454,10 @@ function Kpi({ label, value, note }: { label: string; value: string; note: strin
     <div className="sp-print__kpi">
       <div className="sp-print__kpi-label">{label}</div>
       <div className="sp-print__kpi-value">{value}</div>
-      <div className="sp-print__kpi-note">{note}</div>
+      {/* Facts break between them, never inside one ("7,000 sublease" stays whole). */}
+      <div className="sp-print__kpi-note">
+        <DotJoin parts={note.split(' · ')} />
+      </div>
     </div>
   );
 }

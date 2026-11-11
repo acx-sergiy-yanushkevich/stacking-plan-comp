@@ -8,12 +8,12 @@ import { parseState } from '../../state/planState';
 import { Toolbar } from './Toolbar';
 import { SEARCH_HINTS, hintThatFits, prospectFirst } from './toolbarRules';
 
-const render = (query: string) => renderToString(<Toolbar state={parseState(query, TODAY)} patch={() => {}} />).replace(/<!-- -->/g, '');
+const render = (query: string) => renderToString(<Toolbar state={parseState(query, TODAY)} patch={() => {}} issueCount={8} />).replace(/<!-- -->/g, '');
 const text = (html: string) => html.replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, '|').replace(/\|+/g, '|');
 /** The controls of a group in order: each button's label, and "(slot)" for a kept, empty place. */
 const tools = (html: string) => {
   const group = html.slice(html.indexOf('class="sp-toolbar__find"'));
-  return [...group.matchAll(/<(button|span) [^>]*class="sp-btn[^"]*"[^>]*>(.*?)<\/\1>/g)].map((m) => (m[0].includes('sp-toolbar__slot') ? '(slot)' : m[2].replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, '')));
+  return [...group.matchAll(/<(button|span) [^>]*class="sp-btn [^"]*"[^>]*>(.*?)<\/\1>/g)].map((m) => (m[0].includes('sp-toolbar__slot') ? '(slot)' : m[2].replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, '')));
 };
 const lensTabs = (html: string) => {
   const group = html.slice(html.indexOf('aria-label="Color lens"'), html.indexOf('class="sp-toolbar__lens-select"'));
@@ -41,12 +41,14 @@ describe('Toolbar with prospect-safe on and off: what stays keeps its place', ()
       expect(safe).toEqual(['Status', 'Rent']);
     });
 
-    it(`${view}: the tool buttons keep their order, and Worklist leaves an empty place behind, last`, () => {
+    it(`${view}: the tool buttons keep their order, and Worklist and Data issues leave empty places behind, last`, () => {
       const normal = tools(render(`?view=${view}`));
       const safe = tools(render(`?view=${view}&safe=1`));
       // Area is offered in every view, not the Map alone: the team review found it too hidden there.
-      expect(normal).toEqual(['Find space', 'Area', 'Worklist']);
-      expect(safe).toEqual(normal.map((label) => (label === 'Worklist' ? '(slot)' : label)));
+      // Data issues is in the toolbar in every view (round 19: the header button had gone, and with it the
+      // only way to the panel on a tablet or phone).
+      expect(normal).toEqual(['Find space', 'Area', 'Worklist', 'Data issues8']);
+      expect(safe).toEqual(normal.map((label) => (label === 'Worklist' || label.startsWith('Data issues') ? '(slot)' : label)));
     });
   }
 
@@ -58,8 +60,8 @@ describe('Toolbar with prospect-safe on and off: what stays keeps its place', ()
     // No text of its own: the word that sizes it comes from CSS, so it is not in the page's text.
     expect(text(slot).replace(/\|/g, '')).toBe('');
     // Nothing in the prospect-safe toolbar reads "Worklist", "Expiration" or "Deals".
-    expect(text(html)).not.toMatch(/Worklist|Renewal|Expiration|Deals/);
-    expect(html).not.toMatch(/(title|aria-label)="[^"]*(Worklist|Renewal|Expiration|Deals)/);
+    expect(text(html)).not.toMatch(/Worklist|Renewal|Expiration|Deals|issues/i);
+    expect(html).not.toMatch(/(title|aria-label)="[^"]*(Worklist|Renewal|Expiration|Deals|issues)/i);
   });
 });
 

@@ -151,8 +151,8 @@ describe('Header on a phone: the palette and the theme are a menu, not a row of 
     }
   };
 
-  it('760 px and under: one menu button beside Export, and no look controls in the header', () => {
-    for (const width of [320, 390, 760]) {
+  it('421 to 760 px: one menu button beside Export, and no look controls in the header', () => {
+    for (const width of [421, 600, 760]) {
       const html = at(width);
       expect(html, `${width}`).not.toContain('class="sp-header__look"');
       expect(html, `${width}`).not.toContain('aria-label="Colors"');
@@ -181,7 +181,7 @@ describe('Header on a phone: the palette and the theme are a menu, not a row of 
 });
 
 describe('Header product bar and building card', () => {
-  const bar = (query: string) => /<div class="sp-card sp-topbar sp-no-print"[^>]*>(.*?)<\/div><header/.exec(render(query).html)?.[1] ?? null;
+  const bar = (query: string) => /<section class="sp-card sp-topbar sp-no-print"[^>]*>(.*?)<\/section><header/.exec(render(query).html)?.[1] ?? null;
   const strip = (html: string) => html.replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
   it('standalone: the bar carries the lockup, the switcher, the controls and the look, in that order', () => {
@@ -268,25 +268,26 @@ describe('Header at 420 px and under: the title and one row of controls (round 1
     for (const query of ['', '?safe=1']) {
       const html = sw(at(390, query));
       expect(html).toContain('<span class="sp-sr-only">Prospect-safe</span>');
-      expect(html).toContain('<span aria-hidden="true">Safe</span>');
+      expect(html).toContain('<span class="sp-safe__word" aria-hidden="true">Safe</span>');
     }
     // Embedded: the switch keeps the width of its bold word.
     expect(sw(at(390, '?skin=classic'))).toContain('<span class="sp-switch__label" aria-hidden="true"><span>Safe</span><span class="sp-switch__label-hold">Safe</span></span>');
   });
 
-  it('no slot and no Data issues; Export keeps its word without a chevron; the same controls with prospect-safe on and off', () => {
+  it('no slot and no Data issues; Export is in the menu; the same controls with prospect-safe on and off', () => {
     const own = at(390);
     const safe = at(390, '?safe=1');
     for (const html of [own, safe]) {
       expect(html).not.toContain('class="sp-header__slot"');
       expect(html).not.toContain('Data issues');
-      expect(html).toContain('aria-label="Colors and theme"');
-      expect(html).toContain('<span class="sp-header__export-label">Export</span>');
+      // Export is in the "…" menu, with the colors and the theme (round 19: the bar is one row).
+      expect(html).toContain('aria-label="Export, colors and theme"');
+      expect(html).not.toContain('<span class="sp-header__export-label">Export</span>');
     }
-    // The same controls in the same order with the mode on and off: the date, the switch, Export, the menu.
+    // The same controls in the same order with the mode on and off: the date, the switch, the menu.
     const order = (html: string) => [...actions(html).matchAll(/<button[^>]*>/g)].map(([tag]) => (tag.includes('role="switch"') ? 'switch' : tag.includes('aria-haspopup="menu"') && tag.includes('aria-label=') ? 'menu' : 'button'));
     expect(order(own)).toEqual(order(safe));
-    expect(order(own)).toEqual(['button', 'switch', 'button', 'menu']);
+    expect(order(own)).toEqual(['button', 'switch', 'menu']);
   });
 
   it('from 421 px the embedded slot is back, and the menu holds only the colors and the theme', () => {

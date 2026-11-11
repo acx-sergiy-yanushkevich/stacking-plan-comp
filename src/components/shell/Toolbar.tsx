@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { computedStyle, sizeObserver } from '../../lib/host';
 import { LENSES, type LensId } from '../../domain/lenses';
-import { canShowLeaseTerm, canUseLens } from '../../domain/safe';
+import { canShowIssues, canShowLeaseTerm, canUseLens } from '../../domain/safe';
 import { shownView, type PlanState, type View } from '../../state/planState';
 import { Button, Icon, Segmented, SelectField, TextField } from '../ui';
 import { rememberTrigger } from '../../state/focusStore';
@@ -13,6 +13,8 @@ import { SEARCH_HINTS, hintThatFits, prospectFirst } from './toolbarRules';
 export interface ToolbarProps {
   state: PlanState;
   patch: (p: Partial<PlanState>) => void;
+  /** Open data issues, for the Data issues button's count; 0 or absent draws no count. */
+  issueCount?: number;
 }
 
 const VIEWS: Array<{ id: View; label: string; icon: 'building' | 'stack' | 'timeline' | 'map' }> = [
@@ -26,6 +28,7 @@ const VIEWS: Array<{ id: View; label: string; icon: 'building' | 'stack' | 'time
 const TOOLBAR_LENSES = prospectFirst(LENSES);
 
 const WORKLIST_LABEL = 'Worklist';
+const ISSUES_LABEL = 'Data issues';
 
 /** What a search field keeps free at its right end for its clear button, px: text there would run under it. */
 const CLEAR_ROOM = 16;
@@ -57,7 +60,22 @@ function useHintRoom(): [React.RefObject<HTMLDivElement | null>, { room: number;
   return [ref, fit];
 }
 
-export function Toolbar({ state, patch }: ToolbarProps) {
+/**
+ * The place of a button prospect-safe withholds: a box with the button's own metrics (laid out around the
+ * same icon, word and count, which CSS supplies so that no word is in the page), invisible and inert. The
+ * search field and the buttons before it stand where they do with the mode off, at every width.
+ */
+function Slot({ icon, label, count }: { icon: 'clock' | 'warning'; label: string; count?: number }) {
+  return (
+    <span className="sp-btn sp-btn--neutral sp-toolbar__slot" aria-hidden="true" style={{ '--sp-slot-label': JSON.stringify(label) } as CSSProperties}>
+      <Icon name={icon} size={16} />
+      <span className="sp-toolbar__slot-label" />
+      {count !== undefined && count > 0 && <span className="sp-btn__count sp-toolbar__slot-label" style={{ '--sp-slot-label': JSON.stringify(String(count)) } as CSSProperties} />}
+    </span>
+  );
+}
+
+export function Toolbar({ state, patch, issueCount }: ToolbarProps) {
   const phone = useIsPhone();
   const view: View = state.view === 'floor' ? 'stack' : shownView(state.view, phone);
   // A phone has no room for the model, and its tabs are words alone: without their icons the lens picker fits beside them.
@@ -66,7 +84,7 @@ export function Toolbar({ state, patch }: ToolbarProps) {
   // (months to lease end, which could only repeat the Status lens). A link that names one draws Status.
   const lenses = TOOLBAR_LENSES.filter((l) => canUseLens(l.id, state.safe));
   const lens: LensId = canUseLens(state.lens, state.safe) ? state.lens : 'status';
-  const toggleMode = (mode: 'find' | 'worklist') => {
+  const toggleMode = (mode: 'find' | 'worklist' | 'issues') => {
     if (state.mode === mode) patch({ mode: 'building', req: null, max: null, by: null, inquiry: null, window: null });
     else {
       rememberTrigger();
@@ -129,10 +147,17 @@ export function Toolbar({ state, patch }: ToolbarProps) {
               {WORKLIST_LABEL}
             </Button>
           ) : (
-            <span className="sp-btn sp-btn--neutral sp-toolbar__slot" aria-hidden="true" style={{ '--sp-slot-label': JSON.stringify(WORKLIST_LABEL) } as CSSProperties}>
-              <Icon name="clock" size={16} />
-              <span className="sp-toolbar__slot-label" />
-            </span>
+            <Slot icon="clock" label={WORKLIST_LABEL} />
+          )}
+          {/* Data issues, in every view and at every width (round 19: with the header button gone, a tablet or
+              phone had no way to it). Withheld from a prospect like the worklist, its place kept the same way. */}
+          {canShowIssues(state.safe) ? (
+            <Button icon="warning" active={state.mode === 'issues'} count={issueCount} onClick={() => toggleMode('issues')} title="Data issues: records to fix or verify">
+              {/* On a phone the four tool buttons share one row: the word there is "Issues", drawn and read. */}
+              {phone ? 'Issues' : ISSUES_LABEL}
+            </Button>
+          ) : (
+            <Slot icon="warning" label={phone ? 'Issues' : ISSUES_LABEL} count={issueCount} />
           )}
         </div>
       </div>

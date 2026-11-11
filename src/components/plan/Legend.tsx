@@ -1,5 +1,5 @@
 import type { LegendItem } from '../../domain/lenses';
-import { apportion, num, pct } from '../../domain/format';
+import { num, pct } from '../../domain/format';
 
 /** An entry for something drawn on the plan that is not a state of the lens: building use (the lobby). */
 export interface LegendExtra {
@@ -35,29 +35,35 @@ export function buildingUse(floors: ReadonlyArray<{ floor: { nonLeasable: number
 }
 
 /**
- * Why the legend's shares add up to more than 100%, when they do: the suites on record cover more than the
- * leasable area. The owner is told which floor; a prospect is told the totals only. Null when they agree.
- * The Stack legend and the report's cover say the same sentence (round 19: the cover said nothing).
+ * What the legend's shares add up to, when it is not 100%: the suites on record can cover more than the
+ * leasable area (the owner is told which floor; a prospect, the totals only), and each share is rounded on
+ * its own, as the KPI bar rounds it, so one SF figure reads the same in every lens (round 19). Null when the
+ * printed shares add up to 100.0%. The Stack legend and the report's cover say the same sentence.
  */
 export function sharesNote(items: ReadonlyArray<LegendItem>, leasable: number, over: ReadonlyArray<{ name: string; by: number }>): string | null {
-  const recorded = items.filter((i) => !i.overlay).reduce((t, i) => t + i.sf, 0);
-  if (recorded <= leasable) return null;
-  const which = over.length ? ` (${over.map((f) => `${f.name} records exceed its leasable area by ${num(f.by)} SF`).join('; ')})` : '';
-  return `Shares are of ${num(leasable)} RSF leasable; the suites on record add up to ${num(recorded)} SF${which}.`;
+  const counted = items.filter((i) => !i.overlay && i.sf > 0);
+  const recorded = counted.reduce((t, i) => t + i.sf, 0);
+  const tenths = (r: number) => Math.round(r * 1000);
+  const printed = counted.reduce((t, i) => t + tenths(i.share), 0);
+  const total = leasable > 0 ? tenths(recorded / leasable) : 0;
+  const parts: string[] = [];
+  if (recorded > leasable) {
+    const which = over.length ? ` (${over.map((f) => `${f.name} records exceed its leasable area by ${num(f.by)} SF`).join('; ')})` : '';
+    parts.push(`Shares are of ${num(leasable)} RSF leasable; the suites on record add up to ${num(recorded)} SF, ${pct(total / 1000)}${which}.`);
+  }
+  if (printed !== total) parts.push(`Each share is rounded on its own, so the shares shown add up to ${pct(printed / 1000)}.`);
+  else if (printed !== 1000 && !parts.length) return null;
+  return parts.length ? parts.join(' ') : null;
 }
 
 /** Legend whose items carry the SF and share they currently cover; an overlay carries its SF only. */
 export function Legend({ items, extras, note, id, compact }: LegendProps) {
-  // The shares as printed: apportioned together, so the legend's percentages add up to its total.
-  const counted = items.filter((i) => !i.overlay && i.sf > 0 && i.share > 0);
-  const printed = new Map(apportion(counted.map((i) => i.share)).map((s, k) => [counted[k], s]));
-  const share = (i: LegendItem) => printed.get(i) ?? i.share;
   return (
     <div className="sp-legend" id={id} aria-label="Legend">
       {items
         .filter((i) => i.sf > 0 || !compact)
         .map((i) => (
-          <span key={i.tone + i.label} className="sp-legend__item" title={i.overlay ? `${i.label}: ${num(i.sf)} SF, also counted in its rent band` : `${i.label}: ${num(i.sf)} SF${i.share > 0 ? `, ${pct(share(i))} of leasable` : ''}`}>
+          <span key={i.tone + i.label} className="sp-legend__item" title={i.overlay ? `${i.label}: ${num(i.sf)} SF, also counted in its rent band` : `${i.label}: ${num(i.sf)} SF${i.share > 0 ? `, ${pct(i.share)} of leasable` : ''}`}>
             <span
               className={`sp-legend__swatch ${i.pattern ? `sp-legend__swatch--${i.pattern}` : ''}`}
               style={{ backgroundColor: i.pattern === 'dashed' ? 'transparent' : `var(--tone-${i.tone}-fill)`, borderColor: `var(--tone-${i.tone}-edge)`, color: `var(--tone-${i.tone}-edge)` }}
@@ -68,7 +74,7 @@ export function Legend({ items, extras, note, id, compact }: LegendProps) {
                 carries its SF and says so, and no share, so the shares printed add up to 100%. */}
             {i.sf > 0 && (
               <span className="sp-legend__num">
-                {i.overlay ? `${num(i.sf)} SF · also in its band` : `${num(i.sf)}${i.share > 0 ? ` · ${pct(share(i))}` : ''}`}
+                {i.overlay ? `${num(i.sf)} SF · also in its band` : `${num(i.sf)}${i.share > 0 ? ` · ${pct(i.share)}` : ''}`}
               </span>
             )}
           </span>

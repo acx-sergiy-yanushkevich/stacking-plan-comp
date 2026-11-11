@@ -67,6 +67,8 @@ export function Menu({ label, items, trigger, align = 'end' }: MenuProps) {
                 aria-checked={it.checked}
                 className="sp-menu__item"
                 aria-disabled={it.disabled || undefined}
+                // A disabled entry is read in place, by the arrow keys' list, and takes no tab stop of its own.
+                tabIndex={it.disabled ? -1 : undefined}
                 onClick={() => {
                   if (it.disabled) return;
                   setOpen(false);

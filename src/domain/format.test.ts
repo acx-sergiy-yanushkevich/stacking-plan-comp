@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { apportion, compactRate, pct, rate, rateRange, sf, sfDelta, usdCompact } from './format';
+import { compactRate, pct, rate, rateRange, sf, sfDelta, usdCompact } from './format';
 
 describe('format', () => {
   it('never rounds SF', () => {
@@ -23,21 +23,5 @@ describe('format', () => {
     expect(pct(0.87)).toBe('87.0%');
     expect(sfDelta(-6500)).toBe('−6,500 SF');
     expect(sfDelta(1200)).toBe('+1,200 SF');
-  });
-});
-
-describe('apportion (legend shares, round 18)', () => {
-  it('prints shares whose sum is their total rounded once, each within a tenth of a point', () => {
-    const sf = [26200, 7000, 8000, 2800, 144200, 35300, 17300, 5100];
-    const shares = sf.map((s) => s / 245400);
-    const out = apportion(shares);
-    const sum = Math.round(out.reduce((a, b) => a + b, 0) * 1000);
-    expect(sum).toBe(Math.round((sf.reduce((a, b) => a + b, 0) / 245400) * 1000));
-    out.forEach((o, i) => expect(Math.abs(o - shares[i])).toBeLessThanOrEqual(0.001 + 1e-12));
-  });
-
-  it('keeps exact shares as they are, and an empty list empty', () => {
-    expect(apportion([0.25, 0.5, 0.25])).toEqual([0.25, 0.5, 0.25]);
-    expect(apportion([])).toEqual([]);
   });
 });

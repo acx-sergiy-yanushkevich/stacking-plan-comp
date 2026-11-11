@@ -199,6 +199,8 @@
   .sp-toolbar__search { flex: 1 1 100%; }
   .sp-toolbar__find .sp-toolbar__group { width: 100%; }
   .sp-toolbar__find .sp-toolbar__group .sp-btn { flex: 1; height: 28px; padding: 0 8px; font-size: var(--sp-text-12); }
+  /* Four tools on one row (Find space, Area, Worklist, Issues): the words carry them, so the icons go at 420 px and under. */
+  .sp-toolbar__find .sp-toolbar__group .sp-btn { min-width: 0; }
 }
 
 /* ── A tablet, 761–1099 px ──────────────────────────────── */
@@ -234,7 +236,22 @@
   .sp-toolbar__lens-select .sp-field, .sp-toolbar__lens-select .sp-select { width: 100%; }
   .sp-toolbar__find { gap: 5px; }
 }
-/* A phone of 420 px or less: one row of controls (Header.tsx makes each one compact). */
+/* A phone of 420 px or less: one row of controls (Header.tsx makes each one compact and puts Export in the
+   "…" menu). The lockup is the mark alone; its name is still read. Under 380 px Prospect-safe is its icon
+   (the brand fill says it is on; "Prospect-safe" is still its name). */
+@media (max-width: 420px) {
+  .sp-topbar { flex-wrap: nowrap; gap: 6px; }
+  .sp-lockup__text { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .sp-topbar .sp-header__asof { margin-left: auto; }
+}
+@media (max-width: 420px) { .sp-toolbar__find .sp-toolbar__group .sp-btn > .sp-icon { display: none; } .sp-toolbar__find .sp-toolbar__group { gap: 5px; } }
+@media (max-width: 379px) { .sp-safe__word { display: none; } .sp-topbar .sp-safe { padding: 0 9px; } }
+/* A 320 px phone: tighter still, and the switcher is its building's icon alone (its name is still read). */
+@media (max-width: 359px) {
+  .sp-topbar { gap: 4px; padding-left: 8px; padding-right: 8px; }
+  .sp-topbar .sp-btn { padding: 0 6px; }
+  .sp-switcher > .sp-icon { display: none; }
+}
 @media (max-width: 420px) {
   .sp-header .sp-btn, .sp-topbar .sp-btn { padding: 0 8px; }
   .sp-header .sp-switch, .sp-topbar .sp-switch { gap: 6px; }

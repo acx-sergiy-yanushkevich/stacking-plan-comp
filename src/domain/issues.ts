@@ -13,7 +13,13 @@ export interface Issue {
   floorId?: string;
   segKey?: string;
   recordLabel: string;
+  /** Set on a lease or availability not verified for STALE_DAYS+: the date it was last verified. */
+  unverifiedSince?: ISODate;
 }
+
+/** The plan's records (leases, availabilities) not verified for STALE_DAYS+, oldest first. */
+export const unverifiedRecords = (issues: ReadonlyArray<Issue>): Issue[] =>
+  issues.filter((i) => i.unverifiedSince).sort((a, b) => (a.unverifiedSince! < b.unverifiedSince! ? -1 : 1));
 
 /** A plan record whose LastModifiedDate is older than this many days is reported as unverified. */
 export const STALE_DAYS = 120;
@@ -193,6 +199,7 @@ export function findIssues(p: Property, floors: FloorView[], today: ISODate): Is
     const unit = l.units[0];
     issues.push({
       id: `stale-${l.id}`,
+      unverifiedSince: l.verifiedAt,
       severity: 'info',
       title: `${l.tenant} lease not verified since ${fmtDate(l.verifiedAt)}`,
       detail: `Last modified ${n(daysBetween(l.verifiedAt, today))} days ago. Records older than ${STALE_DAYS} days should be re-confirmed with the tenant or the lease file.`,
@@ -206,6 +213,7 @@ export function findIssues(p: Property, floors: FloorView[], today: ISODate): Is
     if (a.status !== 'Open' || !isStale(a.verifiedAt)) continue;
     issues.push({
       id: `stale-${a.id}`,
+      unverifiedSince: a.verifiedAt,
       severity: 'info',
       title: `Suite ${a.suite} availability not verified since ${fmtDate(a.verifiedAt)}`,
       detail: `Last modified ${n(daysBetween(a.verifiedAt, today))} days ago. Confirm the space, size and asking rent are still current.`,
