@@ -14,13 +14,23 @@ const render = (props: Partial<Parameters<typeof LocationBrief>[0]> = {}) =>
 describe('LocationBrief', () => {
   it('names the building and where it is', () => {
     const html = render();
-    expect(html).toContain(`Location · ${property.name}`);
+    expect(html).toContain('Location');
+    expect(html).toContain(property.name);
     expect(html).toContain(`${property.street}, ${property.city}, ${property.state}`);
   });
 
   it('leads with the four headline figures', () => {
     const html = render();
-    for (const text of ['329,400', 'within 5 miles', '$98,400', '22% above the US · 1 mile', '61%', '2.8× the US · 1 mile', '0.2 mi', 'bus stop · rail 3.1 mi']) expect(html, text).toContain(text);
+    for (const text of ['329,400', 'within 5 miles', '$98,400', '22% above the US', '61%', '2.8× the US', '1 mile', '0.2 mi', 'bus stop', 'rail 3.1 mi']) expect(html, text).toContain(text);
+  });
+
+  it('keeps every figure with its unit, and never starts or ends a line with a separator', () => {
+    const raw = renderToString(<LocationBrief property={property} area={area} />);
+    expect(raw).not.toMatch(/\d (miles?|mi|min|minutes|years)\b/);
+    expect(raw).toContain('1\u00a0mile');
+    // Facts are joined by a space drawn as a dot (DotJoin), never by a "·" character a line could end on.
+    expect(raw).not.toContain(' · ');
+    expect(raw).toContain('sp-dotjoin__sep');
   });
 
   it('says what stands out, as sentences', () => {

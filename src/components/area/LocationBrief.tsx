@@ -1,6 +1,7 @@
 import { locationBrief, US_BENCHMARK } from '../../domain/areaBrief';
 import { num, usd0 } from '../../domain/format';
 import type { Area, AreaRing, Property } from '../../domain/types';
+import { DotJoin } from '../hero/DotJoin';
 import { Chip, Icon } from '../ui';
 import './area.css';
 
@@ -12,6 +13,11 @@ export interface LocationBriefProps {
 }
 
 const wholePct = (ratio: number) => `${Math.round(ratio * 100)}%`;
+
+/** A figure and its unit stay on one line: "1 mile", "0.2 mi", "24.1 minutes" break before the figure, not inside. */
+const keepUnits = (text: string) => text.replace(/(\d) (miles?|mi|minutes|min|years)\b/g, '$1\u00a0$2');
+/** Facts joined by "·", for a line that may wrap: they break between facts, and no dot ends or starts a line. */
+const facts = (text: string) => <DotJoin parts={keepUnits(text).split(' · ')} />;
 
 /** The table's rows: each ring's figure, and the US figure where the measure has one. */
 const ROWS: Array<{ label: string; ring: (r: AreaRing) => string; us: string }> = [
@@ -38,12 +44,8 @@ export function LocationBrief({ property, area, print }: LocationBriefProps) {
     <article className={`sp-brief ${print ? 'sp-brief--print' : ''}`}>
       <header className="sp-brief__head">
         <div>
-          <h2 className="sp-brief__title">
-            {print ? 'Location' : `Location · ${property.name}`}
-          </h2>
-          <p className="sp-brief__sub">
-            {property.street}, {property.city}, {property.state} · rings at {ringMiles.slice(0, -1).join(', ')} and {ringMiles.at(-1)} miles
-          </p>
+          <h2 className="sp-brief__title">{print ? 'Location' : facts(`Location · ${property.name}`)}</h2>
+          <p className="sp-brief__sub">{facts(`${property.street}, ${property.city}, ${property.state} · rings at ${ringMiles.slice(0, -1).join(', ')} and ${ringMiles.at(-1)} miles`)}</p>
         </div>
         {area.sample && !print && (
           <Chip tone="warn" icon="warning" title={area.source}>
@@ -56,8 +58,8 @@ export function LocationBrief({ property, area, print }: LocationBriefProps) {
         {b.headline.map((h) => (
           <div key={h.label} className="sp-brief__hero">
             <span className="sp-brief__label">{h.label}</span>
-            <span className="sp-brief__hero-value">{h.value}</span>
-            <span className="sp-brief__hero-note">{h.note}</span>
+            <span className="sp-brief__hero-value">{keepUnits(h.value)}</span>
+            <span className="sp-brief__hero-note">{facts(h.note)}</span>
           </div>
         ))}
       </div>
@@ -67,7 +69,7 @@ export function LocationBrief({ property, area, print }: LocationBriefProps) {
           <h3 className="sp-brief__label">What stands out</h3>
           <ul className="sp-brief__points">
             {b.points.map((p) => (
-              <li key={p}>{p}</li>
+              <li key={p}>{keepUnits(p)}</li>
             ))}
           </ul>
         </section>
