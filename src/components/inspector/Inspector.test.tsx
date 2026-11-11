@@ -274,6 +274,27 @@ describe('Inspector', () => {
     expect(renderToString(<Inspector model={model} state={state} patch={() => {}} mode="area" areaPanel={<div>Demographics here</div>} />)).toContain('Demographics here');
   });
 
+  it('Area: a small toggle beside Close widens the panel to the brief and back', () => {
+    const state = parseState('?mode=area', TODAY);
+    const model = buildModel(state);
+    const narrow = renderToString(<Inspector model={model} state={state} patch={() => {}} mode="area" areaPanel={<div>Area here</div>} />);
+    expect(narrow).toMatch(/<button[^>]*aria-label="Location brief"[^>]*aria-pressed="false"|<button[^>]*aria-pressed="false"[^>]*aria-label="Location brief"/);
+    expect(narrow).toContain('Area here');
+    const wide = renderToString(<Inspector model={model} state={{ ...state, mode: 'brief' }} patch={() => {}} mode="brief" areaPanel={<div>Area here</div>} />);
+    expect(wide).toMatch(/<button[^>]*aria-label="Location brief"[^>]*aria-pressed="true"|<button[^>]*aria-pressed="true"[^>]*aria-label="Location brief"/);
+    expect(wide).toContain('Area here');
+    // The same panel, wider: its title stays.
+    expect(wide).toMatch(/<h2 class="sp-ins__title"[^>]*>Area<\/h2>/);
+  });
+
+  it('only the Area panel can be widened', () => {
+    for (const query of ['', '?select=L13-U1', '?mode=find', '?mode=issues']) {
+      const state = parseState(query, TODAY);
+      const html = renderToString(<Inspector model={buildModel(state)} state={state} patch={() => {}} mode={deriveMode(state)} />);
+      expect(html, query).not.toContain('aria-label="Location brief"');
+    }
+  });
+
   it('Building mode leads with the area preview, for a prospect too (team review: Area was too hidden)', () => {
     for (const query of ['?view=stack', '?view=map', '?view=stack&safe=1']) {
       const state = parseState(query, TODAY);

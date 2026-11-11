@@ -8,7 +8,7 @@ import { canKeepSearch, canShowInquiries, canShowIssues, canShowLeaseTerm, canUs
 
 export type View = 'building' | 'stack' | 'timeline' | 'map' | 'floor';
 export type Lens = 'status' | 'expiry' | 'deals' | 'rent';
-/** `brief` is the Area panel with the location brief open over the page (`?mode=brief` opens both). */
+/** `brief` is the Area panel widened to the full page: the location brief, with the plan out of the way. */
 export type InspectorMode = 'building' | 'block' | 'floor' | 'find' | 'worklist' | 'issues' | 'area' | 'brief';
 export type WindowKey = 'risk' | '90' | '180' | '12' | '24';
 export type Theme = 'light' | 'dark';

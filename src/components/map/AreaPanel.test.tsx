@@ -9,7 +9,7 @@ import { AreaPanel } from './AreaPanel';
 
 const model = { property } as unknown as PlanModel;
 const render = (a: Area | null) =>
-  renderToString(<AreaPanel model={model} area={a} patch={() => {}} />)
+  renderToString(<AreaPanel model={model} area={a} />)
     .replace(/<!-- -->/g, '')
     .replace(/&#x27;/g, "'")
     .replace(/ /g, ' ');
@@ -21,10 +21,16 @@ describe('AreaPanel (charts in the side panel)', () => {
     expect(html).not.toContain('Population');
   });
 
-  it('opens with the way to the location brief', () => {
-    const html = render(area);
-    expect(html).toContain('Location brief');
-    expect(html.indexOf('Location brief')).toBeLessThan(html.indexOf('Population by distance'));
+  it('widened, is the location brief instead of the charts', () => {
+    const html = renderToString(<AreaPanel model={model} area={area} expanded />).replace(/<!-- -->/g, '');
+    expect(html).toContain('What stands out');
+    expect(html).toContain('Figures by distance');
+    expect(html).not.toContain('Population by distance');
+    expect(html).not.toContain('role="radiogroup"');
+  });
+
+  it("narrow, has no button of its own for the brief: the panel's Expand toggle is the way in", () => {
+    expect(render(area)).not.toContain('Location brief');
   });
 
   it('switches between the rings, the closest first', () => {

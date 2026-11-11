@@ -9,8 +9,6 @@ export interface LocationBriefProps {
   area: Area;
   /** The PDF's section: a plain "Location" heading, on paper. */
   print?: boolean;
-  /** The id the dialog names itself by. */
-  titleId?: string;
 }
 
 const wholePct = (ratio: number) => `${Math.round(ratio * 100)}%`;
@@ -27,21 +25,20 @@ const ROWS: Array<{ label: string; ring: (r: AreaRing) => string; us: string }> 
 
 /**
  * The location brief (DESIGN.md §2.6): what a broker shows a client or a decision maker about the area
- * around the building. Opened over the plan from the Area panel, and printed as the report's last section.
+ * around the building. The Area panel widened to the full page, and the report's last section.
  * Holds no tenant data, so prospect-safe mode shows it whole.
  */
-export function LocationBrief({ property, area, print, titleId }: LocationBriefProps) {
+export function LocationBrief({ property, area, print }: LocationBriefProps) {
   const b = locationBrief(area);
   const amenities = [...area.amenities].filter((a) => a.count > 0).sort((a, b2) => b2.count - a.count);
   const most = amenities[0]?.count ?? 1;
   const stops = [...area.transit].sort((a, b2) => a.distanceMi - b2.distanceMi);
   const ringMiles = b.rings.map((r) => r.miles);
   return (
-    <article className={`sp-brief ${print ? 'sp-brief--print' : ''}`} aria-labelledby={titleId}>
+    <article className={`sp-brief ${print ? 'sp-brief--print' : ''}`}>
       <header className="sp-brief__head">
         <div>
-          {/* In the dialog the title takes focus when it opens: a long page is read from its top. */}
-          <h2 className="sp-brief__title" id={titleId} tabIndex={titleId ? -1 : undefined}>
+          <h2 className="sp-brief__title">
             {print ? 'Location' : `Location · ${property.name}`}
           </h2>
           <p className="sp-brief__sub">

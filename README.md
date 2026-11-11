@@ -37,7 +37,7 @@ One model of the building, shown four ways, with the answers to the questions ab
 - **Renewal worklist.** Leases at risk or expiring within 90 days, 180 days, 12 or 24 months, with the last touch on each.
 - **Data issues.** Over-allocated floors, unaccounted area, leases without a floor, holdover and month-to-month leases and stale deals are listed and marked on the plan.
 - **Timeline and 3D map.** Every lease as a bar against time; the building extruded floor by floor on a real map.
-- **The area around the building.** Demographics, amenities and transit as charts from the Area button in every view, compared with the US. The location brief turns them into a page to show a client or decision maker, and closes the PDF report.
+- **The area around the building.** Demographics, amenities and transit as charts from the Area button in every view, compared with the US. One toggle widens the panel to the location brief, a full-width page to show a client or decision maker, which also closes the PDF report.
 
 **For the prospect, tenant or buyer**
 
@@ -164,7 +164,7 @@ All state lives in the URL, so every view can be linked to.
 | `window` | `risk`, `90`, `180`, `12`, `24` | Renewal worklist window |
 | `bucket` | `0`, `1`, … | Highlight one 12-month rollover period |
 | `q` | text | Search tenant, suite or prospect |
-| `mode` | `issues`, `area`, `brief`, … | Inspector panel, when not implied by the above (`brief`: the Area panel with the location brief open) |
+| `mode` | `issues`, `area`, `brief`, … | Inspector panel, when not implied by the above (`brief`: the Area panel widened to the location brief) |
 | `theme` | `light`, `dark` | Theme (default `dark`) |
 | `palette` | `vice` | The Vice City palette instead of the default Ascendix colors |
 | `skin` | `aurora`, `classic` | The original blue glass, or the flat Salesforce Lightning look, instead of either palette |

@@ -16,7 +16,6 @@ import { ToastProvider, useToast, Sheet } from './components/ui';
 import StackView from './components/stack/StackView';
 import Inspector from './components/inspector/Inspector';
 import { AreaPreview } from './components/inspector/AreaPreview';
-import { BriefDialog } from './components/area/BriefDialog';
 import { useArea } from './components/area/useArea';
 import FloorView from './components/floor/FloorView';
 import BuildingView from './components/building/BuildingView';
@@ -259,7 +258,7 @@ function Shell() {
   const area = useArea(dataSource, property, state.census);
   const areaPanel = (
     <Suspense fallback={<p className="sp-weak" style={{ padding: 16 }}>Loading area data…</p>}>
-      <AreaPanel model={model} area={area} patch={patch} />
+      <AreaPanel model={model} area={area} expanded={mode === 'brief'} />
     </Suspense>
   );
   const areaPreview = <AreaPreview area={area} patch={patch} />;
@@ -280,12 +279,13 @@ function Shell() {
     return on('keydown', onKey);
   }, [state.bucket, state.q, state.window, state.req, state.inquiry, patch, stageOwnsEscape]);
 
-  // The location brief opens over the Area panel: the panel stays beside the plan, under the dialog.
+  // `brief` is the Area panel widened to the full page: laid out as the Area panel, with the plan put away.
   const panel = mode === 'brief' ? 'area' : mode;
+  const wide = mode === 'brief';
   const inspector = useMemo(
-    () => <Inspector model={model} state={state} patch={patch} mode={panel} areaPanel={areaPanel} areaPreview={areaPreview} />,
+    () => <Inspector model={model} state={state} patch={patch} mode={mode} areaPanel={areaPanel} areaPreview={areaPreview} />,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [model, state, patch, panel, area],
+    [model, state, patch, mode, area],
   );
   const view = shownView(state.view, phone);
   // The building view shows a floor itself; the inspector joins it for a suite, a search, the worklist or issues.
@@ -316,7 +316,7 @@ function Shell() {
           resizes it, so the toolbar and the plan under it never move when the view or the selection changes. */}
       <KpiStrip model={model} state={state} onAction={onKpi} />
       <Toolbar state={state} patch={patch} />
-      <main className={`sp-main sp-no-print ${showInspector ? '' : 'sp-main--wide'}`} id="sp-plan" tabIndex={-1}>
+      <main className={`sp-main sp-no-print ${showInspector ? '' : 'sp-main--wide'} ${showInspector && wide ? 'sp-main--panel-wide' : ''}`} id="sp-plan" tabIndex={-1}>
         <Stage epoch={view === 'map' ? 'map' : `fonts-${fontTick}`}>
           {view === 'building' && <BuildingView model={model} state={state} patch={patch} />}
           {view === 'stack' && <StackView model={model} state={state} patch={patch} />}
@@ -349,22 +349,13 @@ function Shell() {
             }
           }}
           title={sheetTitle}
+          snap={wide ? 'full' : 'half'}
           hideHeader
           modeless={panel === 'find' || panel === 'worklist' || panel === 'issues'}
           keepClear={keepClear}
         >
           {inspector}
         </Sheet>
-      )}
-      {mode === 'brief' && area && (
-        <BriefDialog
-          property={property}
-          area={area}
-          onClose={() => {
-            patch({ mode: 'area' });
-            refocusTrigger();
-          }}
-        />
       )}
       <PrintLayout key={`print-${fontTick}`} model={model} state={state} area={area} visible={PRINT_PREVIEW} />
     </div>

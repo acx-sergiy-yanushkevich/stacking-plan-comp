@@ -18,6 +18,8 @@ import { WorklistPanel } from './WorklistPanel';
 import { IssuesPanel } from './IssuesPanel';
 import './inspector.css';
 
+const isArea = (mode: InspectorMode) => mode === 'area' || mode === 'brief';
+
 /** Close a block/floor panel and put keyboard focus back on the block (or floor label) it came from. */
 function closeAndRefocus(patch: Patch, key: string | null, floorId: string | null) {
   clearSelection(patch);
@@ -65,6 +67,7 @@ function headFor(mode: InspectorMode, model: PlanModel, state: PlanState, patch:
     case 'issues':
       return { title: 'Data issues', subtitle: canShowIssues(model.safe) ? `${model.counts.error} errors · ${model.counts.warning} warnings · ${model.counts.info} info` : undefined, close: () => { patch({ mode: 'building' }); refocusTrigger(); } };
     case 'area':
+    case 'brief':
       return { title: 'Area', subtitle: `${model.property.city}, ${model.property.state}`, close: () => { patch({ mode: 'building' }); refocusTrigger(); } };
     case 'building':
     default:
@@ -86,16 +89,25 @@ export default function Inspector({ model, state, patch, mode, areaPanel, areaPr
   }, [bodyKey]);
 
   // Tool panels (find, worklist, issues, area) take focus when they open so Escape works at once.
+  // Widening or narrowing the Area panel is the same panel: focus stays on the toggle that did it.
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const prevMode = useRef(mode);
   useEffect(() => {
-    const toolModes: InspectorMode[] = ['find', 'worklist', 'issues', 'area'];
-    if (mode !== prevMode.current && toolModes.includes(mode)) requestFrame(() => titleRef.current?.focus());
+    const toolModes: InspectorMode[] = ['find', 'worklist', 'issues', 'area', 'brief'];
+    const resized = isArea(mode) && isArea(prevMode.current);
+    if (mode !== prevMode.current && toolModes.includes(mode) && !resized) requestFrame(() => titleRef.current?.focus());
     prevMode.current = mode;
   }, [mode]);
 
+  // The Area panel widens to the full page (the location brief) and back; Escape narrows it before it closes it.
+  const wide = mode === 'brief';
+  const toggleWide = () => patch({ mode: wide ? 'area' : 'brief' });
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Escape' && head.close) {
+    if (e.key !== 'Escape') return;
+    if (wide) {
+      e.stopPropagation();
+      toggleWide();
+    } else if (head.close) {
       e.stopPropagation();
       head.close();
     }
@@ -119,6 +131,7 @@ export default function Inspector({ model, state, patch, mode, areaPanel, areaPr
       body = <IssuesPanel model={model} state={state} patch={patch} />;
       break;
     case 'area':
+    case 'brief':
       body = areaPanel ?? <p className="sp-ins__placeholder">Area demographics and amenities appear here.</p>;
       break;
     default:
@@ -146,6 +159,9 @@ export default function Inspector({ model, state, patch, mode, areaPanel, areaPr
             </p>
           )}
         </div>
+        {isArea(mode) && (
+          <Button variant="ghost" size="sm" icon={wide ? 'collapse' : 'expand'} iconOnly aria-label="Location brief" aria-pressed={wide} title={wide ? 'Back to the side panel (Esc)' : 'Expand to the full page: the location brief'} onClick={toggleWide} />
+        )}
         {head.close && <Button variant="ghost" size="sm" icon="close" iconOnly aria-label="Close" title="Close (Esc)" onClick={head.close} />}
       </div>
       {/* The part that scrolls: the bottom sheet sizes itself to what this holds (ui/Sheet.tsx). */}

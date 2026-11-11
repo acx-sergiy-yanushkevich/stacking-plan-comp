@@ -3,9 +3,8 @@ import { compareRing, US_BENCHMARK } from '../../domain/areaBrief';
 import { num } from '../../domain/format';
 import type { Area } from '../../domain/types';
 import type { PlanModel } from '../../model/usePlanModel';
-import { rememberTrigger } from '../../state/focusStore';
-import { openBrief, type Patch } from '../plan/actions';
-import { Button, Chip, Icon, Segmented } from '../ui';
+import { LocationBrief } from '../area/LocationBrief';
+import { Chip, Icon, Segmented } from '../ui';
 import '../area/area.css';
 import './map.css';
 
@@ -13,7 +12,8 @@ export interface AreaPanelProps {
   model: PlanModel;
   /** The area around the property (App's `useArea`): null while the data source answers. */
   area: Area | null;
-  patch: Patch;
+  /** Widened to the full page (`mode=brief`): the location brief instead of the charts. */
+  expanded?: boolean;
 }
 
 function Skeleton() {
@@ -31,10 +31,11 @@ const ringName = (miles: number) => `${miles} ${miles === 1 ? 'mile' : 'miles'}`
 /**
  * Inspector "Area" mode (DESIGN.md §2.6): the area around the building as charts. Population by
  * distance; one ring compared with the US (a bar for the ring, a tick for the US, both figures in
- * text); amenities within half a mile; nearby transit. "Location brief" opens the same area as a page
- * to show a client or decision maker. Sample figures are flagged until a Census key is given.
+ * text); amenities within half a mile; nearby transit. Widened by the panel's Expand toggle, it is the
+ * location brief: the same area as a page to show a client or decision maker. Sample figures are
+ * flagged until a Census key is given.
  */
-export function AreaPanel({ model, area, patch }: AreaPanelProps) {
+export function AreaPanel({ model, area, expanded }: AreaPanelProps) {
   const { property } = model;
   const rings = area ? [...area.rings].sort((a, b) => a.miles - b.miles) : [];
   const [miles, setMiles] = useState<number | null>(null);
@@ -43,20 +44,13 @@ export function AreaPanel({ model, area, patch }: AreaPanelProps) {
   const amenities = area ? [...area.amenities].filter((a) => a.count > 0).sort((a, b) => b.count - a.count) : [];
   const mostAmenity = amenities[0]?.count ?? 1;
 
+  if (expanded) {
+    return <section className="sp-area sp-area--wide" aria-label="Location brief">{area ? <LocationBrief property={property} area={area} /> : <Skeleton />}</section>;
+  }
+
   return (
     <section className="sp-area" aria-label="Area demographics and amenities">
       <header className="sp-area__head">
-        <Button
-          variant="brand"
-          icon="file"
-          onClick={() => {
-            rememberTrigger();
-            openBrief(patch);
-          }}
-          title="The area as a page to show a client or decision maker; also the last section of the PDF report"
-        >
-          Location brief
-        </Button>
         <p className="sp-weak">
           {property.city}, {property.state} · rings around the property
         </p>

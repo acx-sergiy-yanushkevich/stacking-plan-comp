@@ -6,7 +6,7 @@ export type IconName =
   | 'phone' | 'external' | 'close' | 'chevron-down' | 'chevron-left' | 'chevron-right' | 'play' | 'pause' | 'record'
   | 'map' | 'layers' | 'list' | 'info' | 'check' | 'arrow-left' | 'stack' | 'timeline' | 'floor' | 'plus' | 'file'
   | 'image' | 'table' | 'link' | 'video' | 'sparkle' | 'shield' | 'clock' | 'user' | 'compass' | 'tilt' | 'minus'
-  | 'dollar' | 'home' | 'people' | 'train' | 'coffee' | 'sun' | 'moon' | 'more';
+  | 'dollar' | 'home' | 'people' | 'train' | 'coffee' | 'sun' | 'moon' | 'more' | 'expand' | 'collapse';
 
 const PATHS: Record<IconName, string> = {
   more: 'M5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM19 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z',
@@ -24,6 +24,8 @@ const PATHS: Record<IconName, string> = {
   phone: 'M22 16.9v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 3 4.2 2 2 0 0 1 5 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L9 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z',
   external: 'M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5',
   close: 'M6 6l12 12M18 6 6 18',
+  expand: 'M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7',
+  collapse: 'M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7',
   'chevron-down': 'M6 9l6 6 6-6',
   'chevron-left': 'M15 6l-6 6 6 6',
   'chevron-right': 'M9 6l6 6-6 6',
