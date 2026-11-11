@@ -32,7 +32,8 @@ describe('brand CSS', () => {
   it('uses the fixed hex colours and no palette token', () => {
     for (const hex of ['#00aff0', '#ff9c00', '#1e2d3c', '#15212d']) expect(brand).toContain(hex);
     expect(brand).not.toMatch(/var\(--sp-color-brand/);
-    expect(brand).toMatch(/\[data-theme='light'\][^{]*\.sp-mark__bar\s*\{[^}]*fill:\s*#1e2d3c/);
+    // The bars sit on a navy square in both themes, so no theme may repaint them navy.
+    expect(brand).not.toMatch(/\[data-theme='light'\][^{]*\.sp-mark__bar/);
   });
 });
 

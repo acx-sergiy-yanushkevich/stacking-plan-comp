@@ -41,10 +41,10 @@ Left to right:
    - `(12,22) 24×9` cyan, `(39,22) 13×9` orange
    - `(12,34) 14×9` cyan, `(29,34) 23×9` cyan
    - `(12,46) 40×9` cyan
-   In the light theme the cyan bars become navy for contrast; the orange stays. In the dark theme the square is a darker navy (#15212D) with a 1px white 10% ring so it separates from the page.
+   The bars stay cyan in both themes (they sit on the navy square). In the dark theme the square is a darker navy (#15212D) with a 1px white 10% ring so it separates from the page.
 2. **Lockup B**: "Stax" (capital S, lowercase x) in 800 weight, ~21px, letter-spacing −0.02em, cyan; then "by Ascendix" in 600 weight, ~13px, navy (light) or white (dark). Both on one baseline, 9px apart, the pair vertically centred on the mark.
 3. A 1px vertical divider.
-4. **Building switcher**: a button with a 26px photo thumbnail, the building name, and a chevron. Opening it shows a menu titled "PORTFOLIO · 6 BUILDINGS": the current building highlighted and checked, then five more entries in disabled style (name left, city right) and a last line "sample entries". The disabled entries are fictional Dallas-area office names and do not navigate. Builder's call on the exact names; they must not be real buildings or companies.
+4. **Building switcher**: a button with a building icon, the building name, and a chevron (no photo here; the photo is on the card). Opening it shows a menu titled "PORTFOLIO · 6 BUILDINGS": the current building highlighted and checked, then five more entries in disabled style (name left, city right) and a last line "sample entries". The disabled entries are fictional Dallas-area office names and do not navigate. Builder's call on the exact names; they must not be real buildings or companies.
 5. Spacer.
 6. **Controls**, unchanged in behaviour: as-of popover, Prospect-safe switch, Export menu. Then:
 7. **Palette icon button** (icon-only, same size as the theme toggle): opens a menu "COLORS" with Ascendix, Vice City, and "Custom · coming soon" (disabled). Each entry keeps the existing palette dot adornment. The icon is a new line icon in the app's icon set, a painter's palette outline with three small dots, same stroke as `sun`/`moon`. Selecting a palette does what the segmented control did (`palettePatch`).
@@ -52,7 +52,7 @@ Left to right:
 
 The Prospect-safe chip that today shares a slot with Data issues stays and takes the slot alone: it is what tells a broker the mode is on. The fixed slot width that kept the header height stable with the mode on and off can go if nothing wraps differently; the builder checks the header height is the same in both modes at the breakpoints `shell.css` already names.
 
-On a phone the existing "more" menu keeps the palette and theme entries; the palette icon is desktop only. The building switcher collapses to the thumbnail and chevron.
+On a phone the existing "more" menu keeps the palette and theme entries; the palette icon is desktop only. The building switcher collapses to the icon and chevron.
 
 ### Building card
 

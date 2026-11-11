@@ -165,6 +165,9 @@ describe('Header product bar and building card', () => {
       expect(b.indexOf(a), `${a} before ${c}`).toBeLessThan(b.indexOf(c));
     expect(strip(b)).toMatch(/^Stax by Ascendix Preston Park Financial Center/);
     expect(b).toMatch(/<button(?=[^>]*aria-label="Switch building")(?=[^>]*aria-haspopup="menu")/);
+    // The switcher names the building beside a building icon; the photo is on the card, not here.
+    expect(b).not.toContain('sp-switcher__thumb');
+    expect(b).not.toContain('<img');
   });
 
   it('standalone: the card is the photo, the name and the facts; the controls are not in it', () => {

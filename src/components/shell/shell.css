@@ -53,12 +53,14 @@
 /* How the plan looks (palette, theme): a group of its own, apart from the controls of what it shows. */
 .sp-header__look { display: flex; align-items: center; gap: 8px; flex: none; }
 
-/* The product bar: the lockup, a divider, the building switcher, then the controls pushed to the right. */
-.sp-topbar { display: flex; align-items: center; gap: var(--sp-space-3); padding: 8px var(--sp-space-4); flex-wrap: wrap; }
+/* The product bar: the lockup, a divider, the building switcher, then the controls pushed to the right.
+   Its menus (building, export, colors) open over the cards under it, so it stacks above them. */
+.sp-topbar { position: relative; z-index: 31; display: flex; align-items: center; gap: var(--sp-space-3); padding: 8px var(--sp-space-4); flex-wrap: wrap; }
 .sp-topbar__divider { width: 1px; height: 30px; background: var(--sp-color-border-strong); flex: none; }
 .sp-topbar .sp-header__actions { margin-left: auto; }
 .sp-switcher { max-width: 100%; }
-.sp-switcher__thumb { width: 26px; height: 26px; border-radius: 7px; object-fit: cover; flex: none; }
+/* The portfolio list is wide enough for a long building name and its city on one line each. */
+.sp-pop:has(> .sp-switcher) .sp-pop__panel { min-width: 380px; }
 .sp-switcher__name { font-weight: 600; max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* The building card: the photo, the name and the facts. In the embedded skin it also keeps the controls. */
@@ -191,15 +193,13 @@
 
 /* ── Brand ──────────────────────────────────────────────── */
 /* The Stax mark and lockup are drawn in the brand's own colours, as literal hex: the same under every
-   palette. Only the theme moves them: on a light page the cyan bars turn navy so the mark keeps its
-   contrast; the open suite stays orange. */
+   palette and both themes. The bars sit on a navy square, so they stay cyan on a light page too; only
+   the square's shade and the byline's colour follow the theme. */
 .sp-mark { display: inline-grid; place-items: center; border-radius: 28%; background: #1e2d3c; flex: none; }
 .sp-mark svg { display: block; }
 .sp-mark__bar { fill: #00aff0; }
 .sp-mark__bar--open { fill: #ff9c00; }
 :root:not([data-theme='light']) .sp-mark { background: #15212d; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1); }
-:root[data-theme='light'] .sp-mark__bar { fill: #1e2d3c; }
-:root[data-theme='light'] .sp-mark__bar--open { fill: #ff9c00; }
 .sp-lockup { display: inline-flex; align-items: center; gap: 10px; }
 .sp-lockup__text { display: inline-flex; align-items: baseline; gap: 9px; }
 .sp-lockup__name { font-weight: 800; font-size: 21px; line-height: 1; letter-spacing: -0.02em; color: #00aff0; }

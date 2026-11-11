@@ -156,8 +156,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
           label="Building"
           align="start"
           trigger={(p) => (
-            <Button {...p} iconRight="chevron-down" aria-label="Switch building" title="Switch building" className="sp-switcher">
-              <img className="sp-switcher__thumb" src={buildingPhoto} alt="" />
+            <Button {...p} icon="building" iconRight="chevron-down" aria-label="Switch building" title="Switch building" className="sp-switcher">
               <span className="sp-switcher__name">{property.name}</span>
             </Button>
           )}
