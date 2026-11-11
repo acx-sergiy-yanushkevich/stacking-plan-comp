@@ -91,7 +91,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
     delta: d ? { text: `${d.occupancy >= 0 ? '+' : '−'}${Math.abs(d.occupancy * 100).toFixed(1)} pts`, good: d.occupancy >= 0 } : null,
     // Pressed whenever the plan is coloured by status, as Pipeline is whenever it is coloured by deals.
     active: state.lens === 'status',
-    title: `Leased share of leasable RSF, including signed leases that have not commenced.${safe ? '' : ` ${num(Math.round(k.physical * k.leasable))} SF occupied + ${num(k.committed)} signed, not in + ${num(k.availableSublease)} sublet vacant${overAlloc > 0 ? ` − ${num(overAlloc)} over-allocated (capped)` : ''} = ${num(k.leased)} SF leased.`} Click to color the plan by status.`,
+    title: `Leased share of leasable RSF, including signed leases that have not commenced.${safe ? '' : ` ${num(Math.round(k.physical * k.leasable))} SF occupied + ${num(k.committed)} signed, not in + ${num(k.availableSublease)} sublet vacant${overAlloc > 0 ? ` − ${num(overAlloc)} over-allocated (capped)` : ''} = ${num(k.leased)} SF leased.`} Click to color the plan by occupancy.`,
   };
   const opens: Kpi[] = [
     {
@@ -189,7 +189,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
         detail: `${k.pipeline.onVacancy} on vacancies · ${plural(k.pipeline.deals - k.pipeline.onVacancy, 'renewal')} · ${num(k.pipeline.sf)} SF requested`,
         delta: d ? { text: `${d.pipelineDeals >= 0 ? '+' : '−'}${Math.abs(d.pipelineDeals)} ${Math.abs(d.pipelineDeals) === 1 ? 'deal' : 'deals'}`, good: d.pipelineDeals >= 0 } : null,
         active: state.lens === 'deals',
-        title: 'Live deals on this building. Click to color the plan by deals.',
+        title: 'Live deals on this building. Click to color the plan by pipeline.',
       };
   const lenses = [leased, pipeline];
   const kpi = (c: Kpi, kind: 'lens' | 'open') => {

@@ -5,10 +5,14 @@ import { canShowDeals, canShowIssues, canShowLeaseTerm, canShowTenantRisk, termH
 
 export type LensId = 'status' | 'expiry' | 'deals' | 'rent';
 
+/**
+ * The colour lenses. Each label is the one name the lens goes by everywhere: the toolbar's option, the
+ * legend's title, and (for Pipeline) the KPI that switches to it.
+ */
 export const LENSES: Array<{ id: LensId; label: string; hint: string }> = [
-  { id: 'status', label: 'Status', hint: 'Leased, available, committed and at-risk space' },
+  { id: 'status', label: 'Occupancy', hint: 'Leased, available, committed and at-risk space' },
   { id: 'expiry', label: 'Expiration', hint: 'Months from the as-of date to lease expiration' },
-  { id: 'deals', label: 'Deals', hint: 'Most advanced deal on each space' },
+  { id: 'deals', label: 'Pipeline', hint: 'Most advanced deal on each space' },
   { id: 'rent', label: 'Rent', hint: 'In-place or asking rent, $/SF/yr — full-service gross; NNN and MG shown separately' },
 ];
 
@@ -311,3 +315,6 @@ export function toneShort(tone: Tone, lens: LensId, prospectSafe: boolean): stri
   const words: Partial<Record<Tone, string>> = { available: 'Available', 'available-later': 'Coming', sublease: 'Sublease', committed: 'Committed', forsale: 'For sale', leased: 'Leased', expiring: 'Expiring', risk: 'At risk', empty: 'Vacant', projected: 'Vacating', neutral: 'Leased' };
   return words[tone] ?? toneLabel(tone, lens, prospectSafe);
 }
+
+/** The lens's name, as the toolbar and the legend's title both say it. */
+export const lensName = (id: LensId): string => LENSES.find((l) => l.id === id)!.label;

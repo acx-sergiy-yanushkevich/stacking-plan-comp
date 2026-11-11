@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import { lensName } from '../../domain/lenses';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { blockLayout } from '../../domain/layout';
@@ -226,7 +227,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
     .filter(Boolean)
     .join(' ') || null;
   const totalLeasable = model.kpis.leasable;
-  const title = state.lens === 'status' ? 'Occupancy' : state.lens === 'expiry' ? 'Expirations' : state.lens === 'deals' ? 'Deal pipeline' : 'Rents';
+  const title = lensName(state.lens);
 
   // Phones get floor cards with full-width suite rows instead of a squeezed stack.
   if (phone && !bare) return <PhoneStack model={model} state={state} patch={patch} title={title} legendNote={legendNote} textFor={textFor} highlight={highlight} />;

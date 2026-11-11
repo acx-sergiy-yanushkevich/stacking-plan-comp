@@ -312,4 +312,9 @@ describe('BuildingView', () => {
     expect(labelsOf(status).map((l) => l.text)).toContain('2 · 74.8% leased');
     // (The withheld KPIs are the bar's own business: KpiStrip.test.tsx.)
   });
+
+  it('names the legend as the toolbar names the lens: Occupancy, Expiration, Pipeline, Rent', () => {
+    for (const [lens, name] of [['status', 'Occupancy'], ['expiry', 'Expiration'], ['deals', 'Pipeline'], ['rent', 'Rent']])
+      expect(render(`?lens=${lens}`), lens).toMatch(new RegExp(`<div class="sp-stack__title"><h2>${name}</h2>`));
+  });
 });

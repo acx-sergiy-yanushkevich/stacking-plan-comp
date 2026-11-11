@@ -154,10 +154,10 @@ export function Toolbar({ state, patch, issueCount }: ToolbarProps) {
           {canShowIssues(state.safe) ? (
             <Button icon="warning" active={state.mode === 'issues'} count={issueCount} onClick={() => toggleMode('issues')} title="Data issues: records to fix or verify">
               {/* On a phone the four tool buttons share one row: the word there is "Issues", drawn and read. */}
-              {phone ? 'Issues' : ISSUES_LABEL}
+              {ISSUES_LABEL}
             </Button>
           ) : (
-            <Slot icon="warning" label={phone ? 'Issues' : ISSUES_LABEL} count={issueCount} />
+            <Slot icon="warning" label={ISSUES_LABEL} count={issueCount} />
           )}
         </div>
       </div>

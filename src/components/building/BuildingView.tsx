@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { lensName } from '../../domain/lenses';
 import { fmtDate } from '../../domain/dates';
 import { num } from '../../domain/format';
 import type { PlanModel } from '../../model/usePlanModel';
@@ -271,7 +272,7 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
   const squat = Math.max(shortWindow ? 180 : 210, Math.round(size.width / (shortWindow ? 3.7 : 3)));
   const plateHeight = size.width < 720 ? Math.min(size.height, squat) : size.height;
 
-  const title = state.lens === 'status' ? 'Occupancy' : state.lens === 'expiry' ? 'Expirations' : state.lens === 'deals' ? 'Deal pipeline' : 'Rents';
+  const title = lensName(state.lens);
   const over = floors.filter((f) => f.overAllocatedBy > 0);
   const lobby = buildingUse(floors);
   const head = (
