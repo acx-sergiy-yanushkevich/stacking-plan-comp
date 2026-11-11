@@ -125,7 +125,11 @@
 /* Dots and hatch never cross the letters: the text gets a halo in the suite's own fill (the stroke colour is set inline).
    The stack does the same with a backing rect behind its lines. */
 .sp-plate .sp-seg--patterned > text { stroke-width: 5px; stroke-linejoin: round; paint-order: stroke fill; }
-/* Lobby / building-use slice: weak text on a card-coloured halo so the hatch never crosses the letters. */
-.sp-plate .sp-seg--lobby text { fill: var(--sp-color-text-weak); stroke: var(--sp-color-card); stroke-width: 3px; stroke-linejoin: round; paint-order: stroke fill; }
+/* Lobby / building-use slice: weak text with the same halo as any patterned suite, in the slice's own
+   opaque fill (set inline, as theirs is). The card colour is translucent glass, and a halo in it let the
+   diagonal hatch show through the letters. */
+.sp-plate .sp-seg--lobby text { fill: var(--sp-color-text-weak); }
+/* A keyed slice lists its facts under the plate; an entry may wrap between facts, never inside one. */
+.sp-plate__key li { flex-wrap: wrap; }
 
 @media (max-width: 760px) { .sp-mini__pct { display: none; } }

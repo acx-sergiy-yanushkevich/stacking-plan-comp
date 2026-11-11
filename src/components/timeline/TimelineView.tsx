@@ -17,6 +17,7 @@ import { barLabel, SUB_FONT, tagWidth, wrapLabel, type LabelLine } from './barLa
 import { useWidth } from './useWidth';
 import { measure } from '../../lib/textFit';
 import { Icon } from '../ui';
+import { rampNote } from '../stack/rampNote';
 import './timeline.css';
 
 export interface TimelineViewProps {
@@ -143,10 +144,10 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
               Legend · {legendStates} states
               <Icon name="chevron-down" size={14} />
             </summary>
-            <Legend items={model.legend} compact />
+            <Legend items={model.legend} compact note={rampNote(state.lens, model.safe)} />
           </details>
         ) : (
-          <Legend items={model.legend} compact />
+          <Legend items={model.legend} compact note={rampNote(state.lens, model.safe)} />
         )}
       </div>
     <div className={`sp-timeline ${stackedMode ? 'sp-timeline--stacked' : ''}`} ref={hostRef}>

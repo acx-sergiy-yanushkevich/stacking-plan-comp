@@ -3,7 +3,7 @@ import type { ISODate } from '../../domain/types';
 import { fmtDate, fmtMonthYear, fmtMonthYearShort, fmtMonths } from '../../domain/dates';
 import { compactRate, num, rate, sf, usd, usd0 } from '../../domain/format';
 import { dealCount, rentType, rentValue, topDeal, toneFor, type LensId, type Tone } from '../../domain/lenses';
-import { canShowActivity, canShowDeals, canShowInPlaceRent, canShowIssues, canShowListingStatus, canShowTenant, canShowTenantRisk, leaseDatesHidden, marketedFor, rentVisible, tenantLabel, termHidden } from '../../domain/safe';
+import { canShowActivity, canShowDeals, canShowInPlaceRent, canShowIssues, canShowLeaseTerm, canShowListingStatus, canShowTenant, canShowTenantRisk, leaseDatesHidden, marketedFor, rentVisible, tenantLabel, termHidden } from '../../domain/safe';
 import type { PatternKind } from './Patterns';
 
 export interface Badge {
@@ -46,7 +46,12 @@ export interface SegmentTextOptions {
   today?: ISODate;
   /** Why a search matched this block (shown as a badge). */
   matchReason?: string;
+  /** This suite is (part of) the building's largest contiguous block of direct space, the one the KPI reports. */
+  largest?: boolean;
 }
+
+/** The words that mark the building's largest block wherever it is shown: a floor's label, a suite's badge. */
+export const LARGEST_BLOCK = 'Largest block';
 
 const KIND_LABEL: Record<Segment['kind'], string> = {
   leased: 'Leased',
@@ -84,6 +89,8 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
   let meta = '';
   const lease = seg.lease;
   const a = seg.availability;
+  // First of the badges: it is the answer to "where is the largest block", and it describes space, so a prospect sees it too.
+  if (o.largest) badges.push({ kind: 'info', text: LARGEST_BLOCK, title: 'The largest contiguous block of direct space in the building' });
 
   switch (kind) {
     case 'leased':
@@ -100,8 +107,11 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
       else if (kind === 'mtm') meta = 'Month-to-month';
       else if (kind === 'holdover') meta = `Expired ${seg.endDate ? fmtMonthYear(seg.endDate) : ''}`;
       else if (seg.endDate && seg.monthsToExpiry !== null) meta = `Exp ${fmtMonthYear(seg.endDate)} · ${fmtMonths(seg.monthsToExpiry)}`;
-      // The sublease's own end is part of the offer, not a lease term: it stays in every mode.
-      if (kind === 'sublease' && a?.subleaseExpiration) meta = `Sublease thru ${fmtMonthYear(a.subleaseExpiration)}`;
+      // To the broker a sublet suite says how long the sublease runs. A prospect is given no end date
+      // (it is the sublandlord's lease end; `safeFloors` has already removed it) and reads what any
+      // space on offer says instead: the asking rent, with its unit and lease type.
+      if (kind === 'sublease' && a?.subleaseExpiration && canShowLeaseTerm(safe)) meta = `Sublease thru ${fmtMonthYear(a.subleaseExpiration)}`;
+      else if (kind === 'sublease' && a && termHidden(kind, safe) && rentVisible(a, safe) && a.rentHigh > 0) meta = compactRate(a.rentLow, a.rentHigh, a.rateUnit, a.leaseType);
       // A quiet listing is not shown to a prospect at all; to the broker it is marked as quiet.
       const marketed = marketedFor(seg, safe);
       if (marketed && !marketed.sublease && marketed.kind === 'Lease') {

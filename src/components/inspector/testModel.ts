@@ -1,11 +1,11 @@
 import { property, TODAY } from '../../data/mock/property';
 import { activeDeals, deriveFloors, isLeaseKind, segmentIndex, type FloorView } from '../../domain/derive';
-import { filterFits, findFits, nearMisses } from '../../domain/finder';
+import { checkNeededBy, searchSpace } from '../../domain/finder';
 import { findIssues, issueCounts, recentChanges } from '../../domain/issues';
 import { computeKpis, kpiDeltas } from '../../domain/kpis';
 import { legendFor } from '../../domain/lenses';
 import { rollover } from '../../domain/rollover';
-import { canShowLeaseTerm, planDate, publishedFloors, safeFloors, safeKpis, safeRollover } from '../../domain/safe';
+import { canShowInquiries, canShowLeaseTerm, planDate, publishedFloors, safeFloors, safeKpis, safeRollover } from '../../domain/safe';
 import { timelineModel } from '../../domain/timeline';
 import { WINDOW_MONTHS, type PlanModel, type WorklistRow } from '../../model/usePlanModel';
 import type { PlanState, WindowKey } from '../../state/planState';
@@ -23,17 +23,13 @@ export function buildModel(state: PlanState): PlanModel {
   const kpis = safeKpis(computeKpis(property, totals, asOf), state.safe);
   const kpisToday = asOf === TODAY ? kpis : safeKpis(computeKpis(property, totalsToday, TODAY), state.safe);
   const issues = findIssues(property, totals, TODAY);
-  const inquiry = state.inquiry ? property.inquiries.find((i) => i.id === state.inquiry) ?? null : null;
+  const inquiry = state.inquiry && canShowInquiries(state.safe) ? property.inquiries.find((i) => i.id === state.inquiry) ?? null : null;
   const req = inquiry
     ? { size: inquiry.minSize, max: inquiry.maxSize, by: inquiry.neededBy, type: state.fit }
     : state.req
-      ? { size: state.req, max: state.max, by: state.by, type: state.fit }
+      ? { size: state.req, max: state.max, by: checkNeededBy(state.by, asOf).date, type: state.fit }
       : null;
-  const found = req ? findFits(floors, req.size, req.by, req.max, property.inquiries, asOf) : null;
-  const options = found && req ? filterFits(found.options, req.type) : [];
-  const keys = new Set(options.flatMap((o) => o.keys));
-  const alternatives = found && req && options.length < 3 ? nearMisses(floors, req.size, asOf, req.type) : [];
-  const fits = found ? { options, keys, alternatives, partial: new Set(alternatives.flatMap((m) => m.keys).filter((k) => !keys.has(k))), largestNow: found.largestNow } : null;
+  const fits = req ? searchSpace(floors, req, property.inquiries, asOf) : null;
   const worklist = (w: WindowKey): WorklistRow[] => worklistRows(floors, w);
   const segIndex = segmentIndex(floors);
   const selected = state.select ? segIndex.get(state.select) ?? null : null;

@@ -1,5 +1,5 @@
 import type { ISODate } from '../domain/types';
-import { canKeepSearch, canShowIssues, canShowLeaseTerm, planDate } from '../domain/safe';
+import { canKeepSearch, canShowInquiries, canShowIssues, canShowLeaseTerm, canUseLens, planDate } from '../domain/safe';
 
 /**
  * URL-synced plan state. Pure: no React, no DOM. `usePlanState` wires it to
@@ -117,18 +117,23 @@ function text(v: string | null): string | null {
 
 /**
  * What prospect-safe mode never holds, whatever asked for it: the renewal worklist and the rollover
- * highlight (both point at single leases by their term), the data-issues panel, and an as-of date
- * other than today (a later date shows each lease's end as a vacated suite). `today` is passed by
- * whoever owns the clock (`parseState`, `usePlanState`); without it the date is left alone.
- * Idempotent, and the identity outside prospect-safe mode.
+ * highlight (both point at single leases by their term), the data-issues panel, a lens that colours
+ * by something withheld (Deals, Expiration: the plan falls back to Status), a matched inquiry (another
+ * prospect's size and date would be the requirement on screen) and an as-of date other than today (a
+ * later date shows each lease's end as a vacated suite). `today` is passed by whoever owns the clock
+ * (`parseState`, `usePlanState`); without it the date is left alone. Because every change of state
+ * passes through here (`applyPatch`), none of these can be set while the mode is on, by a control or by
+ * a link. Idempotent, and the identity outside prospect-safe mode.
  */
 export function safeState(s: PlanState, today?: ISODate): PlanState {
   if (!s.safe) return s;
   const window = canShowLeaseTerm(s.safe) ? s.window : null;
   const bucket = canShowLeaseTerm(s.safe) ? s.bucket : null;
   const mode = (s.mode === 'worklist' && !canShowLeaseTerm(s.safe)) || (s.mode === 'issues' && !canShowIssues(s.safe)) ? 'building' : s.mode;
+  const lens = canUseLens(s.lens, s.safe) ? s.lens : DEFAULT_STATE.lens;
+  const inquiry = canShowInquiries(s.safe) ? s.inquiry : null;
   const asOf = today ? planDate(s.asOf, today, s.safe) : s.asOf;
-  return window === s.window && bucket === s.bucket && mode === s.mode && asOf === s.asOf ? s : { ...s, window, bucket, mode, asOf };
+  return window === s.window && bucket === s.bucket && mode === s.mode && lens === s.lens && inquiry === s.inquiry && asOf === s.asOf ? s : { ...s, window, bucket, mode, lens, inquiry, asOf };
 }
 
 /**
@@ -176,7 +181,7 @@ export function parseState(search: string, today: ISODate): PlanState {
     ...(p.get('skin') === 'classic' ? { skin: 'classic' as const } : p.get('skin') === 'aurora' ? { skin: 'aurora' as const } : {}),
     ...(p.get('palette') === 'vice' ? { palette: 'vice' as const } : {}),
   };
-  // A link with `safe=1` is a crossing into the mode: `q` and `asOf` are dropped with everything else it never holds.
+  // A link with `safe=1` is a crossing into the mode: `q`, `inquiry` and `asOf` are dropped with everything else it never holds.
   return enterSafe(parsed, today);
 }
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../../data/mock/property';
 import { deriveFloors, segmentIndex } from '../../domain/derive';
 import { safeFloors } from '../../domain/safe';
-import { badgeLabel, segmentText } from './segmentText';
+import { badgeLabel, LARGEST_BLOCK, segmentText } from './segmentText';
 
 const index = segmentIndex(deriveFloors(property, TODAY, TODAY));
 const opts = { safe: false, asOf: TODAY, today: TODAY, floorName: 'Floor', lens: 'status' as const };
@@ -116,12 +116,42 @@ describe('prospect-safe: every lease in place reads the same', () => {
     expect(segmentText(raw.find((s) => s.kind === 'holdover')!, opts).meta).toMatch(/^Expired /);
   });
 
-  it('a sublet suite keeps the sublease end, which is part of the offer, and drops the head lease term', () => {
+  it('a sublet suite reads as space on offer: its asking rent with unit and type, and no end date (it is the sublandlord\'s lease end)', () => {
     const sub = floors.flatMap((f) => f.segments).find((s) => s.kind === 'sublease')!;
+    // The broker reads how long the sublease runs.
+    expect(segmentText(sub, opts).meta).toBe('Sublease thru Sep 2030');
+    // A prospect does not, whether or not the segment went through the projection first.
     for (const seg of [sub, projected.get(sub.key)!]) {
-      expect(segmentText(seg, { ...opts, safe: true }).meta).toBe('Sublease thru Sep 2030');
-      expect(segmentText(seg, { ...opts, safe: true, lens: 'expiry' }).meta).toBe('Sublease thru Sep 2030');
+      for (const lens of ['status', 'expiry', 'rent'] as const) {
+        const t = segmentText(seg, { ...opts, safe: true, lens });
+        expect(`${t.name} ${t.meta} ${t.lensShort} ${t.tooltip} ${t.aria}`, lens).not.toMatch(/thru|2030|Sep|\d+ (mo|yr)\b|left/);
+        expect(t.name, lens).toBe('Sublease');
+        expect(t.meta, lens).toMatch(/\$24–\$?26\/SF\/yr FSG$/);
+        expect([t.tone, t.pattern], lens).toEqual([lens === 'rent' ? 'rent-0' : 'sublease', 'dots']);
+      }
       expect(segmentText(seg, { ...opts, safe: true }).lensShort).toBe('');
     }
+  });
+});
+
+describe('largest block badge', () => {
+  const vacant = [...index.values()].find((s) => s.kind === 'available' && !s.availableFrom)!;
+
+  it('is the first badge of a suite in the building\'s largest block, in words', () => {
+    const t = segmentText(vacant, { ...opts, largest: true });
+    expect(t.badges[0]).toMatchObject({ kind: 'info', text: 'Largest block' });
+    expect(LARGEST_BLOCK).toBe('Largest block');
+    // Said where the badge has no room to be drawn: the tooltip and the accessible name.
+    expect(t.tooltip).toContain('Largest block');
+    expect(t.aria).toContain('Largest block');
+  });
+
+  it('is on no other suite', () => {
+    for (const s of index.values()) expect(segmentText(s, opts).badges.some((b) => b.text === 'Largest block')).toBe(false);
+  });
+
+  it('stays in prospect-safe mode: available space is marketing information', () => {
+    const safe = segmentIndex(safeFloors(deriveFloors(property, TODAY, TODAY), true)).get(vacant.key)!;
+    expect(segmentText(safe, { ...opts, safe: true, largest: true }).badges[0].text).toBe('Largest block');
   });
 });

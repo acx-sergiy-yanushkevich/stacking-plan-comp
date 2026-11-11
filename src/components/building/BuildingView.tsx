@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { fmtDate } from '../../domain/dates';
-import { num, sf } from '../../domain/format';
+import { num } from '../../domain/format';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { setHoverFloor, useHoverFloor } from '../../state/hoverStore';
@@ -11,29 +11,52 @@ import { FloorPlate } from '../floor/FloorPlate';
 import { FloorSummary } from '../floor/FloorSummary';
 import { MiniStack } from '../floor/MiniStack';
 import { plateAspect, usePlateSize } from '../floor/usePlateSize';
-import { KpiStrip, type KpiAction } from '../kpis/KpiStrip';
 import { FilterBar } from '../stack/FilterBar';
+import { rampNote } from '../stack/rampNote';
 import { Button } from '../ui';
 import { useMedia, usePrefersReducedMotion } from '../../lib/useMedia';
-import { factNote, floorFact, floorLabel, floorSentence, lensFact } from './floorFact';
+import { floorHeading, floorLabel, floorParts, floorSentence, labelNote, lensFact } from './floorFact';
+import { FloorLabels, type FloorLabelRow } from './FloorLabels';
 import { openFloorOf } from './openFloor';
-import { canShowDeals, canShowIssues } from '../../domain/safe';
+import { canShowIssues } from '../../domain/safe';
 import '../floor/floor.css';
-import '../kpis/kpis.css';
 import './building.css';
 
 export interface BuildingViewProps {
   model: PlanModel;
   state: PlanState;
   patch: (p: Partial<PlanState>) => void;
-  /** What a click on one of the building's KPIs does (the same handler as the strip above the plan). */
-  onKpi?: (a: KpiAction) => void;
 }
 
 /** How far the building is turned while it stands alone; it turns to face front (0) as a floor opens. */
 const ALONE_ANGLE = -34;
 const DOCK_MS = 760;
 const DOCK_EASE = 'cubic-bezier(0.22, 0.8, 0.2, 1)';
+/**
+ * When the floor picker comes in while the model docks, as fractions of DOCK_MS: the model glides toward
+ * the picker's place from the right and never reaches it, so the picker fades in at once. (Undocking,
+ * there is no picker: the labels beside the model come back when it has settled.)
+ */
+const PICKER_IN = [0.04, 0.34] as const;
+/** The narrowest the model may be drawn with the list of floors beside it; with less room the list goes under it. */
+const MIN_MODEL = 240;
+/** The space between the model and the list beside it (building.css, `--sp-hero-gap`). */
+const LIST_GAP = 16;
+
+/** Where the model's drawing stands on screen, and how many drawing units its height is. */
+interface Stood {
+  left: number;
+  bottom: number;
+  height: number;
+  units: number;
+}
+function standing(stage: HTMLElement | null): Stood | null {
+  const svg = stage?.querySelector<SVGSVGElement>('.sp-hero__canvas svg');
+  if (!svg) return null;
+  const r = svg.getBoundingClientRect();
+  const units = svg.viewBox?.baseVal?.height ?? 0;
+  return r.height > 0 && units > 0 ? { left: r.left, bottom: r.bottom, height: r.height, units } : null;
+}
 
 /** Where Escape belongs to what has the keyboard: a panel, a popover or menu, the phone sheet, a field. */
 const ESCAPE_OWNERS = '.sp-ins, .sp-pop__panel, .sp-sheet, [role="dialog"], [role="menu"], [role="listbox"], input, select, textarea';
@@ -46,17 +69,26 @@ function layoutTop(el: HTMLElement): number {
 }
 
 /**
- * The building as the plan. With no floor open the model stands alone, large, with a fact beside each
- * floor, the building's six KPIs and three quick starts in the column beside it. Opening a floor (a
- * click, the picker, a quick start, a search or the finder) turns the model to face front and docks it
- * on the left while that floor's plate, numbers and lists come in beside it.
+ * The building as the plan. With no floor open the model stands alone, large, with one list of floors
+ * beside it: a label per floor, level with its floor ("12 · 50.0% leased · 9,300 SF available"). The
+ * labels are buttons, so the list is the floor picker too, and the floors are listed once. Opening a
+ * floor (a click on the model or on a label, a search or the finder) turns the model to face front and
+ * docks it beside a compact picker while that floor's plate, numbers and lists come in on the right.
  *
- * Pointing at a floor only lights it (on the model and in the picker) and, while the building stands
+ * The card holds nothing else: the building's KPIs are the bar above the toolbar (App), the same in every
+ * view. Alone, the model with its list is centred and takes the height there is under one caption line.
+ * Where the list has no room beside the model (a narrow card, a long lens fact) it stands under it.
+ * Docked, there are two columns: [picker + model | the floor], and the picker is the way between floors.
+ *
+ * Pointing at a floor only lights it (on the model and in the list) and, while the building stands
  * alone, puts its numbers on the caption line above the model. It never opens a floor and never
  * replaces the open one: a click does. The caption line has a fixed height, so nothing on the page
  * moves under the pointer.
+ *
+ * The floor that holds the building's largest block (the one the KPI reports) carries a "Largest block"
+ * tag on its label.
  */
-export default function BuildingView({ model, state, patch, onKpi }: BuildingViewProps) {
+export default function BuildingView({ model, state, patch }: BuildingViewProps) {
   const { floors, property, safe } = model;
   const hoverId = useHoverFloor();
   const reduceMotion = usePrefersReducedMotion();
@@ -65,23 +97,37 @@ export default function BuildingView({ model, state, patch, onKpi }: BuildingVie
   const docked = !!floor;
   const openId = floor?.floor.id ?? null;
   const hovered = hoverId ? (floors.find((f) => f.floor.id === hoverId) ?? null) : null;
-  // Where a broker usually starts: the floors with the most space, one click away.
-  const starts = useMemo(() => floors.filter((f) => f.available > 0).sort((a, b) => b.available - a.available).slice(0, 3), [floors]);
-  const texts = useMemo(() => {
-    const byId = new Map(
-      floors.map((f) => [
-        f.floor.id,
-        { fact: floorFact(f, state.lens, safe), label: floorLabel(f, state.lens, safe), sentence: `${f.floor.name} · ${floorSentence(f, model.asOf, safe)}` },
-      ]),
-    );
+  // One row per floor, top floor first: what its label prints, its accessible name and its tooltip.
+  const largestId = model.kpis.maxContiguous.floorId;
+  const rows = useMemo<FloorLabelRow[]>(
+    () =>
+      floors.map((f) => {
+        const largest = f.floor.id === largestId;
+        return {
+          id: f.floor.id,
+          number: f.floor.name.replace(/^Floor\s+/i, ''),
+          share: f.leasable > 0 ? f.leased / f.leasable : 0,
+          ...floorParts(f, state.lens, safe),
+          largest,
+          name: floorLabel(f, state.lens, safe, largest),
+          title: `${f.floor.name} · ${floorSentence(f, model.asOf, safe)}${largest ? ' · the largest block in the building' : ''}`,
+        };
+      }),
+    [floors, state.lens, safe, model.asOf, largestId],
+  );
+  const rowOf = useMemo(() => {
+    const byId = new Map(rows.map((r) => [r.id, r]));
     return (id: string) => byId.get(id);
-  }, [floors, state.lens, safe, model.asOf]);
-  const tagFact = useMemo(() => (id: string) => texts(id)?.fact ?? '', [texts]);
+  }, [rows]);
 
-  // The model is sized to the room left below the header, toolbar and legend (their height varies with
-  // width, and the KPI strip comes and goes), so the whole building sits above the fold. Measured from the
-  // layout, not the screen, so a slide in progress does not skew it.
+  // The model is sized to the room left below the header, the KPI bar, the toolbar and the legend (their
+  // height varies with width), so the whole building sits above the fold. Measured from the layout, not
+  // the screen, so a slide in progress does not skew it.
   const stageRef = useRef<HTMLDivElement | null>(null);
+  // Alone, the list of floors stands beside the model while the model keeps a readable width; otherwise
+  // under it. The list is as wide as its longest label (it never wraps or cuts one), so its width is
+  // measured and the model is given the rest of the column.
+  const [under, setUnder] = useState(false);
   useLayoutEffect(() => {
     const el = stageRef.current;
     if (!el) return;
@@ -89,45 +135,84 @@ export default function BuildingView({ model, state, patch, onKpi }: BuildingVie
     fit();
     window.addEventListener('resize', fit);
     return () => window.removeEventListener('resize', fit);
-  }, [docked, model.filterLabel, state.lens, safe]);
+  }, [docked, model.filterLabel, state.lens, safe, under]);
+  useLayoutEffect(() => {
+    const col = stageRef.current?.parentElement;
+    const list = stageRef.current?.querySelector<HTMLElement>('.sp-flabels__list');
+    if (docked || !col || !list) return;
+    const fit = () => {
+      const width = Math.ceil(list.getBoundingClientRect().width);
+      if (!width) return;
+      col.style.setProperty('--sp-bview-list', `${width}px`);
+      setUnder(col.clientWidth - width - LIST_GAP < MIN_MODEL);
+    };
+    fit();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(fit);
+    ro.observe(col);
+    ro.observe(list);
+    return () => ro.disconnect();
+  }, [docked, rows]);
 
-  // Docking and undocking: the model and its picker glide from where they stood to where they now stand
-  // (FLIP), while BuildingHero turns the model. Where they stood is read as the change is rendered,
-  // before React touches the page, so it is exact however the page has moved since.
+  // Docking and undocking: the model glides from where it stood to where it now stands (FLIP), while
+  // BuildingHero turns it. Where it stood is read as the change is rendered, before React touches the page,
+  // so it is exact however the page has moved since.
+  //
+  // Only the drawing moves. It starts on the very pixels it occupied (same left edge, same ground line,
+  // same size of a floor) and BuildingHero keeps its left edge fixed while it turns, so the model only ever
+  // reaches to its right, into room that is empty: the floor's pane comes in after the model has settled
+  // into its column, the picker fades in at its place as the model docks (PICKER_IN), and the list of
+  // floors beside the model comes back once it has settled (building.css). Nothing is drawn over anything
+  // else at any frame.
   const [wasDocked, setWasDocked] = useState(docked);
-  const [from, setFrom] = useState<DOMRect | null>(null);
-  // While the model is on its way its floor labels are hidden: at the size it starts from they would be
-  // drawn over the floor column coming in beside it. They fade back in when it has settled.
+  const [from, setFrom] = useState<Stood | null>(null);
+  // While the model is on its way its floor numbers and the list of floors are hidden; they fade back in when it has settled.
   const [moving, setMoving] = useState(false);
   if (wasDocked !== docked) {
     setWasDocked(docked);
-    setFrom(stageRef.current?.getBoundingClientRect() ?? null);
+    setFrom(standing(stageRef.current));
     setMoving(!reduceMotion);
   }
   useLayoutEffect(() => {
-    const el = stageRef.current;
-    const to = el?.getBoundingClientRect();
-    if (!el || !to || !from || reduceMotion || !el.animate || to.height === 0 || from.height === 0) {
+    const stage = stageRef.current;
+    const canvas = stage?.querySelector<HTMLElement>('.sp-hero__canvas') ?? null;
+    const to = standing(stage);
+    if (!stage || !canvas || !to || !from || reduceMotion || !canvas.animate) {
       setMoving(false);
       return;
     }
     const settled = window.setTimeout(() => setMoving(false), DOCK_MS);
-    // The picker and the building start at the left edge of the box in both states: hold that edge and
-    // match the height, so the model never starts outside the card.
-    const scale = from.height / to.height;
+    // One drawing unit is as many pixels as it was; the left edge and the ground line are held.
+    const scale = from.height / from.units / (to.height / to.units);
     const dx = from.left - to.left;
-    const dy = from.top + from.height / 2 - (to.top + to.height / 2);
-    const frames = [{ transformOrigin: 'left center', transform: `translate(${dx}px, ${dy}px) scale(${scale})` }, { transformOrigin: 'left center', transform: 'none' }];
-    el.animate(frames, { duration: DOCK_MS, easing: DOCK_EASE });
-    return () => window.clearTimeout(settled);
+    const dy = from.bottom - to.bottom;
+    const running: Animation[] = [
+      canvas.animate(
+        [
+          { transformOrigin: '0 100%', transform: `translate(${dx}px, ${dy}px) scale(${scale})` },
+          { transformOrigin: '0 100%', transform: 'none' },
+        ],
+        { duration: DOCK_MS, easing: DOCK_EASE },
+      ),
+    ];
+    const picker = stage.querySelector<HTMLElement>('.sp-mini');
+    const [a, b] = PICKER_IN;
+    if (picker) running.push(picker.animate([{ opacity: 0 }, { opacity: 0, offset: a }, { opacity: 1, offset: b }, { opacity: 1 }], { duration: DOCK_MS }));
+    return () => {
+      window.clearTimeout(settled);
+      for (const r of running) r.cancel();
+    };
+    // `docked` is read for the direction only; `from` changes with every dock and undock.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [from, reduceMotion]);
 
   // A stale pointer position must not light a floor after the layout has changed under it.
   useEffect(() => () => setHoverFloor(null), [docked]);
 
   // Keyboard focus never falls to the page. Whenever a floor opens or closes and the control that had
-  // focus has left the screen with it (a quick start, a KPI row, "Whole building", a suite on the plate
-  // that Escape closed), focus moves to that floor's row in the picker. Escape asks for the row outright.
+  // focus has left the screen with it (a floor's label, "Whole building", a suite on the plate that
+  // Escape closed), focus moves to that floor in the list that is now on screen: its row in the picker
+  // when a floor is open, its label beside the model when none is. Escape asks for it outright.
   const refocus = useRef<{ id: string; at: number; force?: boolean } | null>(null);
   const shownBefore = useRef({ docked, openId });
   useEffect(() => {
@@ -142,12 +227,14 @@ export default function BuildingView({ model, state, patch, onKpi }: BuildingVie
     const active = document.activeElement;
     const lost = !active || active === document.body || !active.isConnected;
     if (!lost && !want?.force) return;
-    stageRef.current?.querySelector<HTMLElement>(`.sp-mini [data-floor="${id}"]`)?.focus({ preventScroll: true });
+    stageRef.current?.querySelector<HTMLElement>(`:is(.sp-mini, .sp-flabels) [data-floor="${id}"]`)?.focus({ preventScroll: true });
   }, [docked, openId]);
 
-  // Escape closes the open floor and returns to the whole building, with focus on that floor's row in the
-  // picker. Not while a panel, a popover, the sheet or a field has the keyboard (each closes itself), and
+  // Escape closes the open floor and returns to the whole building, with focus on that floor's label
+  // beside the model. Not while a panel, a popover, the sheet or a field has the keyboard (each closes itself), and
   // not when something nearer has already used the key (a selected suite on the plate clears first).
+  // Focus is taken to the picker from inside this view only: a control above the plan (a KPI, the toolbar,
+  // the header) is still there after the floor has closed, so the keyboard stays on it.
   useEffect(() => {
     if (!pinned || !openId) return;
     const onKey = (e: KeyboardEvent) => {
@@ -156,7 +243,7 @@ export default function BuildingView({ model, state, patch, onKpi }: BuildingVie
       if (el && el !== document.body && el.closest(ESCAPE_OWNERS)) return;
       if (document.querySelector('.sp-sheet')) return;
       e.preventDefault();
-      refocus.current = { id: openId, at: performance.now(), force: true };
+      refocus.current = { id: openId, at: performance.now(), force: !el || el === document.body || el.id === 'sp-plan' || !!el.closest('.sp-bview') };
       patch({ floor: null, select: null });
     };
     document.addEventListener('keydown', onKey);
@@ -171,7 +258,8 @@ export default function BuildingView({ model, state, patch, onKpi }: BuildingVie
   // that and the floor's four figures: there the plate may be as low as 180 px, so the figures start on
   // the first screen. Labels that no longer fit a suite move to the numbered key, never cut.
   const shortWindow = useMedia('(max-height: 820px)');
-  const plateHeight = size.width < 720 ? Math.min(size.height, Math.max(shortWindow ? 180 : 210, Math.round(size.width / (shortWindow ? 3.7 : 3)))) : size.height;
+  const squat = Math.max(shortWindow ? 180 : 210, Math.round(size.width / (shortWindow ? 3.7 : 3)));
+  const plateHeight = size.width < 720 ? Math.min(size.height, squat) : size.height;
 
   const title = state.lens === 'status' ? 'Occupancy' : state.lens === 'expiry' ? 'Expirations' : state.lens === 'deals' ? 'Deal pipeline' : 'Rents';
   const over = floors.filter((f) => f.overAllocatedBy > 0);
@@ -183,7 +271,7 @@ export default function BuildingView({ model, state, patch, onKpi }: BuildingVie
           as of {fmtDate(model.asOf)} · {num(model.kpis.leasable)} RSF leasable
         </span>
       </div>
-      <Legend items={model.legend} compact id="sp-legend" />
+      <Legend items={model.legend} compact id="sp-legend" note={rampNote(state.lens, safe)} />
       {over.length > 0 && canShowIssues(model.safe) && (
         <p className="sp-legend__note">
           {over.map((f) => `${f.floor.name} records exceed its leasable area by ${num(f.overAllocatedBy)} SF`).join('; ')}; legend shares use recorded SF, leased occupancy is capped.
@@ -215,44 +303,20 @@ export default function BuildingView({ model, state, patch, onKpi }: BuildingVie
     'Schematic: suite positions are proportional to RSF along the floor plate, not surveyed. ' +
     (property.footprintSource === 'demo' ? 'Demo footprint.' : 'Footprint © OpenStreetMap contributors.');
   const hoveredFact = hovered ? lensFact(hovered, state.lens, safe) : '';
+  const noteParts = labelNote(state.lens, safe).split(' · ');
 
   return (
     <section className="sp-card sp-bview" aria-label="Building">
       {head}
       {model.filterLabel && <FilterBar label={model.filterLabel} alternatives={!!model.partial && model.partial.size > 0} patch={patch} />}
-      <div className={`sp-bview__grid ${docked ? 'is-docked' : 'is-alone'}`}>
-        {!docked && (
-          <div className="sp-bview__alone">
-            <KpiStrip model={model} state={state} onAction={onKpi ?? (() => {})} variant="column" />
-            {starts.length > 0 && (
-              <div className="sp-bview__starts" role="group" aria-label="Floors with the most space">
-                <span className="sp-bview__starts-label sp-label">Most space</span>
-                {starts.map((f) => (
-                  <Button
-                    key={f.floor.id}
-                    variant="neutral"
-                    size="sm"
-                    title={texts(f.floor.id)?.label}
-                    onClick={() => pick(f.floor.id)}
-                    onPointerEnter={() => setHoverFloor(f.floor.id)}
-                    onPointerLeave={() => setHoverFloor(null)}
-                    onFocus={() => setHoverFloor(f.floor.id)}
-                    onBlur={() => setHoverFloor(null)}
-                  >
-                    {f.floor.name} · {sf(f.available)}
-                  </Button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
+      <div className={`sp-bview__grid ${docked ? 'is-docked' : 'is-alone'} ${!docked && under ? 'is-under' : ''} ${moving ? 'is-moving' : ''}`}>
         <div className="sp-bview__model">
-          {/* One line, always the same height: the numbers of the floor under the pointer, or the prompt. It
-              follows the pointer, so it is not announced; the picker rows carry the same facts in their names. */}
+          {/* Above the model while it stands alone, one quiet line of fixed height, so nothing moves under the
+              pointer: the numbers of the floor pointed at, or what to do and what the labels show. It follows
+              the pointer, so it is not announced; each label carries the same facts in its name. */}
           {!docked && (
-            <div className="sp-bview__lead">
-              <p className="sp-bview__caption">
+            <p className="sp-bview__caption">
+              <span>
                 {hovered ? (
                   <>
                     <strong>{hovered.floor.name}</strong> · {floorSentence(hovered, model.asOf, safe)}
@@ -260,12 +324,21 @@ export default function BuildingView({ model, state, patch, onKpi }: BuildingVie
                     <span className="sp-bview__caption-more"> · click to open its plan</span>
                   </>
                 ) : (
-                  `Point at a floor for its numbers. Click one to open its plan${canShowDeals(safe) ? ', suites and deals' : ' and suites'}.`
+                  <>
+                    <span className="sp-nb">Click a floor or its label to open its plan.</span> <span className="sp-nb">Labels:</span>{' '}
+                    {/* Each thing the labels show stays in one piece: a narrow card breaks the line between them, never inside one. */}
+                    {noteParts.map((part, i) => (
+                      <span key={part}>
+                        <span className="sp-nb">
+                          {part}
+                          {i < noteParts.length - 1 ? ' ·' : '.'}
+                        </span>{' '}
+                      </span>
+                    ))}
+                  </>
                 )}
-              </p>
-              {/* What the words beside the floors are, kept with the line above: the two are read together, then the model. */}
-              <p className="sp-bview__note">{factNote(state.lens, safe)}</p>
-            </div>
+              </span>
+            </p>
           )}
           <div className={`sp-bview__stage ${moving ? 'is-moving' : ''}`} ref={stageRef}>
             <BuildingHero
@@ -275,10 +348,11 @@ export default function BuildingView({ model, state, patch, onKpi }: BuildingVie
               size="stage"
               onPick={pick}
               angle={docked ? 0 : ALONE_ANGLE}
-              tagFact={docked ? undefined : tagFact}
               openId={openId}
-              floorTitle={(id) => `${texts(id)?.sentence ?? ''}${id === openId ? '' : docked ? ' · click to open this floor instead' : ' · click to open its plan'}`}
-              beside={<MiniStack floors={floors} currentId={openId ?? ''} hotId={hoverId} onPick={pick} onPreview={setHoverFloor} describe={(f) => texts(f.floor.id)?.label ?? f.floor.name} />}
+              floorTitle={(id) => `${rowOf(id)?.title ?? ''}${id === openId ? '' : docked ? ' · click to open this floor instead' : ' · click to open its plan'}`}
+              // One list of floors at a time: the compact picker beside the docked model, the labels beside the model alone.
+              beside={docked ? <MiniStack floors={floors} currentId={openId ?? ''} hotId={hoverId} onPick={pick} onPreview={setHoverFloor} describe={(f) => rowOf(f.floor.id)?.name ?? f.floor.name} /> : undefined}
+              after={docked ? undefined : <FloorLabels rows={rows} hotId={hoverId} onPick={pick} onPreview={setHoverFloor} />}
             />
           </div>
         </div>
@@ -287,7 +361,8 @@ export default function BuildingView({ model, state, patch, onKpi }: BuildingVie
           <div className="sp-bview__floor" key="floor">
             <div className="sp-bview__floor-head">
               <h3 className="sp-floor__h">{floor.floor.name}</h3>
-              <p className="sp-floor__facts">{floorSentence(floor, model.asOf, safe)}</p>
+              {/* The floor's size (and when it comes to market, if nothing is free today): the cards under the plate carry leased and available. */}
+              <p className="sp-floor__facts">{floorHeading(floor, model.asOf, safe)}</p>
               <div className="sp-bview__actions">
                 {pinned && (
                   <Button variant="ghost" size="sm" icon="close" onClick={wholeBuilding} title="Close this floor and show the whole building">

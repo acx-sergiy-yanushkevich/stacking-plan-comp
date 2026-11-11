@@ -136,20 +136,24 @@ describe('timelineModel in prospect-safe mode', () => {
   });
 
   it('keeps the bars for space on offer exactly as they were', () => {
-    const keep = (m: typeof open) => bars(m).filter((b) => b.kind === 'available' || b.kind === 'forsale');
+    const keep = (m: typeof open) => bars(m).filter((b) => (b.kind === 'available' || b.kind === 'forsale') && !b.sublease);
     // The quiet listing on Floor 6 is removed by the same projection; everything else is unchanged.
     expect(keep(safe)).toEqual(keep(open).filter((b) => b.key !== 'tl-L13-U1-mkt'));
     expect(keep(safe).length).toBeGreaterThan(5);
   });
 
-  it('a sublet suite is the head lease, dateless like any other, and the sublease as its own bar with the dates of the offer', () => {
+  it('a sublet suite is the head lease, dateless like any other, and the sublease as space on offer: from its date, with no end', () => {
     // To the broker the two are one bar when the sublease runs to the head lease's end, and it starts at the lease's commencement.
     expect(bars(open).filter((b) => b.segKey === 'L14-U2')).toEqual([expect.objectContaining({ key: 'tl-L14-U2', kind: 'sublease', start: '2018-09-15', end: '2030-09-30' })]);
     // A prospect never gets that merged bar: it would start on the head lease's commencement and say the two end together.
     const [head, sub] = bars(safe).filter((b) => b.segKey === 'L14-U2');
     expect(head).toMatchObject({ key: 'tl-L14-U2', kind: 'mtm', end: null, datesWithheld: true });
     const a = property.availabilities.find((x) => x.sublease && x.suite === '720')!;
-    expect(sub).toMatchObject({ key: 'tl-L14-U2-sub', kind: 'sublease', start: a.availableFrom ?? TODAY, end: a.subleaseExpiration });
-    expect(sub.datesWithheld).toBeUndefined();
+    // The sublease's end is its sublandlord's lease end: the bar is drawn like any space on offer, dotted, with no end.
+    expect(a.subleaseExpiration).toBe('2030-09-30');
+    expect(sub).toEqual({ key: 'tl-L14-U2-offer', segKey: 'L14-U2', label: 'Sublease · Ste 720', start: a.availableFrom ?? TODAY, end: null, kind: 'available', sublease: true, committed: false });
+    // No bar of the chart ends, or starts, on that date.
+    expect(bars(safe).some((b) => b.end === '2030-09-30' || b.start === '2030-09-30')).toBe(false);
+    expect(JSON.stringify(safe)).not.toContain('2030-09-30');
   });
 });

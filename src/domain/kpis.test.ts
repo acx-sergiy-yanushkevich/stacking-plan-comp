@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../data/mock/property';
 import { deriveFloors, isLeaseKind } from './derive';
 import { annualRate } from './format';
-import { comingSupply, computeKpis, kpiDeltas } from './kpis';
+import { comingSupply, computeKpis, kpiDeltas, largestBlock } from './kpis';
+import { publishedFloors, safeFloors } from './safe';
 
 const at = (asOf: string) => deriveFloors(property, asOf, TODAY);
 
@@ -104,5 +105,64 @@ describe('comingSupply', () => {
   });
   it('counts nothing once the available-from date has passed', () => {
     expect(comingSupply(segs, '2027-04-01', false)).toEqual({ sf: 0, from: null });
+  });
+});
+
+describe('largestBlock', () => {
+  const floors = at(TODAY);
+  const k = computeKpis(property, floors, TODAY);
+
+  it('is the block the KPI reports: its size, its floor and the suites that make it up', () => {
+    expect(k.maxContiguous).toEqual(largestBlock(floors));
+    expect(k.maxContiguous.size).toBe(9300);
+    expect(k.maxContiguous.floorId).toBe('F12');
+    expect(k.maxContiguous.floorName).toBe('Floor 12');
+    const f12 = floors.find((f) => f.floor.id === 'F12')!;
+    expect(k.maxContiguous.keys).toEqual(f12.bestRun);
+    // The suites add up to the figure, each is direct space free today, and they sit side by side on the floor.
+    const segs = k.maxContiguous.keys.map((key) => f12.segments.find((s) => s.key === key)!);
+    expect(segs.reduce((t, s) => t + s.size, 0)).toBe(k.maxContiguous.size);
+    for (const s of segs) expect(s.kind === 'available' && !s.availableFrom).toBe(true);
+    const at0 = f12.segments.indexOf(segs[0]);
+    expect(f12.segments.slice(at0, at0 + segs.length)).toEqual(segs);
+  });
+
+  it('marks every suite of a block that spans several', () => {
+    // Floor 8 offers two adjacent direct suites (4,200 + 3,200 SF): with Floor 12 out of the count, they are the block.
+    const rest = floors.filter((f) => f.floor.id !== 'F12');
+    expect(largestBlock(rest)).toEqual({ size: 7400, floorId: 'F8', floorName: 'Floor 8', keys: ['A06', 'A07'] });
+  });
+
+  it('the upper floor wins a tie, and no direct space is no block', () => {
+    const f8 = floors.find((f) => f.floor.id === 'F8')!;
+    const twin = { ...f8, floor: { ...f8.floor, id: 'F8b', name: 'Floor 8b' } };
+    expect(largestBlock([f8, twin]).floorId).toBe('F8');
+    expect(largestBlock([twin, f8]).floorId).toBe('F8b');
+    expect(largestBlock(floors.filter((f) => f.maxContiguous === 0))).toEqual({ size: 0, floorId: null, floorName: null, keys: [] });
+  });
+
+  it('points at suites that are on the plan a prospect is shown, at every as-of date', () => {
+    for (const asOf of [TODAY, '2027-06-01', '2028-01-01'])
+      for (const safe of [false, true]) {
+        // As the model does it: the KPIs from the published floors, the plan from the prospect-safe ones.
+        const totals = publishedFloors(at(asOf), safe);
+        const drawn = safeFloors(totals, safe);
+        const block = computeKpis(property, totals, asOf).maxContiguous;
+        expect(block, `${asOf} safe=${safe}`).toEqual(largestBlock(drawn));
+        const keys = new Set(drawn.flatMap((f) => f.segments.map((s) => s.key)));
+        for (const key of block.keys) expect(keys.has(key)).toBe(true);
+      }
+  });
+});
+
+describe('availableKeys', () => {
+  it('are the suites behind the Available figure: direct space free today, and sublease space', () => {
+    const floors = at(TODAY);
+    const k = computeKpis(property, floors, TODAY);
+    const segs = floors.flatMap((f) => f.segments).filter((s) => k.availableKeys.includes(s.key));
+    expect(segs.length).toBe(k.availableKeys.length);
+    expect(segs.reduce((t, s) => t + s.size, 0)).toBe(k.availableDirect + k.availableSublease);
+    expect(floors.reduce((t, f) => t + f.available, 0)).toBe(k.availableDirect + k.availableSublease);
+    for (const key of k.maxContiguous.keys) expect(k.availableKeys).toContain(key);
   });
 });

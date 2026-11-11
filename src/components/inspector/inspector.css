@@ -49,6 +49,8 @@
 .sp-ins__row-meta { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); display: flex; gap: 2px 10px; flex-wrap: wrap; }
 /* Parts are separated by space, not glyphs, so a wrapped line never starts with a stray separator; chips wrap inside the column. */
 .sp-ins__row-meta > span { white-space: nowrap; }
+/* The suites of a finder row ("Ste 850 + Ste 860 on Floor 8, Ste 720 on Floor 7"): wraps, never cut. */
+.sp-ins__row-suites { font-size: var(--sp-text-12); color: var(--sp-color-text); overflow-wrap: anywhere; }
 .sp-ins__row-meta .sp-chip { white-space: normal; height: auto; min-height: 20px; line-height: 1.25; text-align: left; max-width: 100%; }
 .sp-ins__change { padding: 4px 0; }
 .sp-ins__row-end { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex: none; text-align: right; }
@@ -81,6 +83,9 @@
 .sp-ins__form-inline { display: flex; align-items: center; gap: var(--sp-space-2); justify-content: space-between; }
 .sp-ins__largest { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }
 .sp-ins__largest strong { color: var(--sp-color-text); }
+/* A refused entry: an icon and a sentence, in the error colour (never the colour alone). */
+.sp-ins__alert { display: flex; gap: 6px; align-items: flex-start; font-size: var(--sp-text-12); line-height: 1.35; color: var(--sp-color-error); }
+.sp-ins__alert .sp-icon { flex: none; margin-top: 1px; }
 .sp-ins__tag { font-size: var(--sp-text-11); color: var(--sp-color-text-faint); }
 
 /* Issues */

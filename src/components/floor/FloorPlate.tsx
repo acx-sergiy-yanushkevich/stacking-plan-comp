@@ -9,6 +9,7 @@ import { type Patch } from '../plan/actions';
 import { PATTERN_IDS } from '../plan/Patterns';
 import { badgeLabel, segmentText, type SegmentText } from '../plan/segmentText';
 import { num, sf } from '../../domain/format';
+import { useHoverKeys } from '../../state/hoverStore';
 import { inquiriesFor } from './floorData';
 
 export interface FloorPlateProps {
@@ -34,8 +35,6 @@ interface Line {
   t: string;
   cls: string;
   font: string;
-  /** Lines that only make sense together (a rate and its lease type): drawn all or none. */
-  pair?: boolean;
 }
 
 /** The numbered marker of a slice whose name is listed under the plate; its `t` is the number. */
@@ -110,25 +109,39 @@ function chord(pts: Pt[], y: number): [number, number] | null {
   return min < max ? [min, max] : null;
 }
 
-/** Accessible name of a slice: floor, the full name when it is not drawn, exactly what is drawn, then the undrawn facts. */
-function sliceName(text: SegmentText, lines: string[], badges: string[]): string {
-  const visible = [...lines, ...badges].filter(Boolean).join(' ');
+/**
+ * Accessible name of a slice: floor, the full name when it is not drawn, exactly what is drawn, then the undrawn facts.
+ * A slice with a numbered marker says "key 2" where the marker stands, before its lines: the number is on
+ * screen, so it is part of the name (WCAG 2.5.3), and it is how the entry under the plate is found.
+ */
+function sliceName(text: SegmentText, lines: string[], badges: string[], keyNo?: number): string {
+  const drawnText = [...lines, ...badges].filter(Boolean).join(' ');
+  const visible = [keyNo !== undefined ? `key ${keyNo}` : '', drawnText].filter(Boolean).join(' ');
   if (!visible) return text.aria;
   const floorName = text.aria.split(',')[0];
-  // A fact drawn over two lines ("Ste 350" / "5,500 SF", "$31–$33/SF/yr" / "FSG") is drawn all the same.
-  const drawn = (t: string) => visible.includes(t) || visible.includes(t.replace(/^Asking /, '')) || t.split(' · ').every((part) => visible.includes(part));
+  // A fact drawn over two lines ("Ste 350" / "5,500 SF") is drawn all the same.
+  const drawn = (t: string) => drawnText.includes(t) || drawnText.includes(t.replace(/^Asking /, '')) || t.split(' · ').every((part) => drawnText.includes(part));
   const extras = [text.sub, text.meta].filter((t, i, all) => t && !drawn(t) && all.indexOf(t) === i);
-  return `${[floorName, visible.includes(text.name) ? null : text.name, visible].filter(Boolean).join(', ')}${extras.length ? `. ${extras.join(', ')}` : ''}`;
+  return `${[floorName, drawnText.includes(text.name) ? null : text.name, visible].filter(Boolean).join(', ')}${extras.length ? `. ${extras.join(', ')}` : ''}`;
 }
 
 type NameMode = 'name' | 'tiny' | 'none';
 /** A rent with its unit and lease type: "$31–$33/SF/yr FSG". */
 const isRate = (t: string) => /^\$\S+\/SF\/(yr|mo) \S+$/.test(t);
+/** The rent a slice has to show, as written when it stands alone ("Asking" is dropped before anything else); '' when its fact is not a rent. */
+export function rentOf(text: SegmentText): string {
+  const plain = text.meta.replace(/^Asking /, '');
+  return isRate(plain) ? plain : '';
+}
 
 /**
  * Candidate label lines for a slice whose usable label width is `fw` and bbox height `bh`.
  * A slice is short of width far more often than of height, so a fact that does not fit one line takes
- * another line rather than being dropped: the suite above the SF, the lease type under the rate.
+ * another line rather than being dropped: the suite above the SF.
+ *
+ * A rent is the exception: it is one fact with its unit and lease type and is never broken inside
+ * ("$31–$33/SF/yr" over a lone "FSG"). It takes a line whole, at 12 px or at 11 px, or it is left off
+ * the slice, and `FloorPlate` then writes it in the numbered key under the plate.
  */
 export function linesFor(text: SegmentText, tier: 0 | 1 | 2 | 3, fw: number, bh: number, mode: NameMode): Line[] {
   const lines: Line[] = [];
@@ -159,25 +172,28 @@ export function linesFor(text: SegmentText, tier: 0 | 1 | 2 | 3, fw: number, bh:
   else if (fits(unit, fw, FONT_SUB)) lines.push(sub(unit, sfCls));
   else if (fits(unit, fw, FONT_TINY)) lines.push({ t: unit, cls: 'sp-seg__small', font: FONT_TINY });
   // The lens line. A wide slice takes the full fact, a narrow one its short form or its rent. A rent is
-  // shown whole (unit and lease type), on one line or two; other facts may lose trailing parts.
+  // shown whole (unit and lease type) on one line; other facts may lose trailing parts.
   const fact = tier <= 1 ? text.meta : tier === 2 ? text.lensShort || (text.meta.includes('$') ? text.meta : '') : '';
+  let factDrawn = false;
   if (fact && lines.length) {
     const plain = fact.replace(/^Asking /, '');
     let fl: Line[] = [];
     if (fits(fact, fw, FONT_SUB)) fl = [sub(fact, 'sp-seg__meta')];
     else if (isRate(plain)) {
-      const cut = plain.lastIndexOf(' ');
       if (fits(plain, fw, FONT_SUB)) fl = [sub(plain, 'sp-seg__meta')];
-      else if (fits(plain.slice(0, cut), fw, FONT_SUB)) fl = [{ ...sub(plain.slice(0, cut), 'sp-seg__meta'), pair: true }, { ...sub(plain.slice(cut + 1), 'sp-seg__meta'), pair: true }];
+      else if (fits(plain, fw, FONT_TINY)) fl = [{ t: plain, cls: 'sp-seg__small', font: FONT_TINY }];
     } else {
       const short = fitParts(fact, fw, FONT_SUB);
       if (short.length >= 4) fl = [sub(short, 'sp-seg__meta')];
     }
-    if (fl.length && lines.length + fl.length <= budget) lines.push(...fl);
+    if (fl.length && lines.length + fl.length <= budget) {
+      lines.push(...fl);
+      factDrawn = true;
+    }
   }
   // No name: the state in a word, or the lens fact ("Feb '27", "$32/SF/yr FSG"), under the SF, so colour
   // is never the only cue.
-  if (!named && lines.length && !lines.some((l) => l.cls === 'sp-seg__meta')) {
+  if (!named && lines.length && !factDrawn) {
     const word = /^For sale/.test(text.name) ? 'For sale' : /^Available/.test(text.name) ? 'Available' : null;
     const short = text.lensShort || word;
     if (short) lines.push(fits(short, fw, FONT_SUB) ? sub(short, 'sp-seg__meta') : { t: short, cls: 'sp-seg__small', font: FONT_TINY });
@@ -204,16 +220,14 @@ function placeLines(poly: Pt[], cy: number, lines: Line[]): PlacedLine[] {
     if (rows.length > 1 && right - left - 2 * SIDE >= widest) for (const r of rows) r.x = (left + right) / 2;
     return rows;
   };
-  const bare = ({ t, cls, font, pair }: Line): Line => ({ t, cls, font, pair });
+  const bare = ({ t, cls, font }: Line): Line => ({ t, cls, font });
   const placed = layout(lines);
   // A name line that does not fit its chord takes every name line with it: never a fragment.
   const isName = (cls: string) => cls === 'sp-seg__name' || cls === 'sp-seg__tiny';
   const nameFailed = placed.some((l) => isName(l.cls) && !l.fitsHere);
   // A lens fact or SF line that misses its chord at 12 px gets a second chance at 11 px (it says the state).
   const second = layout(placed.map((l) => (!l.fitsHere && !isName(l.cls) && l.font !== FONT_TINY ? { ...bare(l), font: FONT_TINY, cls: 'sp-seg__small' } : bare(l))));
-  // Likewise a rate and its lease type stay together or go together.
-  const pairFailed = second.some((l) => l.pair && !l.fitsHere);
-  const kept = second.filter((l) => l.fitsHere && !(nameFailed && isName(l.cls)) && !(pairFailed && l.pair));
+  const kept = second.filter((l) => l.fitsHere && !(nameFailed && isName(l.cls)));
   return layout(kept.map(bare)).map(({ t, cls, font, x, y }) => ({ t, cls, font, x, y }));
 }
 
@@ -245,8 +259,10 @@ interface Slice {
   lines: PlacedLine[];
   badges: PlacedBadge[];
   tier: 0 | 1 | 2 | 3;
-  /** Its number in the key under the plate, when the name could not be drawn on the slice. */
+  /** Its number in the key under the plate, when its name or its rent could not be drawn on the slice. */
   keyNo?: number;
+  /** What the key writes for it (see `keyEntry`). */
+  keyLabel?: string;
 }
 
 /**
@@ -261,13 +277,36 @@ function needsKey(seg: Segment, text: SegmentText, drawn: PlacedLine[], lobby: b
   return !!seg.lease && text.name !== 'Tenant' && (seg.kind === 'leased' || seg.kind === 'holdover' || seg.kind === 'mtm' || seg.kind === 'sublease' || seg.kind === 'committed');
 }
 
-/** The key entry: "Preston Park Café · Ste 100 · 2,400 SF". */
-export const keyText = (text: SegmentText): string => [text.name, text.sub].filter(Boolean).join(' · ');
+/**
+ * The key entry: "Preston Park Café · Ste 100 · 2,400 SF". When the slice had no room for its rent the
+ * entry carries it too, whole: "Available now · Ste 860 · 3,200 SF · $31–$33/SF/yr FSG".
+ */
+export const keyText = (text: SegmentText, rent = ''): string => [text.name, text.sub, rent].filter(Boolean).join(' · ');
+
+/**
+ * What the key says of a marked slice. It writes out what the slice could not: the whole entry when the
+ * name is not on the slice, and only the suite and the rent ("Ste 850 · $31–$33/SF/yr FSG") when the
+ * slice already carries its name and SF and had no room for the rent alone. Nothing is said twice, so
+ * two such entries share a line under a narrow plate.
+ */
+export function keyEntry(text: SegmentText, rent: string, drawn: string[]): string {
+  const named = text.name.split(' ').every((word) => drawn.some((line) => line.includes(word)));
+  const sized = drawn.some((line) => line === text.sub || line === `${text.sfShort} SF`);
+  if (!rent || !named || !sized) return keyText(text, rent);
+  const suite = text.sub.startsWith('Ste ') ? text.sub.split(' · ')[0] : text.sub;
+  return `${suite} · ${rent}`;
+}
 
 /** The floor plate: the footprint sliced into suites along its long axis, in lens tones. */
 export function FloorPlate({ floor, model, state, patch, width, height }: FloorPlateProps) {
-  const { property, safe, asOf, highlight } = model;
+  const { property, safe, asOf } = model;
   const lens = state.lens;
+  // The suites of the block the "Largest block" KPI reports carry its name as a badge.
+  const largest = model.kpis.maxContiguous.keys;
+  // A KPI or a finder row pointed at lights its suites here too, when this floor holds any of them;
+  // pointing at space on another floor leaves this plate as it is.
+  const hoverKeys = useHoverKeys();
+  const highlight = hoverKeys && floor.segments.some((sg) => hoverKeys.has(sg.key)) ? hoverKeys : model.highlight;
   const refs = useRef<Array<SVGGElement | null>>([]);
   const [focusIdx, setFocusIdx] = useState(0);
 
@@ -290,7 +329,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
       const text: SegmentText =
         seg.key === lobbyKey
           ? { tone: 'muted', pattern: 'hatch', name: 'Lobby · building use', sub: sf(seg.size), meta: 'Not leasable', badges: [], tooltip: `${floor.floor.name}: ${sf(seg.size)} non-leasable (lobby, loading, building use). Not counted in occupancy.`, aria: `${floor.floor.name}, lobby and building use, ${sf(seg.size)}, not leasable`, sfShort: num(seg.size), lensShort: '' }
-          : segmentText(seg, { safe, asOf, today: model.today, lens, floorName: floor.floor.name, matches: matches || undefined, matchLabel: state.inquiry ? 'Fits this inquiry' : undefined });
+          : segmentText(seg, { safe, asOf, today: model.today, lens, floorName: floor.floor.name, largest: largest.includes(seg.key), matches: matches || undefined, matchLabel: state.inquiry ? 'Fits this inquiry' : undefined });
       if (poly.length < 3 || polygonArea(poly) < 1) return { seg, text, poly, lines: [], badges: [], tier: 3 as const };
       const isLobby = seg.key === lobbyKey;
       const b = bbox(poly);
@@ -301,24 +340,41 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
       // The whole name at 13 px, then at 11 px; failing both, no name and the state under the SF figure.
       const fw = usable - 2 * SIDE;
       const hasName = (ls: PlacedLine[]) => ls.some((l) => l.cls === 'sp-seg__name' || l.cls === 'sp-seg__tiny');
-      let lines = placeLines(poly, cy, linesFor(text, tier, fw, b.h, 'name'));
+      let cand = linesFor(text, tier, fw, b.h, 'name');
+      let lines = placeLines(poly, cy, cand);
       let keyed = false;
+      const marker: Line = { t: '0', cls: KEY_CLS, font: FONT_TINY };
+      /** With a numbered marker as the label's first line; a sliver too thin for even that line still gets it, at its centre. */
+      const withMarker = (ls: Line[]): PlacedLine[] => {
+        const out = placeLines(poly, cy, [marker, ...ls]);
+        return out.some((l) => l.cls === KEY_CLS) ? out : [{ ...marker, x: c ? (c[0] + c[1]) / 2 : b.minX + b.w / 2, y: cy + 4 }, ...out];
+      };
       if (!hasName(lines)) {
-        const tiny = placeLines(poly, cy, linesFor(text, tier, fw, b.h, 'tiny'));
-        if (hasName(tiny)) lines = tiny;
-        else {
+        const tinyCand = linesFor(text, tier, fw, b.h, 'tiny');
+        const tiny = placeLines(poly, cy, tinyCand);
+        if (hasName(tiny)) {
+          lines = tiny;
+          cand = tinyCand;
+        } else {
           // No room for the name at either size: the facts that do fit, under a numbered marker that the
           // key below the plate spells out. The marker is laid out as the label's first line.
-          const facts = linesFor(text, tier, fw, b.h, 'none');
-          keyed = needsKey(seg, text, placeLines(poly, cy, facts), isLobby);
-          lines = placeLines(poly, cy, keyed ? [{ t: '0', cls: KEY_CLS, font: FONT_TINY }, ...facts] : facts);
-          // A sliver too thin for even the marker's line still gets it, at its centre.
-          if (keyed && !lines.some((l) => l.cls === KEY_CLS)) lines = [{ t: '0', cls: KEY_CLS, font: FONT_TINY, x: c ? (c[0] + c[1]) / 2 : b.minX + b.w / 2, y: cy + 4 }, ...lines];
+          cand = linesFor(text, tier, fw, b.h, 'none');
+          keyed = needsKey(seg, text, placeLines(poly, cy, cand), isLobby);
+          lines = keyed ? withMarker(cand) : placeLines(poly, cy, cand);
         }
+      }
+      // A rent that found no room on the slice (it is never broken, and never dropped from the screen)
+      // goes to the key, with the slice's name and suite, under the same kind of marker.
+      const rent = isLobby ? '' : rentOf(text);
+      const keyRent = rent && !lines.some((l) => l.t === rent || l.t === text.meta) ? rent : '';
+      if (keyRent && !keyed) {
+        keyed = true;
+        lines = withMarker(cand);
       }
       const blockTop = lines.length ? lines[0].y - 11 : NaN;
       const badges = usable >= 120 ? placeBadges(poly, text, blockTop, cy) : [];
-      return { seg, text, poly, lines, badges, tier, keyNo: keyed ? 0 : undefined };
+      const keyLabel = keyed ? keyEntry(text, keyRent, lines.filter((l) => l.cls !== KEY_CLS).map((l) => l.t)) : undefined;
+      return { seg, text, poly, lines, badges, tier, keyNo: keyed ? 0 : undefined, keyLabel };
     });
     // Number the keyed slices in plan order, left to right.
     let n = 0;
@@ -328,7 +384,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
       s.lines = s.lines.map((l) => (l.cls === KEY_CLS ? { ...l, t: String(n) } : l));
     }
     return out;
-  }, [floor, points, model.req, property.inquiries, safe, asOf, lens]);
+  }, [floor, points, model.req, property.inquiries, safe, asOf, lens, largest]);
   const keyed = slices.filter((s) => s.keyNo !== undefined);
 
   const focusAt = (i: number) => {
@@ -404,7 +460,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
             className={['sp-seg', selected ? 'is-selected' : '', dim ? 'is-dim' : '', p === 'dashed' ? 'sp-seg--dashed' : '', s.seg.key.endsWith('-lobby') ? 'sp-seg--lobby' : '', patternFill ? 'sp-seg--patterned' : ''].filter(Boolean).join(' ')}
             role={s.seg.key.endsWith('-lobby') ? 'img' : 'button'}
             tabIndex={s.seg.key.endsWith('-lobby') ? undefined : i === tabStop ? 0 : -1}
-            aria-label={sliceName(s.text, s.lines.filter((l) => l.cls !== KEY_CLS).map((l) => l.t), s.badges.map((b) => (b.kind === 'deal' ? badgeLabel({ kind: 'deal', text: b.text }) : b.text)))}
+            aria-label={sliceName(s.text, s.lines.filter((l) => l.cls !== KEY_CLS).map((l) => l.t), s.badges.map((b) => (b.kind === 'deal' ? badgeLabel({ kind: 'deal', text: b.text }) : b.text)), s.keyNo)}
             aria-pressed={s.seg.key.endsWith('-lobby') ? undefined : selected}
             data-key={s.seg.key}
             style={{ color: edge }}
@@ -422,11 +478,11 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
                 <g key={j} className={KEY_CLS} aria-hidden="true">
                   <circle cx={l.x} cy={l.y - 4} r={KEY_R} fill={color} />
                   <text x={l.x} y={l.y} textAnchor="middle" fill={fill}>
-                    {l.t}
+                    {`${l.t} `}
                   </text>
                 </g>
               ) : (
-                <text key={j} className={l.cls} x={l.x} y={l.y} fill={color} textAnchor="middle" style={patternFill && !s.seg.key.endsWith('-lobby') ? { stroke: fill } : undefined}>
+                <text key={j} className={l.cls} x={l.x} y={l.y} fill={color} textAnchor="middle" style={patternFill ? { stroke: fill } : undefined}>
                   {`${l.t} `}
                 </text>
               ),
@@ -453,15 +509,16 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
       )}
     </svg>
     {keyed.length > 0 && (
-      // Names the plate had no room for, directly under it, so every name is on screen: "1 Preston Park Café · Ste 100 · 2,400 SF".
-      <ol className="sp-plate__key" aria-label={`${floor.floor.name}: names not drawn on the plate`}>
+      // Names and rents the plate had no room for, directly under it, so each is on screen whole:
+      // "1 Preston Park Café · Ste 100 · 2,400 SF", "2 Available now · Ste 860 · 3,200 SF · $31–$33/SF/yr FSG".
+      <ol className="sp-plate__key" aria-label={`${floor.floor.name}: names and rents not drawn on the plate`}>
         {keyed.map((s) => (
           <li key={s.seg.key}>
             <span className="sp-plate__key-n" aria-hidden="true">
               {s.keyNo}
             </span>
             <span className="sp-sr-only">{`Marker ${s.keyNo}: `}</span>
-            {keyText(s.text)}
+            {s.keyLabel}
           </li>
         ))}
       </ol>

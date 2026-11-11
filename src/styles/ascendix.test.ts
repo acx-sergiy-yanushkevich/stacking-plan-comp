@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { contrast, describePalette, hue, hueApart, lightness, loadPalette, lum, tonesOf, type Tokens } from './paletteChecks';
+import { contrast, deltaE, describePalette, deuteranopia, hue, hueApart, lightness, loadPalette, lum, tonesOf, type Tokens } from './paletteChecks';
 
 /**
  * The Ascendix palette (the company colours, the default look), checked against the card colours painted
@@ -155,6 +155,40 @@ describe.each([
       expect(hueApart(fill('risk'), step) >= 60 || dl >= 12, `risk ${fill('risk')} against ${step}`).toBe(true);
     }
   });
+
+  // The 3D model and the map draw the lens with colour alone (no text on a slab). In round 14 the night
+  // ramp's 3–5 yr violet and 5+ yr slate were 6 L* apart and became one colour to a colour-blind viewer.
+  if (theme === 'night')
+    it('expiration lens at night: every neighbour is 8 L* or more apart and stays apart under deuteranopia; the late steps are blues, not violets', () => {
+      const steps = [0, 1, 2, 3, 4, 5].map((i) => fill(`exp-${i}`));
+      for (let i = 1; i < steps.length; i += 1) {
+        expect(lightness(steps[i - 1]) - lightness(steps[i]), `exp-${i - 1} ${steps[i - 1]} to exp-${i} ${steps[i]}`).toBeGreaterThanOrEqual(8);
+        expect(hueApart(steps[i], steps[i - 1]), `exp-${i - 1} to exp-${i} hue`).toBeGreaterThanOrEqual(i === 1 ? 0 : 12);
+        expect(deltaE(deuteranopia(steps[i - 1]), deuteranopia(steps[i])), `exp-${i - 1} to exp-${i} under deuteranopia`).toBeGreaterThanOrEqual(15);
+      }
+      // 3–5 yr and 5+ yr: steel and slate blues (hue 195–225), no purple.
+      for (const i of [4, 5]) {
+        expect(hue(steps[i]), `exp-${i} ${steps[i]} hue`).toBeGreaterThanOrEqual(195);
+        expect(hue(steps[i]), `exp-${i} ${steps[i]} hue`).toBeLessThanOrEqual(225);
+      }
+      // The check has teeth: the pair it replaced fails it.
+      expect(deltaE(deuteranopia('#6d5a9e'), deuteranopia('#34568a'))).toBeLessThan(15);
+      expect(lightness('#6d5a9e') - lightness('#34568a')).toBeLessThan(8);
+    });
+
+  // "< $28" was #1b3a5c on a #21364b card: a $27 lease looked like the confidential grey beside it.
+  if (theme === 'night')
+    it('rent lens at night: the lowest step is plainly a rent, apart from the card and from the confidential grey', () => {
+      const low = fill('rent-0');
+      for (const card of cards) {
+        expect(contrast(low, card), `rent-0 ${low} on ${card}`).toBeGreaterThanOrEqual(1.4);
+        expect(deltaE(low, card), `rent-0 ${low} against ${card}`).toBeGreaterThanOrEqual(15);
+      }
+      expect(deltaE(low, fill('confidential')), 'against confidential').toBeGreaterThanOrEqual(20);
+      expect(deltaE(deuteranopia(low), deuteranopia(fill('confidential'))), 'against confidential, deuteranopia').toBeGreaterThanOrEqual(20);
+      // The colour it replaced fails on every card.
+      for (const card of cards) expect(contrast('#1b3a5c', card)).toBeLessThan(1.4);
+    });
 
   it('rent lens: five company blues, 12 L* or more between neighbours, the text flipping where the fill needs it', () => {
     const steps = [0, 1, 2, 3, 4].map((i) => fill(`rent-${i}`));

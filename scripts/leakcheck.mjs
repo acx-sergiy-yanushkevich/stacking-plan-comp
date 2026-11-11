@@ -1,8 +1,10 @@
 // Prospect-safe leak check: with safe=1, no tenant, contact, broker or prospect name, no in-place
 // rent, no deal, inquiry, tenant-risk or data-issue wording, no record action, no quiet (unpublished)
-// listing, no date of any lease (start or end, in place or signed), no rollover by period and no
-// expiring figure may appear anywhere: DOM text, live regions, toasts, titles, aria-labels, SVG
-// <title>s, the print layout, the values of inputs, or the URL.
+// listing, no date of any lease (start or end, in place or signed), no end date of a sublease (it is
+// its sublandlord's lease end), no rollover by period, no expiring figure, no WALT figure, no inquiry
+// (not its name, not its size range, not in the URL) and no lens that colours by something withheld
+// may appear anywhere: DOM text, live regions, toasts, titles, aria-labels, SVG <title>s, the print
+// layout, the values of inputs, or the URL.
 //
 // Three kinds of state are checked. Fresh loads: a link opened with safe=1. Time travel: every one of
 // those links again with `asOf` set to later dates, which must give the same page as today's, to the
@@ -37,17 +39,19 @@ const inPlaceRent = /(?<![–-])\$\d[\d.,]*\/SF\/(yr|mo)\s(FSG|MG|NNN)/;
 
 // ── Lease dates ────────────────────────────────────────────────────────────────────────────────
 // Every commencement, expiration and termination date in the mock, in each form the app writes a
-// date: ISO (the CSV), "Sep 30, 2028", "Sep 2028" and "Sep '28". A date that is also a date of the
-// offer (available from, sublease thru) or of the page itself (today, a record's last change) is not
-// a lease date to a reader, so it is left out; for the month forms, so is its whole month.
+// date: ISO (the CSV), "Sep 30, 2028", "Sep 2028" and "Sep '28". The end date of a sublease is one
+// of them: a sublease ends with the lease it is cut from. A date that is also a date of the offer
+// (available from) or of the page itself (today, a record's last change) is not a lease date to a
+// reader, so it is left out; for the month forms, so is its whole month.
 const TODAY = /export const TODAY[^=]*= '(\d{4}-\d{2}-\d{2})'/.exec(src)?.[1];
 if (!TODAY) {
   console.error('Could not read TODAY from the mock data.');
   process.exit(2);
 }
 const isoDates = (re) => [...src.matchAll(re)].map((m) => m[1]);
-const leaseDateList = isoDates(/\b(?:commencement|expiration|termination): '(\d{4}-\d{2}-\d{2})'/g);
-const publicDates = new Set([TODAY, ...isoDates(/\b(?:availableFrom|subleaseExpiration|verifiedAt|dataUpdated|at|date|updated|neededBy|asOf): '(\d{4}-\d{2}-\d{2})'/g)]);
+const subleaseEnds = isoDates(/\bsubleaseExpiration: '(\d{4}-\d{2}-\d{2})'/g);
+const leaseDateList = [...isoDates(/\b(?:commencement|expiration|termination): '(\d{4}-\d{2}-\d{2})'/g), ...subleaseEnds];
+const publicDates = new Set([TODAY, ...isoDates(/\b(?:availableFrom|verifiedAt|dataUpdated|at|date|updated|neededBy|asOf): '(\d{4}-\d{2}-\d{2})'/g)]);
 const long = (d) => `${MONTHS[Number(d.slice(5, 7)) - 1]} ${Number(d.slice(8, 10))}, ${d.slice(0, 4)}`;
 const monthYear = (d) => `${MONTHS[Number(d.slice(5, 7)) - 1]} ${d.slice(0, 4)}`;
 const monthShort = (d) => `${MONTHS[Number(d.slice(5, 7)) - 1]} '${d.slice(2, 4)}`;
@@ -64,6 +68,20 @@ for (const d of leaseDates) {
 }
 if (leaseDates.size < 20) {
   console.error(`Only ${leaseDates.size} lease dates were read from the mock data: the check would prove little.`);
+  process.exit(2);
+}
+// The sublease end must really be among the dates looked for, in every form: it is the case this list was extended for.
+if (!subleaseEnds.length || !subleaseEnds.every((d) => leaseDates.has(d) && leaseDateWords.get(long(d)) === d && leaseDateWords.get(monthYear(d)) === d && leaseDateWords.get(monthShort(d)) === d)) {
+  console.error('The sublease end date of the mock is not checked in every form (it collides with a public date): the check would prove nothing about it.');
+  process.exit(2);
+}
+
+// ── Inquiries ──────────────────────────────────────────────────────────────────────────────────
+// Each open inquiry: its id (it must not stay in the URL) and its size range as the app writes it
+// ("15,000–22,000"), which is another prospect's requirement whether or not the name is beside it.
+const inquiryList = [...src.matchAll(/\{ id: '(I\d+)', prospect: '[^']+', minSize: (\d+), maxSize: (\d+), neededBy: '(\d{4}-\d{2}-\d{2})'/g)].map((m) => ({ id: m[1], range: `${Number(m[2]).toLocaleString('en-US')}–${Number(m[3]).toLocaleString('en-US')}`, neededBy: m[4] }));
+if (inquiryList.length < 3) {
+  console.error(`Only ${inquiryList.length} inquiries were read from the mock data: the inquiry checks would prove little.`);
   process.exit(2);
 }
 
@@ -123,6 +141,16 @@ const states = [
   '?view=stack&safe=1&floor=F3',
   '?view=stack&safe=1&req=12000',
   '?view=stack&safe=1&inquiry=I02',
+  '?safe=1&inquiry=I02',
+  '?view=stack&safe=1&inquiry=I02&mode=find',
+  '?view=stack&safe=1&inquiry=I02&fit=direct&select=L13-U1',
+  '?view=timeline&safe=1&inquiry=I01&mode=find',
+  '?view=building&safe=1&floor=F8&inquiry=I04',
+  '?view=stack&safe=1&select=L14-U2&lens=rent',
+  '?view=timeline&safe=1&select=L14-U2',
+  '?view=floor&floor=F7&safe=1&select=L14-U2',
+  '?view=building&safe=1&floor=F7',
+  '?view=stack&safe=1&req=5000&fit=sublease&mode=find',
   '?view=stack&safe=1&window=12',
   '?view=stack&safe=1&window=risk',
   '?view=stack&safe=1&mode=worklist&window=24',
@@ -232,6 +260,21 @@ function findLeaks(text, { q } = {}) {
   const period = /< ?12 mo\b|\b\d–\d yr\b|\b\d\+ yr\b|\bLease rollover\b|\bRollover from\b|\bShare of (leased|listed)|\b\d+ leases?\b|\bleases? ending\b/.exec(text);
   if (period) found.push(`rollover by period "${period[0]}"`);
   if (expiringFigure && text.includes(expiringFigure)) found.push(`the expiring figure "${expiringFigure}"`);
+  // No WALT figure: not the card's two decimals, not the tooltip's four, not in months, in any output.
+  const walt = waltFigure ? new RegExp(`\\b${waltFigure.replace('.', '\\.')}\\s*(yr|years)\\b`).exec(text) : null;
+  if (walt) found.push(`the WALT figure "${walt[0].replace(/\s+/g, ' ')}"`);
+  const waltWords = /WALT[^\n]{0,40}\b\d+\.\d+\s*(yr|years)\b|\b\d+\.\d{4} years\b|lease term remaining: \d|SF-weighted/i.exec(text);
+  if (waltWords) found.push(`a WALT figure is stated: "${waltWords[0]}"`);
+  // A sublease says nothing about when it ends, or whose lease it is cut from.
+  const sub = /\bthru\b|\bsublandlord\b|\bhead lease\b|\bopen-ended\b/i.exec(text);
+  if (sub) found.push(`sublease term wording "${sub[0]}"`);
+  // No inquiry: not the word, not its id in the URL, not its size range as a requirement.
+  const inq = /inquir/i.exec(text);
+  if (inq) found.push(`inquiry wording "${text.slice(Math.max(0, inq.index - 20), inq.index + 30).replace(/\s+/g, ' ')}"`);
+  for (const i of inquiryList) if (text.includes(i.range)) found.push(`the size range of inquiry ${i.id} "${i.range}"`);
+  // No lens that colours by something withheld: not in the URL either.
+  const lens = /[?&]lens=(expiry|deals)\b/.exec(text);
+  if (lens) found.push(`a withheld lens in the URL "${lens[0]}"`);
   const expiring = /expiring in 12 months[^.;\n]*\d/i.exec(text);
   if (expiring) found.push(`an expiring figure is stated: "${expiring[0]}"`);
   // The plan is today's: no other as-of date in the URL, no change chip against today.
@@ -262,6 +305,14 @@ async function findDomLeaks() {
   if (movable.bands) found.push(`a rollover band or chart is drawn (${movable.bands})`);
   if (movable.asOf) found.push('the as-of control is not locked');
   if (movable.ended) found.push(`an ended lease is drawn (${movable.ended})`);
+  // The Expiration and Deals lenses are not offered: not as a button, not in the phone's select.
+  const lensOptions = await page.evaluate(() => [...document.querySelectorAll('.sp-toolbar__lens [role="radio"], .sp-toolbar__lens button, .sp-toolbar__lens-select option')].map((el) => (el.textContent ?? '').trim()));
+  const withheldLens = lensOptions.filter((t) => /Expiration|Deals/.test(t));
+  if (withheldLens.length) found.push(`a withheld lens is offered (${[...new Set(withheldLens)].join(', ')})`);
+  if (lensOptions.length && !lensOptions.some((t) => /Status/.test(t))) found.push('the lens control was not read');
+  // Every sublease bar and block is drawn with no end: nothing stops on the sublandlord's lease end.
+  const subEnds = await page.evaluate(() => document.querySelectorAll('[data-bar$="-sub"]').length);
+  if (subEnds) found.push(`a sublease bar with an end date is drawn (${subEnds})`);
   // An at-risk lease must be indistinguishable from an ordinary one: same words, same tooltip, same colour.
   const sig = await signatures([...riskKeys, ...ordinaryKeys]);
   const ordinary = new Set(ordinaryKeys.flatMap((k) => sig[k] ?? []));
@@ -296,6 +347,15 @@ const expiringFigure = await page.evaluate(() => {
 });
 if (!expiringFigure) {
   console.error('Could not read the Expiring 12 mo figure from the broker view: the check for it would prove nothing.');
+  process.exit(2);
+}
+// The broker's WALT figure ("2.98"): it must be nowhere on a prospect's page, print or file.
+const waltFigure = await page.evaluate(() => {
+  const card = [...document.querySelectorAll('.sp-kpi')].find((c) => c.querySelector('.sp-kpi__label')?.textContent === 'WALT');
+  return card?.querySelector('.sp-kpi__value')?.textContent?.match(/\d+\.\d{2}/)?.[0] ?? null;
+});
+if (!waltFigure) {
+  console.error('Could not read the WALT figure from the broker view: the check for it would prove nothing.');
   process.exit(2);
 }
 const riskKeys = kinds.filter(([, a]) => /Holdover|MTM|Month-to-month/.test(a)).map(([k]) => k);
@@ -397,7 +457,15 @@ const transitions = [
   ['open the at-risk worklist', '?view=stack&mode=worklist&window=risk', async () => {}, 'Argosy Partners'],
   ['highlight a rollover period', '?view=stack&bucket=0', async () => {}, 'Cirrus Energy'],
   ['open the data issues panel', '?view=stack&mode=issues', async () => {}, null],
-  ['match an open inquiry', '?view=stack&inquiry=I02', async () => {}, null],
+  ['match an open inquiry (by link)', '?view=stack&inquiry=I02', async () => {}, '15,000–22,000'],
+  ['match an open inquiry from the Find panel', '?view=stack&mode=find', async () => { await page.getByLabel('Match an open inquiry').selectOption('I02'); }, 'Harbor Freight Regional HQ'],
+  ['match an open inquiry, then open one of its options', '?view=stack&inquiry=I02', async () => { await page.locator('.sp-ins__list .sp-ins__row').first().click(); }, '15,000–22,000'],
+  ['match an open inquiry on the Building view', '?view=building&inquiry=I05', async () => {}, '12,000–14,000'],
+  ['match an open inquiry in the Timeline', '?view=timeline&inquiry=I01&mode=find', async () => {}, '5,000–6,000'],
+  ['the sublease selected (its end date on screen)', '?view=stack&select=L14-U2', async () => {}, 'thru'],
+  ['the sublease selected in the Timeline', '?view=timeline&select=L14-U2', async () => {}, 'thru'],
+  ['the expiration lens in the Stack', '?view=stack&lens=expiry', async () => {}, 'Expiration'],
+  ['the WALT figure on screen', '?view=stack', async () => {}, 'WALT'],
   ['the deals lens with a suite selected', '?view=stack&lens=deals&select=A02', async () => {}, null],
   ['the expiration lens in the Timeline, projected to 2028', '?view=timeline&lens=expiry&asOf=2028-01-01', async () => {}, null],
   ['the Stack projected to April 2027 (a suite vacated, a quiet listing open)', '?view=stack&asOf=2027-04-15', async () => {}, 'Vacated'],
@@ -462,12 +530,16 @@ if (wanted('prospect-safe CSV export')) try {
   const rows = csv.split(/\r?\n/).map((r) => r.split(','));
   const col = (h) => rows[0].indexOf(h);
   for (const r of rows.slice(1)) if (r[col('State')] === 'Leased' && (r[col('Expiration')] || r[col('Months remaining')] || r[col('Rate')])) found.push(`CSV: Ste ${r[col('Suite')]} shows a term or rent`);
-  // No lease has a start or an end in the file: the only dates left are the offer's (a sublease's own end).
+  // No lease has a start or an end in the file, and no sublease an end: no row has a date in those columns at all.
   for (const r of rows.slice(1)) {
     if (r[col('Commencement')]) found.push(`CSV: Ste ${r[col('Suite')]} has a commencement (${r[col('Commencement')]})`);
-    if (r[col('Expiration')] && r[col('State')] !== 'Sublease') found.push(`CSV: Ste ${r[col('Suite')]} (${r[col('State')]}) has an expiration (${r[col('Expiration')]})`);
+    if (r[col('Expiration')]) found.push(`CSV: Ste ${r[col('Suite')]} (${r[col('State')]}) has an expiration (${r[col('Expiration')]})`);
     if (r[col('Months remaining')]) found.push(`CSV: Ste ${r[col('Suite')]} has months remaining`);
   }
+  // The only dates a prospect-safe file may hold at all are none: the rent roll has no available-from column.
+  const anyDate = /\b\d{4}-\d{2}-\d{2}\b/.exec(csv);
+  if (anyDate) found.push(`CSV: a date is in the file (${anyDate[0]})`);
+  if (/WALT|weighted/i.test(csv)) found.push('CSV: a WALT figure or heading is in the file');
   if (!rows.some((r) => r[col('State')] === 'Committed')) found.push('CSV: the signed lease is missing, so its dates were not checked');
   // Asking rents are marketing information: the sublet suite's must be in the file, as it is in the PDF.
   if (!rows.some((r) => r[col('State')] === 'Sublease' && /^\d+(\.\d+)?–\d+(\.\d+)?$/.test(r[col('Rate')] ?? ''))) found.push('CSV: the sublease asking rent is missing');
@@ -493,6 +565,11 @@ if (wanted('prospect-safe print layout')) {
   await page.goto(base + '?view=stack&safe=1&print=1', { waitUntil: 'networkidle' });
   const printed = (await page.evaluate(() => document.querySelector('.sp-print')?.innerText ?? '')).replace(/\u00a0/g, ' ');
   const found = findLeaks(printed);
+  // WALT reads "Withheld" beside Expiring 12 mo and Pipeline: three cards, no figure.
+  const withheldCards = await page.evaluate(() => [...document.querySelectorAll('.sp-print__kpi')].filter((k) => k.querySelector('.sp-print__kpi-value')?.textContent === 'Withheld').map((k) => k.querySelector('.sp-print__kpi-label')?.textContent));
+  for (const card of ['Expiring 12 mo', 'WALT', 'Pipeline']) if (!withheldCards.includes(card)) found.push(`the report's ${card} card does not read "Withheld"`);
+  // The sublease is listed as space on offer, with its asking rent.
+  if (!/Sublease\s+Now\s+\$\d+–\$\d+\/SF\/yr/.test(printed)) found.push('the report does not list the sublease as space on offer with its asking rent');
   for (const must of ['Rent roll', 'Available from', 'Space on offer', 'Coming supply', 'Withheld']) if (!printed.toLowerCase().includes(must.toLowerCase())) found.push(`the report has no "${must}": it was not read`); // table headings are drawn in capitals
   for (const h of ['Commencement', 'Expiration', 'Remaining', 'Leases', 'Period']) if (new RegExp(`(^|\\n|\\t)${h}(\\t|\\n|$)`, 'i').test(printed)) found.push(`the report has a "${h}" column`);
   report('prospect-safe print layout', found);

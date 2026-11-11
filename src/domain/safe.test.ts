@@ -14,6 +14,8 @@ import {
   canShowIssues,
   canShowLeaseTerm,
   canShowRollover,
+  canShowWalt,
+  canUseLens,
   canTimeTravel,
   canKeepSearch,
   canShowListingStatus,
@@ -178,13 +180,38 @@ describe('lease terms in prospect-safe mode', () => {
     expect(segs.some((s) => s.kind === 'holdover' || s.kind === 'mtm')).toBe(false);
   });
 
-  it('a sublet suite keeps the sublease end (part of the offer) and loses the head lease term', () => {
+  it('a sublet suite stays space on offer and loses every date: the head lease term and the sublease end, which is the same date', () => {
     const sub = raw.find((s) => s.kind === 'sublease')!;
+    // The mock shows why: the sublease runs to the last day of its sublandlord's lease.
+    expect(sub.availability!.subleaseExpiration).toBe('2030-09-30');
+    expect(sub.lease!.expiration).toBe('2030-09-30');
     const p = byKey(sub.key);
-    expect(p.kind).toBe('sublease');
-    expect(p.endDate).toBe(sub.availability!.subleaseExpiration);
-    expect(p.headMonths).toBeNull();
-    expect(p.termWithheld).toBe(true);
+    expect([p.kind, p.endDate, p.monthsToExpiry, p.headMonths, p.termWithheld]).toEqual(['sublease', null, null, null, true]);
+    // The listing the suite carries has no end date either; what makes it an offer is intact.
+    const a = p.availability!;
+    expect(a.subleaseExpiration).toBeNull();
+    expect([a.size, a.availableFrom, a.rentLow, a.rentHigh, a.rateUnit, a.leaseType, a.sublease]).toEqual([7000, sub.availability!.availableFrom, 24, 26, 'yr', 'FSG', true]);
+    // The record the plan was derived from is untouched.
+    expect(sub.availability!.subleaseExpiration).toBe('2030-09-30');
+    expect(property.availabilities.find((x) => x.id === a.id)!.subleaseExpiration).toBe('2030-09-30');
+  });
+
+  it('no sublease end date is left anywhere in the projection: not on a listing for later, not on a sublease with no suite', () => {
+    const end = '2031-03-31';
+    const withLater = floors.map((f, i) => {
+      if (i !== 0) return f;
+      const host = f.segments.find((s) => s.kind === 'leased')!;
+      const listing = { ...raw.find((s) => s.kind === 'sublease')!.availability!, id: 'X1', availableFrom: '2027-06-01', subleaseExpiration: end };
+      return { ...f, segments: f.segments.map((s) => (s === host ? { ...s, marketed: listing } : s)), orphanSubleases: [{ ...listing, id: 'X2' }] };
+    });
+    const out = safeFloors(withLater, true);
+    const dates = JSON.stringify(out.map((f) => [f.segments.map((s) => [s.availability?.subleaseExpiration, s.marketed?.subleaseExpiration, s.endDate]), f.orphanSubleases.map((a) => a.subleaseExpiration)]));
+    expect(dates).not.toMatch(/2030-09-30|2031-03-31/);
+    // The listing for later is still there, with its available-from date.
+    expect(out[0].segments.find((s) => s.marketed?.id === 'X1')!.marketed!.availableFrom).toBe('2027-06-01');
+    expect(out[0].orphanSubleases.map((a) => [a.id, a.subleaseExpiration])).toEqual([['X2', null]]);
+    // Outside the mode nothing is removed.
+    expect(JSON.stringify(safeFloors(withLater, false))).toContain(end);
   });
 
   it('a signed lease keeps its state and loses its dates: no move-in, no end, no months', () => {
@@ -260,7 +287,8 @@ describe('prospect-safe is today only', () => {
         for (const s of f.segments) {
           expect(s.kind, `${asOf} ${s.key}`).not.toBe('projected');
           expect([s.availability, s.marketed].some((a) => a && quiet.has(a.id)), `${asOf} ${s.key} quiet listing`).toBe(false);
-          if (s.lease) expect([s.lease.commencement, s.lease.expiration, s.lease.termination, s.endDate === null || s.kind === 'sublease'], `${asOf} ${s.key}`).toEqual(['', null, null, true]);
+          if (s.lease) expect([s.lease.commencement, s.lease.expiration, s.lease.termination, s.endDate], `${asOf} ${s.key}`).toEqual(['', null, null, null]);
+          expect([s.availability?.subleaseExpiration ?? null, s.marketed?.subleaseExpiration ?? null], `${asOf} ${s.key}`).toEqual([null, null]);
           if (!['leased', 'sublease', 'committed'].includes(s.kind)) expect(s.lease, `${asOf} ${s.key}`).toBeUndefined();
         }
         expect(f.orphanSubleases.some((a) => quiet.has(a.id))).toBe(false);
@@ -316,10 +344,21 @@ describe('totals by period in prospect-safe mode', () => {
     expect(roll.buckets.length).toBe(9);
   });
 
-  it('safeKpis hands a prospect no expiring figure and no lease count, and changes nothing else', () => {
+  it('safeKpis hands a prospect no expiring figure, no lease count and no WALT, and changes nothing else', () => {
     expect(safeKpis(kpis, false)).toBe(kpis);
+    expect(kpis.walt).toBeGreaterThan(0);
     const out = safeKpis(kpis, true);
-    expect([out.expiring12, out.expiring12Leases]).toEqual([0, 0]);
-    expect({ ...out, expiring12: kpis.expiring12, expiring12Leases: kpis.expiring12Leases }).toEqual(kpis);
+    expect([out.expiring12, out.expiring12Leases, out.walt]).toEqual([0, 0, 0]);
+    expect({ ...out, expiring12: kpis.expiring12, expiring12Leases: kpis.expiring12Leases, walt: kpis.walt }).toEqual(kpis);
+  });
+
+  it('WALT is withheld with the lease terms it is made of', () => {
+    expect([canShowWalt(false), canShowWalt(true)]).toEqual([true, false]);
+    expect(canShowWalt(true)).toBe(canShowLeaseTerm(true));
+  });
+
+  it('a lens that colours by something withheld is not offered: Deals and Expiration', () => {
+    for (const lens of ['status', 'expiry', 'deals', 'rent']) expect(canUseLens(lens, false), lens).toBe(true);
+    expect(['status', 'expiry', 'deals', 'rent'].filter((lens) => canUseLens(lens, true))).toEqual(['status', 'rent']);
   });
 });

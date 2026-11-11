@@ -347,7 +347,9 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
           <text key={i} className="sp-tl-bar__text sp-tl-bar__text--outside" x={plotLeft + 2 + (i === 0 && risk ? tagW + 5 : 0)} y={y + 11 + i * STACK_LINE_H}>
             {line.map((run, ri) => (
               <tspan key={ri} className={run.kind === 'name' ? 'sp-tl-bar__name' : 'sp-tl-bar__sub'}>
-                {run.text}
+                {/* A line ends in a space, so a label wrapped over two lines reads "Ste 720 7,000 SF" to
+                    assistive technology as it does in the bar's accessible name, not "Ste 7207,000 SF". */}
+                {ri === line.length - 1 ? `${run.text} ` : run.text}
               </tspan>
             ))}
           </text>

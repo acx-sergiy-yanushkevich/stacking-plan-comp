@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../data/mock/property';
 import { deriveFloors } from './derive';
-import { chosenOption, filterFits, findFits, matchingInquiries, nearMisses, neededByDate, optionSuites, type FitOption } from './finder';
+import { checkNeededBy, chosenOption, filterFits, findFits, matchingInquiries, nearMisses, neededByDate, noFit, optionSuites, searchSpace, suitesLabel, type FitOption, type Requirement } from './finder';
 import type { Availability, Floor, Lease, Property } from './types';
 
 const at = (asOf: string) => deriveFloors(property, asOf, TODAY);
@@ -355,5 +355,199 @@ describe('needed by: an exact date, today included', () => {
     expect(when('2027-04-15')).toMatchObject({ from: '2027-04-01', late: false });
     expect(when('2027-04-01').late).toBe(false);
     expect(when('2027-03-31').late).toBe(true);
+  });
+});
+
+describe('one floor, one alternative', () => {
+  const floors = deriveFloors(property, TODAY, TODAY);
+  const want = (size: number, type: Requirement['type'] = 'any', max: number | null = null): Requirement => ({ size, max, by: null, type });
+
+  it('12,000 SF Direct lists Floor 8 once, as both suites together, not again as Ste 850 alone', () => {
+    const { options, alternatives } = searchSpace(floors, want(12000, 'direct'), property.inquiries, TODAY);
+    expect(options.length).toBeLessThan(3);
+    const floor8 = alternatives.filter((m) => m.floorName === 'Floor 8');
+    expect(floor8).toEqual([expect.objectContaining({ kind: 'short', size: 7400, shortfall: 4600, keys: ['A06', 'A07'], suites: 'Ste 850 + Ste 860', type: 'Direct' })]);
+    // It used to be listed a second time: 4,200 SF, 7,800 SF short, which is Ste 850 of the same block.
+    expect(alternatives.some((m) => m.size === 4200 || m.size === 3200)).toBe(false);
+    // The freed slot goes to another floor: every row is a different floor.
+    expect(new Set(alternatives.map((m) => m.floorName)).size).toBe(alternatives.length);
+  });
+
+  it('no alternative is a part of another alternative on its floor, for any size and type', () => {
+    for (const type of ['any', 'direct', 'sublease'] as const) {
+      for (const size of [3000, 5000, 8000, 12000, 20000, 40000]) {
+        const rows = nearMisses(floors, size, TODAY, type, 100);
+        for (const m of rows.filter((x) => x.kind === 'short')) {
+          const others = rows.filter((n) => n !== m && n.kind === 'short' && n.floorName === m.floorName);
+          expect(others.some((n) => m.keys.every((k) => n.keys.includes(k))), `${type} ${size} ${m.floorName} ${m.keys}`).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('a suite that is part of an exact option is not offered again as a smaller alternative', () => {
+    // 7,000 SF Direct: Floor 8 (7,400 SF, both suites) is an option. Ste 850 alone, 2,800 SF short, is not an alternative to it.
+    const { options } = findFits(floors, 7000, null, null, property.inquiries, TODAY);
+    const block = withKeys(options, ['A06', 'A07'])!;
+    expect(block.size).toBe(7400);
+    // On its own the function lists the two Floor 8 suites: nothing tells it the block is already offered.
+    expect(nearMisses(floors, 7000, TODAY, 'direct', 100).filter((m) => m.floorName === 'Floor 8').map((m) => m.suites)).toEqual(['Ste 850', 'Ste 860']);
+    // Told what the options are, it lists neither; the other floors are unaffected.
+    const rows = nearMisses(floors, 7000, TODAY, 'direct', 100, options.map((o) => o.keys));
+    expect(rows.some((m) => m.keys.includes('A06') || m.keys.includes('A07'))).toBe(false);
+    expect(rows.map((m) => m.floorName)).toEqual(['Floor 3', 'Floor 1']);
+    // searchSpace passes the options in: whenever alternatives are listed, none is a part of an option.
+    for (const size of [3000, 5000, 7000, 8000, 9000, 12000, 20000]) {
+      for (const type of ['any', 'direct', 'sublease'] as const) {
+        const r = searchSpace(floors, want(size, type), property.inquiries, TODAY);
+        for (const m of r.alternatives.filter((x) => x.kind === 'short')) for (const o of r.options) expect(m.keys.every((k) => o.keys.includes(k)), `${size} ${type} ${m.floorName}`).toBe(false);
+      }
+    }
+  });
+
+  it('a stack of two floors is a different proposal and is kept beside the single floors in it', () => {
+    const rows = nearMisses(floors, 12000, TODAY);
+    expect(rows.find((m) => m.kind === 'stack')).toMatchObject({ floorName: 'Floors 7–8', suites: 'Ste 850 + Ste 860 on Floor 8, Ste 720 on Floor 7' });
+    expect(rows.some((m) => m.kind === 'short' && m.floorName === 'Floor 8')).toBe(true);
+  });
+});
+
+describe('every finder row names its suites', () => {
+  const floors = deriveFloors(property, TODAY, TODAY);
+
+  it('suitesLabel: one suite, several on a floor, several floors, in plan order whatever order the keys come in', () => {
+    expect(suitesLabel(floors, ['A06'])).toBe('Ste 850');
+    expect(suitesLabel(floors, ['A07', 'A06'])).toBe('Ste 850 + Ste 860');
+    expect(suitesLabel(floors, ['L14-U2', 'A06', 'A07'])).toBe('Ste 850 + Ste 860 on Floor 8, Ste 720 on Floor 7');
+    expect(suitesLabel(floors, [])).toBe('');
+    // Space with no suite number is named by its floor, never left blank.
+    const bare = floors.map((f) => ({ ...f, segments: f.segments.map((s) => (s.key === 'A06' ? { ...s, suite: null } : s)) }));
+    expect(suitesLabel(bare, ['A06', 'A07'])).toBe('Floor 8 + Ste 860');
+  });
+
+  it('every option and every alternative carries the suites its keys stand for', () => {
+    for (const size of [3000, 4000, 7000, 12000, 20000]) {
+      const { options, alternatives } = searchSpace(floors, { size, max: null, by: null, type: 'any' }, property.inquiries, TODAY);
+      for (const row of [...options, ...alternatives]) {
+        expect(row.suites, `${size} ${row.floorName}`).toBe(suitesLabel(floors, row.keys));
+        expect(row.suites).toMatch(/^Ste \d+/);
+        expect(row.suites.match(/Ste \d+/g)).toHaveLength(row.keys.length);
+      }
+    }
+    const { options } = findFits(floors, 4000, null, null, property.inquiries, TODAY);
+    expect(withKeys(options, ['A06', 'A07'])!.suites).toBe('Ste 850 + Ste 860');
+    expect(withKeys(options, ['A06'])!.suites).toBe('Ste 850');
+    // An occupied suite marketed for later is named too.
+    expect(withKeys(findFits(floors, 12000, null, null, property.inquiries, TODAY).options, ['L13-U1'])!.suites).toBe('Ste 600');
+  });
+});
+
+describe('when nothing fits, the advice is only what applies', () => {
+  const floors = deriveFloors(property, TODAY, TODAY);
+  const advise = (req: Requirement) => {
+    const r = searchSpace(floors, req, property.inquiries, TODAY);
+    expect(r.options).toHaveLength(0);
+    return r.noFit!;
+  };
+
+  it('40,000 SF with nothing else set: no maximum, type or date to change, so it says how much space there is', () => {
+    const a = advise({ size: 40000, max: null, by: null, type: 'any' });
+    expect([a.withoutMax, a.anyType, a.withoutBoth]).toEqual([0, 0, 0]);
+    expect(a.message).toMatch(/^The largest block available now is 9,300 SF on Floor 12\./);
+    expect(a.message).not.toMatch(/maximum|type|date/i);
+  });
+
+  it('says the closest spaces are listed below only when some are', () => {
+    const r = searchSpace(floors, { size: 40000, max: null, by: null, type: 'any' }, property.inquiries, TODAY);
+    expect(r.alternatives.length > 0).toBe(r.noFit!.message.includes('listed below'));
+    expect(noFit(floors, { size: 40000, max: null, by: null, type: 'any' }, property.inquiries, TODAY, false).message).toBe('The largest block available now is 9,300 SF on Floor 12.');
+    expect(noFit(floors, { size: 40000, max: null, by: null, type: 'any' }, property.inquiries, TODAY, true).message).toBe('The largest block available now is 9,300 SF on Floor 12. The closest spaces and floor combinations are listed below.');
+  });
+
+  it('a maximum that is in the way is named, with the number of options without it; the type and the date are not', () => {
+    // 1,000–1,200 SF: no suite is that small and none can be split that far down.
+    const a = advise({ size: 1000, max: 1200, by: null, type: 'any' });
+    expect(a.withoutMax).toBe(findFits(floors, 1000, null, null, property.inquiries, TODAY).options.length);
+    expect(a.withoutMax).toBeGreaterThan(1);
+    expect([a.anyType, a.withoutBoth]).toEqual([0, 0]);
+    expect(a.message).toBe(`Without the 1,200 SF maximum, ${a.withoutMax} options fit.`);
+    expect(a.message).not.toMatch(/type|date/i);
+  });
+
+  it('a type that is in the way is named; a maximum that is not set is not', () => {
+    // 8,000 SF of sublease space: the only sublease is 7,000 SF, and direct space of that size exists.
+    const a = advise({ size: 8000, max: null, by: null, type: 'sublease' });
+    expect([a.withoutMax, a.anyType, a.withoutBoth]).toEqual([0, 2, 0]);
+    expect(a.message).toBe('With the type set to Any instead of Sublease, 2 options fit.');
+    expect(a.message).not.toMatch(/maximum|date/);
+    // Both in the way, each on its own: a 1,000–3,000 SF sublease. Each is named, with its own count.
+    const two = advise({ size: 1000, max: 3000, by: null, type: 'sublease' });
+    expect([two.withoutMax, two.anyType, two.withoutBoth]).toEqual([1, 1, 0]);
+    expect(two.message).toBe('Without the 3,000 SF maximum, 1 option fits. With the type set to Any instead of Sublease, 1 option fits.');
+  });
+
+  it('when only both changes together help, it says so once; when neither helps, it says neither', () => {
+    // Without the divisible Floor 6 block: a sublease of 8,000–8,500 SF. Any type alone finds nothing (the 9,300 SF
+    // suite is over the maximum), no maximum alone finds nothing (the only sublease is 7,000 SF); both together find Ste 1250.
+    const noSix = floors.map((f) => ({ ...f, segments: f.segments.map((s) => (s.marketed ? { ...s, marketed: undefined } : s)) }));
+    const both = searchSpace(noSix, { size: 8000, max: 8500, by: null, type: 'sublease' }, property.inquiries, TODAY).noFit!;
+    expect([both.withoutMax, both.anyType, both.withoutBoth]).toEqual([0, 0, 1]);
+    expect(both.message).toBe('Without the 8,500 SF maximum and with the type set to Any, 1 option fits.');
+    // 40,000–45,000 SF Direct: nothing that large exists whatever is relaxed.
+    const neither = advise({ size: 40000, max: 45000, by: '2027-06-01', type: 'direct' });
+    expect([neither.withoutMax, neither.anyType, neither.withoutBoth]).toEqual([0, 0, 0]);
+    expect(neither.message).toMatch(/^The largest block available now is 9,300 SF on Floor 12\./);
+    expect(neither.message).not.toMatch(/maximum|type|date/i);
+  });
+
+  it('the needed-by date is never the suggestion: a later space is listed late, not left out', () => {
+    for (const by of [null, TODAY, '2027-06-01', '2031-01-01']) {
+      const count = filterFits(findFits(floors, 12000, by, null, property.inquiries, TODAY).options, 'any').length;
+      expect(count, String(by)).toBe(filterFits(findFits(floors, 12000, null, null, property.inquiries, TODAY).options, 'any').length);
+    }
+    expect(searchSpace(floors, { size: 12000, max: null, by: TODAY, type: 'any' }, property.inquiries, TODAY).noFit).toBeNull();
+  });
+
+  it('an empty building says so', () => {
+    const empty = floors.map((f) => ({ ...f, maxContiguous: 0, segments: f.segments.filter((s) => s.kind === 'leased') }));
+    expect(noFit(empty, { size: 5000, max: null, by: null, type: 'any' }, [], TODAY).message).toBe('No direct space is available now.');
+  });
+});
+
+describe('needed by: a date before the as-of date is refused, never moved', () => {
+  const floors = deriveFloors(property, TODAY, TODAY);
+
+  it('checkNeededBy: empty is no date, a whole date on or after the as-of date is used as entered', () => {
+    expect(checkNeededBy('', TODAY)).toEqual({ date: null, problem: null });
+    expect(checkNeededBy(null, TODAY)).toEqual({ date: null, problem: null });
+    expect(checkNeededBy(TODAY, TODAY)).toEqual({ date: TODAY, problem: null });
+    expect(checkNeededBy('2027-09-11', TODAY)).toEqual({ date: '2027-09-11', problem: null });
+  });
+
+  it('a date before the as-of date is refused: 11 September 2026 against 9 November 2026', () => {
+    // An en-GB reader types 11/09/2026 meaning 11 September; a date control hands that over as 2026-09-11.
+    expect(TODAY).toBe('2026-11-09');
+    expect(checkNeededBy('2026-09-11', TODAY)).toEqual({ date: null, problem: 'before' });
+    expect(checkNeededBy('2026-11-08', TODAY)).toEqual({ date: null, problem: 'before' });
+    // It is never turned into another date: not the as-of date, not the day and month swapped.
+    for (const v of ['2026-09-11', '2026-11-08', '2020-01-01']) expect(checkNeededBy(v, TODAY).date, v).toBeNull();
+    // The as-of date decides, not today: the same date is fine for an earlier plan and refused for a later one.
+    expect(checkNeededBy('2026-09-11', '2026-09-01')).toEqual({ date: '2026-09-11', problem: null });
+    expect(checkNeededBy('2027-06-01', '2028-01-01')).toEqual({ date: null, problem: 'before' });
+  });
+
+  it('a value that is not a whole date yet is incomplete, not early: the year as a date control reports it while it is typed', () => {
+    for (const v of ['0002-09-11', '0020-09-11', '0202-09-11', '2027-02-30', '2027-13-01', '11/09/2026', 'soon']) expect(checkNeededBy(v, TODAY), v).toEqual({ date: null, problem: 'incomplete' });
+    expect(checkNeededBy('2027-09-11', TODAY).problem).toBeNull();
+  });
+
+  it('the search is run without a refused date: space free today is not marked late by a date already past', () => {
+    // What used to happen with by=2026-09-11: every space with a date of its own was "late".
+    const stale = findFits(floors, 5000, '2026-09-11', null, [], TODAY).options;
+    expect(stale.some((o) => o.late)).toBe(true);
+    const by = checkNeededBy('2026-09-11', TODAY).date;
+    const { options } = searchSpace(floors, { size: 5000, max: null, by, type: 'any' }, [], TODAY);
+    expect(options.length).toBe(stale.length);
+    expect(options.some((o) => o.late)).toBe(false);
   });
 });

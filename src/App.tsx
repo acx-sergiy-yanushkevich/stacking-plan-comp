@@ -11,13 +11,11 @@ import { rentRollRows, toCsv } from './domain/exportCsv';
 import { Header, type ExportKind } from './components/shell/Header';
 import { Toolbar } from './components/shell/Toolbar';
 import { KpiStrip, type KpiAction } from './components/kpis/KpiStrip';
-import { KpiReveal } from './components/kpis/KpiReveal';
 import { ToastProvider, useToast, Sheet } from './components/ui';
 import StackView from './components/stack/StackView';
 import Inspector from './components/inspector/Inspector';
 import FloorView from './components/floor/FloorView';
 import BuildingView from './components/building/BuildingView';
-import { isFloorOpen } from './components/building/openFloor';
 import TimelineView from './components/timeline/TimelineView';
 import { MiniTimeline } from './components/timeline/MiniTimeline';
 import { createDataSource } from './data/sources';
@@ -36,32 +34,22 @@ import './components/ui/ui.css';
 import './components/shell/shell.css';
 import './components/kpis/kpis.css';
 
-/** What can take keyboard focus in a view that has just been shown. */
-const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+/** The KPIs that open a panel in the inspector (the others change the lens or the view). */
+const opensPanel = (action: KpiAction): boolean => action === 'find' || action === 'find-largest' || action === 'expiry-worklist';
 
 /**
  * Where the keyboard goes after a KPI was activated. A KPI that opens a tool (the finder, the worklist)
- * hands focus to that panel's heading, as the panel does itself when it opens beside the Stack; in the
- * Building view the panel is new on screen, and the KPI row that was pressed has left with the column it
- * stood in. A KPI that changes the view (WALT, to the Timeline) hands focus to the first control of the
- * view that came in. Focus never stays on a control that is gone, which would drop it to <body>.
+ * hands focus to that panel's heading, as the panel does itself when it opens beside the Stack. Closing
+ * the panel returns focus to the KPI (`rememberTrigger`): the KPI bar is the same element in every view
+ * and every state, so the KPI that was pressed is always still there. A KPI that changes the lens or the
+ * view keeps the focus it has.
  */
 function focusAfterKpi(action: KpiAction): void {
-  if (typeof document === 'undefined') return;
-  const opensPanel = action === 'find' || action === 'find-largest' || action === 'expiry-worklist';
+  if (typeof document === 'undefined' || !opensPanel(action)) return;
   // Two frames: the new state renders in the first; a panel that mounts with it is in the page by the second.
   requestAnimationFrame(() =>
     requestAnimationFrame(() => {
-      const active = document.activeElement;
-      const lost = !active || active === document.body || !active.isConnected;
-      const heading = opensPanel ? document.querySelector<HTMLElement>('.sp-inspector .sp-ins__title, .sp-sheet .sp-ins__title') : null;
-      if (heading) {
-        heading.focus({ preventScroll: true });
-        return;
-      }
-      if (!lost) return;
-      const first = document.querySelector<HTMLElement>('.sp-stage')?.querySelector<HTMLElement>(FOCUSABLE);
-      (first ?? document.querySelector<HTMLElement>('#sp-plan'))?.focus({ preventScroll: true });
+      document.querySelector<HTMLElement>('.sp-inspector .sp-ins__title, .sp-sheet .sp-ins__title')?.focus({ preventScroll: true });
     }),
   );
 }
@@ -175,6 +163,7 @@ function Shell() {
   );
 
   const onKpi = (a: KpiAction) => {
+    // Closing the panel a KPI opened returns focus to that KPI.
     rememberTrigger();
     switch (a) {
       case 'status':
@@ -231,9 +220,6 @@ function Shell() {
   const view = shownView(state.view, phone);
   // The building view shows a floor itself; the inspector joins it for a suite, a search, the worklist or issues.
   const showInspector = view === 'building' ? mode !== 'building' && mode !== 'floor' : view !== 'floor' || mode === 'block';
-  // While the Building view shows the whole building, its KPIs stand beside the model; the strip above the
-  // plan comes in when a floor opens (and in every other view).
-  const kpisOnTop = view !== 'building' || isFloorOpen(model);
   const sheetOpen = narrow && mode !== 'building';
   const sheetTitle = mode === 'block' ? 'Suite' : mode === 'floor' ? 'Floor' : mode === 'find' ? 'Find space' : mode === 'worklist' ? 'Renewal worklist' : mode === 'issues' ? 'Data issues' : 'Area';
 
@@ -249,13 +235,13 @@ function Shell() {
         {announce}
       </div>
       <Header model={model} state={state} patch={patch} onExport={onExport} miniTimeline={<MiniTimeline model={model} asOf={state.asOf} onChange={(asOf) => patch({ asOf })} width={312} height={64} />} />
-      <KpiReveal open={kpisOnTop}>
-        <KpiStrip model={model} state={state} onAction={onKpi} />
-      </KpiReveal>
+      {/* The KPI bar: always here, above the toolbar, in every view and every state. Nothing shows, hides or
+          resizes it, so the toolbar and the plan under it never move when the view or the selection changes. */}
+      <KpiStrip model={model} state={state} onAction={onKpi} />
       <Toolbar state={state} patch={patch} />
       <main className={`sp-main sp-no-print ${showInspector ? '' : 'sp-main--wide'}`} id="sp-plan" tabIndex={-1}>
         <div className="sp-stage" key={view === 'map' ? 'map' : `fonts-${fontTick}`}>
-          {view === 'building' && <BuildingView model={model} state={state} patch={patch} onKpi={onKpi} />}
+          {view === 'building' && <BuildingView model={model} state={state} patch={patch} />}
           {view === 'stack' && <StackView model={model} state={state} patch={patch} />}
           {view === 'floor' && <FloorView model={model} state={state} patch={patch} />}
           {view === 'timeline' && <TimelineView model={model} state={state} patch={patch} />}

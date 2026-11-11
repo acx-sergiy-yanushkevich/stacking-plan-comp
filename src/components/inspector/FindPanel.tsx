@@ -7,7 +7,7 @@ import { canShowDeals, canShowInquiries } from '../../domain/safe';
 import { Button, Chip, Icon, Segmented, SelectField, TextField } from '../ui';
 import { selectSegment, type Patch } from '../plan/actions';
 import { Section } from './parts';
-import { chosenOption, neededByDate, type FitOption, type NearMiss } from '../../domain/finder';
+import { checkNeededBy, chosenOption, type FitOption, type NearMiss } from '../../domain/finder';
 import { setHoverKeys, setPinnedOption } from '../../state/hoverStore';
 
 export interface FindPanelProps {
@@ -38,14 +38,39 @@ function openOption(patch: Patch, row: FitOption | NearMiss) {
 export function FindPanel({ model, state, patch }: FindPanelProps) {
   const { safe, asOf, today, property } = model;
   const [hovered, setHovered] = useState<number | null>(null);
-  const inquiry = state.inquiry ? property.inquiries.find((i) => i.id === state.inquiry) ?? null : null;
+  // An inquiry is another prospect's requirement: in prospect-safe mode the panel does not read it at all.
+  const inquiry = state.inquiry && canShowInquiries(safe) ? property.inquiries.find((i) => i.id === state.inquiry) ?? null : null;
   const req = model.req;
   const largest = model.fits?.largestNow ?? { size: model.kpis.maxContiguous.size, floorName: model.kpis.maxContiguous.floorName ?? '' };
   const options = model.fits?.options ?? [];
   // Alternatives come from the model, already held to the chosen space type: the list and the plan agree.
   const misses = model.fits?.alternatives ?? [];
-  const by = state.by ?? inquiry?.neededBy ?? null;
-  const setBy = (next: string | null) => patch({ by: next, inquiry: null, req: state.req ?? inquiry?.minSize ?? null, max: state.max ?? inquiry?.maxSize ?? null });
+  // Needed by. The control is a date input, so its value is always an ISO date and never a string to
+  // interpret; what was entered stays in the field as entered. A date before the as-of date is refused
+  // with a message (`checkNeededBy`): it is neither applied nor moved to another date. `draft` holds a
+  // value that is in the field and not in the requirement (refused, or not a whole date yet).
+  const [draft, setDraft] = useState<string | null>(null);
+  const [left, setLeft] = useState(false);
+  const fromState = checkNeededBy(state.by, asOf);
+  const entered = draft !== null ? { value: draft, ...checkNeededBy(draft, asOf) } : { value: state.by ?? '', ...fromState };
+  const by = fromState.date ?? inquiry?.neededBy ?? null;
+  const setBy = (next: string | null) => {
+    setDraft(null);
+    patch({ by: next, inquiry: null, req: state.req ?? inquiry?.minSize ?? null, max: state.max ?? inquiry?.maxSize ?? null });
+  };
+  const onByChange = (value: string) => {
+    setLeft(false);
+    const next = checkNeededBy(value, asOf);
+    if (next.problem) setDraft(value);
+    else setBy(next.date);
+  };
+  const asOfName = asOf === today ? 'today' : 'the as-of date';
+  const byProblem =
+    entered.problem === 'before'
+      ? `${fmtDate(entered.value)} is before the as-of date, ${fmtDate(asOf)}, so it is not applied. Enter ${asOfName} or a later date. ${by ? `The search still uses ${fmtDate(by)}.` : 'The search has no needed-by date.'}`
+      : entered.problem === 'incomplete' && left
+        ? `That is not a complete date, so it is not applied. ${by ? `The search still uses ${fmtDate(by)}.` : 'The search has no needed-by date.'}`
+        : null;
 
   const numberOrNull = (v: string) => {
     const n = Number(v);
@@ -85,7 +110,16 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
             </p>
           )}
           <div className="sp-ins__form-row">
-            <TextField label="Needed by" kind="date" min={asOf} value={by ?? ''} onChange={(e) => setBy(neededByDate(e.target.value))} />
+            <TextField
+              label="Needed by"
+              kind="date"
+              min={asOf}
+              value={draft ?? state.by ?? inquiry?.neededBy ?? ''}
+              onChange={(e) => onByChange(e.target.value)}
+              onBlur={() => setLeft(true)}
+              aria-invalid={byProblem ? true : undefined}
+              aria-describedby={byProblem || fromState.date ? 'sp-find-by-note' : undefined}
+            />
             <div className="sp-field">
               <span className="sp-field__label" id="sp-find-type">
                 Type
@@ -93,9 +127,23 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
               <Segmented aria-label="Space type" options={TYPES} value={state.fit} onChange={(fit) => patch({ fit })} />
             </div>
           </div>
+          {/* Why an entry was refused; otherwise the date in the field read back with its month in words
+              (a typed 11/09 is 11 September or 9 November depending on the browser's locale). */}
+          {byProblem ? (
+            <p id="sp-find-by-note" className="sp-ins__alert" style={{ margin: 0 }} role="alert">
+              <Icon name="warning" size={14} />
+              <span>{byProblem}</span>
+            </p>
+          ) : (
+            fromState.date && (
+              <p id="sp-find-by-note" className="sp-ins__note" style={{ margin: 0 }}>
+                Needed by {fmtDate(fromState.date)}.
+              </p>
+            )
+          )}
           {/* Any exact date can be typed or picked above; these set the common ones in one click. */}
           <div className="sp-ins__chips" role="group" aria-label="Needed by, quick dates">
-            <Chip selected={by === null} onClick={() => setBy(null)}>
+            <Chip selected={by === null && !byProblem} onClick={() => setBy(null)}>
               Any time
             </Chip>
             {BY_PRESETS.map((months) => {
@@ -140,11 +188,25 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
         <Section title="Options">
           <div className="sp-empty">
             <Icon name="search" size={24} />
-            <div className="sp-empty__title">{`No space fits ${num(req.size)}${req.max ? `–${num(req.max)}` : ''} SF${req.by ? ` by ${fmtDate(req.by)}` : ''}`}</div>
-            <p>Raise the maximum, drop the type filter or move the date to include space marketed for later.</p>
-            <Button size="sm" onClick={() => patch({ by: addMonths(req.by ?? asOf, 12), inquiry: null, req: req.size, max: req.max })}>
-              Try 12 months later
-            </Button>
+            <div className="sp-empty__title">{`No ${req.type === 'any' ? '' : `${req.type} `}space fits ${num(req.size)}${req.max ? `–${num(req.max)}` : ''} SF${req.by ? ` by ${fmtDate(req.by)}` : ''}`}</div>
+            {/* Only what applies: each suggestion was counted by running the search without that limit (`noFit`).
+                The date is never one of them: space that comes later is listed and marked late, not left out. */}
+            <p>{model.fits?.noFit?.message}</p>
+            {(model.fits?.noFit?.withoutMax ?? 0) > 0 && (
+              <Button size="sm" onClick={() => patch({ max: null, inquiry: null, req: req.size, by: req.by })}>
+                Remove the maximum
+              </Button>
+            )}
+            {(model.fits?.noFit?.anyType ?? 0) > 0 && (
+              <Button size="sm" onClick={() => patch({ fit: 'any' })}>
+                Search any type
+              </Button>
+            )}
+            {(model.fits?.noFit?.withoutBoth ?? 0) > 0 && (
+              <Button size="sm" onClick={() => patch({ fit: 'any', max: null, inquiry: null, req: req.size, by: req.by })}>
+                Remove the maximum and search any type
+              </Button>
+            )}
           </div>
           <NearMisses misses={misses} patch={patch} max={req.max} selected={state.select} />
         </Section>
@@ -189,6 +251,8 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
                         {o.contiguous && <span className="sp-ins__tag">contiguous</span>}
                         {o.notMarketed && <span className="sp-ins__tag">not marketed</span>}
                       </div>
+                      {/* Which space this is: the floor alone does not say. */}
+                      <div className="sp-ins__row-suites">{o.suites}</div>
                       <div className="sp-ins__row-meta">
                         <span>{o.type}</span>
                         <span>{when}</span>
@@ -256,6 +320,7 @@ function NearMisses({ misses, patch, max, selected }: { misses: NearMiss[]; patc
                   <span>{m.floorName}</span>
                   {m.kind === 'stack' && <span className="sp-ins__tag">stacked floors</span>}
                 </div>
+                <div className="sp-ins__row-suites">{m.suites}</div>
                 <div className="sp-ins__row-meta">
                   <span>{m.type}</span>
                   <span>{m.from ? fmtMonthYear(m.from) : 'Now'}</span>

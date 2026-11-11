@@ -11,6 +11,9 @@ const states = [
   '?view=stack',
   '?view=stack&lens=expiry&select=L13-U1',
   '?view=stack&req=12000',
+  // The space finder with a refused needed-by date (an alert under the field) and with nothing that fits.
+  '?view=stack&req=5000&by=2026-09-11&mode=find',
+  '?view=stack&req=1000&max=1200&mode=find',
   '?view=stack&window=12',
   '?view=stack&mode=issues',
   '?view=stack&safe=1',

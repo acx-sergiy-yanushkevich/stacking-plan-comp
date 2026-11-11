@@ -13,6 +13,7 @@
     "a11y": "node scripts/a11y.mjs",
     "verify": "node scripts/verify.mjs",
     "leakcheck": "node scripts/leakcheck.mjs",
+    "exportcheck": "node scripts/exportcheck.mjs",
     "pdf": "node scripts/pdf.mjs",
     "preview:next": "vite preview --port 4181 --outDir dist-next --strictPort"
   },

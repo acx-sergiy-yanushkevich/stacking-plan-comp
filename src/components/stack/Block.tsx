@@ -142,7 +142,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
       if (fits(t, room(i, FONT_MICRO, true), FONT_MICRO)) return { t, cls: 'sp-seg__micro', font: FONT_MICRO };
       return null;
     };
-    /** Fact lines that can follow n name lines: with the lens fact, with a rate split over two lines, SF only. */
+    /** Fact lines that can follow n name lines: with the lens fact, with a rate on a line of its own in small type, SF only. */
     const factSets = (n: number, compact: boolean) => {
       const full: Line[][] = [];
       const split: Line[][] = [];
@@ -179,15 +179,20 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
         const up = sfL && text.lensShort && !l ? sized(text.lensShort, n, 'sp-seg__meta', compact) : null;
         const sfDown = up ? sized(unit, n + 1, 'sp-seg__sf', compact) : null;
         full.push(sfL && l ? [sfL, l] : up && sfDown ? [up, sfDown] : NONE);
-        // Last resort for a rate that is too long for one line: the lease type goes on the next line
-        // ("$31–$33/SF/yr" / "FSG"), so the rent keeps its unit and its type.
+        // Last resort for a rate that is too long for one line at 12 px. A rent is one fact with its unit and
+        // its lease type ("$31–$33/SF/yr FSG"): it is never broken inside, so "FSG" never stands alone on a
+        // line. The break goes before the rate, which then takes its own line at 11 px, or at 10 px; a
+        // block too narrow even for that falls back a tier (name and SF) and the rent stays in the tooltip,
+        // the accessible name and the inspector.
         const rate = text.lensShort || (text.meta.includes('$') ? text.meta.replace(/^Asking /, '') : '');
         const head = sub ?? sfL;
-        if (head && /^\$\S+\/SF\/(yr|mo) \S+$/.test(rate)) {
-          const cut = rate.lastIndexOf(' ');
-          const r1 = sized(rate.slice(0, cut), n + 1, 'sp-seg__meta', compact);
-          const r2 = sized(rate.slice(cut + 1), n + 2, 'sp-seg__meta', compact);
-          split.push(r1 && r2 ? [head, r1, r2] : NONE);
+        if (head && compact && /^\$\S+\/SF\/(yr|mo) \S+$/.test(rate)) {
+          const whole: Line | null = fits(rate, room(n + 1, FONT_TINY, true), FONT_TINY)
+            ? { t: rate, cls: 'sp-seg__tiny', font: FONT_TINY }
+            : fits(rate, room(n + 1, FONT_MICRO, true), FONT_MICRO)
+              ? { t: rate, cls: 'sp-seg__micro', font: FONT_MICRO }
+              : null;
+          split.push(whole ? [head, whole] : NONE);
         }
         sfOnly.push(sub ? [sub] : sfL ? [sfL] : NONE);
       }

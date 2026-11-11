@@ -80,6 +80,7 @@ button.sp-chip[aria-pressed='true'] { background: var(--sp-color-brand-strong); 
 .sp-input::placeholder { color: var(--sp-color-text-faint); }
 .sp-input:hover, .sp-select:hover { border-color: var(--sp-color-text-faint); }
 .sp-input:focus-visible, .sp-select:focus-visible { border-color: var(--sp-color-brand); box-shadow: 0 0 0 1px var(--sp-color-brand); outline: none; }
+.sp-input[aria-invalid='true'] { border-color: var(--sp-color-error); box-shadow: 0 0 0 1px var(--sp-color-error); }
 .sp-input--search { padding-left: 30px; }
 .sp-input-wrap { position: relative; display: flex; align-items: center; }
 .sp-input-wrap > .sp-icon { position: absolute; left: 9px; color: var(--sp-color-text-faint); pointer-events: none; }

@@ -4,9 +4,10 @@ import { fmtDate, fmtMonths } from '../../domain/dates';
 import { num, pct, rate, rateRange, sf, usd, usd0 } from '../../domain/format';
 import { RENT_ROLL_NUMERIC, rentRollDisplay, unplacedLeases } from '../../domain/exportCsv';
 import { comingSupply } from '../../domain/kpis';
-import { canShowDeals, canShowInPlaceRent, canShowIssues, canShowLeaseTerm, canShowRollover, canShowTenantRisk, marketedFor, rentVisible, tenantLabel } from '../../domain/safe';
+import { canShowDeals, canShowInPlaceRent, canShowIssues, canShowLeaseTerm, canShowRollover, canShowTenantRisk, canShowWalt, marketedFor, rentVisible, tenantLabel } from '../../domain/safe';
 import { Legend } from '../plan/Legend';
 import StackView from '../stack/StackView';
+import { ExportStage } from './ExportStage';
 import './print.css';
 
 export interface PrintLayoutProps {
@@ -20,6 +21,9 @@ export interface PrintLayoutProps {
  * Owner-ready report, landscape Letter. Page 1 cover + plan, page 2 rent roll,
  * page 3 rollover and the 12-month renewal worklist. The prospect-safe report has no rollover, no
  * worklist and no lease date anywhere: its page 3 is the space on offer and the coming supply.
+ *
+ * It also carries the `ExportStage`: like the report, a drawing of the plan that is not on screen
+ * (it appears only while an image export asks for it).
  */
 export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
   const { property: p, kpis: k, safe } = model;
@@ -64,6 +68,8 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
     </>
   );
   return (
+    <>
+    <ExportStage model={model} state={state} />
     <div className={`sp-print ${visible ? 'sp-print--visible' : ''}`} aria-hidden={!visible} inert={!visible}>
       <section className="sp-print__page">
         <RunningHead p={p} asOf={model.asOf} safe={safe} page={1} />
@@ -86,7 +92,8 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
           <Kpi label="Available" value={sf(k.availableDirect + k.availableSublease)} note={`${num(k.availableDirect)} direct · ${num(k.availableSublease)} sublease`} />
           <Kpi label="Largest block" value={sf(k.maxContiguous.size)} note={k.maxContiguous.floorName ?? ''} />
           <Kpi label="Expiring 12 mo" value={showRollover ? sf(k.expiring12) : 'Withheld'} note={showRollover ? `${k.expiring12Leases} leases` : 'Prospect-safe'} />
-          <Kpi label="WALT" value={`${k.walt.toFixed(2)} yr`} note="SF-weighted" />
+          {/* WALT is made of lease terms only: withheld with them, as on screen. */}
+          <Kpi label="WALT" value={canShowWalt(safe) ? `${k.walt.toFixed(2)} yr` : 'Withheld'} note={canShowWalt(safe) ? 'SF-weighted' : 'Prospect-safe'} />
           <Kpi label="Pipeline" value={showDeals ? `${k.pipeline.deals} deals` : 'Withheld'} note={showDeals ? `${sf(k.pipeline.sf)} requested` : 'Prospect-safe'} />
         </div>
         <Legend items={model.legend} compact />
@@ -94,7 +101,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
           <StackView model={model} state={state} patch={noop} bare rowHeight={48} />
         </div>
         <footer className="sp-print__foot">
-          Floor width is proportional to gross floor area; suite width to RSF. Figures are exact RSF from AscendixRE records. {safe ? 'Tenant names, contacts, in-place rents, lease dates and rollover are withheld.' : ''}
+          Floor width is proportional to gross floor area; suite width to RSF. Figures are exact RSF from AscendixRE records. {safe ? 'Tenant names, contacts, in-place rents, lease and sublease dates, WALT and rollover are withheld.' : ''}
         </footer>
       </section>
 
@@ -205,7 +212,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
                     )}
                   </tbody>
                 </table>
-                <p className="sp-print__note">Asking rents carry their unit and lease type. Lease dates, rollover by period and the renewal worklist are withheld from this report.</p>
+                <p className="sp-print__note">Asking rents carry their unit and lease type. Lease dates, the end date of a sublease, rollover by period and the renewal worklist are withheld from this report.</p>
               </>
             )}
             {showRent && k.rentByType.length > 0 && (
@@ -291,6 +298,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
         </div>
       </section>
     </div>
+    </>
   );
 }
 
@@ -306,7 +314,8 @@ interface Offer {
 /**
  * Every space a prospect can take, top floor first: vacant direct space, sublease space, units for
  * sale and occupied suites with a published listing for a later date. Built from the model's floors,
- * which in prospect-safe mode hold no quiet listing.
+ * which in prospect-safe mode hold no quiet listing and no sublease end date, so a sublease is listed
+ * like any other space: from when, and at what asking rent.
  */
 function spaceOnOffer(model: PlanModel): Offer[] {
   const out: Offer[] = [];
@@ -317,7 +326,7 @@ function spaceOnOffer(model: PlanModel): Offer[] {
       if (a && s.kind === 'forsale') {
         out.push({ key: s.key, where, size: s.size, type: 'For sale', when: 'Now', asking: a.askingPrice ? `${usd0(a.askingPrice)} · ${usd(a.askingPrice / s.size)}/SF` : '—' });
       } else if (a && (s.kind === 'available' || s.kind === 'sublease')) {
-        const when = s.kind === 'sublease' ? `${a.availableFrom && a.availableFrom > model.asOf ? fmtDate(a.availableFrom) : 'Now'}${a.subleaseExpiration ? ` · thru ${fmtDate(a.subleaseExpiration)}` : ''}` : s.availableFrom ? fmtDate(s.availableFrom) : 'Now';
+        const when = s.kind === 'sublease' ? (a.availableFrom && a.availableFrom > model.asOf ? fmtDate(a.availableFrom) : 'Now') : s.availableFrom ? fmtDate(s.availableFrom) : 'Now';
         out.push({ key: s.key, where, size: s.size, type: s.kind === 'sublease' ? 'Sublease' : 'Direct', when, asking: a.rentHigh > 0 ? rateRange(a.rentLow, a.rentHigh, a.rateUnit, a.leaseType) : '—' });
       }
       const m = marketedFor(s, model.safe);

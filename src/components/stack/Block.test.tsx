@@ -54,15 +54,40 @@ describe('Block text, 120 px and wider', () => {
     expect(lines.map((l) => l.y)).toEqual([19, 34, 49]);
   });
 
-  it('puts the lease type on the next line when a rate is too long, instead of shrinking it', () => {
+  it('never parts a rate from its lease type: a rate too long for 12 px takes its own line whole, in small type', () => {
+    // 19 characters: 125 px at 12 px (too wide for a 124 px block), 115 px at 11 px (it fits).
     const { lines } = draw(text({ name: 'Available now', sub: 'Ste 860 · 3,200 SF', sfShort: '3,200', meta: 'Asking $131–$133/SF/yr FSG', lensShort: '$131–$133/SF/yr FSG' }), 124, 72, seg('available'));
-    expect(lines.map((l) => l.t)).toEqual(['Available now', '3,200 SF', '$131–$133/SF/yr', 'FSG']);
-    expect(small(lines)).toEqual([]);
+    expect(lines.map((l) => l.t)).toEqual(['Available now', '3,200 SF', '$131–$133/SF/yr FSG']);
+    expect(small(lines).length).toBe(1);
+    // The lease type never stands alone, in any lens.
+    for (const l of lines) expect(l.t).not.toMatch(/^(FSG|MG|NNN)$/);
   });
 
-  it('splits the asking rate of the status lens the same way (the rate is the meta line there)', () => {
+  it('does the same for the asking rate of the status lens (the rate is the meta line there)', () => {
     const { lines } = draw(text({ name: 'Available now', sub: 'Ste 860 · 3,200 SF', sfShort: '3,200', meta: '$131–$133/SF/yr FSG', lensShort: '', tone: 'available' }), 124, 72, seg('available'));
-    expect(lines.map((l) => l.t)).toEqual(['Available now', '3,200 SF', '$131–$133/SF/yr', 'FSG']);
+    expect(lines.map((l) => l.t)).toEqual(['Available now', '3,200 SF', '$131–$133/SF/yr FSG']);
+  });
+
+  it('keeps a rate and its lease type on one line at 12 px in the narrowest block the stack draws', () => {
+    // 132 px is the stack's minimum on a desktop (StackView). 17 characters is 112 px by this estimate.
+    for (const [rate, s] of [['$31–$33/SF/yr FSG', seg('available')], ['$34–$36/SF/yr NNN', seg('available')]] as const) {
+      const { lines } = draw(text({ name: 'Available now', sub: 'Ste 860 · 3,200 SF', sfShort: '3,200', meta: rate, lensShort: '', tone: 'available' }), 132, 72, s);
+      expect(lines.map((l) => l.t)).toEqual(['Available now', 'Ste 860 · 3,200 SF', rate]);
+      expect(small(lines)).toEqual([]);
+    }
+  });
+
+  it('at no width does a lease type stand on a line of its own', () => {
+    for (let w = 56; w <= 260; w += 4)
+      for (const meta of ['$31–$33/SF/yr FSG', 'Asking $34–$36/SF/yr NNN', '$26.50/SF/yr MG']) {
+        const plain = meta.replace(/^Asking /, '');
+        const { lines } = draw(text({ name: 'Available now', sub: 'Ste 860 · 3,200 SF', sfShort: '3,200', meta, lensShort: meta.startsWith('Asking') ? plain : '', tone: 'available' }), w, 72, seg('available'));
+        for (const l of lines) {
+          expect(l.t, `${w} px: ${meta}`).not.toMatch(/^(FSG|MG|NNN)$/);
+          // A line that carries the rate carries all of it.
+          if (l.t.includes('/SF/')) expect(l.t.endsWith(plain), `${w} px: "${l.t}"`).toBe(true);
+        }
+      }
   });
 
   it('falls back one text tier (name and SF) when the rate cannot fit, and still says the rate aloud', () => {

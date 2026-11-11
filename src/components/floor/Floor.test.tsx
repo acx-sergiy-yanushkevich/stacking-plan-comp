@@ -4,6 +4,7 @@ import { renderToString } from 'react-dom/server';
 import { property, TODAY } from '../../data/mock/property';
 import { parseState } from '../../state/planState';
 import { buildModel } from '../inspector/testModel';
+import { segmentText } from '../plan/segmentText';
 import { DealRows, InquiryRows } from './FloorLists';
 import FloorView from './FloorView';
 import { fittingInquiries, floorDeals } from './floorData';
@@ -148,12 +149,57 @@ describe('floor plate key', () => {
     }
   });
 
-  it('a key entry pairs the marker on the slice with the name, suite and SF', () => {
+  it('a key entry pairs the marker on the slice with the name, suite and SF, and the rent the slice had no room for', () => {
     const all = property.floors.map((f) => text(render(`?view=floor&floor=${f.id}`))).join('');
     const entries = [...all.matchAll(/<ol class="sp-plate__key"[^>]*>(.*?)<\/ol>/g)].flatMap((m) => [...m[1].matchAll(/<li>(.*?)<\/li>/g)].map((li) => li[1].replace(/<[^>]+>/g, '')));
-    for (const e of entries) expect(e).toMatch(/^\d+Marker \d+: .+ · (Ste \d+ · )?[\d,]+ SF$/);
+    // "1Marker 1: Name · Ste 100 · 2,400 SF", optionally followed by a whole rent: "· $34–$36/SF/yr NNN";
+    // or, for a slice that shows its name and SF itself, the suite and the rent: "Ste 850 · $31–$33/SF/yr FSG".
+    const rent = String.raw`\$[\d.,–$]+\/SF\/(yr|mo) (FSG|MG|NNN)`;
+    const whole = new RegExp(String.raw`^\d+Marker \d+: .+ · (Ste \d+ · )?[\d,]+ SF( · ${rent})?$`);
+    const added = new RegExp(String.raw`^\d+Marker \d+: Ste \d+ · ${rent}$`);
+    for (const e of entries) expect(whole.test(e) || added.test(e), e).toBe(true);
     // As many markers drawn on the plates as entries listed under them.
     expect((all.match(/<g class="sp-seg__key"/g) ?? []).length).toBe(entries.length);
+  });
+
+  it('a marked slice says its key number in its accessible name, followed by exactly the lines drawn on it', () => {
+    let marked = 0;
+    for (const f of property.floors) {
+      const html = text(render(`?view=floor&floor=${f.id}`));
+      const plate = html.slice(html.indexOf('class="sp-plate"'), html.indexOf('class="sp-plate__caption"'));
+      for (const g of plate.split(/<g class="sp-seg(?=[ "])/).slice(1)) {
+        const label = /aria-label="([^"]*)"/.exec(g)?.[1] ?? '';
+        const marker = /<g class="sp-seg__key"[^>]*>.*?<text[^>]*>([^<]*)<\/text>/.exec(g)?.[1].trim();
+        if (!marker) {
+          expect(label, f.name).not.toMatch(/\bkey \d/);
+          continue;
+        }
+        marked += 1;
+        // What a sighted user reads on the slice, in order: the number, then each line (WCAG 2.5.3).
+        const lines = [...g.matchAll(/<text class="sp-seg__(?!key)[a-z]+"[^>]*>([^<]*)</g)].map((m) => m[1].trim());
+        expect(label, f.name).toContain([`key ${marker}`, ...lines].join(' '));
+      }
+    }
+    expect(marked).toBeGreaterThan(0);
+  });
+
+  it('every asking rent is on its slice or in the key, whole, with its unit and lease type: never split, never dropped', () => {
+    for (const lens of ['status', 'rent'] as const)
+      for (const f of property.floors) {
+        const html = text(render(`?view=floor&floor=${f.id}&lens=${lens}`));
+        const plate = html.slice(html.indexOf('class="sp-plate"'), html.indexOf('class="sp-plate__caption"'));
+        const shown = `${[...plate.matchAll(/<text class="sp-seg__[a-z]+"[^>]*>([^<]*)</g)].map((m) => `[${m[1].trim()}]`).join('')} ${[...plate.matchAll(/<li>(.*?)<\/li>/g)].map((m) => m[1].replace(/<[^>]+>/g, '')).join(' | ')}`;
+        // No line of a label is a bare lease type.
+        expect(shown, `${f.name}, ${lens}`).not.toMatch(/\[(FSG|MG|NNN)\]/);
+        const model = buildModel(parseState(`?floor=${f.id}&lens=${lens}`, TODAY));
+        for (const s of model.selectedFloor!.segments) {
+          const a = s.availability;
+          if (!a || (s.kind !== 'available' && s.kind !== 'sublease') || a.rentHigh <= 0) continue;
+          const rent = segmentText(s, { safe: false, asOf: TODAY, today: TODAY, lens, floorName: f.name }).meta.replace(/^Asking /, '');
+          if (!/\/SF\//.test(rent)) continue;
+          expect(shown.includes(rent), `${f.name}, ${lens}: "${rent}" is not in ${shown}`).toBe(true);
+        }
+      }
   });
 });
 

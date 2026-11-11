@@ -46,6 +46,11 @@ export interface LegendItem {
   sf: number;
   /** `sf` as a fraction of total leasable SF (0..1). */
   share: number;
+  /**
+   * A pattern drawn over other items' space (the rent lens's "Asking rent"): its SF and share are
+   * real, and the same space is also counted under the band it sits in.
+   */
+  overlay?: boolean;
 }
 
 const STAGE_ORDER: DealStage[] = ['Tour', 'Proposal', 'LOI', 'Lease Out'];
@@ -269,7 +274,9 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
  * `leased` figure (the same rule `computeKpis` uses), so the excess is reported as
  * an issue and never counted here; shares therefore never exceed 1. SF is kept
  * to whole feet. The rent lens's "Asking rent" entry is a pattern overlay, not a
- * tone: its SF is the vacant space carrying an asking rent.
+ * tone: its SF is the vacant space carrying an asking rent, and its share is that SF
+ * over leasable like every other item's. The same space is also counted in the rent
+ * band it falls in (`overlay` says so), so the overlay is left out when shares are summed.
  */
 export function legendFor(lens: LensId, prospectSafe: boolean, floors: FloorView[]): LegendItem[] {
   const leasable = floors.reduce((s, f) => s + f.leasable, 0);
@@ -285,9 +292,9 @@ export function legendFor(lens: LensId, prospectSafe: boolean, floors: FloorView
     }
   }
   return legendSpecs(lens, prospectSafe).map((item) => {
-    const sf = item.pattern === 'asking' ? asking : (byTone.get(item.tone) ?? 0);
-    // The asking-rent item is an overlay on the rent bands: it carries SF but no share of its own.
-    return { ...item, sf, share: item.pattern === 'asking' || leasable <= 0 ? 0 : sf / leasable };
+    const overlay = item.pattern === 'asking';
+    const sf = overlay ? asking : (byTone.get(item.tone) ?? 0);
+    return { ...item, sf, share: leasable <= 0 ? 0 : sf / leasable, ...(overlay ? { overlay: true } : {}) };
   });
 }
 

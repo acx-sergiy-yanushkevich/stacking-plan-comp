@@ -7,17 +7,32 @@ import { computeKpis, kpiDeltas } from '../../domain/kpis';
 import { parseState } from '../../state/planState';
 import type { PlanModel } from '../../model/usePlanModel';
 import { KpiStrip } from './KpiStrip';
-import { KpiReveal } from './KpiReveal';
 import { waltCard, waltTitle } from './walt';
 
-function render(asOf: string, safe = false, variant?: 'strip' | 'column') {
+function render(asOf: string, safe = false, search = '') {
   const floors = deriveFloors(property, asOf, TODAY);
   const kpis = computeKpis(property, floors, asOf);
   const kpisToday = computeKpis(property, deriveFloors(property, TODAY, TODAY), TODAY);
   const model = { kpis, kpisToday, deltas: asOf === TODAY ? null : kpiDeltas(kpis, kpisToday), safe } as unknown as PlanModel;
-  const html = renderToString(<KpiStrip model={model} state={parseState(safe ? '?safe=1' : '', TODAY)} onAction={() => {}} variant={variant} />);
+  const html = renderToString(<KpiStrip model={model} state={parseState(search || (safe ? '?safe=1' : ''), TODAY)} onAction={() => {}} />);
   return { html, kpis, kpisToday };
 }
+
+/** One KPI as rendered (a button, or a plain figure where there is nothing to open), found by its action. */
+const kpiOf = (html: string, id: string) => new RegExp(`<(button|div)[^>]*data-kpi="${id}"[^>]*>.*?</\\1>`).exec(html)?.[0] ?? '';
+/** An attribute of a KPI's own element, with the entities React escapes turned back. */
+const attr = (el: string, name: string) => (new RegExp(`^<[^>]* ${name}="([^"]*)"`).exec(el)?.[1] ?? '').replace(/&#x27;/g, "'").replace(/&amp;/g, '&');
+/** What a screen reader is given for a KPI: its content, less what is hidden from it (spaces of every kind as one space). */
+const spoken = (el: string) =>
+  el
+    .replace(/<span class="sp-kpi__context" aria-hidden="true">.*?<\/span><\/span>/, '')
+    .replace(/<!-- -->/g, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&#x27;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+/** The note under a figure, as it is on screen. */
+const noteOf = (el: string) => /<span class="sp-kpi__note">(.*?)<\/span>/.exec(el)?.[1].replace(/&#x27;/g, "'") ?? '';
 
 describe('WALT figure', () => {
   it('shows two decimals on the card', () => {
@@ -46,16 +61,90 @@ describe('WALT figure', () => {
 });
 
 describe('KpiStrip', () => {
-  it('renders six cards, each label a single phrase', () => {
+  it('is one surface holding six figures, each label a single phrase', () => {
     const { html } = render(TODAY);
+    // One card for the bar; no figure is a card of its own.
+    expect(html).toMatch(/^<section class="sp-card sp-kpis sp-no-print" aria-label="Key figures">/);
+    expect(html.match(/sp-card/g)?.length).toBe(1);
     expect(html.match(/class="sp-kpi__label sp-label"/g)?.length).toBe(6);
     for (const label of ['Leased', 'Available', 'Largest block', 'Expiring 12 mo', 'WALT', 'Pipeline']) expect(html).toContain(`>${label}</span>`);
+  });
+
+  it('gives each figure one short note and keeps the whole note in the tooltip and the accessible name', () => {
+    const { html, kpis } = render(TODAY);
+    const notes = Object.fromEntries(['status', 'find', 'find-largest', 'expiry-worklist', 'timeline', 'deals'].map((id) => [id, noteOf(kpiOf(html, id))]));
+    expect(notes).toEqual({
+      status: '80.2% occupied',
+      find: '26,200 direct · 7,000 sublease',
+      'find-largest': 'Floor 12 · direct',
+      'expiry-worklist': '16.7% of leased · 4 leases',
+      timeline: 'SF-weighted',
+      deals: '57,800 SF requested',
+    });
+    // What the short note leaves out is one hover (or one screen-reader stop) away, never lost.
+    const whole: Record<string, string> = {
+      status: '80.2% occupied · 8,000 SF signed, not in',
+      // The month and its year are kept together by a no-break space.
+      find: "26,200 direct · 7,000 sublease · +21,400 Apr\u00a0'27",
+      'find-largest': 'Floor 12 · direct · contiguous',
+      'expiry-worklist': '16.7% of leased · 4 leases',
+      timeline: 'In-place, SF-weighted',
+      deals: '6 on vacancies · 3 renewals · 57,800 SF requested',
+    };
+    for (const [id, detail] of Object.entries(whole)) {
+      const el = kpiOf(html, id);
+      expect(attr(el, 'title').slice(0, detail.length + 2)).toBe(`${detail}. `);
+      // The name is the content: the whole note is read, the short one on screen is not read twice.
+      expect(el).toContain('<span class="sp-kpi__context" aria-hidden="true">');
+      expect(spoken(el).endsWith(` ${detail.replace(/\s+/g, ' ')}`)).toBe(true);
+      expect(el).not.toContain('aria-label');
+    }
+    // The tooltips still say what the figure is and what a click does.
+    expect(attr(kpiOf(html, 'find'), 'title')).toContain('Space a tenant could take on the as-of date. Point at it to see it on the plan; click to find space by size.');
+    expect(attr(kpiOf(html, 'find-largest'), 'title')).toContain('Largest run of adjacent direct availabilities. Point at it to see it on the plan; click to see every option at this size.');
+    expect(attr(kpiOf(html, 'timeline'), 'title')).toContain(`${kpis.walt.toFixed(4)} years`);
+    // The name starts with the label and the exact figure with its unit.
+    expect(spoken(kpiOf(html, 'find'))).toBe("Available 33,200 SF 26,200 direct · 7,000 sublease · +21,400 Apr '27");
+    expect(spoken(kpiOf(html, 'status'))).toBe('Leased 86.1% 80.2% occupied · 8,000 SF signed, not in');
+  });
+
+  it('never abbreviates a figure: each is printed whole, with its unit', () => {
+    const { html, kpis } = render(TODAY);
+    expect(html).toContain(`<span class="sp-kpi__figure">${(kpis.availableDirect + kpis.availableSublease).toLocaleString('en-US')}<span class="sp-kpi__unit"> <!-- -->SF</span></span>`);
+    expect(html).toContain(`<span class="sp-kpi__figure">${kpis.maxContiguous.size.toLocaleString('en-US')}<span class="sp-kpi__unit"> <!-- -->SF</span></span>`);
+    expect(html).not.toContain('…');
+  });
+
+  it('marks the figure in use with aria-pressed and a class, one at a time', () => {
+    const pressed = (html: string) => [...html.matchAll(/data-kpi="([^"]+)"[^>]*aria-pressed="true"/g)].map((m) => m[1]);
+    expect(pressed(render(TODAY).html)).toEqual(['status']);
+    expect(pressed(render(TODAY, false, '?lens=deals').html)).toEqual(['deals']);
+    expect(pressed(render(TODAY, false, '?mode=find').html)).toEqual(['find']);
+    const expiry = render(TODAY, false, '?lens=expiry&window=12&mode=worklist').html;
+    expect(pressed(expiry)).toEqual(['expiry-worklist']);
+    expect(kpiOf(expiry, 'expiry-worklist')).toContain('class="sp-kpi is-active"');
+    expect(kpiOf(expiry, 'status')).not.toContain('is-active');
+  });
+
+  it('carries the time-travel change beside each figure, and in its name', () => {
+    const { html } = render('2028-01-01');
+    expect(html.match(/class="sp-kpi__delta/g)?.length).toBe(6);
+    for (const id of ['status', 'find', 'find-largest', 'expiry-worklist', 'timeline', 'deals']) {
+      const el = kpiOf(html, id);
+      const chip = /<span class="sp-kpi__delta[^"]*" title="Change against today">(.*?)<span class="sp-sr-only">/.exec(el)?.[1] ?? '';
+      expect(chip).toMatch(/^[+−±-]?\d/);
+      // The chip follows its figure inside the same value.
+      expect(el).toMatch(/<span class="sp-kpi__value"><span class="sp-kpi__figure">.*?<\/span><span class="sp-kpi__delta/);
+      expect(spoken(el)).toContain(` ${chip} against today `);
+    }
+    expect(render(TODAY).html).not.toContain('sp-kpi__delta');
   });
 
   it('withholds the pipeline in prospect-safe mode', () => {
     const { html } = render(TODAY, true);
     expect(html).toContain('Withheld');
     expect(html).not.toContain('on vacancies');
+    expect(html).not.toContain('SF requested');
   });
 
   it('withholds Expiring 12 mo in prospect-safe mode: no SF, no share, no lease count, even from a model that carries them', () => {
@@ -64,62 +153,40 @@ describe('KpiStrip', () => {
     expect(open.kpis.expiring12).toBeGreaterThan(0);
     expect(open.html).toContain(`>${figure}<span class="sp-kpi__unit">`);
     expect(open.html).toMatch(/of leased · \d+ leases?/);
-    // `render` hands the strip the broker's KPIs: the card itself asks the policy.
-    for (const variant of ['strip', 'column'] as const) {
-      const { html } = render(TODAY, true, variant);
-      const card = /<div class="sp-kpi sp-kpi--static"[^>]*><span class="sp-kpi__label sp-label">Expiring 12 mo<\/span>.*?<\/div>/.exec(html)?.[0] ?? '';
-      expect(card).toContain('<span>Withheld</span>');
-      expect(html).not.toContain(figure);
-      expect(html).not.toMatch(/\d+ leases?\b|of leased/);
-      // A figure, not a button: there is nothing to open.
-      expect(html.match(/<button type="button" class="sp-kpi/g)?.length).toBe(4);
-    }
-  });
-});
-
-describe('KpiStrip, column variant', () => {
-  /** The same card with only the wrapper's class differing: everything a card says is shared. */
-  const cards = (html: string) => html.replace(/^<section class="[^"]*"/, '<section');
-
-  it('is the same six cards as the strip: labels, figures, notes, tooltips and pressed state', () => {
-    const strip = render(TODAY).html;
-    const column = render(TODAY, false, 'column').html;
-    expect(column).toContain('class="sp-kpis sp-kpis--col sp-no-print"');
-    expect(column).not.toContain('sp-card');
-    expect(cards(column)).toBe(cards(strip));
-    expect(column.match(/<button type="button" class="sp-kpi/g)?.length).toBe(6);
-    expect(column).toContain('title="Space a tenant could take on the as-of date. Click to find space by size."');
+    // `render` hands the strip the broker's KPIs: the figure itself asks the policy.
+    const { html } = render(TODAY, true);
+    const card = kpiOf(html, 'expiry-worklist');
+    expect(card).toMatch(/^<div class="sp-kpi sp-kpi--static"/);
+    expect(card).toContain('<span class="sp-kpi__figure">Withheld</span>');
+    expect(html).not.toContain(figure);
+    expect(html).not.toMatch(/\d+ leases?\b|of leased/);
+    // A figure, not a button: there is nothing to open. Expiring, WALT and Pipeline are all withheld.
+    expect(html.match(/<button type="button" class="sp-kpi/g)?.length).toBe(3);
+    expect(html.match(/<div class="sp-kpi sp-kpi--static"/g)?.length).toBe(3);
   });
 
-  it('carries the time-travel change chips', () => {
-    const { html } = render('2028-01-01', false, 'column');
-    expect(html.match(/class="sp-kpi__delta/g)?.length).toBe(6);
-    expect(cards(html)).toBe(cards(render('2028-01-01').html));
+  it('withholds WALT in prospect-safe mode, in the same words as Expiring 12 mo', () => {
+    const open = render(TODAY);
+    const figure = waltCard(open.kpis.walt);
+    expect(open.html).toContain(`>${figure}<span class="sp-kpi__unit">`);
+    const { html } = render(TODAY, true);
+    const walt = kpiOf(html, 'timeline');
+    expect(walt).toContain('<span class="sp-kpi__figure">Withheld</span>');
+    expect(noteOf(walt)).toBe('Lease terms not shown');
+    expect(attr(walt, 'title')).toContain('Lease terms are not shown in prospect-safe mode');
+    // The same value and the same reason as the figure beside it: one style, one sentence.
+    const strip = (c: string) => c.replace(/data-kpi="[^"]*"/, '').replace(/title="[^"]*"/, '').replace(/>(WALT|Expiring 12 mo)</, '><');
+    expect(strip(walt)).toBe(strip(kpiOf(html, 'expiry-worklist')));
+    // The average itself is nowhere: not on the bar, not in a tooltip or a name, not with a unit.
+    expect(html).not.toContain(figure);
+    expect(html).not.toContain(open.kpis.walt.toFixed(4));
+    expect(html).not.toMatch(/\d yr\b|> <!-- -->yr</);
+    expect(html).not.toContain('SF-weighted');
   });
 
-  it('withholds the pipeline in prospect-safe mode, as the strip does', () => {
-    const { html } = render(TODAY, true, 'column');
-    expect(html).toContain('Withheld');
-    expect(html).not.toContain('on vacancies');
-    expect(html).toContain('sp-kpi--static');
-    expect(cards(html)).toBe(cards(render(TODAY, true).html));
-  });
-});
-
-describe('KpiReveal', () => {
-  const slot = (open: boolean) => renderToString(<KpiReveal open={open}><p>figures</p></KpiReveal>);
-
-  it('shows its content when open', () => {
-    const html = slot(true);
-    expect(html).toContain('figures');
-    expect(html).not.toContain('hidden');
-    expect(html).not.toContain('inert');
-  });
-
-  it('renders nothing reachable when closed: hidden, inert and empty', () => {
-    const html = slot(false);
-    expect(html).not.toContain('figures');
-    expect(html).toMatch(/<div class="sp-kpis-slot sp-no-print" hidden=""/);
-    expect(html).toContain('inert');
+  it('names each figure for the action it stands for, so focus and the checks can find it', () => {
+    const { html } = render(TODAY);
+    expect([...html.matchAll(/data-kpi="([^"]+)"/g)].map((m) => m[1])).toEqual(['status', 'find', 'find-largest', 'expiry-worklist', 'timeline', 'deals']);
+    expect([...render(TODAY, true).html.matchAll(/data-kpi="([^"]+)"/g)].length).toBe(6);
   });
 });

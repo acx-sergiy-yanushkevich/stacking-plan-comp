@@ -56,7 +56,10 @@ export interface Kpis {
   unaccounted: number;
   /** Units offered for sale (Sale record type): neither leased nor available. */
   forSale: number;
-  maxContiguous: { size: number; floorName: string | null };
+  /** The largest run of adjacent direct availabilities in the building (`largestBlock`), with the suites in it. */
+  maxContiguous: LargestBlock;
+  /** The suites behind the Available figure: direct space free on the as-of date, and sublease space. */
+  availableKeys: string[];
   walt: number;
   /** In-place rent per lease type, weighted by recorded SF, largest share first. Never blended across types. */
   rentByType: RentByType[];
@@ -68,14 +71,31 @@ export interface Kpis {
   pipeline: { deals: number; onVacancy: number; sf: number };
 }
 
+/** The building's largest contiguous block of direct space: its size, its floor and the suites that make it up. */
+export interface LargestBlock {
+  size: number;
+  floorId: string | null;
+  floorName: string | null;
+  /** Segment keys of the block, in plan order: one suite, or several adjacent ones. Empty when there is no direct space. */
+  keys: string[];
+}
+
+/**
+ * The largest run of adjacent direct availabilities in the building; the upper floor wins a tie. This is
+ * the one rule behind the "Largest block" KPI and behind what the plan marks and lights as that block, so
+ * the figure and the suites it points at cannot disagree.
+ */
+export function largestBlock(floors: FloorView[]): LargestBlock {
+  let best: LargestBlock = { size: 0, floorId: null, floorName: null, keys: [] };
+  for (const f of floors) if (f.maxContiguous > best.size) best = { size: f.maxContiguous, floorId: f.floor.id, floorName: f.floor.name, keys: f.bestRun };
+  return best;
+}
+
 export function computeKpis(p: Property, floors: FloorView[], asOf: ISODate): Kpis {
   const all = floors.flatMap((f) => f.segments);
   const leasable = floors.reduce((s, f) => s + f.leasable, 0);
   const leased = floors.reduce((s, f) => s + f.leased, 0);
   const sum = (k: SegmentKind) => all.filter((s) => s.kind === k).reduce((t, s) => t + s.size, 0);
-
-  let best = { size: 0, floorName: null as string | null };
-  for (const f of floors) if (f.maxContiguous > best.size) best = { size: f.maxContiguous, floorName: f.floor.name };
 
   // WALT: SF-weighted remaining term to lease end (head lease for subleased space). MTM/holdover = 0.
   let waltNum = 0;
@@ -161,7 +181,8 @@ export function computeKpis(p: Property, floors: FloorView[], asOf: ISODate): Kp
     committed: sum('committed'),
     unaccounted: sum('unmarketed') + sum('projected'),
     forSale: sum('forsale'),
-    maxContiguous: best,
+    maxContiguous: largestBlock(floors),
+    availableKeys: all.filter((s) => (s.kind === 'available' && !s.availableFrom) || s.kind === 'sublease').map((s) => s.key),
     walt: waltDen ? waltNum / waltDen : 0,
     rentByType,
     expiring12,
