@@ -118,6 +118,12 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
     </div>
   );
 
+  const verified = (
+    <span className={`sp-header__verified ${staleDays > 30 ? 'sp-header__verified--stale' : ''}`} title="Most recent change to a lease or availability on this plan">
+      <Icon name={staleDays > 30 ? 'clock' : 'check'} size={12} /> Latest change {fmtDate(verifiedAt)}
+    </span>
+  );
+
   const facts = (
     <div className="sp-header__facts">
       <span>{property.propertyClass}</span>
@@ -142,9 +148,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
             {property.saleListing.capRate !== null ? ` · ${pct(property.saleListing.capRate)} cap` : ''}
           </span>
         ))}
-      <span className={`sp-header__verified ${staleDays > 30 ? 'sp-header__verified--stale' : ''}`} title="Most recent change to a lease or availability on this plan">
-        <Icon name={staleDays > 30 ? 'clock' : 'check'} size={12} /> Latest change {fmtDate(verifiedAt)}
-      </span>
+      {!standalone && verified}
     </div>
   );
 
@@ -203,6 +207,9 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
           </div>
           {facts}
         </div>
+        {/* When the plan was last changed stands apart from the building's facts, at the card's right: the
+            facts keep one line from 1024 px (round 19: "Latest change" wrapped them onto a second). */}
+        <div className="sp-header__aside">{verified}</div>
       </header>
     </>
   );

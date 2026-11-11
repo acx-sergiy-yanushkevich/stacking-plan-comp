@@ -19,7 +19,8 @@ function render(query: string) {
   const model = { property, kpis, issues, counts: issueCounts(issues), today: TODAY } as unknown as PlanModel;
   const html = renderToString(<Header model={model} state={parseState(query, TODAY)} patch={() => {}} onExport={() => {}} />);
   // The sale fact alone: the span that carries it on the facts row.
-  const sale = /<span class="sp-header__sale"[^>]*>(.*?)<\/span>(?=<span class="sp-header__verified)/.exec(html)?.[1] ?? '';
+  // The facts row ends with it in the product skins; "Latest change" follows it in the embedded one.
+  const sale = /<span class="sp-header__sale"[^>]*>(.*?)<\/span>(?=<span class="sp-header__verified|<\/div>)/.exec(html)?.[1] ?? '';
   return { html, sale, kpis };
 }
 
@@ -292,5 +293,17 @@ describe('Header at 420 px and under: the title and one row of controls (round 1
     expect(at(421, '?skin=classic')).toContain('class="sp-header__slot"');
     const html = at(421);
     expect(html).toContain('aria-label="Colors and theme"');
+  });
+});
+
+describe('Header building card: the facts, then when the plan last changed at the right (round 19)', () => {
+  it('standalone: "Latest change" is beside the facts, not in them; embedded: it stays the last fact', () => {
+    const { html } = render('');
+    const card = html.slice(html.indexOf('<header'));
+    const facts = /<div class="sp-header__facts">(.*?)<\/div>/.exec(card)![1];
+    expect(facts).not.toContain('Latest change');
+    expect(card).toMatch(/<div class="sp-header__aside"><span class="sp-header__verified[^"]*"[^>]*>.*Latest change/);
+    const classic = render('?skin=classic').html;
+    expect(/<div class="sp-header__facts">(.*?)<\/div>/.exec(classic)![1]).toContain('Latest change');
   });
 });
