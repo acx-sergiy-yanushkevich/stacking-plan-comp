@@ -189,3 +189,20 @@
   .sp-header .sp-switch { min-height: 40px; }
   .sp-toolbar .sp-segmented__opt { min-height: 36px; }
 }
+
+/* ── Brand ──────────────────────────────────────────────── */
+/* The Stax mark and lockup are drawn in the brand's own colours, as literal hex: the same under every
+   palette. Only the theme moves them: on a light page the cyan bars turn navy so the mark keeps its
+   contrast; the open suite stays orange. */
+.sp-mark { display: inline-grid; place-items: center; border-radius: 28%; background: #1e2d3c; flex: none; }
+.sp-mark svg { display: block; }
+.sp-mark__bar { fill: #00aff0; }
+.sp-mark__bar--open { fill: #ff9c00; }
+:root:not([data-theme='light']) .sp-mark { background: #15212d; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1); }
+:root[data-theme='light'] .sp-mark__bar { fill: #1e2d3c; }
+:root[data-theme='light'] .sp-mark__bar--open { fill: #ff9c00; }
+.sp-lockup { display: inline-flex; align-items: center; gap: 10px; }
+.sp-lockup__text { display: inline-flex; align-items: baseline; gap: 9px; }
+.sp-lockup__name { font-weight: 800; font-size: 21px; line-height: 1; letter-spacing: -0.02em; color: #00aff0; }
+.sp-lockup__by { font-weight: 600; font-size: 13px; line-height: 1; color: #1e2d3c; white-space: nowrap; }
+:root:not([data-theme='light']) .sp-lockup__by { color: #ffffff; }
