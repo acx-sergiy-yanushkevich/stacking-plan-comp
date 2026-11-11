@@ -212,3 +212,16 @@ describe('PrintLayout', () => {
     expect(render('?print=1').html).not.toContain('<h2>Space on offer</h2>');
   });
 });
+
+describe('PrintLayout brand', () => {
+  it('the cover head opens with the Stax lockup, before the building name, in every report', () => {
+    for (const q of ['', '?safe=1', '?skin=classic']) {
+      const { html } = render(q);
+      const head = /<header class="sp-print__head">(.*?)<\/header>/.exec(html)![1];
+      expect(head.startsWith('<div class="sp-print__brand">'), q).toBe(true);
+      expect(head.indexOf('sp-lockup'), q).toBeLessThan(head.indexOf('<h1>'));
+      expect(head, q).toContain('Stax');
+      expect(head, q).toContain('by Ascendix');
+    }
+  });
+});
