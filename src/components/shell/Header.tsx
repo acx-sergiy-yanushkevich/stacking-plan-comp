@@ -5,9 +5,12 @@ import { daysBetween, fmtDate } from '../../domain/dates';
 import { num, pct, usd, usd0 } from '../../domain/format';
 import { Button, Chip, Icon, Menu, Switch, useToastBoundary } from '../ui';
 import { paletteMenuItems } from './paletteMenu';
+import { switcherItems } from './switcher';
+import { StaxLockup } from './Brand';
 import { canTimeTravel, planDate } from '../../domain/safe';
 import { AsOfPopover } from './AsOfPopover';
 import { useIsPhone, usePrefersDark } from '../../lib/useMedia';
+import buildingPhoto from '../../assets/building.jpg';
 
 export type ExportKind = 'pdf' | 'png' | 'csv' | 'link' | 'video';
 
@@ -23,8 +26,9 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
   const { property, kpis, today } = model;
   const verifiedAt = [...property.leases.map((l) => l.verifiedAt), ...property.availabilities.map((a) => a.verifiedAt)].sort().at(-1) ?? property.dataUpdated;
   const staleDays = daysBetween(verifiedAt, today);
-  // Standalone app (glass skin): the property is the page title and the app owns its theme. Embedded on a
-  // record page (classic skin) the host page names the property and sets the theme.
+  // Standalone app (glass skin): the product bar names the product and the building, and the app owns its
+  // theme. Embedded on a record page (classic skin) the host page names the property and sets the theme:
+  // there is no bar, and the card keeps the controls.
   const standalone = state.skin !== 'classic';
   const prefersDark = usePrefersDark();
   const dark = isDark(state, prefersDark);
@@ -36,109 +40,141 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
   const toggleTheme = () => patch({ theme: dark ? 'light' : 'dark' });
   // A toast may name a tenant or a prospect ("Would open Deal D8 (Vantage Robotics)…"): none survives the mode turning on.
   useToastBoundary(state.safe);
-  return (
-    <header className="sp-card sp-header sp-no-print">
-      <div className="sp-header__icon" aria-hidden="true">
-        <Icon name="building" size={22} />
-      </div>
-      <div className="sp-header__text">
-        <div className="sp-header__title">
-          {standalone ? (
-            <>
-              <h1>{property.name}</h1>
-              <span className="sp-header__property">Stacking plan</span>
-            </>
-          ) : (
-            <>
-              <h1>Stacking plan</h1>
-              <span className="sp-header__property">
-                <a href="#property" onClick={(e) => e.preventDefault()} title="Open the Property record">
-                  {property.name}
-                </a>
-              </span>
-            </>
-          )}
-        </div>
-        <div className="sp-header__facts">
-          <span>{property.propertyClass}</span>
-          <span className="sp-dot">·</span>
-          <span>
-            {property.street}, {property.city}, {property.state}
-          </span>
-          <span className="sp-dot">·</span>
-          <span>{num(kpis.leasable)} RSF leasable</span>
-          <span className="sp-dot">·</span>
-          <span>{property.floors.length} floors</span>
-          {/* One more fact on the facts row, in the same quiet type: the title leads, the listing does not compete with it. */}
-          {property.saleListing &&
-            (state.safe ? (
-              <span className="sp-header__sale" title="The building is listed for sale; pricing is withheld in prospect-safe mode">
-                <Icon name="dollar" size={12} /> Listed for sale
-              </span>
-            ) : (
-              <span className="sp-header__sale" title={`Listed for sale by ${property.saleListing.broker} · ${property.saleListing.status}`}>
-                <Icon name="dollar" size={12} />
-                <span className="sp-header__sale-label">For sale</span> {usd0(property.saleListing.price)} · {usd(property.saleListing.price / kpis.leasable)}/RSF
-                {property.saleListing.capRate !== null ? ` · ${pct(property.saleListing.capRate)} cap` : ''}
-              </span>
-            ))}
-          <span className={`sp-header__verified ${staleDays > 30 ? 'sp-header__verified--stale' : ''}`} title="Most recent change to a lease or availability on this plan">
-            <Icon name={staleDays > 30 ? 'clock' : 'check'} size={12} /> Latest change {fmtDate(verifiedAt)}
-          </span>
-        </div>
-      </div>
-      <div className="sp-header__actions">
-        {/* The date the plan is drawn for: in prospect-safe mode that is today, whatever was asked for. */}
-        <AsOfPopover asOf={planDate(state.asOf, today, state.safe)} today={today} onChange={(asOf) => patch({ asOf })} miniTimeline={miniTimeline} locked={!canTimeTravel(state.safe)} />
-        {/* Turning it on drops a search in progress, the worklist, a projected as-of date and any toast: the state layer (applyPatch) and useToastBoundary do it, not this handler. */}
-        <Switch checked={state.safe} onChange={(safe) => patch({ safe })} label="Prospect-safe" title="Hide tenant names, contacts, rents, lease dates and prospects, and show the plan as of today" />
-        {/* The slot that says prospect-safe is on. It is drawn at one width whether the chip is in it or not, so the
-            controls wrap at the same point and the header is the same height with the mode on and off. */}
-        <div className="sp-header__slot">
-          {state.safe && (
-            <Chip tone="brand" icon="shield" title="Tenant names, contacts, rents, lease dates and prospects are hidden">
-              Prospect-safe on
-            </Chip>
-          )}
-        </div>
-        <Menu
-          label="Export"
-          trigger={(p) => (
-            <Button {...p} icon="download" iconRight="chevron-down">
-              Export
-            </Button>
-          )}
-          items={[
-            { id: 'pdf', label: 'PDF report', icon: 'file', hint: 'Letter, landscape', onSelect: () => onExport('pdf') },
-            { id: 'png', label: 'PNG of the plan', icon: 'image', hint: '2× for slides', onSelect: () => onExport('png') },
-            { id: 'csv', label: 'Rent roll (CSV)', icon: 'table', hint: 'Opens in Excel', onSelect: () => onExport('csv') },
-            { id: 'sep', kind: 'separator' },
-            { id: 'video', label: 'Record video', icon: 'video', hint: 'Map view', disabled: state.view !== 'map', onSelect: () => onExport('video') },
-            { id: 'link', label: 'Copy link to this view', icon: 'link', onSelect: () => onExport('link') },
-          ]}
-        />
-        {/* A phone: the same two controls as a menu, on the row the other controls already take. */}
-        {standalone && phone && (
-          <Menu
-            label="Colors and theme"
-            trigger={(p) => <Button {...p} iconOnly icon="more" aria-label="Colors and theme" title="Colors and theme" />}
-            items={[
-              ...(palette ? [...paletteMenuItems(palette, patch), { kind: 'separator' as const, id: 'look-sep' }] : []),
-              { id: 'theme', label: themeLabel, icon: dark ? ('sun' as const) : ('moon' as const), onSelect: toggleTheme },
-            ]}
-          />
+
+  const actions = (
+    <div className="sp-header__actions">
+      {/* The date the plan is drawn for: in prospect-safe mode that is today, whatever was asked for. */}
+      <AsOfPopover asOf={planDate(state.asOf, today, state.safe)} today={today} onChange={(asOf) => patch({ asOf })} miniTimeline={miniTimeline} locked={!canTimeTravel(state.safe)} />
+      {/* Turning it on drops a search in progress, the worklist, a projected as-of date and any toast: the state layer (applyPatch) and useToastBoundary do it, not this handler. */}
+      <Switch checked={state.safe} onChange={(safe) => patch({ safe })} label="Prospect-safe" title="Hide tenant names, contacts, rents, lease dates and prospects, and show the plan as of today" />
+      {/* The slot that says prospect-safe is on. It is drawn at one width whether the chip is in it or not, so the
+          controls wrap at the same point and the header is the same height with the mode on and off. */}
+      <div className="sp-header__slot">
+        {state.safe && (
+          <Chip tone="brand" icon="shield" title="Tenant names, contacts, rents, lease dates and prospects are hidden">
+            Prospect-safe on
+          </Chip>
         )}
       </div>
-      {/* How the plan looks, apart from what it shows: the palette and the theme. Both are state like any
-          other, written to the URL, so a link opens in the colours it was copied in. */}
-      {standalone && !phone && (
-        <div className="sp-header__look">
-          {palette && (
-            <Menu label="Colors" trigger={(p) => <Button {...p} iconOnly icon="palette" aria-label="Colors" title="Colors" />} items={paletteMenuItems(palette, patch)} />
-          )}
-          <Button iconOnly icon={dark ? 'sun' : 'moon'} aria-label={themeLabel} title={dark ? 'Light theme' : 'Dark theme'} onClick={toggleTheme} />
-        </div>
+      <Menu
+        label="Export"
+        trigger={(p) => (
+          <Button {...p} icon="download" iconRight="chevron-down">
+            Export
+          </Button>
+        )}
+        items={[
+          { id: 'pdf', label: 'PDF report', icon: 'file', hint: 'Letter, landscape', onSelect: () => onExport('pdf') },
+          { id: 'png', label: 'PNG of the plan', icon: 'image', hint: '2× for slides', onSelect: () => onExport('png') },
+          { id: 'csv', label: 'Rent roll (CSV)', icon: 'table', hint: 'Opens in Excel', onSelect: () => onExport('csv') },
+          { id: 'sep', kind: 'separator' },
+          { id: 'video', label: 'Record video', icon: 'video', hint: 'Map view', disabled: state.view !== 'map', onSelect: () => onExport('video') },
+          { id: 'link', label: 'Copy link to this view', icon: 'link', onSelect: () => onExport('link') },
+        ]}
+      />
+      {/* A phone: the same two controls as a menu, on the row the other controls already take. */}
+      {standalone && phone && (
+        <Menu
+          label="Colors and theme"
+          trigger={(p) => <Button {...p} iconOnly icon="more" aria-label="Colors and theme" title="Colors and theme" />}
+          items={[
+            ...(palette ? [...paletteMenuItems(palette, patch), { kind: 'separator' as const, id: 'look-sep' }] : []),
+            { id: 'theme', label: themeLabel, icon: dark ? ('sun' as const) : ('moon' as const), onSelect: toggleTheme },
+          ]}
+        />
       )}
-    </header>
+    </div>
+  );
+
+  // How the plan looks, apart from what it shows: the palette and the theme. Both are state like any
+  // other, written to the URL, so a link opens in the colours it was copied in.
+  const look = standalone && !phone && (
+    <div className="sp-header__look">
+      {palette && <Menu label="Colors" trigger={(p) => <Button {...p} iconOnly icon="palette" aria-label="Colors" title="Colors" />} items={paletteMenuItems(palette, patch)} />}
+      <Button iconOnly icon={dark ? 'sun' : 'moon'} aria-label={themeLabel} title={dark ? 'Light theme' : 'Dark theme'} onClick={toggleTheme} />
+    </div>
+  );
+
+  const facts = (
+    <div className="sp-header__facts">
+      <span>{property.propertyClass}</span>
+      <span className="sp-dot">·</span>
+      <span>
+        {property.street}, {property.city}, {property.state}
+      </span>
+      <span className="sp-dot">·</span>
+      <span>{num(kpis.leasable)} RSF leasable</span>
+      <span className="sp-dot">·</span>
+      <span>{property.floors.length} floors</span>
+      {/* One more fact on the facts row, in the same quiet type: the title leads, the listing does not compete with it. */}
+      {property.saleListing &&
+        (state.safe ? (
+          <span className="sp-header__sale" title="The building is listed for sale; pricing is withheld in prospect-safe mode">
+            <Icon name="dollar" size={12} /> Listed for sale
+          </span>
+        ) : (
+          <span className="sp-header__sale" title={`Listed for sale by ${property.saleListing.broker} · ${property.saleListing.status}`}>
+            <Icon name="dollar" size={12} />
+            <span className="sp-header__sale-label">For sale</span> {usd0(property.saleListing.price)} · {usd(property.saleListing.price / kpis.leasable)}/RSF
+            {property.saleListing.capRate !== null ? ` · ${pct(property.saleListing.capRate)} cap` : ''}
+          </span>
+        ))}
+      <span className={`sp-header__verified ${staleDays > 30 ? 'sp-header__verified--stale' : ''}`} title="Most recent change to a lease or availability on this plan">
+        <Icon name={staleDays > 30 ? 'clock' : 'check'} size={12} /> Latest change {fmtDate(verifiedAt)}
+      </span>
+    </div>
+  );
+
+  if (!standalone)
+    return (
+      <header className="sp-card sp-header sp-header--classic sp-no-print">
+        <div className="sp-header__icon" aria-hidden="true">
+          <Icon name="building" size={22} />
+        </div>
+        <div className="sp-header__text">
+          <div className="sp-header__title">
+            <h1>Stacking plan</h1>
+            <span className="sp-header__property">
+              <a href="#property" onClick={(e) => e.preventDefault()} title="Open the Property record">
+                {property.name}
+              </a>
+            </span>
+          </div>
+          {facts}
+        </div>
+        {actions}
+      </header>
+    );
+
+  return (
+    <>
+      {/* The product bar: who made this, which building is open (and that there are others), and the controls. */}
+      <div className="sp-card sp-topbar sp-no-print">
+        <StaxLockup />
+        <span className="sp-topbar__divider" aria-hidden="true" />
+        <Menu
+          label="Building"
+          align="start"
+          trigger={(p) => (
+            <Button {...p} iconRight="chevron-down" aria-label="Switch building" title="Switch building" className="sp-switcher">
+              <img className="sp-switcher__thumb" src={buildingPhoto} alt="" />
+              <span className="sp-switcher__name">{property.name}</span>
+            </Button>
+          )}
+          items={switcherItems(property)}
+        />
+        {actions}
+        {look}
+      </div>
+      <header className="sp-card sp-header sp-no-print">
+        <img className="sp-header__photo" src={buildingPhoto} alt="" width={80} height={80} />
+        <div className="sp-header__text">
+          <div className="sp-header__title">
+            <h1>{property.name}</h1>
+          </div>
+          {facts}
+        </div>
+      </header>
+    </>
   );
 }

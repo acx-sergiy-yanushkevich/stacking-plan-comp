@@ -10,6 +10,7 @@ import { pct, usd, usd0 } from '../../domain/format';
 import { parseState } from '../../state/planState';
 import type { PlanModel } from '../../model/usePlanModel';
 import { Header } from './Header';
+import { switcherItems } from './switcher';
 
 function render(query: string) {
   const floors = deriveFloors(property, TODAY, TODAY);
@@ -151,5 +152,46 @@ describe('Header on a phone: the palette and the theme are a menu, not a row of 
   it('the embedded skin has neither: its host page sets the theme', () => {
     expect(at(390, '?skin=classic')).not.toContain('aria-label="Colors and theme"');
     expect(at(1440, '?skin=classic')).not.toContain('class="sp-header__look"');
+  });
+});
+
+describe('Header product bar and building card', () => {
+  const bar = (query: string) => /<div class="sp-card sp-topbar sp-no-print">(.*?)<\/div><header/.exec(render(query).html)?.[1] ?? null;
+  const strip = (html: string) => html.replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
+  it('standalone: the bar carries the lockup, the switcher, the controls and the look, in that order', () => {
+    const b = bar('')!;
+    for (const [a, c] of [['sp-lockup', 'sp-switcher__name'], ['sp-switcher__name', 'sp-header__actions'], ['sp-header__actions', 'sp-header__look']])
+      expect(b.indexOf(a), `${a} before ${c}`).toBeLessThan(b.indexOf(c));
+    expect(strip(b)).toMatch(/^Stax by Ascendix Preston Park Financial Center/);
+    expect(b).toMatch(/<button(?=[^>]*aria-label="Switch building")(?=[^>]*aria-haspopup="menu")/);
+  });
+
+  it('standalone: the card is the photo, the name and the facts; the controls are not in it', () => {
+    const { html } = render('');
+    const card = html.slice(html.indexOf('<header'));
+    expect(card).toContain('class="sp-header__photo"');
+    expect(card).not.toContain('sp-header__actions');
+    expect(card).not.toContain('sp-header__icon');
+    expect(strip(card.slice(card.indexOf('<div class="sp-header__title"'), card.indexOf('<div class="sp-header__facts"')))).toBe('Preston Park Financial Center');
+  });
+
+  it('aurora gets the bar too; the embedded skin gets none of it', () => {
+    expect(bar('?skin=aurora')).toContain('sp-lockup');
+    expect(bar('?skin=classic')).toBeNull();
+    const classic = render('?skin=classic').html;
+    for (const s of ['sp-lockup', 'Stax', 'sp-header__photo', 'Switch building']) expect(classic, s).not.toContain(s);
+    expect(classic).toContain('class="sp-header__icon"');
+    expect(classic).toContain('sp-header__actions');
+  });
+
+  it('the switcher menu lists the live building checked and five disabled sample entries', () => {
+    // Menu renders its items only when open: test the items through the helper the header builds them with.
+    const items = switcherItems(property);
+    const labels = items.filter((i) => !('kind' in i) || i.kind === 'item').map((i) => (i as { label: string }).label);
+    expect(labels[0]).toBe('Preston Park Financial Center');
+    expect(labels.slice(1, 6)).toEqual(['Legacy West Tower II', 'Galleria Commerce Plaza', 'Trinity Riverfront Offices', 'Cedar Springs Exchange', 'Las Colinas Gateway']);
+    expect(items[1]).toMatchObject({ checked: true });
+    for (const i of items.slice(2, 7)) expect(i).toMatchObject({ disabled: true });
   });
 });
