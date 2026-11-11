@@ -12,6 +12,8 @@ export type MenuItem =
       /** Decoration drawn where the icon would be (a colour swatch). */
       adornment?: ReactNode;
       hint?: string;
+      /** Read after the label by assistive technology (`aria-description`): why an entry is disabled, say. */
+      description?: string;
       disabled?: boolean;
       /** Set (true or false) on an item that is one of a choice: it is then a radio item, and the chosen one carries a tick. */
       checked?: boolean;
@@ -67,6 +69,7 @@ export function Menu({ label, items, trigger, align = 'end' }: MenuProps) {
                 aria-checked={it.checked}
                 className="sp-menu__item"
                 aria-disabled={it.disabled || undefined}
+                aria-description={it.description}
                 // A disabled entry is read in place, by the arrow keys' list, and takes no tab stop of its own.
                 tabIndex={it.disabled ? -1 : undefined}
                 onClick={() => {

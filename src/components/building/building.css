@@ -186,13 +186,12 @@
       height: min(clamp(300px, calc(100vh - var(--sp-bview-top, 430px) - 28px), 560px), calc(var(--sp-bview-max) / var(--sp-hero-ratio, 1)));
     }
     /* With the inspector open the plate is the narrowest it gets (about 620 px and under), and its
-       suites' labels are what suffer first. The plate takes back the room the picker's labels and part
-       of the model held: the picker keeps its rows without their numbers (each row still names its
-       floor to a screen reader and in its tooltip, the model numbers the open floor and the floor's
-       name heads the plate), and the model is a fifth of the card instead of a quarter. */
-    .sp-app:has(.sp-inspector) .sp-bview__grid.is-docked .sp-bview__model { --sp-bview-pick: 24px; }
+       suites' labels are what suffer first. The plate takes back the room part of the model held: the
+       picker keeps its floor numbers and gives up its bars (round 19: twelve blank boxes could not be
+       read by eye), and the model is a fifth of the card instead of a quarter. */
+    .sp-app:has(.sp-inspector) .sp-bview__grid.is-docked .sp-bview__model { --sp-bview-pick: 32px; }
     .sp-app:has(.sp-inspector) .sp-bview__grid.is-docked .sp-mini__row { padding-left: 0; }
-    .sp-app:has(.sp-inspector) .sp-bview__grid.is-docked .sp-mini__num { display: none; }
+    .sp-app:has(.sp-inspector) .sp-bview__grid.is-docked .sp-mini__bar { display: none; }
     .sp-app:has(.sp-inspector) .sp-bview__grid.is-docked .sp-bview__model .sp-hero svg { --sp-bview-max: min(20cqw, 210px); }
   }
 }

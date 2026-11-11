@@ -10,9 +10,9 @@ export const area: Area = {
   asOf: '2024',
   sample: true,
   rings: [
-    { miles: 1, population: 14820, households: 6410, medianIncome: 98400, medianAge: 36.8, bachelorsPct: 0.61, meanCommuteMin: 24.1 },
-    { miles: 3, population: 118600, households: 47900, medianIncome: 104900, medianAge: 37.9, bachelorsPct: 0.63, meanCommuteMin: 25.6 },
-    { miles: 5, population: 329400, households: 128700, medianIncome: 101200, medianAge: 37.2, bachelorsPct: 0.59, meanCommuteMin: 26.3 },
+    { miles: 1, population: 14820, households: 6410, medianIncome: 98400, medianAge: 36.8, bachelorsPct: 0.37, meanCommuteMin: 24.1 },
+    { miles: 3, population: 118600, households: 47900, medianIncome: 104900, medianAge: 37.9, bachelorsPct: 0.39, meanCommuteMin: 25.6 },
+    { miles: 5, population: 329400, households: 128700, medianIncome: 101200, medianAge: 37.2, bachelorsPct: 0.36, meanCommuteMin: 26.3 },
   ],
   transit: [
     { name: 'Parker Road Station (DART Red/Orange)', type: 'Rail', distanceMi: 3.1 },

@@ -1,4 +1,5 @@
 import type { FloorView as FloorViewModel } from '../../domain/derive';
+import { DotJoin } from '../hero/DotJoin';
 import { fmtDate, fmtMonths, fmtMonthYearShort } from '../../domain/dates';
 import { num, pct, sf } from '../../domain/format';
 import { canShowIssues, canShowLeaseTerm, canShowRecordActions, tenantLabel } from '../../domain/safe';
@@ -52,7 +53,8 @@ export function FloorSummary({ floor, model, state, patch }: FloorSummaryProps) 
             <span className="sp-fkpi__value sp-nb">{sf(floor.available)}</span>
             {(floor.available > 0 || !coming) && (
               <span className="sp-fkpi__context">
-                <span className="sp-nb">{num(direct)}{' '}direct</span> <span className="sp-nb">· {num(sublease)}{' '}sublease</span>
+                {/* Only the kinds the floor has ("4,000 direct", not "4,000 direct · 0 sublease"); a line never starts with "·". */}
+                <DotJoin parts={sublease && !direct ? [`${num(sublease)}\u00a0sublease`] : sublease ? [`${num(direct)}\u00a0direct`, `${num(sublease)}\u00a0sublease`] : [`${num(direct)}\u00a0direct`]} />
               </span>
             )}
             {coming && <span className="sp-fkpi__context">{comingText(coming)}</span>}

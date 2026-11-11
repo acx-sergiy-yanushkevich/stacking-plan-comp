@@ -21,7 +21,7 @@ describe('LocationBrief', () => {
 
   it('leads with the four headline figures', () => {
     const html = render();
-    for (const text of ['329,400', 'within 5 miles', '$98,400', '22% above the US', '61.0%', '2.8× the US', '1 mile', '0.2 mi', 'bus stop', 'rail 3.1 mi']) expect(html, text).toContain(text);
+    for (const text of ['329,400', 'within 5 miles', '$98,400', '22% above the US', '37.0%', '1.7× the US', '1 mile', '0.2 mi', 'bus stop', 'rail 3.1 mi']) expect(html, text).toContain(text);
   });
 
   it('keeps every figure with its unit, and never starts or ends a line with a separator', () => {
