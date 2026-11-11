@@ -104,7 +104,7 @@ It works with a keyboard and a screen reader, and on a phone. It opens in the As
 
 ## Development plan
 
-How this prototype could become a product feature is described in [`docs/PLAN.md`](docs/PLAN.md): the feature inventory by priority, the Salesforce architecture (Lightning Web Components and Apex), the data mapping to AscendixRE objects, external services, phases with estimates, and risks.
+How this prototype could become a product feature is described in [`docs/PLAN.md`](docs/PLAN.md): the feature inventory by priority, the Salesforce architecture (Lightning Web Components and Apex), the data mapping to AscendixRE objects, external services, phases with estimates, and risks. Running it as a hosted app inside an iframe on the Property page instead, with its architecture, sign-in and monthly running cost, is described in [`docs/INFRASTRUCTURE.md`](docs/INFRASTRUCTURE.md).
 
 ## Run it
 
@@ -195,6 +195,7 @@ docs/           Brief, design spec, development plan, competitor analysis, revie
 | [`docs/BRIEF.md`](docs/BRIEF.md) | Personas, their top jobs, domain rules, the review rubric |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Screen-by-screen design specification |
 | [`docs/PLAN.md`](docs/PLAN.md) | Feature inventory and development plan |
+| [`docs/INFRASTRUCTURE.md`](docs/INFRASTRUCTURE.md) | Iframe deployment: architecture, sign-in, running cost |
 | [`docs/COMPETITORS.md`](docs/COMPETITORS.md) | Competitor analysis |
 | `docs/judging/` | AI reviewer reports for each round |
 | `docs/shots/` | Screenshots of every reviewed state for each round |
