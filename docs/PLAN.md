@@ -8,28 +8,28 @@ The AscendixRE Stacking Plan becomes the operating view of a building: one model
 
 ## 2. Feature inventory
 
-Source key: **L** legacy jQuery widget, **V1** the 2026 redesign prototype, **C** competitor (named), **N** new. Priority: **P0** in this prototype, **P1** first production release (LWC), **P2** later.
+Source key: **C** competitor (named), **N** new. Priority: **P0** in this prototype, **P1** first production release (LWC), **P2** later.
 
 ### 2.1 Core plan
 | Feature | Source | Persona | Priority |
 |---|---|---|---|
-| Floor-by-floor plan with suite widths proportional to RSF | L, V1, C: all | all | P0 |
+| Floor-by-floor plan with suite widths proportional to RSF | C: all | all | P0 |
 | Floor rows proportional to floor RSF (building taper) | N | all | P0 |
 | Minimum block width with legibility footnote; tooltip and accessible name on every block | C: VTS, FUEL | all | P0 |
-| Adaptive block text by width (tenant, suite, SF, expiry) | V1, N | all | P0 |
-| States: leased, expiring, holdover, MTM, available direct, available later, sublease, committed, for sale, vacant/unaccounted, projected vacancy | V1 (+ for sale: N) | all | P0 |
+| Adaptive block text by width (tenant, suite, SF, expiry) | N | all | P0 |
+| States: leased, expiring, holdover, MTM, available direct, available later, sublease, committed, for sale, vacant/unaccounted, projected vacancy | N | all | P0 |
 | Legend that shows SF and share per state | C: Stevenson patent, VTS | all | P0 |
-| Floor gutter with leased %, mini bar and RSF | V1 | landlord rep, analyst | P0 |
-| Selection, dimming, filter summary bar | V1 | all | P0 |
-| Dark theme | V1 | all | P0 |
+| Floor gutter with leased %, mini bar and RSF | N | landlord rep, analyst | P0 |
+| Selection, dimming, filter summary bar | N | all | P0 |
+| Dark theme | N | all | P0 |
 
 ### 2.2 Lenses
 | Feature | Source | Persona | Priority |
 |---|---|---|---|
-| Status lens | L, V1 | all | P0 |
-| Expiration lens in months from as-of (sequential ramp) | V1, C: VTS, Yardi | landlord rep, analyst | P0 |
-| Deal-stage lens wired to real Deals | V1, C: VTS | landlord rep | P0 |
-| Rent lens with gross scale, net marked separately, asking vs in-place | V1, C: Yardi | analyst | P0 |
+| Status lens | N | all | P0 |
+| Expiration lens in months from as-of (sequential ramp) | C: VTS, Yardi | landlord rep, analyst | P0 |
+| Deal-stage lens wired to real Deals | C: VTS | landlord rep | P0 |
+| Rent lens with gross scale, net marked separately, asking vs in-place | C: Yardi | analyst | P0 |
 | Industry lens | C: Cloud Stacking Plan | landlord rep | P1 |
 | Listing-status lens (published vs quiet) | N | coordinator | P1 |
 | Color by any field with saved palettes | C: Cloud Stacking Plan | admin | P2 |
@@ -37,35 +37,35 @@ Source key: **L** legacy jQuery widget, **V1** the 2026 redesign prototype, **C*
 ### 2.3 Time
 | Feature | Source | Persona | Priority |
 |---|---|---|---|
-| As-of date with KPIs recomputed; deltas vs today | V1, C: Prophia, FUEL | analyst, landlord rep | P0 |
+| As-of date with KPIs recomputed; deltas vs today | C: Prophia, FUEL | analyst, landlord rep | P0 |
 | Lease timeline view (bars per lease, draggable as-of cursor, rollover header) | N (replaces V1 slider) | analyst, landlord rep | P0 |
-| Rollover by 12-month bucket from as-of; calendar-year toggle | V1 | analyst | P0 |
-| Projected vacancies shown honestly; committed leases shown as committed, never vacant | V1, C: gap | all | P0 |
+| Rollover by 12-month bucket from as-of; calendar-year toggle | N | analyst | P0 |
+| Projected vacancies shown honestly; committed leases shown as committed, never vacant | C: gap | all | P0 |
 | Scenario compare (two as-of dates side by side) | N | analyst | P2 |
 
 ### 2.4 Finding space and demand
 | Feature | Source | Persona | Priority |
 |---|---|---|---|
-| Contiguous-block finder: size range, by date, direct/sublease, multi-floor pairs | V1, C: nobody | tenant rep, landlord rep | P0 |
-| Match an open Inquiry to space; inquiry-fit badges on blocks | V1, N | landlord rep | P0 |
-| Search tenant, suite, prospect, broker | V1, C: VTS | all | P0 |
+| Contiguous-block finder: size range, by date, direct/sublease, multi-floor pairs | C: nobody | tenant rep, landlord rep | P0 |
+| Match an open Inquiry to space; inquiry-fit badges on blocks | N | landlord rep | P0 |
+| Search tenant, suite, prospect, broker | C: VTS | all | P0 |
 | Tenant-rep mode: filter to the user's clients | N | tenant rep | P2 |
 
 ### 2.5 Renewal and pipeline
 | Feature | Source | Persona | Priority |
 |---|---|---|---|
-| Renewal worklist (at risk, 90 d, 180 d, 12 mo, 24 mo) with last touch and open renewal | V1 | landlord rep | P0 |
-| Pipeline by stage; live-deal badges per block; stale-deal flags | V1 | landlord rep | P0 |
-| Record actions from a block: open record, new deal, log call, create availability, start renewal (toast stubs in POC) | V1, C: Yardi, Rethink | landlord rep | P0 stub, P1 real |
+| Renewal worklist (at risk, 90 d, 180 d, 12 mo, 24 mo) with last touch and open renewal | N | landlord rep | P0 |
+| Pipeline by stage; live-deal badges per block; stale-deal flags | N | landlord rep | P0 |
+| Record actions from a block: open record, new deal, log call, create availability, start renewal (toast stubs in POC) | C: Yardi, Rethink | landlord rep | P0 stub, P1 real |
 | Schedule tour, create listing, publish to portal | N | landlord rep, coordinator | P1 |
 
 ### 2.6 Trust and data quality
 | Feature | Source | Persona | Priority |
 |---|---|---|---|
-| Data issues: lease without units or floor, over-allocation, unaccounted area, vacant-flag conflicts, orphan subleases, holdover, MTM, stale deals | V1 | coordinator | P0 |
+| Data issues: lease without units or floor, over-allocation, unaccounted area, vacant-flag conflicts, orphan subleases, holdover, MTM, stale deals | N | coordinator | P0 |
 | Recent changes (30-day change log) and per-record "Verified" stamps | N, C: Prophia provenance | coordinator, landlord rep | P0 (mock history), P1 (Field History) |
-| Exact RSF everywhere; rates with unit and type | V1 | all | P0 |
-| Confidential leases hide rent; prospect-safe mode hides names, contacts, rents, prospects on screen and in exports | V1, C: Yardi | landlord rep | P0 |
+| Exact RSF everywhere; rates with unit and type | N | all | P0 |
+| Confidential leases hide rent; prospect-safe mode hides names, contacts, rents, prospects on screen and in exports | C: Yardi | landlord rep | P0 |
 
 ### 2.7 Building, map, 3D, floors, area
 | Feature | Source | Persona | Priority |
@@ -83,17 +83,17 @@ Source key: **L** legacy jQuery widget, **V1** the 2026 redesign prototype, **C*
 ### 2.8 Output
 | Feature | Source | Persona | Priority |
 |---|---|---|---|
-| Print/PDF: cover, plan, rent roll, rollover and worklist, prospect-safe aware | L, V1, C: Rethink | landlord rep | P0 |
+| Print/PDF: cover, plan, rent roll, rollover and worklist, prospect-safe aware | C: Rethink | landlord rep | P0 |
 | PNG of plan at 2× for PowerPoint | N, C: gap | landlord rep | P0 |
-| CSV rent roll (Excel-ready) | L | analyst | P0 |
-| True .xlsx with formatting | L | analyst | P1 |
-| Copy link to exact state | V1 | all | P0 |
+| CSV rent roll (Excel-ready) | N | analyst | P0 |
+| True .xlsx with formatting | N | analyst | P1 |
+| Copy link to exact state | N | all | P0 |
 
 ### 2.9 Platform
 | Feature | Source | Persona | Priority |
 |---|---|---|---|
-| Keyboard grid, screen-reader names, live region, reduced motion | V1 | all | P0 |
-| Mobile layout with bottom-sheet inspector | V1 | landlord rep | P0 |
+| Keyboard grid, screen-reader names, live region, reduced motion | N | all | P0 |
+| Mobile layout with bottom-sheet inspector | N | landlord rep | P0 |
 | LWC port with SLDS styling hooks | — | all | P1 |
 | Edit on the canvas (split, merge, reorder floors) | C: patent only | coordinator | P2 |
 

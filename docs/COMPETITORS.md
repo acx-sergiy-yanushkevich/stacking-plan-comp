@@ -1,6 +1,6 @@
 # Stacking Plan Competitor Analysis — CRE Software (Nov 2026)
 
-**Purpose.** Input for the AscendixRE Stacking Plan tab rebuild. Covers how each competitor draws, colours, filters, times, exports and edits a stacking plan, what users complain about, and where a Salesforce-native plan can win.
+**Purpose.** Input for the AscendixRE Stacking Plan tab. Covers how each competitor draws, colours, filters, times, exports and edits a stacking plan, what users complain about, and where a Salesforce-native plan can win.
 
 **Method and caveats.** Primary sources were vendor product pages, help centres, release notes, a design case study from a VTS product designer, a Stevenson Systems patent, and review sites (Software Advice, TrustRadius, Gartner, Capterra/G2 snippets). Capterra, G2 and Reddit block automated fetching, so complaints from those sites are quoted only where a search snippet surfaced them. Vendor marketing claims are reported as claims. Anything I could not confirm from a source is marked **(unverified)**. Much of the public documentation for VTS (2017) and Yardi (2018) is old; both products have been updated since, but the vendors publish little detail, so "current" behaviour is partly inferred.
 
@@ -127,42 +127,38 @@
 - An Jul 2026 practitioner guide describes the emerging pattern — AI parses the rent roll, colours by expiry year, computes % RSF and % rent expiring per year, flags "contiguity for expiring suites that could be combined into a larger block", and models "the cost of holding a suite vacant to assemble a full-floor block", while warning "a stacking plan is a decision tool, not a legal record" ([AI Consulting Network](https://www.theaiconsultingnetwork.com/blog/ai-stacking-plans-office-leasing-rollover-2026)).
 - **VTS AI** (abstraction, Asset Intelligence, Proposal AI) feeds the plan but no new plan UI is documented ([vts.com](https://www.vts.com/)). **Floorwire** "Managed Central" claims overlays, 3D views and branded templates ([Floorwire, Nov 2023](https://floorwire.com/blog/commercial-real-estate-goodbye-to-excel-with-dynamic-stacking-plans)) **(unverified)**. No funded 2025–26 startup with a stacking plan as its core UI was found.
 
-### 1.11 Baseline: current AscendixRE plan
-
-Skeleton from "Floors number and an Average Floor Size"; leases and availabilities added as records; "By default, all available space is in yellow", leases colour-coded by expiration with a legend "under the LDX title"; shows SF, expiration, tenant, occupancy/vacancy %; "move the date forward or back to see how tenants and vacancies change over time"; Excel or PDF export; Enterprise tier at no extra cost ([Ascendix blog](https://ascendix.com/blog/stacking-plan-software/), [help](https://help.ascendix.com/1160683-ascendixre-stacking-plan-overview)). Not documented: lenses beyond expiry, deal-stage, side panel, search, contiguous finder, privacy mode.
-
 ---
 
 ## 2. Feature matrix
 
 ✓ documented · ◐ partial / claimed by vendor · ✗ not present / not found · ? unverified
 
-| Feature | VTS | Prophia | Yardi DM | CoStar | Rethink/Apto | FUEL (RealPage) | StackPlanner | Cloud Stacking Plan | Excel DIY | AscendixRE today |
-|---|---|---|---|---|---|---|---|---|---|---|
-| Proportional block widths | ✓ (min/max) | ? | ? | ? | ? | ✓ | ? | ◐ (width factor) | ✓ | ✓ |
-| Min readable block / tooltip for tiny suites | ✓ | ✗ | ? | ✗ | ✗ | ✓ (index # + expand) | ? | ✗ | ✗ | ✗ |
-| Expiration-year colour lens | ✓ | ✓ | ✓ | ◐ | ✓ | ? | ◐ | ✓ | ✗ | ✓ |
-| Deal-stage / pipeline lens | ✓ | ✗ | ◐ (proposals) | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| Rent / $PSF lens | ◐ (in block) | ◐ (KPI) | ✓ | ✗ | ✗ | ✗ | ✗ | ◐ (field) | ✗ | ✗ |
-| Tenant industry / category lens | ✗ | ✗ | ◐ (unit type) | ✗ | ✗ | ✗ | ✗ | ✓ (Suite Category) | ✗ | ✗ |
-| Colour by any field, user palette | ✗ | ✗ | ◐ | ✗ | ✗ | ✗ | ✗ | ◐ (6 schemes) | ✗ | ✗ |
-| As-of date / future view | ◐ (committed badge) | ✓ (month dropdown) | ? | ✗ | ✗ | ✓ (start date + years bar) | ◐ | ✗ | ✗ | ✓ |
-| KPIs on plan (occupancy, WALT, in-place rent) | ◐ | ✓ | ◐ | ✗ | ✗ | ◐ (summary cols) | ◐ | ◐ (floor summary) | ✗ | ◐ |
-| Rollover-by-year chart next to plan | ✓ (lens legend) | ✗ | ? | ✗ | ✗ | ✗ | ◐ | ✗ | ✓ | ✗ |
-| Contiguous-block finder | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| Search by suite / tenant / deal | ✓ | ? | ? | ✗ | ✗ | ✗ | ? | ◐ (sort) | ✗ | ✗ |
-| Side panel (lease, deal, options, budget) | ✓ | ✓ (encumbrances, source doc) | ✓ | ✗ | ◐ (hover) | ◐ | ? | ✓ (suite detail) | ✗ | ◐ |
-| Start deal / proposal from plan | ✗ | ✗ | ✓ | ✗ | ✓ (create deal) | ✗ | ✗ | ✗ | ✗ | ✗ |
-| Create availability from plan | ? | ◐ (edit suites) | ? | ✗ | ✓ (add space) | ✗ | ? | ✓ | ✗ | ✓ |
-| Drag-resize / move suites | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| Encumbrances / options / subtenancy shown | ✓ (options icon) | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ◐ (lease option) | ✗ | ✗ |
-| Prospect-safe / confidential mode | ? | ✗ | ✓ | n/a | ✗ | ✗ | ✗ | ◐ (hide fields, vacant only) | ✗ | ✗ |
-| PDF export | ✓ | ✗ (complaint) | ✓ (print) | ✗ | ✓ | ? | ✓ | ✓ | ✓ | ✓ |
-| Excel export | ◐ (poor) | ✗ (requested) | ? | ◐ (capped) | ✗ | ? | ✗ | ✗ | n/a | ✓ |
-| PNG / PowerPoint-ready export | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ◐ (embed) | ✓ (BMP) | ◐ | ✗ |
-| Branded / embeddable plan | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ | ◐ (logo, image) | ✗ | ✗ |
-| Multi-building / campus view | ✗ (complaint) | ◐ (portfolio) | ◐ | ✗ | ✗ | ✗ | ◐ | ✗ | ✗ | ✗ |
-| Mobile | ✓ | ? | ✓ | ✗ | ◐ (SF mobile) | ✗ | ? | ✗ | ✗ | ◐ |
+| Feature | VTS | Prophia | Yardi DM | CoStar | Rethink/Apto | FUEL (RealPage) | StackPlanner | Cloud Stacking Plan | Excel DIY |
+|---|---|---|---|---|---|---|---|---|---|
+| Proportional block widths | ✓ (min/max) | ? | ? | ? | ? | ✓ | ? | ◐ (width factor) | ✓ |
+| Min readable block / tooltip for tiny suites | ✓ | ✗ | ? | ✗ | ✗ | ✓ (index # + expand) | ? | ✗ | ✗ |
+| Expiration-year colour lens | ✓ | ✓ | ✓ | ◐ | ✓ | ? | ◐ | ✓ | ✗ |
+| Deal-stage / pipeline lens | ✓ | ✗ | ◐ (proposals) | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Rent / $PSF lens | ◐ (in block) | ◐ (KPI) | ✓ | ✗ | ✗ | ✗ | ✗ | ◐ (field) | ✗ |
+| Tenant industry / category lens | ✗ | ✗ | ◐ (unit type) | ✗ | ✗ | ✗ | ✗ | ✓ (Suite Category) | ✗ |
+| Colour by any field, user palette | ✗ | ✗ | ◐ | ✗ | ✗ | ✗ | ✗ | ◐ (6 schemes) | ✗ |
+| As-of date / future view | ◐ (committed badge) | ✓ (month dropdown) | ? | ✗ | ✗ | ✓ (start date + years bar) | ◐ | ✗ | ✗ |
+| KPIs on plan (occupancy, WALT, in-place rent) | ◐ | ✓ | ◐ | ✗ | ✗ | ◐ (summary cols) | ◐ | ◐ (floor summary) | ✗ |
+| Rollover-by-year chart next to plan | ✓ (lens legend) | ✗ | ? | ✗ | ✗ | ✗ | ◐ | ✗ | ✓ |
+| Contiguous-block finder | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Search by suite / tenant / deal | ✓ | ? | ? | ✗ | ✗ | ✗ | ? | ◐ (sort) | ✗ |
+| Side panel (lease, deal, options, budget) | ✓ | ✓ (encumbrances, source doc) | ✓ | ✗ | ◐ (hover) | ◐ | ? | ✓ (suite detail) | ✗ |
+| Start deal / proposal from plan | ✗ | ✗ | ✓ | ✗ | ✓ (create deal) | ✗ | ✗ | ✗ | ✗ |
+| Create availability from plan | ? | ◐ (edit suites) | ? | ✗ | ✓ (add space) | ✗ | ? | ✓ | ✗ |
+| Drag-resize / move suites | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Encumbrances / options / subtenancy shown | ✓ (options icon) | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ◐ (lease option) | ✗ |
+| Prospect-safe / confidential mode | ? | ✗ | ✓ | n/a | ✗ | ✗ | ✗ | ◐ (hide fields, vacant only) | ✗ |
+| PDF export | ✓ | ✗ (complaint) | ✓ (print) | ✗ | ✓ | ? | ✓ | ✓ | ✓ |
+| Excel export | ◐ (poor) | ✗ (requested) | ? | ◐ (capped) | ✗ | ? | ✗ | ✗ | n/a |
+| PNG / PowerPoint-ready export | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ◐ (embed) | ✓ (BMP) | ◐ |
+| Branded / embeddable plan | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ | ◐ (logo, image) | ✗ |
+| Multi-building / campus view | ✗ (complaint) | ◐ (portfolio) | ◐ | ✗ | ✗ | ✗ | ◐ | ✗ | ✗ |
+| Mobile | ✓ | ? | ✓ | ✗ | ◐ (SF mobile) | ✗ | ? | ✗ | ✗ |
 
 ---
 
@@ -209,7 +205,7 @@ Because the AscendixRE plan sits on Salesforce **Properties, Spaces/Availabiliti
 
 ## 6. Visual design observations
 
-- **Palette.** Expiration is the default lens everywhere (Prophia, Apto, Yardi, VTS, AscendixRE). Common mistakes: (a) rainbow by year — hard to order visually; (b) red/green only for leased/available, which fails for colour-blind users and leaves no room for "committed"; (c) Cloud Stacking Plan's literal "Red-Green-Blue" scheme ([PBT](https://m1sys.screenstepslive.com/s/13612/m/50928/l/477254-formatting-editing-a-stacking-plan)). Better practice: a single sequential ramp for years-to-expiry, a reserved hue for available (yellow in AscendixRE, gold in CoStar), a hatched or outlined treatment for committed/under-negotiation, and grey for unaccounted/common area.
+- **Palette.** Expiration is the default lens everywhere (Prophia, Apto, Yardi, VTS). Common mistakes: (a) rainbow by year — hard to order visually; (b) red/green only for leased/available, which fails for colour-blind users and leaves no room for "committed"; (c) Cloud Stacking Plan's literal "Red-Green-Blue" scheme ([PBT](https://m1sys.screenstepslive.com/s/13612/m/50928/l/477254-formatting-editing-a-stacking-plan)). Better practice: a single sequential ramp for years-to-expiry, a reserved hue for available (gold in CoStar), a hatched or outlined treatment for committed/under-negotiation, and grey for unaccounted/common area.
 - **Block text density.** Tools cram tenant, suite, SF and LXD into every block; small suites truncate names. VTS solved it with tooltips and min/max widths; FUEL with "Size to text" fallback to an index number; the Stevenson patent with zoom/pan. Truncated names and rounded SF are the two most-cited legibility complaints.
 - **Legend.** Best legends carry data: Stevenson's legend lists SF and % per colour value; VTS's expiration legend doubles as an 8-year rollover forecast. Most others are a static key.
 - **Layout.** Floors as rows top-down; proportional widths in VTS/FUEL/Excel; CoStar adds a minimap for towers; Cloud Stacking Plan adds a floor-summary column. Multi-building layouts are absent.
@@ -249,5 +245,4 @@ Lease admin: [Leasecake](https://leasecake.com/) · [Cakebot](https://www.newswi
 Investment: [Argus Portfolio Manager Jun 2026](https://www.altusgroup.com/product-releases/argus-portfolio-manager-jun26/) · [A.CRE tenancy analysis](https://www.adventuresincre.com/all-in-one-walkthrough-8-tenancy-analysis/) · [Dealpath](https://www.dealpath.com/blog/new-release-data-visualization-for-pipeline-insights-ic-meeting-management/) · [Lextract/Juniper Square](https://lextract.io/integrations/juniper-square) · [Dottid](https://dottid.squarespace.com/dev-updates/2023/holdover-exports)
 Standalone: [StackPlanner](https://stackplanner.io/) · [features](https://stackplanner.io/features-of-real-estate-stacking-plan-software/) · [Excel blog](https://stackplanner.io/blog/why-making-stacking-plans-in-excel-is-a-time-waster-for-cre-teams/) · [Bisnow launch](https://www.bisnow.com/biswire/springbord-2025-12-10-132269) · [Savills Stacker](https://apps.apple.com/us/app/id1516444309) · [Cloud Stacking Plan formatting](https://m1sys.screenstepslive.com/s/13612/m/50928/l/477254-formatting-editing-a-stacking-plan) · [printing](https://m1sys.screenstepslive.com/s/13612/m/50928/l/470954-printing-the-stacking-plan) · [WorkSpace](https://workspace.helpjuice.com/properties/exporting-a-stacking-plan) · [realestatestackingplan.com](https://realestatestackingplan.com/) · [Floorwire](https://floorwire.com/blog/commercial-real-estate-goodbye-to-excel-with-dynamic-stacking-plans) · [Stevenson patent](https://patents.google.com/patent/CA2964355C/en) · [eFinancialModels](https://www.efinancialmodels.com/downloads/stacking-plan-excel-template-233100/) · [Eloquens](https://www.eloquens.com/tool/93q1fR2e/finance/real-estate/stacking-plan) · [RealClear Excel](https://realclear.software/make-a-building-stacking-plan-with-excel/) · [Planpoint](https://www.getapp.com.au/software/2104588/planpoint) · [Springbord](https://springbord.com/services-we-offer/real-estate-marketing-services/stacking-plan.html)
 AI / 2026: [A.CRE skill](https://intelligence.adventuresincre.com/skills/stacking-plan-builder) · [MetaProp skill](https://skills.metaproplabs.com/asset-management/asset-performance-reporting/stacking-plan-builder) · [AI Consulting Network Jul 2026](https://www.theaiconsultingnetwork.com/blog/ai-stacking-plans-office-leasing-rollover-2026)
-AscendixRE: [blog](https://ascendix.com/blog/stacking-plan-software/) · [help](https://help.ascendix.com/1160683-ascendixre-stacking-plan-overview)
 Not retrievable (blocked): [CBRE Build "Quest for a Better Stacking Plan"](https://medium.com/cbrebuild/the-quest-for-a-better-stacking-plan-64e276a96146), Reddit r/CommercialRealEstate, Capterra/G2 full review pages.
