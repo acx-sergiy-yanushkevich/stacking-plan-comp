@@ -10,7 +10,6 @@ import { StaxLockup } from './Brand';
 import { canTimeTravel, planDate } from '../../domain/safe';
 import { AsOfPopover } from './AsOfPopover';
 import { useIsPhone, usePrefersDark } from '../../lib/useMedia';
-import buildingPhoto from '../../assets/building.jpg';
 
 export type ExportKind = 'pdf' | 'png' | 'csv' | 'link' | 'video';
 
@@ -156,7 +155,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
           label="Building"
           align="start"
           trigger={(p) => (
-            <Button {...p} icon="building" iconRight="chevron-down" aria-label="Switch building" title="Switch building" className="sp-switcher">
+            <Button {...p} iconRight="chevron-down" aria-label={`Switch building: ${property.name}`} title="Switch building" className="sp-switcher">
               <span className="sp-switcher__name">{property.name}</span>
             </Button>
           )}
@@ -166,7 +165,9 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
         {look}
       </div>
       <header className="sp-card sp-header sp-no-print">
-        <img className="sp-header__photo" src={buildingPhoto} alt="" width={80} height={80} />
+        <div className="sp-header__icon" aria-hidden="true">
+          <Icon name="building" size={22} />
+        </div>
         <div className="sp-header__text">
           <div className="sp-header__title">
             <h1>{property.name}</h1>

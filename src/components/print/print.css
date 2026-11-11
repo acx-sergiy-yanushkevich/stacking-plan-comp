@@ -23,11 +23,11 @@
 /* The product's lockup opens the cover. Paper is white whatever the screen's theme, so its colours are set here. */
 .sp-print__brand { margin-right: 16px; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 .sp-print__title { flex: 1; min-width: 0; }
-.sp-print__head .sp-mark { background: #1e2d3c; box-shadow: none; }
-.sp-print__head .sp-mark__bar { fill: #00aff0; }
-.sp-print__head .sp-mark__bar--open { fill: #ff9c00; }
-.sp-print__head .sp-lockup__name { font-size: 16px; }
-.sp-print__head .sp-lockup__by { color: #1e2d3c; font-size: 11px; }
+.sp-print .sp-print__head .sp-mark { background: #1e2d3c; box-shadow: none; }
+.sp-print .sp-print__head .sp-mark__bar { fill: #00aff0; }
+.sp-print .sp-print__head .sp-mark__bar--open { fill: #ff9c00; }
+.sp-print .sp-print__head .sp-lockup__name { font-size: 16px; }
+.sp-print .sp-print__head .sp-lockup__by { color: #1e2d3c; font-size: 11px; }
 .sp-print__eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #5c5c5c; font-weight: 600; }
 .sp-print__sub { color: #5c5c5c; font-size: 11px; }
 .sp-print__meta { text-align: right; color: #5c5c5c; font-size: 11px; line-height: 1.5; }

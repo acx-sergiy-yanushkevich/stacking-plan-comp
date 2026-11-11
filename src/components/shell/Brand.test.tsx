@@ -35,6 +35,14 @@ describe('brand CSS', () => {
     // The bars sit on a navy square in both themes, so no theme may repaint them navy.
     expect(brand).not.toMatch(/\[data-theme='light'\][^{]*\.sp-mark__bar/);
   });
+  it('follows the theme the way tokens.css does: an explicit data-theme, else the OS preference', () => {
+    // Without data-theme (aurora, classic, print preview) the page is light unless the OS prefers dark, so the
+    // dark variant must only apply under an explicit dark theme or inside a prefers-color-scheme: dark block.
+    const outsideMedia = brand.replace(/@media \(prefers-color-scheme: dark\) \{[^}]*\}[^}]*\}/g, '');
+    expect(outsideMedia).not.toMatch(/:root:not\(\[data-theme='light'\]\)/);
+    expect(brand).toMatch(/:root\[data-theme='dark'\] \.sp-lockup__by/);
+    expect(brand).toMatch(/@media \(prefers-color-scheme: dark\)/);
+  });
 });
 
 describe('palette icon', () => {

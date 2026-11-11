@@ -164,18 +164,20 @@ describe('Header product bar and building card', () => {
     for (const [a, c] of [['sp-lockup', 'sp-switcher__name'], ['sp-switcher__name', 'sp-header__actions'], ['sp-header__actions', 'sp-header__look']])
       expect(b.indexOf(a), `${a} before ${c}`).toBeLessThan(b.indexOf(c));
     expect(strip(b)).toMatch(/^Stax by Ascendix Preston Park Financial Center/);
-    expect(b).toMatch(/<button(?=[^>]*aria-label="Switch building")(?=[^>]*aria-haspopup="menu")/);
-    // The switcher names the building beside a building icon; the photo is on the card, not here.
-    expect(b).not.toContain('sp-switcher__thumb');
+    // The accessible name keeps the visible text (WCAG 2.5.3): a screen reader hears which building is open.
+    expect(b).toMatch(/<button(?=[^>]*aria-label="Switch building: Preston Park Financial Center")(?=[^>]*aria-haspopup="menu")/);
+    // The switcher is the building's name and a chevron: no photo, no icon before the name.
     expect(b).not.toContain('<img');
+    const sw = /<button[^>]*aria-label="Switch building: [^"]*"[^>]*>(.*?)<\/button>/.exec(b)![1];
+    expect(sw.indexOf('<svg')).toBeGreaterThan(sw.indexOf('sp-switcher__name'));
   });
 
-  it('standalone: the card is the photo, the name and the facts; the controls are not in it', () => {
+  it('standalone: the card is the icon, the name and the facts; the controls are not in it', () => {
     const { html } = render('');
     const card = html.slice(html.indexOf('<header'));
-    expect(card).toContain('class="sp-header__photo"');
+    expect(card).toContain('class="sp-header__icon"');
+    expect(card).not.toContain('<img');
     expect(card).not.toContain('sp-header__actions');
-    expect(card).not.toContain('sp-header__icon');
     expect(strip(card.slice(card.indexOf('<div class="sp-header__title"'), card.indexOf('<div class="sp-header__facts"')))).toBe('Preston Park Financial Center');
   });
 
@@ -183,7 +185,7 @@ describe('Header product bar and building card', () => {
     expect(bar('?skin=aurora')).toContain('sp-lockup');
     expect(bar('?skin=classic')).toBeNull();
     const classic = render('?skin=classic').html;
-    for (const s of ['sp-lockup', 'Stax', 'sp-header__photo', 'Switch building']) expect(classic, s).not.toContain(s);
+    for (const s of ['sp-lockup', 'Stax', '<img', 'Switch building']) expect(classic, s).not.toContain(s);
     expect(classic).toContain('class="sp-header__icon"');
     expect(classic).toContain('sp-header__actions');
   });

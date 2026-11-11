@@ -4,13 +4,12 @@ Date: 2026-11-11. Status: approved for planning.
 
 ## Intent
 
-The header should tell a broker, in the first second, two things: this is a finished product, and it works for any building, not just the one on screen. Today the header is a generic building icon, the building name, a facts row and a row of controls. It has no product identity and nothing says there is more than one building. The team agreed on 2026-11-11 that the header is Clara's task and that the Data issues button goes.
+The header should tell a broker, in the first second, two things: this is a finished product, and it works for any building, not just the one on screen. Today the header is a generic building icon, the building name, a facts row and a row of controls. It has no product identity and nothing says there is more than one building. The team agreed on 2026-11-11 that the header is one team member's task and that the Data issues button goes.
 
 ## Goals
 
 - Give the app a product identity: a mark and the name "Stax by Ascendix", in Ascendix colours.
 - Say "built for many buildings" through a building switcher, without adding a second real building.
-- Show a photo of the building.
 - Replace the palette segmented control with a palette icon that opens a menu, and show "Custom" as coming soon.
 - Remove Data issues from the header.
 
@@ -26,7 +25,6 @@ The header should tell a broker, in the first second, two things: this is a fini
 - The Ascendix "X" logo must not be copied or imitated. The mark is a new drawing that uses the same colours.
 - No gray in the brand area. The lockup uses only navy, white, cyan and orange.
 - No person's name, username or picture anywhere (challenge anonymity rule).
-- No real photo of the real building at the real address; the photo is a generic office tower.
 
 ## The design
 
@@ -44,7 +42,7 @@ Left to right:
    The bars stay cyan in both themes (they sit on the navy square). In the dark theme the square is a darker navy (#15212D) with a 1px white 10% ring so it separates from the page.
 2. **Lockup B**: "Stax" (capital S, lowercase x) in 800 weight, ~21px, letter-spacing −0.02em, cyan; then "by Ascendix" in 600 weight, ~13px, navy (light) or white (dark). Both on one baseline, 9px apart, the pair vertically centred on the mark.
 3. A 1px vertical divider.
-4. **Building switcher**: a button with a building icon, the building name, and a chevron (no photo here; the photo is on the card). Opening it shows a menu titled "PORTFOLIO · 6 BUILDINGS": the current building highlighted and checked, then five more entries in disabled style (name left, city right) and a last line "sample entries". The disabled entries are fictional Dallas-area office names and do not navigate. Builder's call on the exact names; they must not be real buildings or companies.
+4. **Building switcher**: a button with the building name and a chevron (no photo, no icon). Opening it shows a menu titled "PORTFOLIO · 6 BUILDINGS": the current building highlighted and checked, then five more entries in disabled style (name left, city right) and a last line "sample entries". The disabled entries are fictional Dallas-area office names and do not navigate. Builder's call on the exact names; they must not be real buildings or companies.
 5. Spacer.
 6. **Controls**, unchanged in behaviour: as-of popover, Prospect-safe switch, Export menu. Then:
 7. **Palette icon button** (icon-only, same size as the theme toggle): opens a menu "COLORS" with Ascendix, Vice City, and "Custom · coming soon" (disabled). Each entry keeps the existing palette dot adornment. The icon is a new line icon in the app's icon set, a painter's palette outline with three small dots, same stroke as `sun`/`moon`. Selecting a palette does what the segmented control did (`palettePatch`).
@@ -52,20 +50,20 @@ Left to right:
 
 The Prospect-safe chip that today shares a slot with Data issues stays and takes the slot alone: it is what tells a broker the mode is on. The fixed slot width that kept the header height stable with the mode on and off can go if nothing wraps differently; the builder checks the header height is the same in both modes at the breakpoints `shell.css` already names.
 
-On a phone the existing "more" menu keeps the palette and theme entries; the palette icon is desktop only. The building switcher collapses to the icon and chevron.
+On a phone the existing "more" menu keeps the palette and theme entries; the palette icon is desktop only. The building switcher collapses to the chevron.
 
 ### Building card
 
 The current header card, lighter:
 
-- An ~80px rounded photo of the building replaces the icon.
-- Title: the building name (h1).
+- The building icon box stays (the user chose it over a photo on 2026-11-11).
+- Title: the building name (h1). The facts row starts flush with the title.
 - Facts row, as today: class, address, leasable RSF, floors, sale listing (with the prospect-safe variant), "Latest change". The "N records stale" link goes with Data issues.
 - The right-hand controls and the look controls move up to the product bar, so the card is text and photo only.
 
 ### Photo
 
-One royalty-free photo of a generic Class A office tower (Unsplash or similar, licence allowing redistribution), stored under `src/assets/`, resized to ~320px wide for the card and reused for the thumbnail. Its source and licence go in the README assumptions section. The builder picks the photo; it should not show a readable sign or company name.
+None. A stock photo was tried and dropped on 2026-11-11; the icon box stays.
 
 ### Exports
 
@@ -90,5 +88,4 @@ The PDF report header should carry the lockup (mark + "Stax by Ascendix") in pla
 - Exact spacing, breakpoints and how the switcher collapses on narrow widths.
 - The palette icon path.
 - The fictional building names and cities.
-- The photo.
 - Whether the PDF header gets the SVG mark or a PNG rasterised from it.

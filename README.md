@@ -86,7 +86,7 @@ It works with a keyboard and a screen reader, and on a phone. It opens in the As
 - The mock data is shaped like the AscendixRE objects (Property, Floor, Lease, Unit, Availability, Deal, Inquiry), so the same screens can later read real records.
 - The mock building contains each awkward case at least once: holdover, month-to-month, a committed future lease, occupied-but-marketed space, a sublease, an over-allocated floor, a multi-floor tenant, a confidential lease, records with no floor, and a for-sale unit.
 - "Today" is fixed at November 9, 2026, so screenshots are reproducible.
-- The building photo is a stock image of a generic office tower ("Low Angle Photo of High-Rise Building" by Diana on Pexels, Pexels licence, free to use), not the real building. The other buildings in the switcher are fictional sample entries.
+- The other buildings in the header's switcher are fictional sample entries; only the first opens.
 - Demographics are sample figures unless live mode is on. Floor plates are schematic, derived from the footprint, and are not real floor plans.
 
 **Domain**
