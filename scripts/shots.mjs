@@ -41,6 +41,7 @@ export const STATES = [
   ['32-timeline-safe', '?view=timeline&safe=1'],
   ['46-area-panel', '?view=stack&mode=area'],
   ['47-location-brief', '?view=stack&mode=brief'],
+  ['49-floor-area', '?view=floor&floor=F6&mode=area'],
 ];
 
 const browser = await chromium.launch({ channel: 'chrome' });
@@ -86,6 +87,8 @@ for (const [name, qs, w] of [
   ['41-light-map', '?view=map&theme=light', 1440],
   ['42-tablet-building', '?view=building', 1024],
   ['43-tablet-building-pinned', '?view=building&floor=F8', 1024],
+  ['50-light-header-safe', '?view=stack&safe=1&theme=light', 1440],
+  ['51-tablet-floor-area', '?view=floor&floor=F6&mode=area&theme=light', 1024],
 ]) {
   await dark.setViewportSize({ width: w, height: 1100 });
   await dark.goto(base + qs, { waitUntil: 'networkidle' });
