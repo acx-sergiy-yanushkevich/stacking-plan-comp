@@ -34,7 +34,11 @@ export function relativeToUs(value: number, us: number): string {
   return `${off}% ${ratio > 1 ? 'above' : 'below'} the US`;
 }
 
-const wholePct = (ratio: number) => `${Math.round(ratio * 100)}%`;
+/** A share to one decimal ("21.6%"): the education measure, whose US figure would lose too much rounded whole. */
+export const pct1 = (ratio: number) => `${(Math.round(ratio * 1000) / 10).toFixed(1)}%`;
+
+/** The education measure's name, said the way the table defines it (B15003_022 / B15003_001). */
+export const BACHELORS_LABEL = "Bachelor's as highest degree";
 
 export type Measure = 'income' | 'bachelors' | 'age' | 'commute';
 
@@ -64,7 +68,7 @@ function difference(value: number, us: number, unit: string, less: string, more:
 export function compareRing(ring: AreaRing, us: Benchmark = US_BENCHMARK): Comparison[] {
   return [
     { measure: 'income', label: 'Median household income', value: usd0(ring.medianIncome), us: usd0(us.medianIncome), delta: relativeToUs(ring.medianIncome, us.medianIncome), stands: standsOut(ring.medianIncome, us.medianIncome), raw: ring.medianIncome, usRaw: us.medianIncome },
-    { measure: 'bachelors', label: "Bachelor's degree", value: wholePct(ring.bachelorsPct), us: wholePct(us.bachelorsPct), delta: relativeToUs(ring.bachelorsPct, us.bachelorsPct), stands: standsOut(ring.bachelorsPct, us.bachelorsPct), raw: ring.bachelorsPct, usRaw: us.bachelorsPct },
+    { measure: 'bachelors', label: BACHELORS_LABEL, value: pct1(ring.bachelorsPct), us: pct1(us.bachelorsPct), delta: relativeToUs(ring.bachelorsPct, us.bachelorsPct), stands: standsOut(ring.bachelorsPct, us.bachelorsPct), raw: ring.bachelorsPct, usRaw: us.bachelorsPct },
     { measure: 'age', label: 'Median age', value: ring.medianAge.toFixed(1), us: us.medianAge.toFixed(1), delta: difference(ring.medianAge, us.medianAge, 'years', 'younger', 'older'), stands: standsOut(ring.medianAge, us.medianAge), raw: ring.medianAge, usRaw: us.medianAge },
     { measure: 'commute', label: 'Mean commute', value: `${ring.meanCommuteMin.toFixed(1)} min`, us: `${us.meanCommuteMin.toFixed(1)} min`, delta: difference(ring.meanCommuteMin, us.meanCommuteMin, 'min', 'shorter', 'longer'), stands: standsOut(ring.meanCommuteMin, us.meanCommuteMin), raw: ring.meanCommuteMin, usRaw: us.meanCommuteMin },
   ];
@@ -125,13 +129,13 @@ export function locationBrief(area: Area, us: Benchmark = US_BENCHMARK): Locatio
   const headline: Headline[] = [
     { label: 'Population', value: num(wide.population), note: `within ${wide.miles} miles` },
     { label: 'Median household income', value: by.income.value, note: `${by.income.delta} · ${near.miles} mile${near.miles === 1 ? '' : 's'}` },
-    { label: "Bachelor's degree", value: by.bachelors.value, note: `${by.bachelors.delta} · ${near.miles} mile${near.miles === 1 ? '' : 's'}` },
+    { label: BACHELORS_LABEL, value: by.bachelors.value, note: `${by.bachelors.delta} · ${near.miles} mile${near.miles === 1 ? '' : 's'}` },
     { label: 'Nearest transit', value: stop ? `${stop.distanceMi.toFixed(1)} mi` : '—', note: transitNote },
   ];
 
   const points: string[] = [];
   if (by.income.stands) points.push(`Median household income of ${by.income.value} ${within}, ${by.income.delta}.`);
-  if (by.bachelors.stands) points.push(`${by.bachelors.value} of adults ${within} hold a bachelor's degree, ${by.bachelors.delta}.`);
+  if (by.bachelors.stands) points.push(`${by.bachelors.value} of people 25 and over ${within} have a bachelor's as their highest degree, ${by.bachelors.delta}.`);
   if (by.age.stands) points.push(`A median age of ${by.age.value} ${within}, ${by.age.delta}.`);
   if (by.commute.stands) points.push(`A mean commute of ${near.meanCommuteMin.toFixed(1)} minutes ${within}, ${by.commute.delta}.`);
   const top = [...area.amenities].filter((a) => a.count > 0).sort((a, b) => b.count - a.count).slice(0, 3);

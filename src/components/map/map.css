@@ -155,7 +155,7 @@
 .sp-area__head { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 .sp-area__sub { margin-top: var(--sp-space-2); }
 .sp-area-transit { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.sp-area-transit li { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.sp-area-transit li { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
 .sp-area-transit__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-area--wide { padding: var(--sp-space-2) 0 0; }
 .sp-area__households { grid-column: 1 / -1; font-size: var(--sp-text-11); color: var(--sp-color-text-faint); margin-top: -2px; }

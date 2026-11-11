@@ -7,7 +7,7 @@ export type IconName =
   | 'map' | 'layers' | 'list' | 'info' | 'check' | 'arrow-left' | 'stack' | 'timeline' | 'floor' | 'plus' | 'file'
   | 'image' | 'table' | 'link' | 'video' | 'sparkle' | 'shield' | 'clock' | 'user' | 'compass' | 'tilt' | 'minus'
   | 'dollar' | 'home' | 'people' | 'train' | 'coffee' | 'sun' | 'moon' | 'more' | 'expand' | 'collapse' | 'palette'
-  | 'contrast' | 'caret-down';
+  | 'contrast' | 'caret-down' | 'bus';
 
 /** Icons with a filled part, drawn under the stroke. */
 const FILLS: Partial<Record<IconName, string>> = {
@@ -18,6 +18,7 @@ const FILLS: Partial<Record<IconName, string>> = {
 const PATHS: Record<IconName, string> = {
   // A circle, its left half filled (FILLS): the prospect-safe mode, half of the plan held back.
   contrast: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 3v18',
+  bus: 'M6 3h12a2 2 0 0 1 2 2v12H4V5a2 2 0 0 1 2-2zM4 11h16M8 3v8M16 3v8M7 17v3M17 17v3M7.5 14h.01M16.5 14h.01',
   // A small solid triangle, drawn in the box of a 14 px icon so it takes the chevron's place at its width.
   'caret-down': 'M8.5 10h7L12 14.5z',
   more: 'M5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM19 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z',

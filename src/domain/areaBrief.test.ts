@@ -40,7 +40,7 @@ describe('compareRing', () => {
     expect(rows.map((r) => r.measure)).toEqual(['income', 'bachelors', 'age', 'commute']);
     const by = Object.fromEntries(rows.map((r) => [r.measure, r]));
     expect(by.income).toMatchObject({ value: '$98,400', us: '$80,734', delta: '22% above the US', stands: true });
-    expect(by.bachelors).toMatchObject({ value: '61%', us: '22%', delta: '2.8× the US', stands: true });
+    expect(by.bachelors).toMatchObject({ value: '61.0%', us: '21.6%', delta: '2.8× the US', stands: true });
     // Age and commute read as years and minutes: "5.4 minutes shorter" says more than "9% below".
     expect(by.age).toMatchObject({ value: '36.8', us: '38.9', delta: '2.1 years younger than the US', stands: false });
     expect(by.commute).toMatchObject({ value: '24.1 min', us: '26.4 min', delta: '2.3 min shorter than the US', stands: false });
@@ -53,7 +53,7 @@ describe('locationBrief', () => {
     expect(b.headline.map((h) => [h.label, h.value, h.note])).toEqual([
       ['Population', '329,400', 'within 5 miles'],
       ['Median household income', '$98,400', '22% above the US · 1 mile'],
-      ["Bachelor's degree", '61%', '2.8× the US · 1 mile'],
+      ["Bachelor's as highest degree", '61.0%', '2.8× the US · 1 mile'],
       ['Nearest transit', '0.2 mi', 'bus stop · rail 3.1 mi'],
     ]);
   });
@@ -61,7 +61,7 @@ describe('locationBrief', () => {
   it('says what stands out from the US, then the amenities and the transit', () => {
     expect(locationBrief(area).points).toEqual([
       'Median household income of $98,400 within 1 mile, 22% above the US.',
-      "61% of adults within 1 mile hold a bachelor's degree, 2.8× the US.",
+      "61.0% of people 25 and over within 1 mile have a bachelor's as their highest degree, 2.8× the US.",
       '42 restaurants, 11 parking facilities and 9 cafés within half a mile.',
       'A bus stop 0.2 miles away; the nearest rail station is 3.1 miles away.',
     ]);

@@ -53,7 +53,7 @@ describe('AreaPanel (charts in the side panel)', () => {
     const html = render(area);
     expect(html).toContain('Compared with the US');
     expect(html).toContain('within 1 mile');
-    for (const text of ['Median household income', '$98,400', 'US $80,734', '22% above the US', "Bachelor's degree", '61%', 'US 22%', 'Median age', '36.8', 'US 38.9', 'Mean commute', '24.1 min', 'US 26.4 min']) expect(html, text).toContain(text);
+    for (const text of ['Median household income', '$98,400', 'US $80,734', '22% above the US', "Bachelor's as highest degree", '61.0%', 'US 21.6%', 'Median age', '36.8', 'US 38.9', 'Mean commute', '24.1 min', 'US 26.4 min']) expect(html, text).toContain(text);
     expect(html).toMatch(/class="sp-area-meter__track" aria-hidden="true"/);
   });
 
@@ -70,5 +70,17 @@ describe('AreaPanel (charts in the side panel)', () => {
     expect(html).toContain('Sample data');
     expect(html).toContain('US Census Bureau ACS 5-year');
     expect(html).toContain('US figures: US Census Bureau, ACS 5-year 2020–2024');
+  });
+
+  it('round 18: names the kind of each stop in words, says the place once, credits sample figures as samples, and shows no developer hint', () => {
+    const html = render(area);
+    // Bus and rail differ by a word, not only by the drawing; bus no longer borrows the people icon.
+    expect(html.match(/<span class="sp-transit-kind">Bus<\/span>/g)?.length).toBeGreaterThan(0);
+    expect(html).toContain('<span class="sp-transit-kind">Rail</span>');
+    expect(html).not.toContain('aria-label="Bus"');
+    expect(html).not.toContain('Plano, TX · rings');
+    expect(html).not.toContain('Data: US Census Bureau');
+    expect(html).not.toContain('live=1');
+    expect(html).not.toContain('within half a mile.</p>');
   });
 });
