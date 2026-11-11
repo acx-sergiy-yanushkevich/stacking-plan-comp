@@ -1,6 +1,6 @@
-# Stacking Plan v2
+# Storyline
 
-An interactive stacking plan that lets a broker see a building's availability, expirations and leasing options in one screen, and share a safe version of it with a prospect.
+Storyline is an interactive stacking plan that lets a broker see a building's availability, expirations and leasing options in one screen, and share a safe version of it with a prospect.
 
 Built for the Ascendix Tech Challenge, November 2026. It is a prototype on mock data, not a production application.
 

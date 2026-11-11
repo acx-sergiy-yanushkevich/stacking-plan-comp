@@ -1,4 +1,4 @@
-# Stacking Plan v2: design specification
+# Storyline: design specification
 
 Status: approved direction (2026-11-09). Prototype / proof of concept: no backend, mock data shaped like xRE objects, live calls only to free public services behind a `?live=1` flag with cached fallbacks.
 

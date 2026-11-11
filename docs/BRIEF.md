@@ -1,4 +1,4 @@
-# Stacking Plan v2: brief and scoring rubric
+# Storyline: brief and scoring rubric
 
 ## What it is
 
