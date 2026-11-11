@@ -45,6 +45,7 @@ From the `cre-personas` skill:
 - Sublease space has its own visual state and an expiration date.
 - `Confidential__c` leases never show their rent; prospect-safe mode hides every tenant name, contact and rent.
 - Data that does not exist in xRE (lease options, ROFR, notice dates) must not be invented.
+- **American English** in everything a user, judge or voter reads (UI text, tooltips, screen-reader labels, exports, README, plan): color, gray, center, labeled, behavior. Ascendix is a US company.
 
 ## Scoring rubric
 

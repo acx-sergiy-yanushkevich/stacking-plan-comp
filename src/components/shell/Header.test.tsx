@@ -99,7 +99,7 @@ describe('Header palette control', () => {
   /** The palette radiogroup and its options, as [name, checked] pairs. */
   const palette = (query: string) => {
     const { html } = render(query);
-    const group = /<div role="radiogroup" aria-label="Colour palette"[^>]*>(.*?)<\/div>/.exec(html)?.[1];
+    const group = /<div role="radiogroup" aria-label="Color palette"[^>]*>(.*?)<\/div>/.exec(html)?.[1];
     if (group === undefined) return null;
     return [...group.matchAll(/<button[^>]*role="radio"[^>]*aria-checked="(true|false)"[^>]*tabindex="(-?\d)"[^>]*>(.*?)<\/button>/g)].map((m) => ({
       name: /<span class="sp-segmented__label">(.*?)<\/span>/.exec(m[3])?.[1],
@@ -126,9 +126,9 @@ describe('Header palette control', () => {
   it('stands beside the theme switch, and is not offered by the skins that have no palette', () => {
     const { html } = render('');
     const look = /<div class="sp-header__look">(.*?)<\/div><\/header>/.exec(html)?.[1] ?? '';
-    expect(look).toContain('aria-label="Colour palette"');
+    expect(look).toContain('aria-label="Color palette"');
     expect(look).toContain('aria-label="Switch to light theme"');
-    expect(look.indexOf('Colour palette')).toBeLessThan(look.indexOf('Switch to light theme'));
+    expect(look.indexOf('Color palette')).toBeLessThan(look.indexOf('Switch to light theme'));
     // The original blue glass keeps the theme switch alone; the embedded skin has neither.
     expect(palette('?skin=aurora')).toBeNull();
     expect(render('?skin=aurora').html).toContain('sp-header__look');
@@ -153,11 +153,11 @@ describe('Header on a phone: the palette and the theme are a menu, not a row of 
     for (const width of [320, 390, 760]) {
       const html = at(width);
       expect(html, `${width}`).not.toContain('class="sp-header__look"');
-      expect(html, `${width}`).not.toContain('aria-label="Colour palette"');
-      const menu = /<button[^>]*aria-label="Colours and theme"[^>]*>/.exec(html)?.[0] ?? '';
+      expect(html, `${width}`).not.toContain('aria-label="Color palette"');
+      const menu = /<button[^>]*aria-label="Colors and theme"[^>]*>/.exec(html)?.[0] ?? '';
       expect(menu, `${width}`).toContain('aria-haspopup="menu"');
       // It follows Export: the same row of controls.
-      expect(html.indexOf('aria-label="Colours and theme"')).toBeGreaterThan(html.indexOf('>Export<'));
+      expect(html.indexOf('aria-label="Colors and theme"')).toBeGreaterThan(html.indexOf('>Export<'));
     }
   });
 
@@ -165,14 +165,14 @@ describe('Header on a phone: the palette and the theme are a menu, not a row of 
     for (const width of [761, 1024, 1440]) {
       const html = at(width);
       expect(html, `${width}`).toContain('class="sp-header__look"');
-      expect(html, `${width}`).toContain('aria-label="Colour palette"');
+      expect(html, `${width}`).toContain('aria-label="Color palette"');
       expect(html, `${width}`).toMatch(/aria-label="Switch to (light|dark) theme"/);
-      expect(html, `${width}`).not.toContain('aria-label="Colours and theme"');
+      expect(html, `${width}`).not.toContain('aria-label="Colors and theme"');
     }
   });
 
   it('the embedded skin has neither: its host page sets the theme', () => {
-    expect(at(390, '?skin=classic')).not.toContain('aria-label="Colours and theme"');
+    expect(at(390, '?skin=classic')).not.toContain('aria-label="Colors and theme"');
     expect(at(1440, '?skin=classic')).not.toContain('class="sp-header__look"');
   });
 });

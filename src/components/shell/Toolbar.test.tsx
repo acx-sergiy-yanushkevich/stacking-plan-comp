@@ -16,7 +16,7 @@ const tools = (html: string) => {
   return [...group.matchAll(/<(button|span) [^>]*class="sp-btn[^"]*"[^>]*>(.*?)<\/\1>/g)].map((m) => (m[0].includes('sp-toolbar__slot') ? '(slot)' : m[2].replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, '')));
 };
 const lensTabs = (html: string) => {
-  const group = html.slice(html.indexOf('aria-label="Colour lens"'), html.indexOf('class="sp-toolbar__lens-select"'));
+  const group = html.slice(html.indexOf('aria-label="Color lens"'), html.indexOf('class="sp-toolbar__lens-select"'));
   return [...group.matchAll(/role="radio"[^>]*>([^<]*)</g)].map((m) => m[1]);
 };
 

@@ -32,7 +32,7 @@ Source key: **L** legacy jQuery widget, **V1** the 2026 redesign prototype, **C*
 | Rent lens with gross scale, net marked separately, asking vs in-place | V1, C: Yardi | analyst | P0 |
 | Industry lens | C: Cloud Stacking Plan | landlord rep | P1 |
 | Listing-status lens (published vs quiet) | N | coordinator | P1 |
-| Colour by any field with saved palettes | C: Cloud Stacking Plan | admin | P2 |
+| Color by any field with saved palettes | C: Cloud Stacking Plan | admin | P2 |
 
 ### 2.3 Time
 | Feature | Source | Persona | Priority |
@@ -71,7 +71,7 @@ Source key: **L** legacy jQuery widget, **V1** the 2026 redesign prototype, **C*
 | Feature | Source | Persona | Priority |
 |---|---|---|---|
 | Map placement on OpenStreetMap (MapLibre + OpenFreeMap tiles) | N (V1 had a basic map) | all | P0 |
-| 3D building on the map, extruded per floor, coloured by lens, clickable floors | N | landlord rep (presenting), investment sales | P0 |
+| 3D building on the map, extruded per floor, colored by lens, clickable floors | N | landlord rep (presenting), investment sales | P0 |
 | Present mode (orbit + time-lapse) and WebM recording | N | landlord rep | P0 |
 | Floor plate drill-in: schematic from the real footprint, suites proportional, floor lists | N (user ask) | all | P0 |
 | Floor plan image when attached to the Floor record | N | all | P1 |
@@ -162,7 +162,7 @@ Governor limits: one SOQL per object with the Property filter; a 60-floor tower 
 ### 4.5 Risks
 - Third-party WebGL inside LWC needs `lwc:dom="manual"` and a static resource; Lightning Locker and Web Security are compatible with MapLibre, but the map must be tested under Lightning Web Security early in phase 2.
 - Overpass is a shared community server; footprints must be cached after the first fetch and the UI must degrade to the SVG footprint.
-- Census radius aggregation needs tract geometries (TIGERweb); if that call is unreliable, fall back to the containing tract plus a county figure, clearly labelled.
+- Census radius aggregation needs tract geometries (TIGERweb); if that call is unreliable, fall back to the containing tract plus a county figure, clearly labeled.
 - Video recording relies on `MediaRecorder` and `canvas.captureStream`, available in Chrome and Edge; Safari is partial. Offer PNG as the fallback.
 
 ## 5. What is needed from the user, and when

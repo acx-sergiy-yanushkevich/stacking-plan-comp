@@ -7,7 +7,7 @@ import { rampNote } from './rampNote';
 
 describe('rampNote', () => {
   it('states which end of the expiration ramp is sooner, in words that hold by night and by day', () => {
-    expect(rampNote('expiry', false)).toBe('Stronger colour = sooner expiry.');
+    expect(rampNote('expiry', false)).toBe('Stronger color = sooner expiry.');
   });
 
   it('says nothing where there is no ramp: the status lens, and the ramps prospect-safe withholds', () => {

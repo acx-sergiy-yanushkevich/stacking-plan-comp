@@ -13,7 +13,7 @@ import { canShowDeals, canShowLeaseTerm } from '../../domain/safe';
  * Null when the lens has no ramp to explain: the status lens, and any ramp prospect-safe mode withholds.
  */
 export function rampNote(lens: LensId, safe: boolean): string | null {
-  if (lens === 'expiry') return canShowLeaseTerm(safe) ? 'Stronger colour = sooner expiry.' : null;
+  if (lens === 'expiry') return canShowLeaseTerm(safe) ? 'Stronger color = sooner expiry.' : null;
   if (lens === 'rent') return 'Stronger blue = higher rent.';
   if (lens === 'deals') return canShowDeals(safe) ? 'Stronger orange = deal further along.' : null;
   return null;

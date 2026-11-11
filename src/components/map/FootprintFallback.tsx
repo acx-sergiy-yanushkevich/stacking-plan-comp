@@ -21,7 +21,7 @@ const BAND_GAP = 2;
 
 /**
  * Static stand-in when WebGL or the tile server is unavailable (Review Focus 5): the footprint
- * in plan, and a side elevation of stacked bands coloured by the active lens.
+ * in plan, and a side elevation of stacked bands colored by the active lens.
  */
 export function FootprintFallback({ footprint, floors, toneOf, selectedFloorId, onSelect }: FootprintFallbackProps) {
   const pts = projectPolygon(footprint, { w: PLAN_W, h: PLAN_H }, 12);
@@ -42,7 +42,7 @@ export function FootprintFallback({ footprint, floors, toneOf, selectedFloorId, 
             Footprint · plan
           </text>
         </svg>
-        <svg className="sp-map-fallback__elev" viewBox={`0 0 ${ELEV_W} ${elevH}`} width={ELEV_W} height={elevH} role="img" aria-label="Side elevation: one band per floor coloured by the active lens">
+        <svg className="sp-map-fallback__elev" viewBox={`0 0 ${ELEV_W} ${elevH}`} width={ELEV_W} height={elevH} role="img" aria-label="Side elevation: one band per floor colored by the active lens">
           {ordered.map((f, i) => {
             const tone = toneOf(f);
             const y = 4 + i * (BAND_H + BAND_GAP);

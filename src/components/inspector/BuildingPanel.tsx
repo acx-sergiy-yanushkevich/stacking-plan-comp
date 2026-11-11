@@ -233,7 +233,7 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
         <ul className="sp-ins__list">
           {byStage.map((row) => (
             <li key={row.stage}>
-              <button type="button" className="sp-ins__row" onClick={() => patch({ lens: 'deals' })} aria-pressed={state.lens === 'deals'} title="Colour the plan by deal stage">
+              <button type="button" className="sp-ins__row" onClick={() => patch({ lens: 'deals' })} aria-pressed={state.lens === 'deals'} title="Color the plan by deal stage">
                 <StageChip stage={row.stage} />
                 <div className="sp-ins__row-main">
                   <div className="sp-ins__row-title">

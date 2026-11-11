@@ -186,11 +186,11 @@ describe('BuildingView', () => {
   });
 
   it('says how to read the colour ramp in the legend, where the lens has one', () => {
-    expect(render('?lens=expiry')).toContain('Stronger colour = sooner expiry.');
+    expect(render('?lens=expiry')).toContain('Stronger color = sooner expiry.');
     expect(render('?lens=rent')).toContain('Stronger blue = higher rent.');
     expect(render('')).not.toContain('Stronger');
     // Prospect-safe withholds lease terms: there is no ramp to explain.
-    expect(render('?lens=expiry&safe=1')).not.toContain('Stronger colour');
+    expect(render('?lens=expiry&safe=1')).not.toContain('Stronger color');
   });
 
   // Round 15: the model drew the lobby as a grey hatch and the legend had no entry for it.
