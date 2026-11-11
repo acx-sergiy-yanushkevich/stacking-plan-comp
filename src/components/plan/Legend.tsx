@@ -34,6 +34,18 @@ export function buildingUse(floors: ReadonlyArray<{ floor: { nonLeasable: number
   return { label: 'Lobby · building use', sf, title: `Lobby and building use: ${num(sf)} SF non-leasable (lobby, loading, building use). Not counted in occupancy.`, tone: 'muted', pattern: 'hatch' };
 }
 
+/**
+ * Why the legend's shares add up to more than 100%, when they do: the suites on record cover more than the
+ * leasable area. The owner is told which floor; a prospect is told the totals only. Null when they agree.
+ * The Stack legend and the report's cover say the same sentence (round 19: the cover said nothing).
+ */
+export function sharesNote(items: ReadonlyArray<LegendItem>, leasable: number, over: ReadonlyArray<{ name: string; by: number }>): string | null {
+  const recorded = items.filter((i) => !i.overlay).reduce((t, i) => t + i.sf, 0);
+  if (recorded <= leasable) return null;
+  const which = over.length ? ` (${over.map((f) => `${f.name} records exceed its leasable area by ${num(f.by)} SF`).join('; ')})` : '';
+  return `Shares are of ${num(leasable)} RSF leasable; the suites on record add up to ${num(recorded)} SF${which}.`;
+}
+
 /** Legend whose items carry the SF and share they currently cover; an overlay carries its SF only. */
 export function Legend({ items, extras, note, id, compact }: LegendProps) {
   // The shares as printed: apportioned together, so the legend's percentages add up to its total.

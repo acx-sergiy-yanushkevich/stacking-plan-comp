@@ -276,3 +276,20 @@ describe('PrintLayout brand', () => {
     }
   });
 });
+
+describe('report cover (round 19)', () => {
+  it('says why the legend shares add up to more than 100%: the floor to the owner, the totals to a prospect', () => {
+    const owner = render('').html;
+    expect(owner).toContain('Shares are of 245,400 RSF leasable; the suites on record add up to 245,900 SF (Floor 7 records exceed its leasable area by 500 SF).');
+    const safe = render('?safe=1').html;
+    expect(safe).toContain('Shares are of 245,400 RSF leasable; the suites on record add up to 245,900 SF.');
+    expect(safe).not.toContain('Floor 7 records exceed');
+  });
+
+  it('withholds the owner from a prospect when it is the sale listing broker', () => {
+    const { model, html } = render('?safe=1');
+    const broker = model.property.saleListing?.broker;
+    if (broker && model.property.owner === broker) expect(html).not.toContain(broker);
+    expect(render('').html).toContain(model.property.owner);
+  });
+});

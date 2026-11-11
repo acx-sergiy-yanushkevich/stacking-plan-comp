@@ -7,7 +7,7 @@ import { RENT_ROLL_NUMERIC, rentRollDisplay, unplacedLeases } from '../../domain
 import { comingSupply } from '../../domain/kpis';
 import { canShowDeals, canShowInPlaceRent, canShowIssues, canShowLeaseTerm, canShowRollover, canShowTenantRisk, canShowWalt, marketedFor, rentVisible, tenantLabel } from '../../domain/safe';
 import { FixedWidth } from '../../lib/useWidth';
-import { Legend } from '../plan/Legend';
+import { Legend, sharesNote } from '../plan/Legend';
 import StackView from '../stack/StackView';
 import { ExportStage } from './ExportStage';
 import { StaxLockup } from '../shell/Brand';
@@ -100,7 +100,8 @@ export function PrintLayout({ model, state, area = null, visible }: PrintLayoutP
         <div className="sp-print__meta">
           <div>As of {fmtDate(model.asOf)}</div>
           <div>Prepared {fmtDate(model.today)}</div>
-          <div>{p.owner}</div>
+          {/* The owner is withheld from a prospect when it is also the sale listing's broker, which the screen withholds. */}
+          {!(safe && p.saleListing && p.owner === p.saleListing.broker) && <div>{p.owner}</div>}
         </div>
       </header>
       <div className="sp-print__kpis">
@@ -112,7 +113,8 @@ export function PrintLayout({ model, state, area = null, visible }: PrintLayoutP
         <Kpi label="WALT" value={canShowWalt(safe) ? `${k.walt.toFixed(2)} yr` : 'Withheld'} note={canShowWalt(safe) ? 'SF-weighted' : 'Prospect-safe'} />
         <Kpi label="Pipeline" value={showDeals ? `${k.pipeline.deals} deals` : 'Withheld'} note={showDeals ? `${sf(k.pipeline.sf)} requested` : 'Prospect-safe'} />
       </div>
-      <Legend items={model.legend} compact />
+      {/* The cover's legend says why its shares add up to more than 100%, as the Stack legend does. */}
+      <Legend items={model.legend} compact note={sharesNote(model.legend, k.leasable, safe ? [] : model.floors.filter((f) => f.overAllocatedBy > 0).map((f) => ({ name: f.floor.name, by: f.overAllocatedBy })))} />
       {/* Drawn at one width on every screen (and when the report is not on screen at all), then scaled to the page. */}
       <div className="sp-print__plan">
         <FixedWidth value={PLAN_WIDTH}>
