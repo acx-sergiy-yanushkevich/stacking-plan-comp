@@ -6,7 +6,6 @@ import { num, pct, usd, usd0 } from '../../domain/format';
 import { Button, Chip, Icon, Menu, Segmented, Switch, useToastBoundary } from '../ui';
 import { canTimeTravel, planDate } from '../../domain/safe';
 import { AsOfPopover } from './AsOfPopover';
-import { rememberTrigger } from '../../state/focusStore';
 import { useIsPhone, usePrefersDark } from '../../lib/useMedia';
 
 export type ExportKind = 'pdf' | 'png' | 'csv' | 'link' | 'video';
@@ -20,11 +19,9 @@ export interface HeaderProps {
 }
 
 export function Header({ model, state, patch, onExport, miniTimeline }: HeaderProps) {
-  const { property, kpis, counts, today } = model;
+  const { property, kpis, today } = model;
   const verifiedAt = [...property.leases.map((l) => l.verifiedAt), ...property.availabilities.map((a) => a.verifiedAt)].sort().at(-1) ?? property.dataUpdated;
   const staleDays = daysBetween(verifiedAt, today);
-  const staleRecords = model.issues.filter((i) => i.id.startsWith('stale-L') || i.id.startsWith('stale-A')).length;
-  const issueTotal = model.issues.length;
   // Standalone app (glass skin): the property is the page title and the app owns its theme. Embedded on a
   // record page (classic skin) the host page names the property and sets the theme.
   const standalone = state.skin !== 'classic';
@@ -84,13 +81,8 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
                 {property.saleListing.capRate !== null ? ` · ${pct(property.saleListing.capRate)} cap` : ''}
               </span>
             ))}
-          <span className={`sp-header__verified ${staleDays > 30 || staleRecords ? 'sp-header__verified--stale' : ''}`} title={`Most recent change to a lease or availability on this plan${state.safe ? '' : '; records not re-confirmed in 120 days are listed under Data issues'}`}>
-            <Icon name={staleRecords ? 'clock' : 'check'} size={12} /> Latest change {fmtDate(verifiedAt)}
-            {staleRecords > 0 && !state.safe && (
-              <button type="button" className="sp-header__stale" onClick={() => patch({ mode: 'issues', select: null, floor: null })}>
-                {staleRecords} record{staleRecords === 1 ? '' : 's'} stale
-              </button>
-            )}
+          <span className={`sp-header__verified ${staleDays > 30 ? 'sp-header__verified--stale' : ''}`} title="Most recent change to a lease or availability on this plan">
+            <Icon name={staleDays > 30 ? 'clock' : 'check'} size={12} /> Latest change {fmtDate(verifiedAt)}
           </span>
         </div>
       </div>
@@ -99,27 +91,13 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
         <AsOfPopover asOf={planDate(state.asOf, today, state.safe)} today={today} onChange={(asOf) => patch({ asOf })} miniTimeline={miniTimeline} locked={!canTimeTravel(state.safe)} />
         {/* Turning it on drops a search in progress, the worklist, a projected as-of date and any toast: the state layer (applyPatch) and useToastBoundary do it, not this handler. */}
         <Switch checked={state.safe} onChange={(safe) => patch({ safe })} label="Prospect-safe" title="Hide tenant names, contacts, rents, lease dates and prospects, and show the plan as of today" />
-        {/* One slot, two tenants. Data issues are withheld from a prospect, so in prospect-safe mode the slot
-            holds the chip that says the mode is on. The slot is the same width either way (shell.css), so the
+        {/* The slot that says prospect-safe is on. It is drawn at one width whether the chip is in it or not, so the
             controls wrap at the same point and the header is the same height with the mode on and off. */}
         <div className="sp-header__slot">
-          {state.safe ? (
+          {state.safe && (
             <Chip tone="brand" icon="shield" title="Tenant names, contacts, rents, lease dates and prospects are hidden">
               Prospect-safe on
             </Chip>
-          ) : (
-            <Button
-              icon="warning"
-              count={issueTotal}
-              active={state.mode === 'issues'}
-              onClick={() => {
-                if (state.mode !== 'issues') rememberTrigger();
-                patch({ mode: state.mode === 'issues' ? 'building' : 'issues', select: null, floor: null });
-              }}
-              title={`${counts.error} errors, ${counts.warning} warnings, ${counts.info} notes. Open the list.`}
-            >
-              Data issues
-            </Button>
           )}
         </div>
         <Menu

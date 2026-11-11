@@ -26,8 +26,6 @@
 .sp-header__sale .sp-icon, .sp-header__sale svg { color: var(--tone-forsale-edge); flex: none; }
 .sp-header__sale-label { font-weight: 500; }
 .sp-header__verified--stale { color: var(--sp-color-warn); }
-/* The line is as tall with the link as without it: the facts row must not grow when a record is stale. */
-.sp-header__stale { color: inherit; font: inherit; font-weight: 600; line-height: inherit; padding: 0; text-decoration: underline; text-underline-offset: 2px; margin-left: 2px; }
 .sp-header__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .sp-header__asof .sp-btn { font-variant-numeric: tabular-nums; }
 .sp-header__asof--projected .sp-btn { background: var(--sp-color-warn-soft); border-color: var(--sp-color-warn); color: var(--sp-color-warn); }
@@ -39,8 +37,7 @@
 /* The header is the same height with Prospect-safe on and off, because each of its controls is the same
    width in both, so they wrap at the same widths: the locked as-of button has the label of the unlocked
    one (a lock where the chevron was), the switch keeps the width of its bold label, and the slot after it
-   holds Data issues or, in its place, the chip that says the mode is on, at one width (that of the
-   button with a one-digit count; on a phone, where the button is smaller, that of the chip). */
+   is one width whether it holds the chip that says the mode is on or nothing. */
 .sp-header__slot { display: inline-flex; align-items: center; min-width: 11.07em; font-size: var(--sp-text-13); }
 .sp-header__slot > * { flex: 1 1 auto; justify-content: center; }
 @media (max-width: 760px) { .sp-header__slot { min-width: 11.3em; font-size: var(--sp-text-12); } }

@@ -73,12 +73,14 @@ describe('Header with Prospect-safe on and off: the same controls in the same pl
     expect(text(/<div class="sp-header__asof[^"]*">(.*?)<\/button>/.exec(actions('?safe=1&asOf=2028-01-01'))![1])).toBe('As of Nov 9, 2026');
   });
 
-  it('one slot holds Data issues or, in prospect-safe, the chip that says the mode is on', () => {
-    const slot = (query: string) => /<div class="sp-header__slot">(.*?)<\/div>/.exec(actions(query))?.[1] ?? '';
-    expect(text(slot(''))).toMatch(/^Data issues\d+$/);
-    expect(slot('')).toContain('<button');
+  it('the slot is empty, or holds the chip that says prospect-safe is on; Data issues is not in the header', () => {
+    const slot = (query: string) => /<div class="sp-header__slot">(.*?)<\/div>/.exec(actions(query))?.[1] ?? 'MISSING';
+    expect(slot('')).toBe('');
     expect(text(slot('?safe=1'))).toBe('Prospect-safe on');
-    expect(slot('?safe=1')).not.toContain('<button');
+    for (const q of ['', '?safe=1', '?skin=classic', '?skin=aurora']) {
+      expect(render(q).html, q).not.toContain('Data issues');
+      expect(render(q).html, q).not.toContain('sp-header__stale');
+    }
     // The chip is in the slot and nowhere else: the title row is the same with the mode on and off.
     const title = (query: string) => { const { html } = render(query); return text(html.slice(html.indexOf('class="sp-header__title"'), html.indexOf('class="sp-header__facts"'))); };
     expect(title('?safe=1')).toBe(title(''));
