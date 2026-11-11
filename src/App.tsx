@@ -275,7 +275,11 @@ function Shell() {
       // An open tool panel answers Escape wherever focus is, outside a field or a popover: after a link to
       // `?mode=brief` focus is on the page, and a click on the brief's text moves it to <main> (round 18).
       // The brief narrows first; the panel closes next. Inside the panel its own handler does the same.
-      if (!el?.closest('.sp-ins, .sp-pop__panel, input, select, textarea') && (mode === 'brief' || isToolPanel(mode))) {
+      // An empty field outside the panel (the toolbar's search) has nothing for Escape to clear, so it closes
+      // the tool too (round 19); a field with text keeps the key for itself.
+      const field = el?.closest('input, select, textarea');
+      const idleField = !field || (field.tagName === 'INPUT' && (field as HTMLInputElement).value === '');
+      if (idleField && !el?.closest('.sp-ins, .sp-pop__panel') && (mode === 'brief' || isToolPanel(mode))) {
         e.preventDefault();
         if (mode === 'brief') patch({ mode: 'area' });
         else {
