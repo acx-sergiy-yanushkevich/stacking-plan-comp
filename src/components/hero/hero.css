@@ -50,16 +50,16 @@
 
 /* Stage: the model as a view of its own (BuildingView). No panel chrome; lifted floors stay reachable. */
 .sp-hero--stage { margin: 0; padding: 0; border-bottom: 0; display: flex; align-items: stretch; gap: var(--sp-hero-gap, var(--sp-space-4)); }
-/* What stands beside the drawing (the floor picker) is as tall as the drawing, centred unless its owner places it. */
+/* What stands to the left of the drawing (the floor picker) is as tall as the drawing, and centred on it. */
 .sp-hero__beside { flex: none; position: relative; display: flex; flex-direction: column; justify-content: center; }
-/* The labels stand to the right of the drawing, in room the component reserves for the longest of them.
-   The canvas is exactly the drawing's box (never stretched to a taller picker): the labels are placed in % of it. */
+/* What stands to its right in place of the model's own numbers (the list of floors) is as tall as the
+   drawing too, and lays its labels out by the shares of that height the model gives it
+   (`--sp-hero-tags-above`, `--sp-hero-tags-band`, `--sp-hero-tags-below`): each label level with its floor. */
+.sp-hero__after { flex: none; display: flex; min-width: 0; }
+/* The model's own floor numbers stand to the right of the drawing, in room the component reserves for them.
+   The canvas is exactly the drawing's box (never stretched to a taller picker): the numbers are placed in % of it. */
 .sp-hero--stage .sp-hero__canvas { flex: none; align-self: center; width: fit-content; margin-right: var(--sp-hero-room, 28px); }
 .sp-hero--stage .sp-hero__tag { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }
-/* With a fact after each number the tags are the model's legend: set them at reading size. */
-.sp-hero--facts .sp-hero__tag { font-size: var(--sp-text-13); color: var(--sp-color-text); }
-.sp-hero__fact { font-weight: 500; color: var(--sp-color-text-weak); }
-.sp-hero__tag.is-hot .sp-hero__fact { color: var(--sp-color-text); }
 /* A floor is open: its number is the one label the model keeps, in the colour of the outline round that
    floor. The floor under the pointer is numbered beside it in plain text, so the two are told apart. */
 .sp-hero--stage .sp-hero__tag.is-open { font-weight: 700; color: var(--sp-color-brand-strong); }

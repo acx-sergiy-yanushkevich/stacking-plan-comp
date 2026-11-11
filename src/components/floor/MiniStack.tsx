@@ -1,6 +1,6 @@
-import { useRef, useState, type KeyboardEvent } from 'react';
 import type { FloorView } from '../../domain/derive';
 import { num, pct } from '../../domain/format';
+import { useFloorRoving } from './useFloorRoving';
 
 export interface MiniStackProps {
   /** Top floor first (as `PlanModel.floors`). */
@@ -26,20 +26,12 @@ export function miniStackLabel(f: FloorView): string {
 /**
  * Thin vertical floor picker: one row per floor, the open floor outlined. It is the keyboard
  * equivalent of the building model, so it is one tab stop: ↑ ↓ move between floors (lighting each on
- * the model), Home and End jump to the top and bottom, Enter or Space opens the floor.
+ * the model), Home and End jump to the top and bottom, Enter or Space opens the floor (`useFloorRoving`).
+ * It stands beside the docked model in the Building view and beside the plate in the Floor view; while
+ * the building stands alone, the labels beside the model are the picker (building/FloorLabels).
  */
 export function MiniStack({ floors, currentId, hotId, onPick, onPreview, describe = miniStackLabel }: MiniStackProps) {
-  const refs = useRef<Array<HTMLButtonElement | null>>([]);
-  // The tab stop is the open floor; with none open, the row last focused (the top floor at first).
-  const [lastId, setLastId] = useState<string | null>(null);
-  const at = (id: string | null) => floors.findIndex((f) => f.floor.id === id);
-  const stop = at(currentId) >= 0 ? at(currentId) : Math.max(0, at(lastId));
-  const onKey = (e: KeyboardEvent<HTMLButtonElement>, i: number) => {
-    const to = e.key === 'ArrowDown' ? i + 1 : e.key === 'ArrowUp' ? i - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? floors.length - 1 : null;
-    if (to === null) return;
-    e.preventDefault();
-    refs.current[Math.min(floors.length - 1, Math.max(0, to))]?.focus();
-  };
+  const roving = useFloorRoving(floors.map((f) => f.floor.id), currentId);
   return (
     <nav className="sp-mini" aria-label="Floors">
       <ol className="sp-mini__list">
@@ -52,12 +44,8 @@ export function MiniStack({ floors, currentId, hotId, onPick, onPreview, describ
             <li key={id}>
               <button
                 type="button"
-                ref={(el) => {
-                  refs.current[i] = el;
-                }}
+                {...roving.rowProps(i)}
                 data-floor={id}
-                tabIndex={i === stop ? 0 : -1}
-                onKeyDown={(e) => onKey(e, i)}
                 className={`sp-mini__row ${current ? 'is-current' : ''} ${!current && id === hotId ? 'is-hot' : ''} ${share > 0.6 ? 'is-strong' : ''}`}
                 aria-label={label}
                 aria-current={current ? 'true' : undefined}
@@ -66,7 +54,7 @@ export function MiniStack({ floors, currentId, hotId, onPick, onPreview, describ
                 onPointerEnter={onPreview && (() => onPreview(id))}
                 onPointerLeave={onPreview && (() => onPreview(null))}
                 onFocus={() => {
-                  setLastId(id);
+                  roving.remember(id);
                   onPreview?.(id);
                 }}
                 onBlur={onPreview && (() => onPreview(null))}

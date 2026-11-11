@@ -46,7 +46,12 @@ export interface SegmentTextOptions {
   today?: ISODate;
   /** Why a search matched this block (shown as a badge). */
   matchReason?: string;
+  /** This suite is (part of) the building's largest contiguous block of direct space, the one the KPI reports. */
+  largest?: boolean;
 }
+
+/** The words that mark the building's largest block wherever it is shown: a floor's label, a suite's badge. */
+export const LARGEST_BLOCK = 'Largest block';
 
 const KIND_LABEL: Record<Segment['kind'], string> = {
   leased: 'Leased',
@@ -84,6 +89,8 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
   let meta = '';
   const lease = seg.lease;
   const a = seg.availability;
+  // First of the badges: it is the answer to "where is the largest block", and it describes space, so a prospect sees it too.
+  if (o.largest) badges.push({ kind: 'info', text: LARGEST_BLOCK, title: 'The largest contiguous block of direct space in the building' });
 
   switch (kind) {
     case 'leased':

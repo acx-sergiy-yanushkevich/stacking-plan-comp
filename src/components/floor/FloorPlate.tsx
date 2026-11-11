@@ -9,6 +9,7 @@ import { type Patch } from '../plan/actions';
 import { PATTERN_IDS } from '../plan/Patterns';
 import { badgeLabel, segmentText, type SegmentText } from '../plan/segmentText';
 import { num, sf } from '../../domain/format';
+import { useHoverKeys } from '../../state/hoverStore';
 import { inquiriesFor } from './floorData';
 
 export interface FloorPlateProps {
@@ -298,8 +299,14 @@ export function keyEntry(text: SegmentText, rent: string, drawn: string[]): stri
 
 /** The floor plate: the footprint sliced into suites along its long axis, in lens tones. */
 export function FloorPlate({ floor, model, state, patch, width, height }: FloorPlateProps) {
-  const { property, safe, asOf, highlight } = model;
+  const { property, safe, asOf } = model;
   const lens = state.lens;
+  // The suites of the block the "Largest block" KPI reports carry its name as a badge.
+  const largest = model.kpis.maxContiguous.keys;
+  // A KPI or a finder row pointed at lights its suites here too, when this floor holds any of them;
+  // pointing at space on another floor leaves this plate as it is.
+  const hoverKeys = useHoverKeys();
+  const highlight = hoverKeys && floor.segments.some((sg) => hoverKeys.has(sg.key)) ? hoverKeys : model.highlight;
   const refs = useRef<Array<SVGGElement | null>>([]);
   const [focusIdx, setFocusIdx] = useState(0);
 
@@ -322,7 +329,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
       const text: SegmentText =
         seg.key === lobbyKey
           ? { tone: 'muted', pattern: 'hatch', name: 'Lobby · building use', sub: sf(seg.size), meta: 'Not leasable', badges: [], tooltip: `${floor.floor.name}: ${sf(seg.size)} non-leasable (lobby, loading, building use). Not counted in occupancy.`, aria: `${floor.floor.name}, lobby and building use, ${sf(seg.size)}, not leasable`, sfShort: num(seg.size), lensShort: '' }
-          : segmentText(seg, { safe, asOf, today: model.today, lens, floorName: floor.floor.name, matches: matches || undefined, matchLabel: state.inquiry ? 'Fits this inquiry' : undefined });
+          : segmentText(seg, { safe, asOf, today: model.today, lens, floorName: floor.floor.name, largest: largest.includes(seg.key), matches: matches || undefined, matchLabel: state.inquiry ? 'Fits this inquiry' : undefined });
       if (poly.length < 3 || polygonArea(poly) < 1) return { seg, text, poly, lines: [], badges: [], tier: 3 as const };
       const isLobby = seg.key === lobbyKey;
       const b = bbox(poly);
@@ -377,7 +384,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
       s.lines = s.lines.map((l) => (l.cls === KEY_CLS ? { ...l, t: String(n) } : l));
     }
     return out;
-  }, [floor, points, model.req, property.inquiries, safe, asOf, lens]);
+  }, [floor, points, model.req, property.inquiries, safe, asOf, lens, largest]);
   const keyed = slices.filter((s) => s.keyNo !== undefined);
 
   const focusAt = (i: number) => {

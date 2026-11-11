@@ -205,7 +205,8 @@
   :root[data-skin='glass'][data-palette='ascendix'] .sp-roll__mark { fill: var(--sp-color-brand-fill); }
   :root[data-skin='glass'][data-palette='ascendix'] .sp-roll__bar--risk .sp-roll__mark { fill: var(--tone-risk-edge); }
   :root[data-skin='glass'][data-palette='ascendix'] .sp-fkpi__bar-fill,
-  :root[data-skin='glass'][data-palette='ascendix'] .sp-mini__fill { background: var(--sp-color-brand-fill); }
+  :root[data-skin='glass'][data-palette='ascendix'] .sp-mini__fill,
+  :root[data-skin='glass'][data-palette='ascendix'] .sp-flabel__bar > span { background: var(--sp-color-brand-fill); }
   /* Neutral badges sit on the brightest fills of the night ramps: give them a solid ground. */
   :root[data-skin='glass'][data-palette='ascendix'][data-theme='dark'] .sp-badge--info rect { fill: var(--sp-glass-float); }
   :root[data-skin='glass'][data-palette='ascendix'][data-theme='dark'] .sp-pbadge--info { background: var(--sp-glass-float); }

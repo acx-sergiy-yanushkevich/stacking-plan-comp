@@ -113,12 +113,14 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
     [model.req, model.property.inquiries, model.asOf, segIndex, state.safe, state.inquiry],
   );
 
+  // The suites of the block the "Largest block" KPI reports carry its name as a badge.
+  const largest = model.kpis.maxContiguous.keys;
   const textFor = useCallback(
     (seg: Segment, f: FloorView) => {
       const reason = model.searchReasons?.get(seg.key);
-      return segmentText(seg, { safe: state.safe, asOf: model.asOf, today: model.today, lens: state.lens, floorName: f.floor.name, matches: matchCount(seg.key), matchLabel: state.inquiry ? 'Fits this inquiry' : undefined, matchReason: reason && reason !== 'Tenant' && !reason.startsWith('Suite') && !reason.startsWith('Floor') ? reason : undefined });
+      return segmentText(seg, { safe: state.safe, asOf: model.asOf, today: model.today, lens: state.lens, floorName: f.floor.name, largest: largest.includes(seg.key), matches: matchCount(seg.key), matchLabel: state.inquiry ? 'Fits this inquiry' : undefined, matchReason: reason && reason !== 'Tenant' && !reason.startsWith('Suite') && !reason.startsWith('Floor') ? reason : undefined });
     },
-    [model.searchReasons, model.asOf, model.today, state.safe, state.lens, state.inquiry, matchCount],
+    [model.searchReasons, model.asOf, model.today, state.safe, state.lens, state.inquiry, matchCount, largest],
   );
   const hoverFloor = useHoverFloor();
 

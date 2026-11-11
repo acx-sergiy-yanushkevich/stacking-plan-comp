@@ -46,11 +46,12 @@ export function dominantTone(f: FloorView, lens: Lens, safe: boolean): Tone {
 }
 
 /**
- * What the floor list writes after a floor's leased share: the Building view's own fact for that floor
- * (`floorFact`, building/floorFact.ts), word for word. The two views show one building, so a floor reads
- * the same in both: "7,000 SF available" on Floor 7 here as on the model, "Month-to-month" on Floor 2,
- * the next expiry in the expiration lens, the live deals, the rents. Nothing is added to it and nothing
- * reworded; prospect-safe follows with it, since `floorFact` says nothing a prospect may not be told.
+ * What the floor list writes after a floor's leased share: the short fact for that floor (`floorFact`,
+ * building/floorFact.ts), built from the same `lensFact` as the labels beside the Building view's model.
+ * The two views show one building, so a floor reads the same in both: "7,000 SF available" on Floor 7
+ * here as there, "Month-to-month" on Floor 2, the next expiry in the expiration lens, the live deals,
+ * the rents. Nothing is added to it and nothing reworded; prospect-safe follows with it, since
+ * `floorFact` says nothing a prospect may not be told.
  */
 export function floorState(f: FloorView, lens: Lens, safe: boolean): string {
   return floorFact(f, lens, safe);

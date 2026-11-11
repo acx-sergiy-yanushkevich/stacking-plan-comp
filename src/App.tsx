@@ -11,13 +11,11 @@ import { rentRollRows, toCsv } from './domain/exportCsv';
 import { Header, type ExportKind } from './components/shell/Header';
 import { Toolbar } from './components/shell/Toolbar';
 import { KpiStrip, type KpiAction } from './components/kpis/KpiStrip';
-import { KpiReveal } from './components/kpis/KpiReveal';
 import { ToastProvider, useToast, Sheet } from './components/ui';
 import StackView from './components/stack/StackView';
 import Inspector from './components/inspector/Inspector';
 import FloorView from './components/floor/FloorView';
 import BuildingView from './components/building/BuildingView';
-import { KPI_COLUMN_QUERY, kpisBesideModel } from './components/building/kpiPlacement';
 import TimelineView from './components/timeline/TimelineView';
 import { MiniTimeline } from './components/timeline/MiniTimeline';
 import { createDataSource } from './data/sources';
@@ -26,7 +24,7 @@ const AreaPanel = lazy(() => import('./components/map/AreaPanel').then((m) => ({
 import { PrintLayout } from './components/print/PrintLayout';
 import { csvBlob, download } from './lib/exportFile';
 import { svgToPng } from './lib/exportPng';
-import { useIsNarrow, useIsPhone, useMedia } from './lib/useMedia';
+import { useIsNarrow, useIsPhone } from './lib/useMedia';
 import { clearSelection } from './components/plan/actions';
 import { focusSegment, refocusTrigger, rememberTrigger } from './state/focusStore';
 import { Patterns } from './components/plan/Patterns';
@@ -36,56 +34,22 @@ import './components/ui/ui.css';
 import './components/shell/shell.css';
 import './components/kpis/kpis.css';
 
-/** What can take keyboard focus in a view that has just been shown. */
-const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
 /** The KPIs that open a panel in the inspector (the others change the lens or the view). */
 const opensPanel = (action: KpiAction): boolean => action === 'find' || action === 'find-largest' || action === 'expiry-worklist';
 
 /**
  * Where the keyboard goes after a KPI was activated. A KPI that opens a tool (the finder, the worklist)
- * hands focus to that panel's heading, as the panel does itself when it opens beside the Stack; in the
- * Building view the panel is new on screen, and the KPI row that was pressed may have left with the column
- * it stood in (the KPIs move to the strip above the plan when the inspector takes the room beside the
- * model). A KPI that changes the view (WALT, to the Timeline) hands focus to the first control of the
- * view that came in. Focus never stays on a control that is gone, which would drop it to <body>.
+ * hands focus to that panel's heading, as the panel does itself when it opens beside the Stack. Closing
+ * the panel returns focus to the KPI (`rememberTrigger`): the KPI bar is the same element in every view
+ * and every state, so the KPI that was pressed is always still there. A KPI that changes the lens or the
+ * view keeps the focus it has.
  */
 function focusAfterKpi(action: KpiAction): void {
-  if (typeof document === 'undefined') return;
+  if (typeof document === 'undefined' || !opensPanel(action)) return;
   // Two frames: the new state renders in the first; a panel that mounts with it is in the page by the second.
   requestAnimationFrame(() =>
     requestAnimationFrame(() => {
-      const active = document.activeElement;
-      const lost = !active || active === document.body || !active.isConnected;
-      const heading = opensPanel(action) ? document.querySelector<HTMLElement>('.sp-inspector .sp-ins__title, .sp-sheet .sp-ins__title') : null;
-      if (heading) {
-        heading.focus({ preventScroll: true });
-        return;
-      }
-      if (!lost) return;
-      const first = document.querySelector<HTMLElement>('.sp-stage')?.querySelector<HTMLElement>(FOCUSABLE);
-      (first ?? document.querySelector<HTMLElement>('#sp-plan'))?.focus({ preventScroll: true });
-    }),
-  );
-}
-
-/**
- * The way back: when the panel a KPI opened is closed, focus returns to that KPI. The panel's own close
- * returns it to the element that opened it, which works while that element is still in the page. In the
- * Building view it is not: the KPI was a row of the column beside the model, and with the inspector gone
- * the column is drawn again as a new element. So the KPI is found again by what it is (`data-kpi`),
- * wherever the six are drawn now, once focus has been left on the page itself.
- */
-function refocusKpi(action: KpiAction): void {
-  if (typeof document === 'undefined') return;
-  // After the frame in which the panel's close has tried the element it remembered, and the render that follows.
-  requestAnimationFrame(() =>
-    requestAnimationFrame(() => {
-      const active = document.activeElement as HTMLElement | null;
-      const lost = !active || active === document.body || !active.isConnected || active.id === 'sp-plan';
-      if (!lost) return;
-      const cards = Array.from(document.querySelectorAll<HTMLElement>(`.sp-kpi[data-kpi="${action}"]`));
-      (cards.find((el) => !el.closest('[inert], [hidden]')) ?? null)?.focus({ preventScroll: true });
+      document.querySelector<HTMLElement>('.sp-inspector .sp-ins__title, .sp-sheet .sp-ins__title')?.focus({ preventScroll: true });
     }),
   );
 }
@@ -198,11 +162,9 @@ function Shell() {
     [model.floors, model.asOf, state.asOf, state.safe, toast],
   );
 
-  // The KPI that opened the panel now in the inspector: focus goes back to it when that panel closes.
-  const kpiOpener = useRef<KpiAction | null>(null);
   const onKpi = (a: KpiAction) => {
+    // Closing the panel a KPI opened returns focus to that KPI.
     rememberTrigger();
-    kpiOpener.current = opensPanel(a) ? a : null;
     switch (a) {
       case 'status':
         patch({ lens: 'status', mode: 'building', select: null, q: '', window: null, req: null, inquiry: null, bucket: null });
@@ -258,23 +220,6 @@ function Shell() {
   const view = shownView(state.view, phone);
   // The building view shows a floor itself; the inspector joins it for a suite, a search, the worklist or issues.
   const showInspector = view === 'building' ? mode !== 'building' && mode !== 'floor' : view !== 'floor' || mode === 'block';
-  // The Building view keeps its KPIs in a column beside the model where the card has the room for one: a wide
-  // window with no inspector beside the plan. That is decided by the room alone, never by whether a floor is
-  // open, so opening or closing a floor moves neither the KPIs nor the toolbar. Everywhere else (a tablet,
-  // the inspector open, every other view) the six stand in the strip above the plan.
-  const roomForKpiColumn = useMedia(KPI_COLUMN_QUERY);
-  const kpiColumn = kpisBesideModel({ view, roomy: roomForKpiColumn, inspector: showInspector && !narrow });
-  const kpisOnTop = !kpiColumn;
-  // A panel opened from a KPI has closed: back to that KPI (see refocusKpi).
-  const lastMode = useRef(mode);
-  useEffect(() => {
-    const before = lastMode.current;
-    lastMode.current = mode;
-    if (before === mode || mode !== 'building') return;
-    const opener = kpiOpener.current;
-    kpiOpener.current = null;
-    if (opener && (before === 'find' || before === 'worklist')) refocusKpi(opener);
-  }, [mode]);
   const sheetOpen = narrow && mode !== 'building';
   const sheetTitle = mode === 'block' ? 'Suite' : mode === 'floor' ? 'Floor' : mode === 'find' ? 'Find space' : mode === 'worklist' ? 'Renewal worklist' : mode === 'issues' ? 'Data issues' : 'Area';
 
@@ -290,13 +235,13 @@ function Shell() {
         {announce}
       </div>
       <Header model={model} state={state} patch={patch} onExport={onExport} miniTimeline={<MiniTimeline model={model} asOf={state.asOf} onChange={(asOf) => patch({ asOf })} width={312} height={64} />} />
-      <KpiReveal open={kpisOnTop}>
-        <KpiStrip model={model} state={state} onAction={onKpi} />
-      </KpiReveal>
+      {/* The KPI bar: always here, above the toolbar, in every view and every state. Nothing shows, hides or
+          resizes it, so the toolbar and the plan under it never move when the view or the selection changes. */}
+      <KpiStrip model={model} state={state} onAction={onKpi} />
       <Toolbar state={state} patch={patch} />
       <main className={`sp-main sp-no-print ${showInspector ? '' : 'sp-main--wide'}`} id="sp-plan" tabIndex={-1}>
         <div className="sp-stage" key={view === 'map' ? 'map' : `fonts-${fontTick}`}>
-          {view === 'building' && <BuildingView model={model} state={state} patch={patch} onKpi={onKpi} kpiColumn={kpiColumn} />}
+          {view === 'building' && <BuildingView model={model} state={state} patch={patch} />}
           {view === 'stack' && <StackView model={model} state={state} patch={patch} />}
           {view === 'floor' && <FloorView model={model} state={state} patch={patch} />}
           {view === 'timeline' && <TimelineView model={model} state={state} patch={patch} />}

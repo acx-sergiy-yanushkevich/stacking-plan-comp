@@ -7,12 +7,17 @@ import type { LeaseType, RateUnit } from '../../domain/types';
 import { availabilityFact, floorDeals } from '../floor/floorData';
 
 /**
- * What the building model and its floor picker say about a floor in words, so neither is read by
- * colour alone. Three texts, all built here so they cannot disagree:
+ * What the Building view says about a floor in words, so the model is never read by colour alone. All of
+ * it is built here, so the texts cannot disagree:
  *
- *   floorFact      the few words printed after the floor number on the model ("7,400 SF available")
- *   floorLabel     the picker row's accessible name and tooltip ("Floor 8, 65.4% leased, 7,400 SF available")
- *   floorSentence  the full line under the model and beside an open floor
+ *   floorParts     what a floor's label beside the model prints after the floor number
+ *                  ("65.4% leased", "7,400 SF available · holdover")
+ *   floorLabel     the same label's accessible name ("Floor 8, 65.4% leased, 7,400 SF available"); the
+ *                  docked picker's rows use it too
+ *   floorSentence  the full line: the caption above the model, a floor's tooltip
+ *   floorHeading   what stands beside an open floor's name (its size; the cards under it carry the rest)
+ *   floorFact      a floor in one short fact, for the Map view's floor list
+ *   labelNote      what the labels show in the active lens, for the caption line
  *
  * Prospect-safe keeps to what a prospect may see: space on the market and its asking rents.
  */
@@ -109,7 +114,26 @@ export function lensFact(f: FloorView, lens: LensId, safe: boolean): string {
   }
 }
 
-/** The fact printed after the floor number on the model: the one thing the active lens colours by, in a few words. */
+const leasedShare = (f: FloorView): number => (f.leasable > 0 ? f.leased / f.leasable : 0);
+
+/** What a floor's label prints after its number: the leased share, then its space and what the active lens adds. */
+export interface FloorParts {
+  /** "65.4% leased" */
+  leased: string;
+  /** "7,400 SF available · holdover"; empty for a full floor the lens has nothing to say about. */
+  fact: string;
+}
+
+export function floorParts(f: FloorView, lens: LensId, safe: boolean): FloorParts {
+  return { leased: `${pct(leasedShare(f))} leased`, fact: [spaceOf(f), lensFact(f, lens, safe)].filter(Boolean).join(' · ') };
+}
+
+/**
+ * A floor in a few words, for a row that has room for one short fact: the Map view's floor list
+ * (map/mapStyle.ts `floorState`). The one thing the active lens colours by: space on offer and a risk
+ * word (status), the next expiry, the live deals, the rents. The Building view's labels have the room
+ * to say the space in every lens and use `floorParts`; both are built from `lensFact`, so they agree.
+ */
 export function floorFact(f: FloorView, lens: LensId, safe: boolean): string {
   const space = spaceOf(f);
   const fact = lensFact(f, lens, safe);
@@ -121,24 +145,25 @@ export function floorFact(f: FloorView, lens: LensId, safe: boolean): string {
   return fact || (safe ? space : '');
 }
 
-/** What the facts beside the floors are, in the active lens: a blank then reads as "none", not as missing data. */
-export function factNote(lens: LensId, safe: boolean): string {
-  if (lens === 'rent')
-    return safe
-      ? 'Beside each floor: the asking rent of the space on offer.'
-      : 'Beside each floor: recorded in-place rent by lease type (confidential leases left out); the asking rent where no rent is in place.';
-  if (lens === 'deals' && canShowDeals(safe)) return 'Beside each floor: its live deals and the furthest stage any has reached.';
-  if (lens === 'expiry' && canShowTenantRisk(safe)) return 'Beside each floor: its next lease expiry within 24 months of the as-of date. No date means none in that window.';
-  return canShowTenantRisk(safe) && lens === 'status'
-    ? 'Beside each floor: space available now, then holdover, month-to-month or an expiry within 12 months where one applies.'
-    : 'Beside each floor: space available now.';
+/**
+ * What the labels beside the floors show in the active lens, as the end of the caption line
+ * ("Labels: …"). It names what the last part is, so a label without it reads as "none", not as missing data.
+ */
+export function labelNote(lens: LensId, safe: boolean): string {
+  const base = '% leased · space available now';
+  if (lens === 'rent') return `${base} · ${safe ? 'the asking rent of the space on offer' : 'in-place rent by lease type (confidential leases left out), else the asking rent'}`;
+  if (lens === 'deals' && canShowDeals(safe)) return `${base} · live deals and the furthest stage reached`;
+  if (lens === 'expiry' && canShowTenantRisk(safe)) return `${base} · the next lease expiry within 24 months (no date: none in that window)`;
+  if (lens === 'status' && canShowTenantRisk(safe)) return `${base} · holdover, month-to-month or an expiry within 12 months`;
+  return base;
 }
 
-const leasedShare = (f: FloorView): number => (f.leasable > 0 ? f.leased / f.leasable : 0);
-
-/** A picker row's accessible name and tooltip: "Floor 8, 65.4% leased, 7,400 SF available", then the lens fact. */
-export function floorLabel(f: FloorView, lens: LensId, safe: boolean): string {
-  return [f.floor.name, `${pct(leasedShare(f))} leased`, spaceOf(f), lensFact(f, lens, safe)].filter(Boolean).join(', ');
+/**
+ * A floor label's accessible name: "Floor 8, 65.4% leased, 7,400 SF available", then the lens fact, then
+ * "largest block" on the floor that holds the building's largest block.
+ */
+export function floorLabel(f: FloorView, lens: LensId, safe: boolean, largest = false): string {
+  return [f.floor.name, `${pct(leasedShare(f))} leased`, spaceOf(f), lensFact(f, lens, safe), largest ? 'largest block' : ''].filter(Boolean).join(', ');
 }
 
 /**
@@ -148,4 +173,14 @@ export function floorLabel(f: FloorView, lens: LensId, safe: boolean): string {
 export function floorSentence(f: FloorView, asOf: string, safe: boolean): string {
   const space = f.available === 0 ? availabilityFact(f, asOf, safe) : `${num(f.available)} SF available`;
   return `${num(f.leasable)} RSF leasable · ${pct(leasedShare(f))} leased · ${space === 'Nothing available' ? '0 SF available' : space}`;
+}
+
+/**
+ * What stands beside an open floor's name: its size. The cards under the plate carry the leased share
+ * and the space available, so the heading does not say them again. A floor with nothing free today but
+ * space coming to market keeps that phrase here ("21,400 SF marketed from Apr '27"): no card states it.
+ */
+export function floorHeading(f: FloorView, asOf: string, safe: boolean): string {
+  const coming = f.available === 0 ? availabilityFact(f, asOf, safe) : '';
+  return [`${num(f.leasable)} RSF leasable`, coming === 'Nothing available' ? '' : coming].filter(Boolean).join(' · ');
 }

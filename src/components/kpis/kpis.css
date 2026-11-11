@@ -1,105 +1,94 @@
-.sp-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0; overflow: hidden; }
-.sp-kpi {
-  display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; text-align: left; min-width: 0;
-  border-right: 1px solid var(--sp-color-border); transition: background var(--sp-ease);
+/* The KPI bar: the building's six key figures on one quiet surface above the toolbar, in every view.
+   One card, hairlines between the figures, no tile of its own for any of them. Its height does not depend
+   on the view, on an open floor, on the inspector or on what the figures say, so nothing under it moves.
+   Tokens only. */
+.sp-kpis {
+  display: grid; overflow: hidden;
+  /* The six share the bar by what they hold: a long label with an SF figure needs more room than a
+     percentage or a term in years. */
+  grid-template-columns: minmax(0, 0.81fr) minmax(0, 1.09fr) minmax(0, 1.16fr) minmax(0, 1.2fr) minmax(0, 0.82fr) minmax(0, 0.92fr);
 }
-.sp-kpi:last-child { border-right: 0; }
-.sp-kpi:hover { background: var(--sp-color-card-2); }
-.sp-kpi.is-active { background: var(--sp-color-brand-soft); box-shadow: inset 0 -3px 0 var(--sp-color-brand); }
+.sp-kpi { position: relative; display: block; min-width: 0; padding: 7px 14px; text-align: left; transition: background var(--sp-ease); }
+/* The hairline between two figures stops short of the bar's edges. */
+.sp-kpi + .sp-kpi::before { content: ''; position: absolute; left: 0; top: 9px; bottom: 9px; width: 1px; background: var(--sp-color-border-strong); opacity: 0.55; }
+button.sp-kpi:hover { background: var(--sp-color-card-2); }
+/* The figure in use: a thin underline (and `aria-pressed`), not a filled tile. */
+.sp-kpi.is-active::after { content: ''; position: absolute; left: 14px; right: 14px; bottom: 0; height: 2px; border-radius: 2px 2px 0 0; background: var(--sp-color-brand); }
+.sp-kpi.is-active .sp-kpi__label { color: var(--sp-color-brand-strong); }
+/* The bar clips its corners, so the focus ring is drawn inside the figure. */
+.sp-kpi:focus-visible { outline-offset: -3px; border-radius: 9px; }
+.sp-kpi--static { cursor: default; }
+
+/* A figure's two lines: the label and the figure, then one short note. The time-travel change stands
+   beside its figure where every column has the room for that (a wide window, below), and otherwise leads
+   the second line in all six, so the row reads the same way across.
+   The box is exactly those two lines high and shows whole items only:
+   - a note with no room on its line is not shown at all (its text is in the tooltip and the name);
+   - a change chip with no room beside its figure takes the second line, in place of the note.
+   A label, a figure and a chip never shrink, wrap inside themselves or lose a character. */
+.sp-kpi__body { display: flex; flex-wrap: wrap; align-items: baseline; align-content: flex-start; gap: 0 8px; height: 39px; overflow: hidden; }
+/* The line break after the label and the figure: an empty item as wide as the box. */
+.sp-kpi__body::after { content: ''; order: 1; flex: 0 0 100%; height: 0; }
 /* A KPI label is one short phrase: it never breaks across lines ("Largest / block"). */
-.sp-kpi__label { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
-.sp-kpi__value { font-size: var(--sp-text-22); font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; color: var(--sp-color-text); display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.sp-kpi__unit { font-size: var(--sp-text-13); font-weight: 500; color: var(--sp-color-text-weak); letter-spacing: 0; }
-.sp-kpi__delta { font-size: var(--sp-text-12); font-weight: 600; padding: 1px 6px; border-radius: 10px; background: var(--sp-color-card-2); color: var(--sp-color-text-weak); }
+.sp-kpi__label { flex: none; line-height: 16px; white-space: nowrap; }
+.sp-kpi__value { display: contents; }
+.sp-kpi__figure { flex: none; font-size: var(--sp-text-18); font-weight: 600; letter-spacing: -0.015em; line-height: 22px; white-space: nowrap; color: var(--sp-color-text); }
+.sp-kpi__unit { font-size: var(--sp-text-12); font-weight: 500; color: var(--sp-color-text-weak); letter-spacing: 0; }
+.sp-kpi__delta { order: 2; flex: none; font-size: var(--sp-text-11); font-weight: 600; line-height: 15px; padding: 0 5px; border-radius: 8px; white-space: nowrap; background: var(--sp-color-card-2); color: var(--sp-color-text-weak); }
 .sp-kpi__delta--up { background: var(--sp-color-success-soft); color: var(--sp-color-success); }
 .sp-kpi__delta--down { background: var(--sp-color-error-soft); color: var(--sp-color-error); }
-.sp-kpi__context { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.sp-kpi__value > span:first-child { white-space: nowrap; }
+/* The note's line: what is left of the second line. Its first item is an empty one as tall as the line
+   (a zero-width space, so the line has a text baseline for the chip beside it to sit on), and a note that
+   does not fit beside it wraps whole to a line below, which the box (one line high) does not show. */
+.sp-kpi__context { order: 3; flex: 1 1 0; min-width: 0; height: 17px; overflow: hidden; display: flex; flex-wrap: wrap; align-content: flex-start; font-size: var(--sp-text-12); line-height: 17px; color: var(--sp-color-text-weak); }
+.sp-kpi__context::before { content: '\200b'; flex: none; }
+.sp-kpi__note { flex: none; white-space: nowrap; }
+/* A wide window: every column holds its label, its figure and the change on one line. */
+@media (min-width: 1600px) { .sp-kpi__delta { order: 0; } }
 
-.sp-kpi--static { cursor: default; }
-.sp-kpi--static:hover { background: var(--sp-color-card); }
-
-@media (max-width: 1199px) { .sp-kpi__context { display: none; } }
-
-/*
- * Tablet: six tiles stay on one row, so each tightens until its label and figure fit whole.
- * The `:root[data-skin]` prefix is there to outrank the skin's own tile gap, padding and figure
- * size (`:root[data-skin='glass'] .sp-kpi`), which are set for the wide layout.
- */
-@media (min-width: 761px) and (max-width: 1099px) {
-  /* The figure itself has no break point; only its unit may drop to a second line before anything is cut. */
-  .sp-kpi__value > span:first-child { white-space: normal; }
-}
-/* A tablet is short of height more than of width: the header and the toolbar each take two rows there,
-   so the tiles are set tighter (the notes are already in the tooltips at this width) and the plan, or an
-   open floor's numbers, starts sooner. */
-@media (min-width: 761px) and (max-width: 1099px) {
-  :root[data-skin] .sp-kpis .sp-kpi { padding: 6px 12px 7px; gap: 1px; }
-  :root[data-skin] .sp-kpis .sp-kpi__value { font-size: var(--sp-text-22); letter-spacing: -0.02em; gap: 2px 6px; }
+/* ── Under 1200 px (a narrow desktop, a tablet): still one row of six ────────────────────────── */
+/* There is no room for a label and its figure on one line in every column, so each figure stands under
+   its label and the notes are left to the tooltips. While the date is moved, the change stands under its
+   figure in all six (a third line: the bar is that much taller for as long as the plan is projected, and
+   for no other reason). The six never wrap into a second row. */
+@media (max-width: 1199px) {
+  .sp-kpi { padding: 6px 12px 7px; }
+  .sp-kpi + .sp-kpi::before { top: 8px; bottom: 8px; }
+  .sp-kpi.is-active::after { left: 12px; right: 12px; }
+  .sp-kpi__body { height: auto; overflow: visible; }
+  .sp-kpi__context { display: none; }
+  .sp-kpi__label { flex: 0 0 100%; line-height: 15px; }
+  .sp-kpi__figure { line-height: 21px; }
+  .sp-kpi__delta { margin-top: 1px; }
 }
 @media (min-width: 761px) and (max-width: 979px) {
-  :root[data-skin] section.sp-kpis { gap: 6px; }
-  :root[data-skin] .sp-kpis .sp-kpi { padding: 6px 10px 7px; }
-  :root[data-skin] .sp-kpis .sp-kpi__value { font-size: 20px; letter-spacing: -0.02em; gap: 2px 6px; }
+  .sp-kpi { padding: 6px 10px 7px; }
+  .sp-kpi.is-active::after { left: 10px; right: 10px; }
   .sp-kpi__label { letter-spacing: 0.02em; }
+  .sp-kpi__figure { font-size: 16px; }
 }
 @media (min-width: 761px) and (max-width: 899px) {
   .sp-kpi__label { font-size: 10px; letter-spacing: 0.01em; }
-  :root[data-skin] .sp-kpis .sp-kpi__value { font-size: var(--sp-text-18); }
 }
 
-/* Phones: every figure is on screen at once, three across and two down; nothing scrolls off the edge. */
+/* ── A phone: every figure on screen at once, three across and two down ──────────────────────── */
 @media (max-width: 760px) {
-  :root[data-skin] section.sp-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px 6px; overflow: visible; }
-  .sp-kpi { padding: 3px 9px 4px; gap: 0; }
-  .sp-kpi:nth-child(3n) { border-right: 0; }
-  .sp-kpi:nth-child(-n + 3) { border-bottom: 1px solid var(--sp-color-border); }
-  .sp-kpi__value { font-size: var(--sp-text-15); gap: 2px 6px; }
-  .sp-kpi__label { font-size: 10px; letter-spacing: 0.02em; }
+  .sp-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sp-kpi { padding: 4px 10px 5px; }
+  .sp-kpi.is-active::after { left: 10px; right: 10px; }
+  /* Hairlines between the columns, and one between the two rows. */
+  .sp-kpi + .sp-kpi::before { top: 6px; bottom: 6px; }
+  .sp-kpi:nth-child(3n + 1)::before { display: none; }
+  .sp-kpi:nth-child(n + 4) { border-top: 1px solid var(--sp-color-border); }
+  .sp-kpi__label { font-size: 10px; letter-spacing: 0.02em; line-height: 14px; }
+  .sp-kpi__figure { font-size: var(--sp-text-15); line-height: 19px; }
   .sp-kpi__unit { font-size: var(--sp-text-11); }
-  .sp-kpi__delta { font-size: var(--sp-text-11); padding: 0 5px; }
-  .sp-kpi__context { display: none; }
+  .sp-kpi__delta { padding: 0 4px; line-height: 15px; }
 }
 /* Very narrow phones: two across, so "Expiring 12 mo" still fits on one line. */
 @media (max-width: 359px) {
-  :root[data-skin] section.sp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .sp-kpi:nth-child(3n) { border-right: 1px solid var(--sp-color-border); }
-  .sp-kpi:nth-child(2n) { border-right: 0; }
-  .sp-kpi:nth-child(-n + 4) { border-bottom: 1px solid var(--sp-color-border); }
-}
-
-/*
- * Column variant (the Building view's KPI column, beside the model): the same six figures as a list, one
- * row each: label and figure on a line, the note under them. Rows are quiet panels inside the plan card,
- * not six cards of their own. The selectors carry `:root[data-skin] section` to outrank the skin's
- * tile rules, which are written for the strip.
- */
-:root[data-skin] section.sp-kpis--col { display: flex; flex-direction: column; gap: 6px; overflow: visible; flex: 1 0 auto; }
-/* The column is given a height by the view (the room below the plan's head, the same whether a floor is
-   open or not). The six rows share it evenly, each keeping its two lines together in the middle of its
-   row; they stop growing at 88 px, so on a very tall window the list keeps its rhythm and the spare room
-   falls between the rows. */
-:root[data-skin] section.sp-kpis--col { justify-content: space-between; }
-:root[data-skin] section.sp-kpis--col .sp-kpi,
-:root[data-skin] section.sp-kpis--col .sp-kpi:last-child {
-  flex: 1 0 auto; max-height: 88px; align-content: center;
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'label value' 'context context';
-  align-items: baseline; gap: 1px var(--sp-space-3); padding: 7px 12px 8px;
-  background: var(--sp-color-card-2); border: 1px solid var(--sp-color-border); border-radius: 10px;
-  box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none;
-  transition: background var(--sp-ease), border-color var(--sp-ease);
-}
-/* No lift on hover here: nothing in this column may move under the pointer. */
-:root[data-skin] section.sp-kpis--col button.sp-kpi:hover { transform: none; box-shadow: none; border-color: var(--sp-color-border-strong); background: var(--sp-color-card-2); }
-:root[data-skin] section.sp-kpis--col .sp-kpi.is-active { background: var(--sp-color-brand-soft); border-color: var(--sp-color-brand); box-shadow: inset 3px 0 0 var(--sp-color-brand); }
-:root[data-skin] section.sp-kpis--col .sp-kpi--static:hover { background: var(--sp-color-card-2); }
-.sp-kpis--col .sp-kpi__label { grid-area: label; }
-:root[data-skin] section.sp-kpis--col .sp-kpi__value { grid-area: value; justify-content: flex-end; flex-direction: row-reverse; font-size: var(--sp-text-18); letter-spacing: -0.02em; line-height: 1.25; gap: 2px 8px; }
-.sp-kpis--col .sp-kpi__context { grid-area: context; display: block; overflow: visible; -webkit-line-clamp: none; line-height: 1.35; }
-
-/* A short window: the rows tighten so the six figures and what follows them stay on the first screen. */
-@media (max-height: 840px) {
-  :root[data-skin] section.sp-kpis--col { gap: 4px; }
-  :root[data-skin] section.sp-kpis--col .sp-kpi,
-  :root[data-skin] section.sp-kpis--col .sp-kpi:last-child { padding: 5px 12px 6px; }
+  .sp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sp-kpi:nth-child(3n + 1)::before { display: block; }
+  .sp-kpi:nth-child(2n + 1)::before { display: none; }
+  .sp-kpi:nth-child(n + 3) { border-top: 1px solid var(--sp-color-border); }
 }

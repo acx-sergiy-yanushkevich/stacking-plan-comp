@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../../data/mock/property';
 import { deriveFloors, segmentIndex } from '../../domain/derive';
 import { safeFloors } from '../../domain/safe';
-import { badgeLabel, segmentText } from './segmentText';
+import { badgeLabel, LARGEST_BLOCK, segmentText } from './segmentText';
 
 const index = segmentIndex(deriveFloors(property, TODAY, TODAY));
 const opts = { safe: false, asOf: TODAY, today: TODAY, floorName: 'Floor', lens: 'status' as const };
@@ -131,5 +131,27 @@ describe('prospect-safe: every lease in place reads the same', () => {
       }
       expect(segmentText(seg, { ...opts, safe: true }).lensShort).toBe('');
     }
+  });
+});
+
+describe('largest block badge', () => {
+  const vacant = [...index.values()].find((s) => s.kind === 'available' && !s.availableFrom)!;
+
+  it('is the first badge of a suite in the building\'s largest block, in words', () => {
+    const t = segmentText(vacant, { ...opts, largest: true });
+    expect(t.badges[0]).toMatchObject({ kind: 'info', text: 'Largest block' });
+    expect(LARGEST_BLOCK).toBe('Largest block');
+    // Said where the badge has no room to be drawn: the tooltip and the accessible name.
+    expect(t.tooltip).toContain('Largest block');
+    expect(t.aria).toContain('Largest block');
+  });
+
+  it('is on no other suite', () => {
+    for (const s of index.values()) expect(segmentText(s, opts).badges.some((b) => b.text === 'Largest block')).toBe(false);
+  });
+
+  it('stays in prospect-safe mode: available space is marketing information', () => {
+    const safe = segmentIndex(safeFloors(deriveFloors(property, TODAY, TODAY), true)).get(vacant.key)!;
+    expect(segmentText(safe, { ...opts, safe: true, largest: true }).badges[0].text).toBe('Largest block');
   });
 });

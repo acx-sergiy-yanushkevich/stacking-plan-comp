@@ -135,23 +135,6 @@
     -webkit-backdrop-filter: var(--sp-glass-blur); backdrop-filter: var(--sp-glass-blur);
   }
 
-  /* ── KPI tiles: six separate panes ────────────────────── */
-  :root[data-skin='glass'] .sp-kpis { background: transparent; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; gap: 10px; }
-  @media (min-width: 761px) { :root[data-skin='glass'] .sp-kpis { overflow: visible; } }
-  :root[data-skin='glass'] .sp-kpi,
-  :root[data-skin='glass'] .sp-kpi:last-child {
-    background: var(--sp-color-card); border: 1px solid var(--sp-glass-edge); border-radius: 14px;
-    -webkit-backdrop-filter: var(--sp-glass-blur); backdrop-filter: var(--sp-glass-blur);
-    box-shadow: var(--sp-glass-shadow); transition: transform var(--sp-ease), box-shadow var(--sp-ease), background var(--sp-ease);
-  }
-  :root[data-skin='glass'] button.sp-kpi:hover { transform: translateY(-2px); box-shadow: var(--sp-glass-lift); background: var(--sp-color-card); }
-  :root[data-skin='glass'] .sp-kpi.is-active { background: var(--sp-glass-active); box-shadow: var(--sp-glass-active-ring); }
-  :root[data-skin='glass'] .sp-kpi--static:hover { background: var(--sp-color-card); }
-  @media (min-width: 761px) {
-    :root[data-skin='glass'] .sp-kpi { padding: 14px 16px; }
-    :root[data-skin='glass'] .sp-kpi__value { font-size: 26px; letter-spacing: -0.03em; }
-  }
-
   /* ── Controls ─────────────────────────────────────────── */
   :root[data-skin='glass'] .sp-btn { border-radius: 10px; }
   :root[data-skin='glass'] .sp-btn--neutral, :root[data-skin='glass'] .sp-btn--danger { background: var(--sp-glass-control); border-color: var(--sp-color-border-strong); }

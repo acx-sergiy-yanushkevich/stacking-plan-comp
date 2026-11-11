@@ -7,7 +7,7 @@ import { PATTERN_IDS } from '../plan/Patterns';
 import { patternFor } from '../plan/segmentText';
 import { num, pct } from '../../domain/format';
 import { openFloor, openFloorPlate, type Patch } from '../plan/actions';
-import { setHoverFloor, useHoverFloor } from '../../state/hoverStore';
+import { setHoverFloor, useHoverFloor, useHoverKeys } from '../../state/hoverStore';
 import { usePrefersReducedMotion } from '../../lib/useMedia';
 import './hero.css';
 
@@ -23,8 +23,6 @@ export interface BuildingHeroProps {
   onPick?: (floorId: string) => void;
   /** Stage only: how far the building is turned about its vertical axis, in degrees. A change is animated. */
   angle?: number;
-  /** Stage only: a short fact printed after each floor number (for example "9,300 SF available"). */
-  tagFact?: (floorId: string) => string;
   /** A tooltip for each floor of the model (its numbers in a sentence). */
   floorTitle?: (floorId: string) => string;
   /**
@@ -33,12 +31,16 @@ export interface BuildingHeroProps {
    * docked model has under a line of type per floor, where twelve numbers would touch.
    */
   openId?: string | null;
-  /**
-   * Stage only: what stands to the left of the drawing (the floor picker). It is given the height of the
-   * drawing and `--sp-hero-band-mid` / `--sp-hero-band` (the middle and the height of the stack of
-   * floors, as fractions of that height), so its rows can line up with the floors they name.
-   */
+  /** Stage only: what stands to the left of the drawing (the compact floor picker, while a floor is open). */
   beside?: ReactNode;
+  /**
+   * Stage only: what stands to the right of the drawing in place of the model's own floor numbers: the
+   * list of floors, one label per floor (while no floor is open). It is given the height of the drawing
+   * and three shares of that height, `--sp-hero-tags-above`, `--sp-hero-tags-band` and
+   * `--sp-hero-tags-below`: the room above the top floor's label, the run of the labels, and the room
+   * under the bottom one. A list laid out by them has each label level with the floor it names.
+   */
+  after?: ReactNode;
 }
 
 /** Eases a number toward its target; jumps when the viewer asked for reduced motion. */
@@ -82,9 +84,6 @@ const PANEL: Dims = { W: 328, H: 276, HZ: 10, LIFT: 20, GAP: 1 };
 const STAGE: Dims = { W: 600, H: 640, HZ: 28, LIFT: 44, GAP: 2 };
 /** Floor labels are HTML over the drawing, so their size is in CSS px whatever the model's scale. */
 const TAG_PX = 12;
-const FACT_PX = 13;
-/** An average glyph is about 0.56 em wide in the UI font: enough to reserve room for a label without measuring it. */
-const GLYPH = 0.56;
 const COS = 0.866;
 const SIN = 0.5;
 const BOX = 200;
@@ -122,23 +121,30 @@ const fillOf = (tone: string) => (tone === 'empty' || tone === 'deal-none' ? 'va
  * The building in axonometric view: every floor is a slab cut into its suites and coloured by the
  * active lens. It mirrors the stack: hovering a floor here lights it in the plan and the other way
  * round; a click focuses the floor, a second click opens its floor plan. Decorative for assistive
- * technology (the stack, or in the Building view the floor picker, is the accessible equivalent), so
- * the SVG is a labelled image. The floor numbers are HTML laid over the drawing: they keep their size
+ * technology (the stack, or in the Building view the list of floors beside it, is the accessible
+ * equivalent), so the SVG is a labelled image. The floor numbers are HTML laid over the drawing: they keep their size
  * in CSS px however small the model is drawn.
  */
-export function BuildingHero({ model, state, patch, compact, size = 'panel', onPick, angle = 0, tagFact, floorTitle, openId = null, beside }: BuildingHeroProps) {
+export function BuildingHero({ model, state, patch, compact, size = 'panel', onPick, angle = 0, floorTitle, openId = null, beside, after }: BuildingHeroProps) {
   const stage = size === 'stage';
   const { W, H, HZ, LIFT, GAP } = stage ? STAGE : PANEL;
-  const { property, floors, safe, highlight, segIndex } = model;
+  const { property, floors, safe, segIndex } = model;
   const hoverId = useHoverFloor();
+  // A KPI or a finder option pointed at lights its suites for as long as it is pointed at; otherwise the active filter does.
+  const hoverKeys = useHoverKeys();
+  const highlight = hoverKeys ?? model.highlight;
   const focusId = state.floor ?? (state.select ? (segIndex.get(state.select)?.floorId ?? null) : null);
+  // On the stage the floors above a floor in focus lift, and the frame keeps room for that above the roof.
+  // With no floor in focus nothing lifts: the frame closes on the building, which is then drawn larger.
+  const liftRoom = !stage || focusId !== null || openId !== null;
 
-  // Room to the right of the drawing for the floor labels, in CSS px: the number, and the longest fact.
+  // Room to the right of the drawing for the model's own floor numbers, in CSS px. A list of floors
+  // standing there (`after`) brings its own width.
   const tagRoom = useMemo(() => {
+    if (after) return 0;
     const digits = Math.max(1, ...floors.map((f) => f.floor.name.replace(/^Floor\s+/i, '').length));
-    const fact = tagFact ? Math.max(0, ...floors.map((f) => tagFact(f.floor.id).length)) : 0;
-    return Math.ceil(10 + digits * TAG_PX * 0.64 + (fact ? (fact + 3) * FACT_PX * GLYPH : 0));
-  }, [tagFact, floors]);
+    return Math.ceil(10 + digits * TAG_PX * 0.64);
+  }, [after, floors]);
   const build = useCallback((deg: number) => {
     const base = levelPolygon(projectPolygon(property.footprint, { w: BOX, h: BOX }, 0), { w: BOX, h: BOX }, 0);
     const cx = (Math.min(...base.map((p) => p[0])) + Math.max(...base.map((p) => p[0]))) / 2;
@@ -212,17 +218,21 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
       const edge = poly.map((p) => iso(rot(p), z0 + HZ / 2)).reduce((best, p) => (p[0] > best[0] ? p : best));
       return { id: f.floor.id, name: f.floor.name, level, leasedPct: f.leasable ? f.leased / f.leasable : 0, leasable: f.leasable, available: f.available, keys: f.segments.map((sg) => sg.key), slices, tag: edge };
     });
-    const groundPts = base.map((p) => iso(rot(p), 0));
-    const ground = path(groundPts);
-    // The building's left corner at ground level: the stack of floors rises from here, one HZ per floor.
-    const corner = groundPts.reduce((best, p) => (p[0] < best[0] ? p : best));
-    // Room for the lift above and the blurred ground shadow below; the floor labels sit outside the drawing.
+    const ground = path(base.map((p) => iso(rot(p), 0)));
+    // Room for the lift above (when a floor can be in focus) and the blurred ground shadow below; the floor labels sit outside the drawing.
     const vx = Math.floor(box.x0 - 6);
-    const vy = Math.floor(box.y0 - LIFT - 8);
+    const vy = Math.floor(box.y0 - (liftRoom ? LIFT : 0) - 8);
     const frame = { x: vx, y: vy, w: Math.ceil(box.x1 + 6 - vx), h: Math.ceil(box.y1 + 20 - vy) };
-    const band = { mid: (corner[1] - (n * HZ) / 2 - vy) / frame.h, height: (n * HZ) / frame.h };
-    return { heroFloors: heroFloors.slice().sort((a, b) => a.level - b.level), fit: { ground, frame, band, left: box.x0 } };
-  }, [property.footprint, floors, state.lens, safe, W, H, HZ, LIFT, GAP]);
+    // Where the floors' labels stand, top to bottom, as shares of the frame's height: the run from the top
+    // floor's label to the bottom one's (one step per floor), and the room above and under it.
+    const ys = heroFloors.map((f) => f.tag[1]);
+    const top = Math.min(...ys);
+    const step = n > 1 ? (Math.max(...ys) - top) / (n - 1) : HZ;
+    const above = Math.max(0, (top - step / 2 - vy) / frame.h);
+    const run = (step * n) / frame.h;
+    const ladder = { above, run, below: Math.max(0, 1 - above - run) };
+    return { heroFloors: heroFloors.slice().sort((a, b) => a.level - b.level), fit: { ground, frame, ladder, left: box.x0 } };
+  }, [property.footprint, floors, state.lens, safe, W, H, HZ, LIFT, GAP, liftRoom]);
   // The frame (viewBox) belongs to the angle being turned to, so the model does not pulse while it turns.
   // A building is wider seen from a corner than from the front, so while it turns it is wider than the
   // frame it is turning into. Its left edge is held on the frame's left edge the whole way: the drawing
@@ -247,6 +257,7 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
   // line of type per floor they would run into each other at a readable size, so a small model names its
   // top and bottom floors, the floor in focus and the floor under the pointer. With a floor open, only
   // that floor and the one under the pointer are numbered (the picker beside the model names them all).
+  // With a list of floors standing beside the drawing (`after`) the model prints no number of its own.
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [drawnHeight, setDrawnHeight] = useState<number | null>(null);
   useLayoutEffect(() => {
@@ -260,19 +271,21 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
     ro.observe(el);
     return () => ro.disconnect();
   }, [stage]);
-  const roomy = stage && (drawnHeight === null || (HZ * drawnHeight) / frame.h >= (tagFact ? FACT_PX : TAG_PX));
-  const tagged = openId
-    ? heroFloors.filter((f) => f.id === openId || f.id === hoverId)
-    : heroFloors.filter((f) => roomy || f.level === 0 || f.level === heroFloors.length - 1 || f.id === hot?.id || f.id === focusId);
-  // In the Building view the floor picker stands beside the model; in a panel the stack is on screen.
+  const roomy = stage && (drawnHeight === null || (HZ * drawnHeight) / frame.h >= TAG_PX);
+  const tagged = after
+    ? []
+    : openId
+      ? heroFloors.filter((f) => f.id === openId || f.id === hoverId)
+      : heroFloors.filter((f) => roomy || f.level === 0 || f.level === heroFloors.length - 1 || f.id === hot?.id || f.id === focusId);
+  // In the Building view the list of floors stands beside the model; in a panel the stack is on screen.
   const label = stage
-    ? `Building model: ${floors.length} floors, each cut into its suites and coloured by the active lens. The floor picker beside it lists every floor with the same figures.`
+    ? `Building model: ${floors.length} floors, each cut into its suites and coloured by the active lens. The list of floors beside it names every floor with the same figures.`
     : `Building model: ${floors.length} floors coloured by the active lens. The stack lists the same suites.`;
 
   return (
     <div
-      className={`sp-hero ${compact ? 'sp-hero--compact' : ''} ${stage ? 'sp-hero--stage' : ''} ${tagFact ? 'sp-hero--facts' : ''} ${stage && openId ? 'sp-hero--open' : ''}`}
-      style={{ '--sp-hero-ratio': (frame.w / frame.h).toFixed(4), '--sp-hero-room': `${tagRoom}px`, '--sp-hero-band-mid': rest.fit.band.mid.toFixed(4), '--sp-hero-band': rest.fit.band.height.toFixed(4), '--sp-hero-floors': floors.length } as CSSProperties}
+      className={`sp-hero ${compact ? 'sp-hero--compact' : ''} ${stage ? 'sp-hero--stage' : ''} ${stage && openId ? 'sp-hero--open' : ''}`}
+      style={{ '--sp-hero-ratio': (frame.w / frame.h).toFixed(4), '--sp-hero-room': `${tagRoom}px`, '--sp-hero-tags-above': rest.fit.ladder.above.toFixed(4), '--sp-hero-tags-band': rest.fit.ladder.run.toFixed(4), '--sp-hero-tags-below': rest.fit.ladder.below.toFixed(4), '--sp-hero-floors': floors.length } as CSSProperties}
     >
       {stage && beside && <div className="sp-hero__beside">{beside}</div>}
       <div className="sp-hero__canvas">
@@ -319,12 +332,12 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
           })}
           </g>
         </svg>
-        {/* Floor numbers: on the stage every floor (only the open one and the one pointed at while a floor is open);
-            in a panel the top and bottom floors, plus the floor under the pointer or in focus. */}
+        {/* Floor numbers: on the stage every floor (only the open one and the one pointed at while a floor is open;
+            none where a list of floors stands beside the drawing); in a panel the top and bottom floors, plus
+            the floor under the pointer or in focus. */}
         <div className="sp-hero__tags" aria-hidden="true">
           {tagged.map((f) => {
             const lifted = focusLevel !== null && f.level > focusLevel;
-            const fact = tagFact?.(f.id);
             return (
               <span
                 key={f.id}
@@ -332,12 +345,12 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
                 style={{ left: `${(((f.tag[0] + slide - frame.x) / frame.w) * 100).toFixed(2)}%`, top: `${(((f.tag[1] - (lifted ? LIFT : 0) - frame.y) / frame.h) * 100).toFixed(2)}%` }}
               >
                 {f.name.replace(/^Floor\s+/i, '')}
-                {fact ? <span className="sp-hero__fact">{` · ${fact}`}</span> : null}
               </span>
             );
           })}
         </div>
       </div>
+      {stage && after && <div className="sp-hero__after">{after}</div>}
       {!stage && (
         <p className="sp-hero__cap">
           <span className="sp-hero__cap-main">{caption}</span>
