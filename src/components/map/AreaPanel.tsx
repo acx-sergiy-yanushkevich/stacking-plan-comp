@@ -26,7 +26,7 @@ function Skeleton() {
   );
 }
 
-const ringName = (miles: number) => `${miles} ${miles === 1 ? 'mile' : 'miles'}`;
+const ringName = (miles: number) => `${miles}\u00a0${miles === 1 ? 'mile' : 'miles'}`;
 
 /**
  * Inspector "Area" mode (DESIGN.md §2.6): the area around the building as charts. Population by
