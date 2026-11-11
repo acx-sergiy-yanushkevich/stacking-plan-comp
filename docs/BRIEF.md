@@ -4,11 +4,6 @@
 
 A stacking plan draws a building floor by floor. Each floor is split into suites, and each suite's width is proportional to its square footage. A suite is leased, available, committed, or unaccounted for. In AscendixRE (xRE), a Salesforce CRM for commercial real estate brokers, the plan is a tab on the Property record.
 
-This is a **from-scratch rebuild**. Two earlier versions exist for reference only:
-
-- `docs/reference/legacy-stacking-plan.png`: the 2015 jQuery widget (saturated rainbow, seven lines of text per block, no analytics).
-- `docs/reference/v1-redesign-*.png`: the 2026 "redesign" prototype, which plateaued at UI 17.3/20 and UX 18.3/20. Judges' remaining deductions: five bands of controls above the plan, an overlay panel that hid the plan, wrapped or truncated names in narrow suites, and hierarchy that did not lead the eye.
-
 The prototype is React, TypeScript and Vite with mock data shaped like the xRE objects.
 
 **Scenario (from round 9): a standalone web app.** The stacking plan is judged as its own product that reads xRE data, not as a component on a Salesforce record page. It uses the glass skin (frosted panels over a gradient backdrop, light and dark, with its own theme switch), and the property name is the page title. Record actions still open the xRE record. The flat Lightning look remains available at `?skin=classic` for the embedded scenario (a later LWC port) and is not what is being scored.

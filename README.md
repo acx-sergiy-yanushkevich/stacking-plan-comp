@@ -16,7 +16,7 @@ A stacking plan draws a building floor by floor, with each suite as wide as its 
 - **Can I trust it?** Is space double-counted, is a lease missing its floor, is a record stale?
 - **Can I show it?** A prospect or buyer should see the availability without seeing who the other tenants are or what they pay.
 
-The existing AscendixRE stacking plan is a picture of the building: one color scheme, several lines of text in every block, no analytics, no way to look ahead in time, and no version that is safe to hand to someone outside the brokerage.
+A typical stacking plan is a picture of the building: one color scheme, several lines of text in every block, no analytics, no way to look ahead in time, and no version that is safe to hand to someone outside the brokerage.
 
 ## The solution
 
