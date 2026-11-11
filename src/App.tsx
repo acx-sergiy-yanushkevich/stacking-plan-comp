@@ -16,6 +16,8 @@ import { ToastProvider, useToast, Sheet } from './components/ui';
 import StackView from './components/stack/StackView';
 import Inspector from './components/inspector/Inspector';
 import { AreaPreview } from './components/inspector/AreaPreview';
+import { BriefDialog } from './components/area/BriefDialog';
+import { useArea } from './components/area/useArea';
 import FloorView from './components/floor/FloorView';
 import BuildingView from './components/building/BuildingView';
 import TimelineView from './components/timeline/TimelineView';
@@ -252,12 +254,15 @@ function Shell() {
   };
 
   const dataSource = useMemo(() => createDataSource(state.live, state.census), [state.live, state.census]);
+  // The area around the building, loaded once: the Building panel's preview, the Area panel, the location
+  // brief and the report's last section all show the same figures.
+  const area = useArea(dataSource, property, state.census);
   const areaPanel = (
     <Suspense fallback={<p className="sp-weak" style={{ padding: 16 }}>Loading area data…</p>}>
-      <AreaPanel model={model} state={state} dataSource={dataSource} />
+      <AreaPanel model={model} area={area} patch={patch} />
     </Suspense>
   );
-  const areaPreview = <AreaPreview model={model} state={state} patch={patch} dataSource={dataSource} />;
+  const areaPreview = <AreaPreview area={area} patch={patch} />;
   // Escape on the page itself (no panel, popover or block focused) clears the active filter and returns to the plan.
   // In the Building view the plan's own controls do not use the key, so it works from them as well: the
   // view closes its open floor first (BuildingView), and the next Escape clears the filter here.
@@ -275,23 +280,25 @@ function Shell() {
     return on('keydown', onKey);
   }, [state.bucket, state.q, state.window, state.req, state.inquiry, patch, stageOwnsEscape]);
 
+  // The location brief opens over the Area panel: the panel stays beside the plan, under the dialog.
+  const panel = mode === 'brief' ? 'area' : mode;
   const inspector = useMemo(
-    () => <Inspector model={model} state={state} patch={patch} mode={mode} areaPanel={areaPanel} areaPreview={areaPreview} />,
+    () => <Inspector model={model} state={state} patch={patch} mode={panel} areaPanel={areaPanel} areaPreview={areaPreview} />,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [model, state, patch, mode, dataSource],
+    [model, state, patch, panel, area],
   );
   const view = shownView(state.view, phone);
   // The building view shows a floor itself; the inspector joins it for a suite, a search, the worklist or issues.
-  const showInspector = view === 'building' ? mode !== 'building' && mode !== 'floor' : view !== 'floor' || mode === 'block';
-  const sheetOpen = narrow && mode !== 'building';
+  const showInspector = view === 'building' ? panel !== 'building' && panel !== 'floor' : view !== 'floor' || panel === 'block';
+  const sheetOpen = narrow && panel !== 'building';
   // A sheet that opened for a selection (a suite, a floor) must not hide it: the page keeps the chosen block
   // or row whole above the sheet's top edge, follows the sheet when it grows, and tells the sheet how much
   // of the window the selection needs, so the expanded sheet stops short of it (stack/aboveSheet.ts).
   const sheetShown = narrow && showInspector && sheetOpen;
-  const keepClear = useClearOfSheet(sheetShown && (mode === 'block' || mode === 'floor') ? selectionSelector(state.select, state.floor) : null, sheetShown, reduceMotion);
+  const keepClear = useClearOfSheet(sheetShown && (panel === 'block' || panel === 'floor') ? selectionSelector(state.select, state.floor) : null, sheetShown, reduceMotion);
   // While a sheet is open the page ends with as much room as the sheet covers, so its last rows can be scrolled clear of it.
   const appStyle = sheetShown ? ({ paddingBottom: 'calc(var(--sp-sheet-cover, 48vh) + var(--sp-space-4))' } as CSSProperties) : undefined;
-  const sheetTitle = mode === 'block' ? 'Suite' : mode === 'floor' ? 'Floor' : mode === 'find' ? 'Find space' : mode === 'worklist' ? 'Renewal worklist' : mode === 'issues' ? 'Data issues' : 'Area';
+  const sheetTitle = panel === 'block' ? 'Suite' : panel === 'floor' ? 'Floor' : panel === 'find' ? 'Find space' : panel === 'worklist' ? 'Renewal worklist' : panel === 'issues' ? 'Data issues' : 'Area';
 
   return (
     <div className="sp-app" data-view={view} data-mode={mode} style={appStyle}>
@@ -331,7 +338,7 @@ function Shell() {
         <Sheet
           open={sheetOpen}
           onClose={() => {
-            if (mode === 'block' || mode === 'floor') {
+            if (panel === 'block' || panel === 'floor') {
               const key = state.select;
               clearSelection(patch);
               if (key) focusSegment(key);
@@ -343,13 +350,23 @@ function Shell() {
           }}
           title={sheetTitle}
           hideHeader
-          modeless={mode === 'find' || mode === 'worklist' || mode === 'issues'}
+          modeless={panel === 'find' || panel === 'worklist' || panel === 'issues'}
           keepClear={keepClear}
         >
           {inspector}
         </Sheet>
       )}
-      <PrintLayout key={`print-${fontTick}`} model={model} state={state} visible={PRINT_PREVIEW} />
+      {mode === 'brief' && area && (
+        <BriefDialog
+          property={property}
+          area={area}
+          onClose={() => {
+            patch({ mode: 'area' });
+            refocusTrigger();
+          }}
+        />
+      )}
+      <PrintLayout key={`print-${fontTick}`} model={model} state={state} area={area} visible={PRINT_PREVIEW} />
     </div>
   );
 }

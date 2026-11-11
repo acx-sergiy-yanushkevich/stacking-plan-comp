@@ -153,18 +153,27 @@
 /* Area panel (inspector). */
 .sp-area { display: flex; flex-direction: column; gap: var(--sp-space-3); padding: var(--sp-space-4); font-size: var(--sp-text-13); }
 .sp-area__head { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
-.sp-area__title { font-size: var(--sp-text-15); font-weight: 600; }
-.sp-area__sample { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); padding: var(--sp-space-2) var(--sp-space-3); background: var(--sp-color-warn-soft); border-radius: var(--sp-radius-block); }
 .sp-area__sub { margin-top: var(--sp-space-2); }
-.sp-area-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-.sp-area-table th, .sp-area-table td { padding: 6px 8px; border-bottom: 1px solid var(--sp-color-border); text-align: right; }
-.sp-area-table th[scope='row'] { text-align: left; font-weight: 400; color: var(--sp-color-text-weak); padding-left: 0; }
-.sp-area-table thead th { font-size: var(--sp-text-11); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sp-color-text-weak); }
-.sp-area-table td:last-child, .sp-area-table th:last-child { padding-right: 0; }
 .sp-area-transit { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .sp-area-transit li { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
 .sp-area-transit__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-area-amenities { display: flex; flex-wrap: wrap; gap: 6px; }
+.sp-area__head .sp-btn { align-self: stretch; justify-content: center; }
+.sp-area__households { grid-column: 1 / -1; font-size: var(--sp-text-11); color: var(--sp-color-text-faint); margin-top: -2px; }
+.sp-area__compare-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-space-2); margin: var(--sp-space-2) 0 6px; }
+.sp-area__compare-head .sp-label { margin: 0; }
+/* Legend of the comparison: the bar is the ring, the tick the US. */
+.sp-area__key { display: flex; gap: var(--sp-space-3); font-size: var(--sp-text-11); color: var(--sp-color-text-weak); margin: 0 0 var(--sp-space-2); }
+.sp-area__key span { display: inline-flex; align-items: center; gap: 5px; }
+.sp-area__key-bar { width: 14px; height: 8px; border-radius: 0 4px 4px 0; background: var(--sp-color-brand); opacity: 0.75; }
+.sp-area__key-tick { width: 2px; height: 12px; border-radius: 1px; background: var(--sp-color-text); opacity: 0.7; }
+.sp-area-meters { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-space-3); }
+.sp-area-meter__top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-space-2); font-size: var(--sp-text-12); }
+.sp-area-meter__top b { font-weight: 600; }
+.sp-area-meter__us { color: var(--sp-color-text-weak); white-space: nowrap; }
+.sp-area-meter__track { position: relative; height: 8px; margin-top: 5px; }
+.sp-area-meter__fill { position: absolute; inset: 0 auto 0 0; border-radius: 0 4px 4px 0; background: var(--sp-color-brand); opacity: 0.75; }
+.sp-area-meter__tick { position: absolute; top: -3px; width: 2px; height: 14px; margin-left: -1px; border-radius: 1px; background: var(--sp-color-text); opacity: 0.7; }
+.sp-area-meter__delta { font-size: var(--sp-text-11); color: var(--sp-color-text-weak); margin-top: 3px; }
 .sp-area__foot { display: flex; flex-direction: column; gap: 4px; font-size: var(--sp-text-12); color: var(--sp-color-text-weak); border-top: 1px solid var(--sp-color-border); padding-top: var(--sp-space-3); }
 .sp-area__foot code { font-size: var(--sp-text-11); background: var(--sp-color-card-2); color: var(--sp-color-text); padding: 1px 4px; border-radius: 3px; }
 .sp-area__foot a { text-decoration: underline; }
@@ -199,8 +208,8 @@
   .sp-map .maplibregl-ctrl-bottom-right { right: 8px; bottom: 4px; }
 }
 
-.sp-area li, .sp-area__row { white-space: normal; }
-.sp-area .sp-area__name, .sp-area-transit__name { white-space: normal; overflow: visible; text-overflow: clip; }
+.sp-area li { white-space: normal; }
+.sp-area-transit__name { white-space: normal; overflow: visible; text-overflow: clip; }
 
 /* A stage too narrow for the list beside the map (a phone, a window under 728 px): the map comes first and
    the list stands under it, the full width of the card, in two columns where both have room (top floors

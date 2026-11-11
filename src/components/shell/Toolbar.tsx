@@ -104,9 +104,9 @@ export function Toolbar({ state, patch }: ToolbarProps) {
           </Button>
           <Button
             icon="people"
-            active={state.mode === 'area'}
+            active={state.mode === 'area' || state.mode === 'brief'}
             onClick={() => {
-              if (state.mode === 'area') patch({ mode: 'building' });
+              if (state.mode === 'area' || state.mode === 'brief') patch({ mode: 'building' });
               else {
                 rememberTrigger();
                 openArea(patch);

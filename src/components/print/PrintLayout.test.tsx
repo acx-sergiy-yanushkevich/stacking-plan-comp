@@ -4,6 +4,8 @@ import { renderToString } from 'react-dom/server';
 import { property, TODAY } from '../../data/mock/property';
 import { parseState } from '../../state/planState';
 import { buildModel } from '../inspector/testModel';
+import { area } from '../../data/mock/area';
+import type { Area } from '../../domain/types';
 import { PrintLayout } from './PrintLayout';
 
 class RO {
@@ -13,10 +15,10 @@ class RO {
 }
 (globalThis as unknown as { ResizeObserver: typeof RO }).ResizeObserver = RO;
 
-const render = (search: string) => {
+const render = (search: string, withArea?: Area) => {
   const state = parseState(search, TODAY);
   const model = buildModel(state);
-  const html = renderToString(<PrintLayout model={model} state={state} visible />);
+  const html = renderToString(<PrintLayout model={model} state={state} area={withArea ?? null} visible />);
   return { model, html: html.replace(/<!-- -->/g, '').replace(/&#x27;/g, "'") };
 };
 /** One table row of the report, by its first cell. */
@@ -28,6 +30,32 @@ const sectionsOf = (html: string) => {
   const heads = parts.map((part) => /<span class="sp-print__pageno">Section (\d+) of (\d+)<\/span>/.exec(part)).map((m) => (m ? [Number(m[1]), Number(m[2])] : null));
   return { parts, heads };
 };
+
+describe('PrintLayout location section', () => {
+  it('ends the owner report with the location brief: four sections, 1 to 4 of 4', () => {
+    const { parts, heads } = sectionsOf(render('?print=1', area).html);
+    expect(parts).toHaveLength(4);
+    expect(heads).toEqual([[1, 4], [2, 4], [3, 4], [4, 4]]);
+    expect(parts[3]).toContain('sp-brief--print');
+    expect(parts[3]).toContain('<h2 class="sp-brief__title">Location</h2>');
+    expect(parts[3]).toContain('What stands out');
+    expect(parts[3]).toContain('Figures by distance');
+  });
+
+  it('ends the prospect-safe report with the same brief: it holds no tenant data', () => {
+    const { parts, heads } = sectionsOf(render('?print=1&safe=1', area).html);
+    expect(parts).toHaveLength(3);
+    expect(heads).toEqual([[1, 3], [2, 3], [3, 3]]);
+    const owner = sectionsOf(render('?print=1', area).html).parts[3];
+    const strip = (part: string) => part.replace(/<div class="sp-print__running">.*?<\/div>/, '');
+    expect(strip(parts[2])).toBe(strip(owner));
+  });
+
+  it('has no location section until the area has arrived', () => {
+    expect(sectionsOf(render('?print=1').html).parts).toHaveLength(3);
+    expect(render('?print=1').html).not.toContain('sp-brief');
+  });
+});
 
 describe('PrintLayout sections', () => {
   it('owner report: three sections, numbered 1 to 3 of 3', () => {

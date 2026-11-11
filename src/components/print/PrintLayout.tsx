@@ -10,12 +10,16 @@ import { FixedWidth } from '../../lib/useWidth';
 import { Legend } from '../plan/Legend';
 import StackView from '../stack/StackView';
 import { ExportStage } from './ExportStage';
+import { LocationBrief } from '../area/LocationBrief';
+import type { Area } from '../../domain/types';
 import { PLAN_WIDTH, planRowHeight } from './pageFit';
 import './print.css';
 
 export interface PrintLayoutProps {
   model: PlanModel;
   state: PlanState;
+  /** The area around the building (App's `useArea`): the report ends with its location brief once it has arrived. */
+  area?: Area | null;
   /** Show on screen too (for the print emulation screenshot). */
   visible?: boolean;
 }
@@ -26,6 +30,7 @@ export interface PrintLayoutProps {
  *  - Prospect-safe: the cover with the plan; then one page with the rent roll beside the space on
  *    offer and the coming supply. It has no rollover, no worklist and no lease date anywhere, so what
  *    is left of the third section is short: it shares the rent roll's page instead of taking its own.
+ *  - Both end with the location brief (the area around the building), once the area has arrived.
  *
  * The cover is exactly one sheet (`pageFit`, `print.css`). Every later section starts on a new sheet
  * only if it does not fit under the one before. The running head numbers the sections that are in
@@ -34,7 +39,7 @@ export interface PrintLayoutProps {
  * It also carries the `ExportStage`: like the report, a drawing of the plan that is not on screen
  * (it appears only while an image export asks for it).
  */
-export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
+export function PrintLayout({ model, state, area = null, visible }: PrintLayoutProps) {
   const { property: p, kpis: k, safe } = model;
   // The rent roll, the worklist and the supply figures each arrive already passed through the prospect-safe policy.
   const rows = rentRollDisplay(p, model.floors, model.asOf, safe);
@@ -346,6 +351,9 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
           ),
         },
       ];
+
+  // The location brief closes every report, owner and prospect-safe alike: it holds no tenant data.
+  if (area) sections.push({ key: 'location', body: <LocationBrief property={p} area={area} print /> });
 
   return (
     <>

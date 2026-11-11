@@ -82,7 +82,8 @@ View tabs (Stack, Timeline, Map), lens segmented control, search field ("Find te
 - The property footprint (OSM polygon, cached in mock data; `?live=1` fetches from Overpass) is extruded floor by floor as separate fill-extrusion features: base and height from floor index × floor height; colour from the active lens using the floor's dominant state, with a second thin ring showing available share. Surrounding buildings extrude in muted grey from the tiles' building layer.
 - Hover highlights a floor and shows a floor tooltip; click selects the floor (inspector Floor mode). The camera starts pitched 55°, bearing −20°, 17.5 zoom.
 - Controls (bottom right): zoom, compass, pitch, "Present" (slow orbit plus a time-lapse of the as-of date across the next five years, pausing at each expiration), "Record" (MediaRecorder captures the canvas to WebM; the download appears in a toast). Reduced-motion disables orbit and time-lapse.
-- **Area panel** (inspector mode "Area", opened from the toolbar in every view, not the Map alone): demographics rings at 1, 3 and 5 miles (population, households, median household income, median age, bachelor's share, mean commute), source "US Census Bureau ACS 5-year, 2024", plus nearby transit stops and amenity counts from OSM within half a mile. Cached for the demo property; live behind the flag.
+- **Area panel** (inspector mode "Area", opened from the toolbar in every view, not the Map alone): the area around the building as charts. Population (and households) by distance at 1, 3 and 5 miles; one ring, chosen with a 1 / 3 / 5 mi switch, compared with the US in median household income, bachelor's share, median age and mean commute (a bar for the ring, a tick for the US, both figures and the difference in text); amenity counts from OSM within half a mile as ranked bars; nearby transit stops. Source "US Census Bureau ACS 5-year", cached for the demo property, live behind the flag. "Location brief" at the top opens the brief.
+- **Location brief** (`mode=brief`, a modal dialog over the Area panel; full screen on a phone; Escape, Close or the backdrop return to the panel): what a broker shows a client or decision maker. Four headline figures (population in the widest ring; median household income and bachelor's share in the closest ring, each against the US; the nearest transit), "What stands out" (a sentence for each measure at least 10% above or below the US, said as a plain fact, then the top amenities and the transit), amenities as ranked bars, a table of every ring beside the US, and the transit stops. US figures are fixed: ACS 5-year 2020–2024, in the same measures the rings use (`domain/areaBrief.ts`). It holds no tenant data, so prospect-safe mode shows it whole, and it is the last section of the PDF report.
 - If WebGL or the tile server is unavailable, the view shows a static footprint SVG with the same colouring and a notice.
 
 ### 2.7 Floor plate (drill-in)
@@ -99,7 +100,7 @@ Modes, each with a title row and a Close that returns to Building:
 - **Find space**: Need SF (min, max), by date, direct / sublease / any, match an open Inquiry (pre-fills). Results ranked: on time first, sooner, closest size; each shows floors, SF, type, from date, inquiry fits and live deals; selecting a result highlights its blocks. Shows "Largest block now" and suggests two-floor combinations.
 - **Worklist**: window chips (At risk, 90 d, 180 d, 12 mo, 24 mo). Rows: tenant, suite, SF, months left, rent, broker, last touch, open renewal. Sorted by end date. Export CSV. Clicking a row selects the block.
 - **Issues**: errors, warnings, info with a fix action and a locate link.
-- **Area**: demographics and amenities, from any view; the Building panel previews it (§2.6).
+- **Area**: demographics and amenities as charts, from any view; the Building panel previews it and it opens the location brief (§2.6).
 
 On < 1100 px the inspector is a bottom sheet with a handle (snap at 45 % and 90 %); on ≥ 1100 px it reflows beside the plan and never overlays it.
 
@@ -139,7 +140,7 @@ Hover: border darkens, cursor pointer, 120 ms. Selected: 2 px brand outline, 4 p
 - ≥ 1200: as drawn. under 1200: KPI notes are left to the tooltips. 760–1100: inspector becomes a bottom sheet; the toolbar wraps to two rows. ≤ 760: header stacks; the KPI bar is a 3 × 2 grid of label and figure; lens becomes a select; floor gutter shows the floor number only; blocks 56 px; the timeline scrolls horizontally with the cursor pinned; the map fills the width and the Area panel is a sheet.
 
 ## 5. Print and exports
-- Print (landscape Letter): page 1, a cover with property facts, the six KPIs, the plan with legend, the as-of date and "Prospect-safe" when on; page 2, the rent roll table; page 3, the rollover chart and the renewal worklist. Hidden: toolbar, inspector, buttons.
+- Print (landscape Letter): page 1, a cover with property facts, the six KPIs, the plan with legend, the as-of date and "Prospect-safe" when on; page 2, the rent roll table; page 3, the rollover chart and the renewal worklist; last, the location brief (§2.6), in the prospect-safe report too. Hidden: toolbar, inspector, buttons.
 - PNG: the plan SVG serialised with inlined styles and rasterised at 2× for a PowerPoint slide.
 - CSV rent roll: floor, suite, tenant, RSF, commencement, expiration, months remaining, rate, unit, type, state, deals. Prospect-safe removes tenants, rents and prospects.
 - Video: WebM from the map canvas while Present runs.

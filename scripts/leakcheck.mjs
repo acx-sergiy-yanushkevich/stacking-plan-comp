@@ -178,6 +178,7 @@ const states = [
   '?view=floor&floor=F3&safe=1',
   '?view=floor&floor=F7&safe=1',
   '?view=map&safe=1&mode=area',
+  '?view=stack&safe=1&mode=brief',
   '?view=map&safe=1&lens=expiry',
   '?view=stack&safe=1&print=1',
   '?view=stack&safe=1&lens=expiry&print=1',

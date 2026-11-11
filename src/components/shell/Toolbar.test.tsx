@@ -63,6 +63,15 @@ describe('Toolbar with prospect-safe on and off: what stays keeps its place', ()
   });
 });
 
+describe('Area button', () => {
+  const pressed = (query: string) => /<button[^>]*aria-pressed="(true|false)"[^>]*>(?:(?!<\/button>).)*Area<\/button>/.exec(render(query))?.[1];
+  it('is pressed while the Area panel is open, and while its location brief is open over it', () => {
+    expect(pressed('?view=stack')).toBe('false');
+    expect(pressed('?view=stack&mode=area')).toBe('true');
+    expect(pressed('?view=stack&mode=brief')).toBe('true');
+  });
+});
+
 describe('search field name', () => {
   const name = (html: string) => /<label for="[^"]*" class="sp-sr-only">([^<]*)<\/label>/.exec(html.slice(html.indexOf('sp-toolbar__search')))?.[1];
   it('names the search for what it finds: tenants and prospects for the owner, suites and floors for a prospect (round 17)', () => {

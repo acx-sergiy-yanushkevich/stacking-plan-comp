@@ -45,6 +45,9 @@ export const backFromFloor = (patch: Patch, floorId: string | null) => {
  */
 export const openArea = (patch: Patch) => patch({ mode: 'area', select: null, floor: null, req: null, max: null, by: null, inquiry: null, window: null });
 
+/** Open the location brief over the page, from the Area panel; closing it returns to the panel. */
+export const openBrief = (patch: Patch) => patch({ mode: 'brief' });
+
 /** Toggle a rollover bucket filter (0 = next 12 months). */
 export const toggleBucket = (patch: Patch, current: number | null, key: number) => patch({ bucket: current === key ? null : key, select: null });
 
