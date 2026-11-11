@@ -22,6 +22,73 @@ const render = (search: string) => {
 /** One table row of the report, by its first cell. */
 const row = (html: string, first: string) => new RegExp(`<tr><td>${first}</td>(.*?)</tr>`).exec(html)?.[1] ?? '';
 
+/** The report's sections, each as its markup, and the "Section n of N" of each running head. */
+const sectionsOf = (html: string) => {
+  const parts = html.split(/<section class="sp-print__page[^"]*">/).slice(1);
+  const heads = parts.map((part) => /<span class="sp-print__pageno">Section (\d+) of (\d+)<\/span>/.exec(part)).map((m) => (m ? [Number(m[1]), Number(m[2])] : null));
+  return { parts, heads };
+};
+
+describe('PrintLayout sections', () => {
+  it('owner report: three sections, numbered 1 to 3 of 3', () => {
+    for (const query of ['?print=1', '?print=1&lens=expiry', '?print=1&asOf=2028-01-01']) {
+      const { parts, heads } = sectionsOf(render(query).html);
+      expect(parts, query).toHaveLength(3);
+      expect(heads, query).toEqual([[1, 3], [2, 3], [3, 3]]);
+      expect(parts[0]).toContain('sp-print__plan');
+      expect(parts[1]).toContain('<h2>Rent roll</h2>');
+      expect(parts[2]).toContain('<h2>Lease rollover</h2>');
+      expect(parts[2]).toMatch(/<h2>Renewal worklist/);
+    }
+  });
+
+  it('prospect-safe report: two sections, numbered 1 and 2 of 2, the rent roll beside the space on offer', () => {
+    const { parts, heads } = sectionsOf(render('?print=1&safe=1').html);
+    expect(parts).toHaveLength(2);
+    expect(heads).toEqual([[1, 2], [2, 2]]);
+    // What is left of the owner's third section is short: it shares the rent roll's page, in the next column.
+    expect(parts[1]).toContain('sp-print__two--roll');
+    for (const h of ['<h2>Rent roll</h2>', '<h2>Space on offer</h2>', '<h2>Coming supply</h2>']) expect(parts[1]).toContain(h);
+    expect(parts[1].indexOf('<h2>Rent roll</h2>')).toBeLessThan(parts[1].indexOf('<h2>Space on offer</h2>'));
+  });
+
+  it('the head counts the sections that are printed: "of N" is the number of sections, in every report', () => {
+    for (const query of ['?print=1', '?print=1&safe=1', '?print=1&lens=rent', '?print=1&safe=1&lens=rent']) {
+      const { parts, heads } = sectionsOf(render(query).html);
+      expect(heads.every((h) => h !== null), query).toBe(true);
+      expect(heads.map((h) => h![0]), query).toEqual(parts.map((_, i) => i + 1));
+      expect(new Set(heads.map((h) => h![1])), query).toEqual(new Set([parts.length]));
+    }
+  });
+
+  it('the cover is one section: head, six figures, legend, plan and its footnote, in that order', () => {
+    for (const query of ['?print=1', '?print=1&safe=1']) {
+      const cover = sectionsOf(render(query).html).parts[0];
+      const at = ['sp-print__running', 'sp-print__head', 'sp-print__kpis', 'sp-legend', 'sp-print__plan', 'sp-print__foot'].map((c) => cover.indexOf(`class="${c}`));
+      expect(at.every((i) => i >= 0), query).toBe(true);
+      expect([...at].sort((a, b) => a - b), query).toEqual(at);
+      expect(cover).not.toContain('<section class="sp-print__page');
+    }
+  });
+
+  it('the plan is drawn 1,400 px wide whatever the screen, so its printed height does not depend on the window', () => {
+    for (const query of ['?print=1', '?print=1&safe=1']) {
+      const svg = /<div class="sp-print__plan">.*?<svg[^>]*viewBox="0 0 (\d+) (\d+)"[^>]*>/.exec(render(query).html);
+      expect(svg?.[1], query).toBe('1400');
+      // Twelve rows of 48 px, 6 px between them and 2 px under the last.
+      expect(svg?.[2], query).toBe('644');
+    }
+  });
+
+  it('a note stands under its table, and the footnote under the plan, inside the same section', () => {
+    const owner = sectionsOf(render('?print=1').html).parts;
+    expect(owner[1]).toMatch(/<\/table><p class="sp-print__note">2 leases are not placed/);
+    const safe = sectionsOf(render('?print=1&safe=1').html).parts;
+    expect(safe[0]).toMatch(/<footer class="sp-print__foot">Floor width is proportional.*WALT and rollover are withheld\.<\/footer>/);
+    expect(safe[1]).toMatch(/<\/table><p class="sp-print__note">Asking rents carry their unit and lease type/);
+  });
+});
+
 describe('PrintLayout', () => {
   it('owner report: coming supply names the space marketed for later', () => {
     const { html } = render('?print=1');

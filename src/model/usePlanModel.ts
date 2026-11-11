@@ -54,8 +54,8 @@ export interface PlanModel {
   /**
    * Finder results for `req` (`searchSpace`). `alternatives` are the near misses the Find panel lists
    * when exact options are few (smaller spaces, stacked floors), already narrowed to the requirement's
-   * space type; `partial` is their suites, which the plan keeps readable instead of dimming; `noFit`
-   * is the advice when there is no option at all.
+   * space type and maximum; `partial` is their suites, which the plan keeps readable instead of dimming;
+   * `noFit` is the advice when there is no option at all.
    */
   fits: FinderResult | null;
   worklist: (window: WindowKey) => WorklistRow[];
@@ -156,7 +156,7 @@ function search(floors: FloorView[], q: string, safe: boolean): Map<string, stri
 
 export function usePlanModel(property: Property, state: PlanState, today: ISODate): PlanModel {
   const { safe, lens } = state;
-  // Prospect-safe is always drawn as of today (domain/safe.ts, rule 3): the model does not rely on the
+  // Prospect-safe is always drawn as of today (domain/safe.ts, rule 4): the model does not rely on the
   // state layer having already dropped the date.
   const asOf = planDate(state.asOf, today, safe);
   // Two projections, one policy (domain/safe.ts). `totals` keeps the real lease terms and feeds only

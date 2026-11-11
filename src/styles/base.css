@@ -26,3 +26,13 @@ svg { display: block; }
 .sp-skip { position: absolute; left: 8px; top: -40px; z-index: 200; padding: 6px 10px; background: var(--sp-color-brand); color: #fff; border-radius: 4px; font-weight: 600; }
 .sp-skip:focus { top: 8px; }
 .sp-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+/* A run of facts separated by "·" that may wrap ("Ste 1250 · 9,300 SF · $38–$40/SF/yr FSG"). It breaks
+   between parts only, and a separator never ends a line and never begins one: each part after the first
+   carries its separator in front of it, so the break comes before the separator, and the run clips a
+   strip one separator wide at its left edge, so the separator of a part that starts a line is not drawn.
+   Read as text (and by assistive technology) the separators are all there. */
+.sp-dotrun { display: block; min-width: 0; overflow-x: clip; }
+.sp-dotrun__in { display: flex; flex-wrap: wrap; align-items: center; margin-left: -0.8em; }
+.sp-dotrun__part { position: relative; padding-left: 0.8em; max-width: 100%; }
+.sp-dotrun__dot { position: absolute; left: 0; top: 0; width: 0.8em; text-align: center; white-space: pre; }

@@ -7,14 +7,20 @@ export interface AsOfPopoverProps {
   asOf: ISODate;
   today: ISODate;
   onChange: (d: ISODate) => void;
-  /** Miniature lease timeline used as a scrubber (Task 16). */
+  /** Miniature lease timeline, drawn in the popover as a scrubber for the date. */
   miniTimeline?: ReactNode;
   /**
    * The date cannot be moved (prospect-safe: a later date would show each lease's end as a vacated
-   * suite). The control then states the date and why it is fixed, and opens nothing.
+   * suite). The control then states the date and opens nothing. It is the unlocked button with a lock
+   * where the chevron was: the same label and the same width, so turning the mode on or off moves
+   * nothing in the header. That the date is fixed, and why, is in its tooltip and its accessible
+   * description.
    */
   locked?: boolean;
 }
+
+/** Why the as-of control is locked, for the tooltip and for a screen reader. */
+export const LOCKED_NOTE = 'Fixed to today in prospect-safe. Turn Prospect-safe off to move the date.';
 
 const PRESETS: Array<{ label: string; months: number }> = [
   { label: 'Today', months: 0 },
@@ -33,11 +39,11 @@ export function AsOfPopover({ asOf, today, onChange, miniTimeline, locked = fals
     // `aria-disabled`, not `disabled`: the button keeps its tab stop, so the reason can be reached and read.
     return (
       <div className="sp-header__asof sp-header__asof--locked">
-        <Button icon="calendar" iconRight="lock" aria-disabled="true" aria-describedby={noteId} title="Prospect-safe shows the plan as of today. Turn Prospect-safe off to move the date.">
+        <Button icon="calendar" iconRight="lock" aria-disabled="true" aria-describedby={noteId} title={LOCKED_NOTE}>
           As of {fmtDate(asOf)}
         </Button>
-        <span id={noteId} className="sp-header__asof-note">
-          Fixed to today in prospect-safe
+        <span id={noteId} className="sp-sr-only">
+          {LOCKED_NOTE}
         </span>
       </div>
     );

@@ -65,7 +65,7 @@ const render = (search: string, over: Partial<PlanModel> = {}) => {
 const plain = (t: string) => t.replace(/&#x27;/g, "'").replace(/&lt;/g, '<').replace(/&amp;/g, '&').replace(/ /g, ' ');
 /** The labels beside the model, top floor first: each button's own tag and what it prints. */
 const labelsOf = (html: string) =>
-  [...html.matchAll(/(<button[^>]*class="sp-flabel[^>]*>)(.*?)<\/button>/g)].map((m) => ({ tag: plain(m[1]), text: plain(m[2].replace(/<!-- -->/g, '').replace(/<[^>]+>/g, '')) }));
+  [...html.matchAll(/(<button[^>]*class="[^"]*sp-flabel[^>]*>)(.*?)<\/button>/g)].map((m) => ({ tag: plain(m[1]), text: plain(m[2].replace(/<!-- -->/g, '').replace(/<[^>]+>/g, '')) }));
 const labelTexts = (search: string) => labelsOf(render(search)).map((l) => l.text);
 const floorOf = (l: { tag: string }) => /data-floor="([^"]+)"/.exec(l.tag)?.[1];
 
@@ -154,8 +154,11 @@ describe('BuildingView', () => {
     expect(html).toContain('Whole building');
     // A floor the user opened carries no status word.
     for (const jargon of ['Pinned', 'Preview', 'First match', 'First floor that matches']) expect(html).not.toContain(jargon);
-    // Nothing is free today, but the floor is marketed for later: the heading says when.
-    expect(plain(html)).toContain(`<p class="sp-floor__facts">21,400 RSF leasable · 21,400 SF marketed from Apr '27</p>`);
+    // Nothing is free today, but the floor is marketed for later: the Available card says when, once. The
+    // heading is the floor's size alone (round 15: it said "marketed from Apr '27" a second time).
+    expect(plain(html)).toContain('<p class="sp-floor__facts">21,400 RSF leasable</p>');
+    const pane = plain(html).slice(plain(html).indexOf('<div class="sp-bview__floor">'));
+    expect(pane.match(/marketed from Apr '27/g)?.length).toBe(1);
     // The listing is unpublished, so a prospect sees the floor as leased.
     expect(render('?floor=F6&safe=1')).not.toContain('marketed from');
   });
@@ -190,6 +193,25 @@ describe('BuildingView', () => {
     expect(render('?lens=expiry&safe=1')).not.toContain('Stronger colour');
   });
 
+  // Round 15: the model drew the lobby as a grey hatch and the legend had no entry for it.
+  it('names the lobby\'s hatch in the legend, with its exact SF and no share, where the building has non-leasable area', () => {
+    const lobbySf = property.floors.reduce((t, f) => t + f.nonLeasable, 0);
+    expect(lobbySf).toBeGreaterThan(0);
+    for (const html of [render(''), render('?lens=expiry'), render('?lens=rent'), render('?safe=1'), render('?floor=F8')]) {
+      const entry = html.match(/<span class="sp-legend__item sp-legend__item--extra"[^>]*>.*?<\/span><\/span>/)?.[0] ?? '';
+      expect(entry).toContain('sp-legend__swatch--hatch');
+      expect(entry).toContain('var(--tone-muted-edge)');
+      expect(entry).toContain('<span class="sp-legend__label">Lobby · building use</span>');
+      expect(entry).toContain(`<span class="sp-legend__num">${lobbySf.toLocaleString('en-US')}</span>`);
+      expect(entry).toContain('Not counted in occupancy');
+    }
+    // A building with no lobby has no such entry.
+    const base = buildModel(parseState('', TODAY));
+    const none = render('', { floors: base.floors.map((f) => ({ ...f, floor: { ...f.floor, nonLeasable: 0 } })) });
+    expect(none).not.toContain('sp-legend__item--extra');
+    expect(none).not.toContain('building use');
+  });
+
   it('explains an over-allocated floor beside the legend', () => {
     expect(render('')).toContain('Floor 7 records exceed its leasable area by 500 SF');
   });
@@ -213,7 +235,10 @@ describe('BuildingView', () => {
   it('puts each floor\'s facts in its label\'s accessible name, in every lens, and in the docked picker\'s rows', () => {
     expect(labelNames(render(''))).toContain('Floor 8, 65.4% leased, 7,400 SF available');
     expect(labelNames(render(''))).toContain('Floor 3, 74.3% leased, 5,500 SF available, holdover');
-    expect(labelNames(render('?lens=expiry'))).toContain("Floor 6, 100.0% leased, Expires Mar '27");
+    expect(labelNames(render('?lens=expiry'))).toContain("Floor 6, 100.0% leased, expires Mar '27");
+    // A sublease is named: Floor 7 is fully leased, and its 7,000 SF is not direct space.
+    expect(labelNames(render(''))).toContain('Floor 7, 100.0% leased, 7,000 SF sublease available');
+    expect(labelTexts('')).toContain('7 · 100.0% leased · 7,000 SF sublease available');
     expect(labelNames(render('?lens=deals'))).toContain('Floor 6, 100.0% leased, 2 live deals · LOI');
     expect(labelNames(render('?lens=rent'))).toContain('Floor 5, 100.0% leased, $30–$31/SF/yr FSG · $26.50/SF/yr MG');
     // The same names on the compact picker beside a docked model.
@@ -234,8 +259,8 @@ describe('BuildingView', () => {
     const texts = labelTexts('');
     for (const [i, f] of floors.entries()) {
       expect(texts[i]).toContain(`${((f.leased / f.leasable) * 100).toFixed(1)}% leased`);
-      if (f.available > 0) expect(texts[i]).toContain(`${f.available.toLocaleString('en-US')} SF available`);
-      else expect(texts[i]).not.toContain('SF available');
+      if (f.available > 0) expect(texts[i]).toMatch(new RegExp(`${f.available.toLocaleString('en-US')} SF (sublease )?available`));
+      else expect(texts[i]).not.toContain('available');
     }
   });
 
@@ -253,7 +278,7 @@ describe('BuildingView', () => {
 
   it('prospect-safe mode shows asking rents only, and no risk, expiry or deal word beside a floor', () => {
     const rent = render('?safe=1&lens=rent');
-    expect(rent).toContain('Asking $38–$40/SF/yr FSG');
+    expect(rent).toContain('asking $38–$40/SF/yr FSG');
     expect(rent).not.toContain('$36/SF/yr FSG');
     // The caption describes asking rents; the in-place wording is gone with the in-place rents.
     expect(rent).toContain('the asking rent of the space on offer');

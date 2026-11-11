@@ -1,0 +1,35 @@
+/* One floor label, two lists: the list beside the Building view's model and the Map view's floor list
+   print a floor through the same component (FloorLabelText) on the same grid, in the same type.
+   Tokens only.
+
+   The parts of a label are the columns of one grid, shared by every row (subgrid): a mark (the leased
+   share as a bar beside the model, the floor's colour on the map), the floor number, the dot, the leased
+   share, the fact. So the marks and the numbers stand in a column, the percentages line up on their
+   decimals and the facts begin on one edge. Nothing wraps and nothing is cut: a list is as wide as its
+   longest label. A row is a button at least 24 px tall. */
+.sp-floorlist {
+  list-style: none; margin: 0; padding: 0; width: max-content;
+  display: grid; grid-template-columns: repeat(5, auto); grid-auto-rows: minmax(24px, auto);
+}
+.sp-floorlist > li { display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; min-height: 0; }
+.sp-floorlist__row {
+  display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; align-items: center; min-height: 24px;
+  padding: 0 8px 0 6px; border: 1px solid transparent; border-radius: 6px;
+  font-size: var(--sp-text-13); line-height: 1; white-space: pre; text-align: left;
+  color: var(--sp-color-text-weak); font-variant-numeric: tabular-nums;
+  transition: background var(--sp-ease), border-color var(--sp-ease), color var(--sp-ease);
+}
+.sp-floorlist__row:focus-visible { outline-offset: 0; border-radius: 6px; }
+.sp-flabel__num { text-align: right; font-weight: 600; color: var(--sp-color-text); }
+.sp-flabel__sep { display: inline-block; width: 0.8em; text-align: center; }
+.sp-flabel__pct { text-align: right; }
+/* The facts: a separator, then the run of whole parts (base.css, `.sp-dotrun`). On one line in a list as
+   wide as its longest label; where a list is narrower than that, the run breaks between parts. */
+.sp-flabel__fact { display: flex; align-items: center; min-width: 0; color: var(--sp-color-text); }
+.sp-flabel__fact > .sp-dotrun { flex: 0 1 auto; }
+/* "Largest block": the floor that holds the block the KPI reports. A word in the badge style, never colour alone. */
+.sp-flabel__tag {
+  display: inline-flex; align-items: center; height: 18px; padding: 0 7px; border-radius: 999px;
+  border: 1px solid var(--sp-color-border-strong); background: var(--sp-color-card-2);
+  font-size: var(--sp-text-11); font-weight: 600; color: var(--sp-color-text);
+}

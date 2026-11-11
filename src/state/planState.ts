@@ -2,9 +2,8 @@ import type { ISODate } from '../domain/types';
 import { canKeepSearch, canShowInquiries, canShowIssues, canShowLeaseTerm, canUseLens, planDate } from '../domain/safe';
 
 /**
- * URL-synced plan state. Pure: no React, no DOM. `usePlanState` wires it to
- * `location` and `history`. Every field is optional in the URL; defaults are
- * omitted when serialising so a fresh plan is just `/`.
+ * URL-synced plan state. Pure: no React, no DOM. `usePlanState` wires it to the page (`lib/host`).
+ * Every field is optional in the URL; defaults are omitted when serialising so a fresh plan is just `/`.
  */
 
 export type View = 'building' | 'stack' | 'timeline' | 'map' | 'floor';
@@ -148,12 +147,91 @@ export function enterSafe(s: PlanState, today?: ISODate): PlanState {
 
 /**
  * The one way state changes: apply a patch, then hold the prospect-safe invariants. Every control
- * goes through this (`usePlanState`), so no handler has to remember to clear anything itself: a
- * handler that asks for another as-of date while the mode is on simply stays on today.
+ * goes through this (by way of `stepSession`), so no handler has to remember to clear anything itself:
+ * a handler that asks for another as-of date while the mode is on simply stays on today. The state
+ * holds no trace of what the mode took off it: on its own, turning the mode off restores nothing.
  */
 export function applyPatch(prev: PlanState, patch: Partial<PlanState>, today?: ISODate): PlanState {
   const next = { ...prev, ...patch };
   return next.safe && !prev.safe ? enterSafe(next, today) : safeState(next, today);
+}
+
+/** Everything crossing into prospect-safe mode can take off the plan (`enterSafe`). */
+const WITHHELD = ['asOf', 'lens', 'window', 'bucket', 'mode', 'inquiry', 'q'] as const;
+type WithheldState = Pick<PlanState, (typeof WITHHELD)[number]>;
+
+/**
+ * What the Prospect-safe switch took off the plan when it was turned on: the broker's as-of date,
+ * lens, worklist, rollover highlight, search and matched inquiry. `was` is what the plan held and
+ * `left` is what the mode put in its place, field by field, for the fields it changed and no others.
+ */
+export interface Withheld {
+  was: Partial<WithheldState>;
+  left: Partial<WithheldState>;
+}
+
+/**
+ * The plan's state and, beside it, what the switch withheld. The two are kept apart on purpose:
+ * `state` is all that is drawn, read by the model and written to the URL, and while the mode is on it
+ * holds none of what was withheld. `withheld` is read by one function, `stepSession`, when the mode is
+ * turned off. It lives in memory for as long as the page does and is never serialised: a reload, or a
+ * link opened with `safe=1`, starts with nothing to bring back.
+ */
+export interface PlanSession {
+  state: PlanState;
+  withheld: Withheld | null;
+}
+
+/** A session as a link opens it: the state the address gives, and nothing withheld to restore. */
+export function openSession(search: string, today: ISODate): PlanSession {
+  return { state: parseState(search, today), withheld: null };
+}
+
+/** The fields the mode changed on the way in, as they were and as it left them; null when it changed none. */
+function withheldBy(asked: PlanState, entered: PlanState): Withheld | null {
+  const was: Partial<WithheldState> = {};
+  const left: Partial<WithheldState> = {};
+  for (const key of WITHHELD) {
+    if (asked[key] === entered[key]) continue;
+    Object.assign(was, { [key]: asked[key] });
+    Object.assign(left, { [key]: entered[key] });
+  }
+  return Object.keys(was).length > 0 ? { was, left } : null;
+}
+
+/**
+ * The state with what was withheld put back. A field is restored only if it still holds what the mode
+ * left there: one the user has since changed (a lens picked, a suite number searched for while the
+ * prospect was looking) keeps the newer choice. A matched inquiry comes back only if no requirement
+ * was typed in its place.
+ */
+function restored(state: PlanState, withheld: Withheld | null): PlanState {
+  if (!withheld) return state;
+  const back: Partial<WithheldState> = {};
+  for (const key of WITHHELD) {
+    if (!(key in withheld.was) || state[key] !== withheld.left[key]) continue;
+    if (key === 'inquiry' && state.req !== null) continue;
+    Object.assign(back, { [key]: withheld.was[key] });
+  }
+  return Object.keys(back).length > 0 ? { ...state, ...back } : state;
+}
+
+/**
+ * One change of state, with the memory of the switch (`PlanSession`).
+ *  - Turning Prospect-safe on: the state is held to the mode (`enterSafe`) and what that removed is
+ *    remembered.
+ *  - Any change while it is on: `applyPatch`, as before. The memory is carried and not read.
+ *  - Turning it off: what was removed is put back (`restored`) and the memory is emptied, so the
+ *    broker is returned to the view they had before showing the plan to a prospect.
+ */
+export function stepSession(prev: PlanSession, patch: Partial<PlanState>, today?: ISODate): PlanSession {
+  const asked = { ...prev.state, ...patch };
+  if (asked.safe && !prev.state.safe) {
+    const state = enterSafe(asked, today);
+    return { state, withheld: withheldBy(asked, state) };
+  }
+  if (!asked.safe && prev.state.safe) return { state: restored(asked, prev.withheld), withheld: null };
+  return { state: applyPatch(prev.state, patch, today), withheld: prev.withheld };
 }
 
 export function parseState(search: string, today: ISODate): PlanState {

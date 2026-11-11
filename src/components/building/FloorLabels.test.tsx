@@ -5,19 +5,16 @@ import { FloorLabels, type FloorLabelRow } from './FloorLabels';
 
 const row = (n: number, over: Partial<FloorLabelRow> = {}): FloorLabelRow => ({
   id: `F${n}`,
-  number: String(n),
   share: 1,
-  leased: '100.0% leased',
-  fact: '',
-  largest: false,
+  parts: { number: String(n), leased: '100.0% leased', space: '', fact: '', largest: false },
   name: `Floor ${n}, 100.0% leased`,
   title: `Floor ${n} · 20,800 RSF leasable · 100.0% leased · 0 SF available`,
   ...over,
 });
 const rows = [
-  row(3, { share: 0.5, leased: '50.0% leased', fact: '9,300 SF available', largest: true, name: 'Floor 3, 50.0% leased, 9,300 SF available, largest block' }),
+  row(3, { share: 0.5, parts: { number: '3', leased: '50.0% leased', space: '9,300 SF available', fact: '', largest: true }, name: 'Floor 3, 50.0% leased, 9,300 SF available, largest block' }),
   row(2),
-  row(1, { share: 0.654, leased: '65.4% leased', fact: '7,400 SF available · holdover', name: 'Floor 1, 65.4% leased, 7,400 SF available, holdover' }),
+  row(1, { share: 0.654, parts: { number: '1', leased: '65.4% leased', space: '7,400 SF available', fact: 'holdover', largest: false }, name: 'Floor 1, 65.4% leased, 7,400 SF available, holdover' }),
 ];
 const render = (hotId: string | null = null) => renderToString(<FloorLabels rows={rows} hotId={hotId} onPick={() => {}} onPreview={() => {}} />);
 const buttons = (html: string) => [...html.matchAll(/(<button[^>]*>)(.*?)<\/button>/g)].map((m) => ({ tag: m[1], text: m[2].replace(/<!-- -->/g, '').replace(/<[^>]+>/g, '') }));
@@ -25,7 +22,9 @@ const buttons = (html: string) => [...html.matchAll(/(<button[^>]*>)(.*?)<\/butt
 describe('FloorLabels', () => {
   it('is one list of floors, a button per floor, top floor first', () => {
     const html = render();
-    expect(html).toMatch(/^<nav class="sp-flabels" aria-label="Floors"><ol class="sp-flabels__list">/);
+    expect(html).toMatch(/^<nav class="sp-flabels" aria-label="Floors">/);
+    expect(html.match(/<ol /g)?.length).toBe(1);
+    expect(html).toContain('<ol class="sp-floorlist sp-flabels__list">');
     expect(html.match(/<li>/g)?.length).toBe(3);
     expect(buttons(html).map((b) => /data-floor="([^"]+)"/.exec(b.tag)?.[1])).toEqual(['F3', 'F2', 'F1']);
   });
@@ -56,6 +55,15 @@ describe('FloorLabels', () => {
     const html = render();
     expect(html.match(/<span class="sp-flabel__bar" aria-hidden="true"><span style="width:(\d+)%"><\/span><\/span>/g)?.length).toBe(3);
     expect([...html.matchAll(/sp-flabel__bar" aria-hidden="true"><span style="width:(\d+)%"/g)].map((m) => m[1])).toEqual(['50', '100', '65']);
+  });
+
+  it('draws its leaders as decoration: hidden from assistive technology, before the list', () => {
+    const html = render();
+    expect(html).toMatch(/^<nav class="sp-flabels" aria-label="Floors"><svg class="sp-fleaders" aria-hidden="true" focusable="false"><\/svg><ol /);
+  });
+
+  it('prints every row as the shared floor label: a button 24 px tall on the shared grid', () => {
+    for (const b of buttons(render())) expect(b.tag).toMatch(/class="sp-floorlist__row sp-flabel ?(is-hot)?"/);
   });
 
   it('lights the label of the floor pointed at on the model', () => {

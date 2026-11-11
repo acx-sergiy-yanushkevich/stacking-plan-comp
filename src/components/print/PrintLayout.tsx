@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { PlanModel, WorklistRow } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { fmtDate, fmtMonths } from '../../domain/dates';
@@ -5,9 +6,11 @@ import { num, pct, rate, rateRange, sf, usd, usd0 } from '../../domain/format';
 import { RENT_ROLL_NUMERIC, rentRollDisplay, unplacedLeases } from '../../domain/exportCsv';
 import { comingSupply } from '../../domain/kpis';
 import { canShowDeals, canShowInPlaceRent, canShowIssues, canShowLeaseTerm, canShowRollover, canShowTenantRisk, canShowWalt, marketedFor, rentVisible, tenantLabel } from '../../domain/safe';
+import { FixedWidth } from '../../lib/useWidth';
 import { Legend } from '../plan/Legend';
 import StackView from '../stack/StackView';
 import { ExportStage } from './ExportStage';
+import { PLAN_WIDTH, planRowHeight } from './pageFit';
 import './print.css';
 
 export interface PrintLayoutProps {
@@ -18,9 +21,15 @@ export interface PrintLayoutProps {
 }
 
 /**
- * Owner-ready report, landscape Letter. Page 1 cover + plan, page 2 rent roll,
- * page 3 rollover and the 12-month renewal worklist. The prospect-safe report has no rollover, no
- * worklist and no lease date anywhere: its page 3 is the space on offer and the coming supply.
+ * Owner-ready report, landscape Letter, as a list of sections (`sections` below).
+ *  - Owner: the cover with the plan; the rent roll; the rollover with the 12-month renewal worklist.
+ *  - Prospect-safe: the cover with the plan; then one page with the rent roll beside the space on
+ *    offer and the coming supply. It has no rollover, no worklist and no lease date anywhere, so what
+ *    is left of the third section is short: it shares the rent roll's page instead of taking its own.
+ *
+ * The cover is exactly one sheet (`pageFit`, `print.css`). Every later section starts on a new sheet
+ * only if it does not fit under the one before. The running head numbers the sections that are in
+ * the list, so "Section 2 of 2" is always true of what is printed.
  *
  * It also carries the `ExportStage`: like the report, a drawing of the plan that is not on screen
  * (it appears only while an image export asks for it).
@@ -44,11 +53,9 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
   const showRent = canShowInPlaceRent(safe);
   const offers = showRollover ? [] : spaceOnOffer(model);
   const noop = () => {};
-  // The owner report lists coming supply under the rollover; the prospect-safe report, which has no
-  // worklist, gives it the second column.
   const comingTable = (
     <>
-      <h2 style={showRollover ? { marginTop: 14 } : undefined}>Coming supply</h2>
+      <h2>Coming supply</h2>
       <table className="sp-print__table sp-print__table--tight">
         <tbody>
           <tr>
@@ -67,239 +74,289 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
       </table>
     </>
   );
+  const cover = (
+    <>
+      <header className="sp-print__head">
+        <div>
+          <div className="sp-print__eyebrow">Stacking plan{safe ? ' · Prospect-safe' : ''}</div>
+          <h1>{p.name}</h1>
+          <div className="sp-print__sub">
+            {p.propertyClass} · {p.street}, {p.city}, {p.state} · {num(k.leasable)} RSF leasable · {p.floors.length} floors
+          </div>
+        </div>
+        <div className="sp-print__meta">
+          <div>As of {fmtDate(model.asOf)}</div>
+          <div>Prepared {fmtDate(model.today)}</div>
+          <div>{p.owner}</div>
+        </div>
+      </header>
+      <div className="sp-print__kpis">
+        <Kpi label="Leased" value={pct(k.occupancy)} note={`${pct(k.physical)} occupied`} />
+        <Kpi label="Available" value={sf(k.availableDirect + k.availableSublease)} note={`${num(k.availableDirect)} direct · ${num(k.availableSublease)} sublease`} />
+        <Kpi label="Largest block" value={sf(k.maxContiguous.size)} note={k.maxContiguous.floorName ?? ''} />
+        <Kpi label="Expiring 12 mo" value={showRollover ? sf(k.expiring12) : 'Withheld'} note={showRollover ? `${k.expiring12Leases} leases` : 'Prospect-safe'} />
+        {/* WALT is made of lease terms only: withheld with them, as on screen. */}
+        <Kpi label="WALT" value={canShowWalt(safe) ? `${k.walt.toFixed(2)} yr` : 'Withheld'} note={canShowWalt(safe) ? 'SF-weighted' : 'Prospect-safe'} />
+        <Kpi label="Pipeline" value={showDeals ? `${k.pipeline.deals} deals` : 'Withheld'} note={showDeals ? `${sf(k.pipeline.sf)} requested` : 'Prospect-safe'} />
+      </div>
+      <Legend items={model.legend} compact />
+      {/* Drawn at one width on every screen (and when the report is not on screen at all), then scaled to the page. */}
+      <div className="sp-print__plan">
+        <FixedWidth value={PLAN_WIDTH}>
+          <StackView model={model} state={state} patch={noop} bare rowHeight={planRowHeight(model.floors.length)} />
+        </FixedWidth>
+      </div>
+      <footer className="sp-print__foot">
+        Floor width is proportional to gross floor area; suite width to RSF. Figures are exact RSF from AscendixRE records. {safe ? 'Tenant names, contacts, in-place rents, lease and sublease dates, WALT and rollover are withheld.' : ''}
+      </footer>
+    </>
+  );
+
+  const rentRoll = (
+    <>
+      <h2>Rent roll</h2>
+      <table className="sp-print__table">
+        <thead>
+          <tr>
+            {rows[0].map((h) => (
+              <th key={h}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.slice(1).map((r, i) => (
+            <tr key={i}>
+              {r.map((c, j) => (
+                <td key={j} className={RENT_ROLL_NUMERIC.has(rows[0][j]) ? 'num' : ''}>
+                  {c}
+                </td>
+              ))}
+            </tr>
+          ))}
+          <tr className="sp-print__total">
+            <td colSpan={3}>Total · {num(k.leasable)} RSF leasable</td>
+            <td className="num">{num(k.leased)} leased</td>
+            <td colSpan={rows[0].length - 4}>
+              {pct(k.occupancy)} leased · {num(k.availableDirect + k.availableSublease)} SF available · {num(k.committed)} SF signed, not in
+              {overBy > 0 &&
+                (canShowIssues(safe)
+                  ? ` · rows sum to ${num(k.leased + overBy)} SF; ${model.roll.overAllocated.map((o) => `${o.floor} records exceed its leasable area by ${num(o.sf)} SF`).join(', ')}, so leased is capped at ${num(k.leased)} SF`
+                  : ` · rows sum to ${num(k.leased + overBy)} SF; leased is capped at the leasable area (${num(k.leased)} SF)`)}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      {unplaced > 0 && (
+        <p className="sp-print__note">
+          {unplaced} lease{unplaced === 1 ? ' is' : 's are'} not placed on the plan (no floor or unit records) and {unplaced === 1 ? 'is' : 'are'} listed above as “Not placed”; see Data issues.
+        </p>
+      )}
+    </>
+  );
+
+  const rolloverTable = (
+    <>
+      <h2>Lease rollover</h2>
+      <p className="sp-print__note">SF of leases ending in each 12-month period from {fmtDate(model.asOf)}.</p>
+      <table className="sp-print__table sp-print__table--tight">
+        <thead>
+          <tr>
+            <th>Period</th>
+            <th className="num">SF</th>
+            <th className="num">Leases</th>
+            <th className="num">Share of leased</th>
+          </tr>
+        </thead>
+        <tbody>
+          {model.roll.buckets.map((b) => (
+            <tr key={b.key}>
+              <td>{b.label}</td>
+              <td className="num">{b.sf ? num(b.sf) : '—'}</td>
+              <td className="num">{b.leases || '—'}</td>
+              <td className="num">{b.sf ? pct(b.sf / k.leased) : '—'}</td>
+            </tr>
+          ))}
+          {showRisk && (
+            <tr>
+              <td>At risk (holdover, month-to-month)</td>
+              <td className="num">{num(model.roll.atRisk)}</td>
+              <td className="num" colSpan={2}></td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </>
+  );
+
+  const offerTable = (
+    <>
+      <h2>Space on offer</h2>
+      <table className="sp-print__table sp-print__table--tight">
+        <thead>
+          <tr>
+            <th>Floor · Suite</th>
+            <th className="num">RSF</th>
+            <th>Type</th>
+            <th>Available from</th>
+            <th>Asking</th>
+          </tr>
+        </thead>
+        <tbody>
+          {offers.map((o) => (
+            <tr key={o.key}>
+              <td style={{ whiteSpace: 'nowrap' }}>{o.where}</td>
+              <td className="num">{num(o.size)}</td>
+              <td>{o.type}</td>
+              <td>{o.when}</td>
+              <td>{o.asking}</td>
+            </tr>
+          ))}
+          {offers.length === 0 && (
+            <tr>
+              <td colSpan={5}>No space is on offer.</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+      <p className="sp-print__note">Asking rents carry their unit and lease type. Lease dates, the end date of a sublease, rollover by period and the renewal worklist are withheld from this report.</p>
+    </>
+  );
+
+  const rentByType = showRent && k.rentByType.length > 0 && (
+    <>
+      <h2>In-place rent by lease type</h2>
+      <table className="sp-print__table sp-print__table--tight">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th className="num">Recorded SF</th>
+            <th className="num">Average, weighted by recorded SF</th>
+          </tr>
+        </thead>
+        <tbody>
+          {k.rentByType.map((r) => (
+            <tr key={r.type}>
+              <td>{r.type}</td>
+              <td className="num">{num(r.sf)}</td>
+              <td className="num">${r.avg.toFixed(2)}/SF/yr</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="sp-print__note">
+        Recorded SF is the sum of the rent-roll rows with a rent on record{overBy > 0 ? '; the over-allocation cap on leased SF is not applied' : ''}. Confidential leases excluded; never blended across lease types.
+      </p>
+    </>
+  );
+
+  const worklistTable = (
+    <>
+      <h2>{atRisk.length ? 'Renewal worklist · at risk and next 12 months' : 'Renewal worklist · next 12 months'}</h2>
+      <table className="sp-print__table sp-print__table--tight">
+        <thead>
+          <tr>
+            <th>Tenant</th>
+            <th style={{ whiteSpace: 'nowrap' }}>Floor · Suite</th>
+            <th className="num">RSF</th>
+            <th>Ends</th>
+            <th className="num">Left</th>
+            {showRent && <th>Rent</th>}
+            {showDeals && <th>Renewal</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {atRisk.map((r) => (
+            <tr key={`risk-${r.segKey}`}>
+              <td>{r.tenant}</td>
+              <td style={{ whiteSpace: 'nowrap' }}>
+                {r.floorName.replace(/^Floor /, 'Fl ')} · {r.suite}
+              </td>
+              <td className="num">{num(r.size)}</td>
+              <td>{r.kind === 'holdover' ? `Holdover · expired ${r.endDate ? fmtDate(r.endDate) : ''}` : 'Month-to-month'}</td>
+              <td className="num">—</td>
+              {showRent && <td>{rentText(r, safe)}</td>}
+              {showDeals && <td>{r.renewal ? r.renewal.stage : '—'}</td>}
+            </tr>
+          ))}
+          {worklist.map((r) => (
+            <tr key={r.segKey}>
+              <td>{tenantLabel({ tenant: r.tenant }, safe)}</td>
+              <td style={{ whiteSpace: 'nowrap' }}>
+                {r.floorName.replace(/^Floor /, 'Fl ')} · {r.suite}
+              </td>
+              <td className="num">{num(r.size)}</td>
+              <td>{r.endDate ? fmtDate(r.endDate) : 'MTM'}</td>
+              <td className="num">{r.months === null ? '—' : fmtMonths(r.months)}</td>
+              {showRent && <td>{rentText(r, safe)}</td>}
+              {showDeals && <td>{r.renewal ? r.renewal.stage : '—'}</td>}
+            </tr>
+          ))}
+          {worklist.length === 0 && (
+            <tr>
+              <td colSpan={5 + (showRent ? 1 : 0) + (showDeals ? 1 : 0)}>No leases end in the next 12 months.</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </>
+  );
+
+  // The report, in the order it is printed. An owner's rollover and worklist fill a page of their own.
+  // What a prospect may not see leaves two short tables after the rent roll: they stand beside it.
+  const sections: Section[] = showRollover
+    ? [
+        { key: 'plan', kind: 'plan', body: cover },
+        { key: 'roll', body: rentRoll },
+        {
+          key: 'terms',
+          body: (
+            <div className="sp-print__two">
+              <div>
+                {rolloverTable}
+                {rentByType}
+                {comingTable}
+              </div>
+              {showTerms && <div>{worklistTable}</div>}
+            </div>
+          ),
+        },
+      ]
+    : [
+        { key: 'plan', kind: 'plan', body: cover },
+        {
+          key: 'roll',
+          body: (
+            <div className="sp-print__two sp-print__two--roll">
+              <div>{rentRoll}</div>
+              <div>
+                {offerTable}
+                {comingTable}
+              </div>
+            </div>
+          ),
+        },
+      ];
+
   return (
     <>
     <ExportStage model={model} state={state} />
     <div className={`sp-print ${visible ? 'sp-print--visible' : ''}`} aria-hidden={!visible} inert={!visible}>
-      <section className="sp-print__page">
-        <RunningHead p={p} asOf={model.asOf} safe={safe} page={1} />
-        <header className="sp-print__head">
-          <div>
-            <div className="sp-print__eyebrow">Stacking plan{safe ? ' · Prospect-safe' : ''}</div>
-            <h1>{p.name}</h1>
-            <div className="sp-print__sub">
-              {p.propertyClass} · {p.street}, {p.city}, {p.state} · {num(k.leasable)} RSF leasable · {p.floors.length} floors
-            </div>
-          </div>
-          <div className="sp-print__meta">
-            <div>As of {fmtDate(model.asOf)}</div>
-            <div>Prepared {fmtDate(model.today)}</div>
-            <div>{p.owner}</div>
-          </div>
-        </header>
-        <div className="sp-print__kpis">
-          <Kpi label="Leased" value={pct(k.occupancy)} note={`${pct(k.physical)} occupied`} />
-          <Kpi label="Available" value={sf(k.availableDirect + k.availableSublease)} note={`${num(k.availableDirect)} direct · ${num(k.availableSublease)} sublease`} />
-          <Kpi label="Largest block" value={sf(k.maxContiguous.size)} note={k.maxContiguous.floorName ?? ''} />
-          <Kpi label="Expiring 12 mo" value={showRollover ? sf(k.expiring12) : 'Withheld'} note={showRollover ? `${k.expiring12Leases} leases` : 'Prospect-safe'} />
-          {/* WALT is made of lease terms only: withheld with them, as on screen. */}
-          <Kpi label="WALT" value={canShowWalt(safe) ? `${k.walt.toFixed(2)} yr` : 'Withheld'} note={canShowWalt(safe) ? 'SF-weighted' : 'Prospect-safe'} />
-          <Kpi label="Pipeline" value={showDeals ? `${k.pipeline.deals} deals` : 'Withheld'} note={showDeals ? `${sf(k.pipeline.sf)} requested` : 'Prospect-safe'} />
-        </div>
-        <Legend items={model.legend} compact />
-        <div className="sp-print__plan">
-          <StackView model={model} state={state} patch={noop} bare rowHeight={48} />
-        </div>
-        <footer className="sp-print__foot">
-          Floor width is proportional to gross floor area; suite width to RSF. Figures are exact RSF from AscendixRE records. {safe ? 'Tenant names, contacts, in-place rents, lease and sublease dates, WALT and rollover are withheld.' : ''}
-        </footer>
-      </section>
-
-      <section className="sp-print__page">
-        <RunningHead p={p} asOf={model.asOf} safe={safe} page={2} />
-        <h2>Rent roll</h2>
-        <table className="sp-print__table">
-          <thead>
-            <tr>
-              {rows[0].map((h) => (
-                <th key={h}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.slice(1).map((r, i) => (
-              <tr key={i}>
-                {r.map((c, j) => (
-                  <td key={j} className={RENT_ROLL_NUMERIC.has(rows[0][j]) ? 'num' : ''}>
-                    {c}
-                  </td>
-                ))}
-              </tr>
-            ))}
-            <tr className="sp-print__total">
-              <td colSpan={3}>Total · {num(k.leasable)} RSF leasable</td>
-              <td className="num">{num(k.leased)} leased</td>
-              <td colSpan={rows[0].length - 4}>
-                {pct(k.occupancy)} leased · {num(k.availableDirect + k.availableSublease)} SF available · {num(k.committed)} SF signed, not in
-                {overBy > 0 &&
-                  (canShowIssues(safe)
-                    ? ` · rows sum to ${num(k.leased + overBy)} SF; ${model.roll.overAllocated.map((o) => `${o.floor} records exceed its leasable area by ${num(o.sf)} SF`).join(', ')}, so leased is capped at ${num(k.leased)} SF`
-                    : ` · rows sum to ${num(k.leased + overBy)} SF; leased is capped at the leasable area (${num(k.leased)} SF)`)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        {unplaced > 0 && (
-          <p className="sp-print__note" style={{ marginTop: 6 }}>
-            {unplaced} lease{unplaced === 1 ? ' is' : 's are'} not placed on the plan (no floor or unit records) and {unplaced === 1 ? 'is' : 'are'} listed above as “Not placed”; see Data issues.
-          </p>
-        )}
-      </section>
-
-      <section className="sp-print__page">
-        <RunningHead p={p} asOf={model.asOf} safe={safe} page={3} />
-        <div className="sp-print__two">
-          <div>
-            {showRollover ? (
-              <>
-            <h2>Lease rollover</h2>
-            <p className="sp-print__note">SF of leases ending in each 12-month period from {fmtDate(model.asOf)}.</p>
-            <table className="sp-print__table sp-print__table--tight">
-              <thead>
-                <tr>
-                  <th>Period</th>
-                  <th className="num">SF</th>
-                  <th className="num">Leases</th>
-                  <th className="num">Share of leased</th>
-                </tr>
-              </thead>
-              <tbody>
-                {model.roll.buckets.map((b) => (
-                  <tr key={b.key}>
-                    <td>{b.label}</td>
-                    <td className="num">{b.sf ? num(b.sf) : '—'}</td>
-                    <td className="num">{b.leases || '—'}</td>
-                    <td className="num">{b.sf ? pct(b.sf / k.leased) : '—'}</td>
-                  </tr>
-                ))}
-                {showRisk && (
-                  <tr>
-                    <td>At risk (holdover, month-to-month)</td>
-                    <td className="num">{num(model.roll.atRisk)}</td>
-                    <td className="num" colSpan={2}></td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-              </>
-            ) : (
-              <>
-                <h2>Space on offer</h2>
-                <table className="sp-print__table sp-print__table--tight">
-                  <thead>
-                    <tr>
-                      <th>Floor · Suite</th>
-                      <th className="num">RSF</th>
-                      <th>Type</th>
-                      <th>Available from</th>
-                      <th>Asking</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {offers.map((o) => (
-                      <tr key={o.key}>
-                        <td style={{ whiteSpace: 'nowrap' }}>{o.where}</td>
-                        <td className="num">{num(o.size)}</td>
-                        <td>{o.type}</td>
-                        <td>{o.when}</td>
-                        <td>{o.asking}</td>
-                      </tr>
-                    ))}
-                    {offers.length === 0 && (
-                      <tr>
-                        <td colSpan={5}>No space is on offer.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-                <p className="sp-print__note">Asking rents carry their unit and lease type. Lease dates, the end date of a sublease, rollover by period and the renewal worklist are withheld from this report.</p>
-              </>
-            )}
-            {showRent && k.rentByType.length > 0 && (
-              <>
-                <h2 style={{ marginTop: 14 }}>In-place rent by lease type</h2>
-                <table className="sp-print__table sp-print__table--tight">
-                  <thead>
-                    <tr>
-                      <th>Type</th>
-                      <th className="num">Recorded SF</th>
-                      <th className="num">Average, weighted by recorded SF</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {k.rentByType.map((r) => (
-                      <tr key={r.type}>
-                        <td>{r.type}</td>
-                        <td className="num">{num(r.sf)}</td>
-                        <td className="num">${r.avg.toFixed(2)}/SF/yr</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <p className="sp-print__note">
-                  Recorded SF is the sum of the rent-roll rows with a rent on record{overBy > 0 ? '; the over-allocation cap on leased SF is not applied' : ''}. Confidential leases excluded; never blended across lease types.
-                </p>
-              </>
-            )}
-            {showRollover && comingTable}
-          </div>
-          {!showRollover && <div>{comingTable}</div>}
-          {showTerms && (
-          <div>
-            <h2>{atRisk.length ? 'Renewal worklist · at risk and next 12 months' : 'Renewal worklist · next 12 months'}</h2>
-            <table className="sp-print__table sp-print__table--tight">
-              <thead>
-                <tr>
-                  <th>Tenant</th>
-                  <th style={{ whiteSpace: 'nowrap' }}>Floor · Suite</th>
-                  <th className="num">RSF</th>
-                  <th>Ends</th>
-                  <th className="num">Left</th>
-                  {showRent && <th>Rent</th>}
-                  {showDeals && <th>Renewal</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {atRisk.map((r) => (
-                  <tr key={`risk-${r.segKey}`}>
-                    <td>{r.tenant}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      {r.floorName.replace(/^Floor /, 'Fl ')} · {r.suite}
-                    </td>
-                    <td className="num">{num(r.size)}</td>
-                    <td>{r.kind === 'holdover' ? `Holdover · expired ${r.endDate ? fmtDate(r.endDate) : ''}` : 'Month-to-month'}</td>
-                    <td className="num">—</td>
-                    {showRent && <td>{rentText(r, safe)}</td>}
-                    {showDeals && <td>{r.renewal ? r.renewal.stage : '—'}</td>}
-                  </tr>
-                ))}
-                {worklist.map((r) => (
-                  <tr key={r.segKey}>
-                    <td>{tenantLabel({ tenant: r.tenant }, safe)}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      {r.floorName.replace(/^Floor /, 'Fl ')} · {r.suite}
-                    </td>
-                    <td className="num">{num(r.size)}</td>
-                    <td>{r.endDate ? fmtDate(r.endDate) : 'MTM'}</td>
-                    <td className="num">{r.months === null ? '—' : fmtMonths(r.months)}</td>
-                    {showRent && <td>{rentText(r, safe)}</td>}
-                    {showDeals && <td>{r.renewal ? r.renewal.stage : '—'}</td>}
-                  </tr>
-                ))}
-                {worklist.length === 0 && (
-                  <tr>
-                    <td colSpan={5 + (showRent ? 1 : 0) + (showDeals ? 1 : 0)}>No leases end in the next 12 months.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          )}
-        </div>
-      </section>
+      {sections.map((section, i) => (
+        <section key={section.key} className={`sp-print__page ${section.kind === 'plan' ? 'sp-print__page--plan' : ''}`}>
+          <RunningHead p={p} asOf={model.asOf} safe={safe} section={i + 1} of={sections.length} />
+          {section.body}
+        </section>
+      ))}
     </div>
     </>
   );
+}
+
+/** One section of the report. `plan` is the cover: it is held to exactly one sheet. */
+interface Section {
+  key: string;
+  kind?: 'plan';
+  body: ReactNode;
 }
 
 interface Offer {
@@ -344,15 +401,15 @@ function rentText(r: WorklistRow, safe: boolean): string {
   return lease && rentVisible(lease, safe) && lease.rate !== null ? rate(lease.rate, lease.rateUnit, lease.leaseType) : '—';
 }
 
-const SECTIONS = 3;
-function RunningHead({ p, asOf, safe, page, total = SECTIONS }: { p: PlanModel['property']; asOf: string; safe: boolean; page: number; total?: number }) {
+/** The line above every section. `of` is the number of sections in the report that is printed, not a fixed count. */
+function RunningHead({ p, asOf, safe, section, of }: { p: PlanModel['property']; asOf: string; safe: boolean; section: number; of: number }) {
   return (
     <div className="sp-print__running">
       <span>
         {p.name} · Stacking plan as of {fmtDate(asOf)}
         {safe ? ' · Prospect-safe' : ''}
       </span>
-      <span className="sp-print__pageno">Section {page} of {total}</span>
+      <span className="sp-print__pageno">Section {section} of {of}</span>
     </div>
   );
 }

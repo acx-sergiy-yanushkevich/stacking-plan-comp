@@ -7,7 +7,7 @@ import { canShowDeals, canShowInquiries } from '../../domain/safe';
 import { Button, Chip, Icon, Segmented, SelectField, TextField } from '../ui';
 import { selectSegment, type Patch } from '../plan/actions';
 import { Section } from './parts';
-import { checkNeededBy, chosenOption, type FitOption, type NearMiss } from '../../domain/finder';
+import { alternativesNote, checkNeededBy, chosenOption, type FitOption, type NearMiss } from '../../domain/finder';
 import { setHoverKeys, setPinnedOption } from '../../state/hoverStore';
 
 export interface FindPanelProps {
@@ -43,7 +43,7 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
   const req = model.req;
   const largest = model.fits?.largestNow ?? { size: model.kpis.maxContiguous.size, floorName: model.kpis.maxContiguous.floorName ?? '' };
   const options = model.fits?.options ?? [];
-  // Alternatives come from the model, already held to the chosen space type: the list and the plan agree.
+  // Alternatives come from the model, already held to the chosen space type and maximum: the list and the plan agree.
   const misses = model.fits?.alternatives ?? [];
   // Needed by. The control is a date input, so its value is always an ISO date and never a string to
   // interpret; what was entered stays in the field as entered. A date before the as-of date is refused
@@ -208,7 +208,7 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
               </Button>
             )}
           </div>
-          <NearMisses misses={misses} patch={patch} max={req.max} selected={state.select} />
+          <NearMisses misses={misses} patch={patch} selected={state.select} />
         </Section>
       ) : (
         <Section title={`Options · ${options.length}`}>
@@ -287,16 +287,17 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
       {options.length > 0 && misses.length > 0 && (
         <Section title="Alternatives">
           <p className="sp-ins__note" style={{ marginTop: 0, marginBottom: 8 }}>
-            {state.fit === 'any' ? 'Smaller spaces with their shortfall, and stacked floors that combine direct and sublease space.' : `Smaller ${state.fit} spaces with their shortfall, and stacked floors of ${state.fit} space. Choose “Any” to combine direct and sublease space.`}
+            {/* Only the kinds of row that are listed: no "stacked floors" when every stack is over the maximum. */}
+            {alternativesNote(misses, state.fit)}
           </p>
-          <NearMisses misses={misses} patch={patch} max={req?.max ?? null} selected={state.select} />
+          <NearMisses misses={misses} patch={patch} selected={state.select} />
         </Section>
       )}
     </>
   );
 }
 
-function NearMisses({ misses, patch, max, selected }: { misses: NearMiss[]; patch: Patch; max: number | null; selected: string | null }) {
+function NearMisses({ misses, patch, selected }: { misses: NearMiss[]; patch: Patch; selected: string | null }) {
   if (!misses.length) return null;
   const light = (m: NearMiss | null) => setHoverKeys(m ? new Set(m.keys) : null);
   return (
@@ -325,7 +326,6 @@ function NearMisses({ misses, patch, max, selected }: { misses: NearMiss[]; patc
                   <span>{m.type}</span>
                   <span>{m.from ? fmtMonthYear(m.from) : 'Now'}</span>
                   {m.shortfall > 0 && <span>{num(m.shortfall)} SF short</span>}
-                  {max !== null && m.size > max && <span>{num(m.size - max)} SF over max</span>}
                   {m.kind === 'stack' && <span>{plural(m.keys.length, 'suite')} on two floors</span>}
                 </div>
               </div>

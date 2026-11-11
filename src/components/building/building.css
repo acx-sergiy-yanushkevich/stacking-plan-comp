@@ -21,9 +21,11 @@
   position: sticky; top: var(--sp-space-3);
 }
 .sp-bview__stage { min-width: 0; }
-/* While the model docks or undocks its floor numbers and the list of floors are hidden (they would be
-   drawn, at the size the model sets out from, over what is coming in); they fade back in once it has settled. */
-.sp-bview__stage.is-moving .sp-hero__tags, .sp-bview__stage.is-moving .sp-flabels { opacity: 0; transition: none; pointer-events: none; }
+/* While the model docks or undocks its own floor numbers are hidden (they would be drawn, at the size the
+   model sets out from, over what is coming in), and so are the leaders from the labels to its floors
+   (they point at where the model will stand); both fade back in once it has settled. The list of floors
+   itself and the floor picker come in as soon as the gliding model is clear of their place (BuildingView). */
+.sp-bview__stage.is-moving .sp-hero__tags, .sp-bview__stage.is-moving .sp-fleaders { opacity: 0; transition: none; pointer-events: none; }
 .sp-bview__stage .sp-hero__canvas { will-change: transform; }
 .sp-bview__stage .sp-mini { width: var(--sp-bview-pick); }
 /* The model is sized by height: the room below it in the window, so it fills its column to the foot of
@@ -42,7 +44,7 @@
 /* The model column measures itself (container units), so the model takes the width that is really left
    beside the list of floors, whatever stands beside the view. `--sp-bview-list` is the list's own width,
    measured (BuildingView): it is as wide as its longest label, which is never wrapped or cut. */
-.sp-bview__grid.is-alone .sp-bview__model { position: static; container-type: inline-size; gap: var(--sp-space-2); }
+.sp-bview__grid.is-alone .sp-bview__model { position: static; container-type: inline-size; gap: var(--sp-space-2); --sp-hero-gap: 40px; }
 .sp-bview__grid.is-alone .sp-bview__model .sp-hero svg {
   --sp-bview-max: calc(100cqw - var(--sp-bview-list, 340px) - var(--sp-hero-gap));
   /* Nothing stands under the model (its one caption line is above it), so it runs to the foot of the card. */
@@ -50,7 +52,7 @@
 }
 /* The labels keep a readable row each, so beside a small model the list is a little taller than the
    stack of floors: the model's box is at least as tall as the list. */
-.sp-bview__grid.is-alone .sp-hero { min-height: calc(var(--sp-hero-floors, 12) * 24px + 2px); }
+.sp-bview__grid.is-alone .sp-hero { min-height: calc(var(--sp-hero-floors, 12) * 24px); }
 
 /* The caption: one quiet line above the model, the floor under the pointer or what to do and what the
    labels show. Its height is fixed: pointing from floor to floor changes its words, never the layout.
@@ -72,43 +74,31 @@
    top label, along the labels and under the bottom one (hero.css, `.sp-hero__after`), and the list takes
    the middle share. A label keeps a row of 22 px or more, so beside a small model the list is taller
    than the stack of floors and the room above and under it gives way. */
-.sp-flabels { display: flex; flex-direction: column; min-width: 0; transition: opacity 200ms ease; }
+.sp-flabels { display: flex; flex-direction: column; min-width: 0; }
+/* A thin leader from each label to its floor (FloorLeaders): where the window is low, the model's floors
+   are closer together than the labels (a label is a button 24 px tall), and the leaders tie each label to
+   its own floor; where there is room the labels are level with their floors and the leaders are ticks. */
+.sp-fleaders { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; transition: opacity 200ms ease; }
+.sp-fleader path { fill: none; stroke: var(--sp-color-border-strong); stroke-width: 1; }
+.sp-fleader circle { fill: var(--sp-color-text-weak); }
+.sp-fleader.is-hot path { stroke: var(--sp-color-brand); stroke-width: 1.5; }
+.sp-fleader.is-hot circle { fill: var(--sp-color-brand); }
 .sp-flabels::before { content: ''; flex: var(--sp-hero-tags-above, 0.2) 1 0px; }
 .sp-flabels::after { content: ''; flex: var(--sp-hero-tags-below, 0.2) 1 0px; }
-/* The parts of a label are the columns of one grid, shared by every row (subgrid): the bar, the floor
-   number, the dot, the leased share, the fact. So the bars and the numbers stand in a column, the
-   percentages line up on their decimals and the facts begin on one edge. Nothing wraps: the list is as
-   wide as its longest label. */
+/* The rows are the shared floor label (floorLabel.css): one grid, so the bars and the numbers stand in a
+   column, the percentages line up on their decimals and the facts begin on one edge. Nothing wraps: the
+   list is as wide as its longest label. Every row is a button 24 px tall or more. */
 .sp-flabels__list {
-  flex: var(--sp-hero-tags-band, 0.6) 0 0px; min-height: calc(var(--sp-hero-floors, 12) * 24px - 2px);
-  list-style: none; margin: 0; padding: 0; width: max-content;
-  display: grid; grid-template-columns: repeat(5, auto); grid-auto-rows: minmax(22px, 1fr); row-gap: 2px;
-}
-.sp-flabels__list > li { display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; min-height: 0; }
-.sp-flabel {
-  display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; align-items: center; min-height: 0;
-  padding: 0 8px 0 6px; border: 1px solid transparent; border-radius: 6px;
-  font-size: var(--sp-text-13); line-height: 1; white-space: pre; text-align: left;
-  color: var(--sp-color-text-weak); font-variant-numeric: tabular-nums;
-  transition: background var(--sp-ease), border-color var(--sp-ease);
+  flex: var(--sp-hero-tags-band, 0.6) 0 0px; min-height: calc(var(--sp-hero-floors, 12) * 24px);
+  grid-auto-rows: minmax(24px, 1fr);
 }
 /* Pointed at (here or on the model) and focused: the same quiet ground, so the label and its floor light together. */
 .sp-flabel:hover, .sp-flabel.is-hot { background: var(--sp-color-card-2); border-color: var(--sp-color-border-strong); }
-.sp-flabel:focus-visible { outline-offset: 0; border-radius: 6px; }
 /* The leased share as a small bar, next to the building: twelve of them read as a chart of the floors. */
 .sp-flabel__bar { width: 28px; height: 4px; margin-right: 8px; border-radius: 2px; background: var(--sp-color-border-strong); overflow: hidden; }
 .sp-flabel__bar > span { display: block; height: 100%; border-radius: 2px; background: var(--sp-color-brand); }
-.sp-flabel__num { text-align: right; font-weight: 600; color: var(--sp-color-text); }
-.sp-flabel__pct { text-align: right; }
-.sp-flabel__fact { display: flex; align-items: center; color: var(--sp-color-text); }
 .sp-flabel:hover .sp-flabel__num, .sp-flabel.is-hot .sp-flabel__num { color: var(--sp-color-brand-strong); }
 .sp-flabel:hover .sp-flabel__pct, .sp-flabel.is-hot .sp-flabel__pct { color: var(--sp-color-text); }
-/* "Largest block": the floor that holds the block the KPI reports. A word in the badge style, never colour alone. */
-.sp-flabel__tag {
-  margin-left: 4px; display: inline-flex; align-items: center; height: 18px; padding: 0 7px; border-radius: 999px;
-  border: 1px solid var(--sp-color-border-strong); background: var(--sp-color-card-2);
-  font-size: var(--sp-text-11); font-weight: 600; color: var(--sp-color-text);
-}
 
 /* No room for the list beside a model of a readable width (a narrow card, a long lens fact): the list
    stands under the model, as an ordinary list, and the model keeps to the upper part of the window so
@@ -120,13 +110,14 @@
   height: min(clamp(240px, calc(52vh - var(--sp-bview-top, 380px) / 2), 420px), calc(var(--sp-bview-max) / var(--sp-hero-ratio, 1)));
 }
 .sp-bview__grid.is-under .sp-flabels::before, .sp-bview__grid.is-under .sp-flabels::after { content: none; }
+.sp-bview__grid.is-under .sp-fleaders { display: none; }
 .sp-bview__grid.is-under .sp-flabels__list { flex: none; min-height: 0; grid-auto-rows: 26px; }
 
 /* ── Docked ─────────────────────────────────────────────────────────────────────────── */
 /* What comes in with a dock or an undock, and when. The model glides and turns for 760 ms (BuildingView)
    and until it has settled into its own column it reaches into the room beside it. So what belongs in
-   that room waits for it: the floor's pane as the model docks, the caption line as it undocks (the list
-   of floors comes back when the model has stopped). Each begins at 420 ms, when the model is inside its
+   that room waits for it: the floor's pane as the model docks, the caption line as it undocks (the floor
+   picker and the list of floors are timed by BuildingView, from where the model is). Each begins at 420 ms, when the model is inside its
    column, and is in place as the model stops. `.is-moving` is set only for a dock or an undock in progress: a page that loads with a
    floor open shows it at once, and nothing moves under reduced motion. */
 @keyframes sp-bview-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }

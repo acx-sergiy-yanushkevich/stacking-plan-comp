@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../data/mock/property';
 import { deriveFloors } from './derive';
-import { checkNeededBy, chosenOption, filterFits, findFits, matchingInquiries, nearMisses, neededByDate, noFit, optionSuites, searchSpace, suitesLabel, type FitOption, type Requirement } from './finder';
+import { alternativesListed, alternativesNote, checkNeededBy, chosenOption, filterFits, findFits, matchingInquiries, nearMisses, neededByDate, noFit, optionSuites, searchSpace, suitesLabel, type FitOption, type Requirement } from './finder';
 import type { Availability, Floor, Lease, Property } from './types';
 
 const at = (asOf: string) => deriveFloors(property, asOf, TODAY);
@@ -405,10 +405,125 @@ describe('one floor, one alternative', () => {
     }
   });
 
-  it('a stack of two floors is a different proposal and is kept beside the single floors in it', () => {
-    const rows = nearMisses(floors, 12000, TODAY);
-    expect(rows.find((m) => m.kind === 'stack')).toMatchObject({ floorName: 'Floors 7–8', suites: 'Ste 850 + Ste 860 on Floor 8, Ste 720 on Floor 7' });
-    expect(rows.some((m) => m.kind === 'short' && m.floorName === 'Floor 8')).toBe(true);
+  it('a floor that is half of a listed stack is not listed again on its own', () => {
+    const rows = nearMisses(floors, 12000, TODAY, 'any', 100);
+    const stack = rows.find((m) => m.kind === 'stack')!;
+    expect(stack).toMatchObject({ floorName: 'Floors 7–8', suites: 'Ste 850 + Ste 860 on Floor 8, Ste 720 on Floor 7', size: 14400, shortfall: 0 });
+    // Floor 8 (7,400 SF, 4,600 SF short) and Floor 7 (7,000 SF, 5,000 SF short) are the two halves of it.
+    expect(rows.filter((m) => m.kind === 'short').map((m) => m.floorName)).toEqual(['Floor 12', 'Floor 3', 'Floor 1']);
+    // With the stack out of reach (a maximum under it), the two floors are listed with their shortfall.
+    const capped = nearMisses(floors, 12000, TODAY, 'any', 100, [], 14000);
+    expect(capped.some((m) => m.kind === 'stack')).toBe(false);
+    expect(capped.map((m) => [m.floorName, m.shortfall])).toEqual(expect.arrayContaining([['Floor 8', 4600], ['Floor 7', 5000]]));
+  });
+});
+
+describe('an alternative is never an option with more added, and never more than the maximum', () => {
+  const floors = deriveFloors(property, TODAY, TODAY);
+  const search = (size: number, max: number | null = null, type: Requirement['type'] = 'any') => searchSpace(floors, { size, max, by: null, type }, property.inquiries, TODAY);
+  const holds = (outer: readonly string[], inner: readonly string[]) => inner.every((k) => outer.includes(k));
+
+  it('12,000 SF: Floor 6 is the option, so Floors 6–7 (the same suite and the sublease under it) is not an alternative', () => {
+    const { options, alternatives } = search(12000);
+    expect(options.map((o) => [o.floorName, o.suites, o.size])).toEqual([['Floor 6', 'Ste 600', 21400]]);
+    // On its own the function still finds the stack: nothing tells it Ste 600 is already an option.
+    expect(nearMisses(floors, 12000, TODAY, 'any', 100).map((m) => m.floorName)).toContain('Floors 6–7');
+    expect(alternatives.map((m) => m.floorName)).not.toContain('Floors 6–7');
+    expect(alternatives.some((m) => m.keys.includes('L13-U1'))).toBe(false);
+    // The stack that holds no option stays.
+    expect(alternatives.map((m) => [m.kind, m.floorName, m.size])).toContainEqual(['stack', 'Floors 7–8', 14400]);
+  });
+
+  it('for every size and type: no alternative holds a whole option, is a part of one, or overlaps another in full', () => {
+    for (const size of [3000, 5000, 7000, 8000, 9000, 12000, 15000, 20000, 25000, 40000]) {
+      for (const type of ['any', 'direct', 'sublease'] as const) {
+        const { options, alternatives } = search(size, null, type);
+        for (const m of alternatives) {
+          for (const o of options) {
+            expect(holds(m.keys, o.keys), `${size} ${type}: ${m.floorName} holds the option ${o.floorName}`).toBe(false);
+            expect(holds(o.keys, m.keys), `${size} ${type}: ${m.floorName} is a part of the option ${o.floorName}`).toBe(false);
+          }
+          for (const n of alternatives) if (n !== m) expect(holds(n.keys, m.keys), `${size} ${type}: ${m.floorName} is a part of ${n.floorName}`).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('9,000–9,500 SF: stacked floors of 14,400 and 28,400 SF are over the maximum and are not offered', () => {
+    const { options, alternatives } = search(9000, 9500);
+    // Ste 1250 as it is, and Ste 600, which is divisible and can be split down to the maximum.
+    expect(options.map((o) => [o.suites, o.size, o.splitTo])).toEqual([['Ste 1250', 9300, undefined], ['Ste 600', 21400, 9500]]);
+    expect(nearMisses(floors, 9000, TODAY, 'any', 100).filter((m) => m.kind === 'stack').map((m) => m.size)).toEqual(expect.arrayContaining([14400, 28400]));
+    expect(alternatives.some((m) => m.kind === 'stack')).toBe(false);
+    for (const m of alternatives) expect(m.size).toBeLessThanOrEqual(9500);
+    // Near misses under the minimum stay, each with what it is short by.
+    expect(alternatives.map((m) => [m.floorName, m.size, m.shortfall])).toEqual([
+      ['Floor 8', 7400, 1600],
+      ['Floor 7', 7000, 2000],
+      ['Floor 3', 5500, 3500],
+      ['Floor 1', 4000, 5000],
+    ]);
+  });
+
+  it('no alternative is above the maximum, whatever the size, the maximum and the type', () => {
+    for (const size of [3000, 5000, 7000, 9000, 12000, 20000]) {
+      for (const max of [size, size + 500, size + 2000, size * 2]) {
+        for (const type of ['any', 'direct', 'sublease'] as const) {
+          for (const m of search(size, max, type).alternatives) expect(m.size, `${size}–${max} ${type}: ${m.floorName}`).toBeLessThanOrEqual(max);
+        }
+      }
+    }
+  });
+
+  it('a stack exactly at the maximum is kept: the maximum is the most the tenant takes, not less', () => {
+    expect(nearMisses(floors, 12000, TODAY, 'any', 100, [], 14400).map((m) => m.size)).toContain(14400);
+    expect(nearMisses(floors, 12000, TODAY, 'any', 100, [], 14399).map((m) => m.size)).not.toContain(14400);
+  });
+});
+
+describe('the text about the alternatives says what is listed', () => {
+  const floors = deriveFloors(property, TODAY, TODAY);
+
+  it('alternativesListed names only the kinds of row in the list', () => {
+    expect(alternativesListed([])).toBeNull();
+    expect(alternativesListed([{ kind: 'short' }, { kind: 'short' }])).toBe('The closest spaces are listed below.');
+    expect(alternativesListed([{ kind: 'stack' }])).toBe('Floor combinations that add up to it are listed below.');
+    expect(alternativesListed([{ kind: 'short' }, { kind: 'stack' }])).toBe('The closest spaces and floor combinations are listed below.');
+  });
+
+  it('40,000 SF: only single spaces are listed, so the message does not mention floor combinations', () => {
+    const r = searchSpace(floors, { size: 40000, max: null, by: null, type: 'any' }, property.inquiries, TODAY);
+    expect(r.options).toHaveLength(0);
+    expect(r.alternatives.length).toBeGreaterThan(0);
+    expect(r.alternatives.every((m) => m.kind === 'short')).toBe(true);
+    expect(r.noFit!.message).toBe('The largest block available now is 9,300 SF on Floor 12. The closest spaces are listed below.');
+  });
+
+  it('for every search with no option, "floor combinations" is in the message exactly when a stack is listed', () => {
+    let checked = 0;
+    for (const size of [9500, 12000, 15000, 22000, 30000, 40000]) {
+      for (const type of ['any', 'direct', 'sublease'] as const) {
+        for (const max of [null, size + 1000]) {
+          const r = searchSpace(floors, { size, max, by: null, type }, property.inquiries, TODAY);
+          if (!r.noFit || !r.noFit.message.includes('listed below')) continue;
+          checked++;
+          expect(r.noFit.message.includes('floor combinations') || r.noFit.message.includes('Floor combinations'), `${size} ${type} ${max}`).toBe(r.alternatives.some((m) => m.kind === 'stack'));
+          expect(/closest spaces/.test(r.noFit.message), `${size} ${type} ${max}`).toBe(r.alternatives.some((m) => m.kind === 'short'));
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(3);
+  });
+
+  it('alternativesNote, above the list when there are options too, describes the same rows', () => {
+    expect(alternativesNote([{ kind: 'short', type: 'Direct' }], 'any')).toBe('Smaller spaces with their shortfall.');
+    expect(alternativesNote([{ kind: 'short', type: 'Direct' }, { kind: 'stack', type: 'Direct + sublease' }], 'any')).toBe('Smaller spaces with their shortfall, and stacked floors that combine direct and sublease space.');
+    expect(alternativesNote([{ kind: 'stack', type: 'Direct' }], 'any')).toBe('Stacked floors.');
+    expect(alternativesNote([{ kind: 'short', type: 'Direct' }], 'direct')).toBe('Smaller direct spaces with their shortfall. Choose “Any” to combine direct and sublease space.');
+    expect(alternativesNote([{ kind: 'short', type: 'Sublease' }, { kind: 'stack', type: 'Sublease' }], 'sublease')).toBe('Smaller sublease spaces with their shortfall, and stacked floors of sublease space. Choose “Any” to combine direct and sublease space.');
+    // 9,000–9,500 SF: every stack is over the maximum, so the note names no stack.
+    const r = searchSpace(floors, { size: 9000, max: 9500, by: null, type: 'any' }, property.inquiries, TODAY);
+    expect(alternativesNote(r.alternatives, 'any')).toBe('Smaller spaces with their shortfall.');
   });
 });
 
@@ -460,8 +575,8 @@ describe('when nothing fits, the advice is only what applies', () => {
   it('says the closest spaces are listed below only when some are', () => {
     const r = searchSpace(floors, { size: 40000, max: null, by: null, type: 'any' }, property.inquiries, TODAY);
     expect(r.alternatives.length > 0).toBe(r.noFit!.message.includes('listed below'));
-    expect(noFit(floors, { size: 40000, max: null, by: null, type: 'any' }, property.inquiries, TODAY, false).message).toBe('The largest block available now is 9,300 SF on Floor 12.');
-    expect(noFit(floors, { size: 40000, max: null, by: null, type: 'any' }, property.inquiries, TODAY, true).message).toBe('The largest block available now is 9,300 SF on Floor 12. The closest spaces and floor combinations are listed below.');
+    expect(noFit(floors, { size: 40000, max: null, by: null, type: 'any' }, property.inquiries, TODAY).message).toBe('The largest block available now is 9,300 SF on Floor 12.');
+    expect(noFit(floors, { size: 40000, max: null, by: null, type: 'any' }, property.inquiries, TODAY, r.alternatives).message).toBe(r.noFit!.message);
   });
 
   it('a maximum that is in the way is named, with the number of options without it; the type and the date are not', () => {

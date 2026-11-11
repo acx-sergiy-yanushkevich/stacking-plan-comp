@@ -71,6 +71,12 @@ import type { Availability, Deal, ISODate, Lease } from './types';
  * plan that says "lease terms are not shown" beside it contradicts itself. The screen, the print and
  * the CSV say "Withheld" (or say nothing); `safeKpis` hands a caller that forgets to ask a zero.
  * Occupancy, available SF and the largest block stay: they describe space, not terms.
+ *
+ * What the switch takes off the plan on the way in (the broker's as-of date, lens, worklist, rollover
+ * highlight, search and matched inquiry) is put back when it is turned off again. It is remembered
+ * beside the state, never in it (`state/planState.ts`, `PlanSession`): while the mode is on, nothing
+ * that is drawn, read by the model or written to the URL holds any of it, and a link opened with
+ * `safe=1` has nothing to bring back.
  */
 
 export const TITLE = 'Stacking plan';

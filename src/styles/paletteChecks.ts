@@ -96,6 +96,38 @@ export const tonesOf = (t: Tokens) => [...t.keys()].filter((k) => k.startsWith('
 
 /** The 3D map deepens each daytime solid 45% toward the tone's edge (MapView). */
 export const MAP_DEEPEN = 0.45;
+/** At night the 3D map lifts each fill 12% toward white (MapView). */
+export const MAP_LIFT = 0.12;
+
+/**
+ * The expiration ramp's six steps are read off the building model and the 3D map by colour alone (a
+ * slab has no month written on it), so two neighbouring steps must differ in both ways a reader can
+ * use: 8 L* or more in lightness, which survives a colour-blind eye and a grey print, and a different
+ * hue. One rule for every palette, by night and by day.
+ */
+export const EXPIRY_STEP_L = 8;
+export const EXPIRY_STEP_HUE = 8;
+/** On the map the walls are the fills lifted (night) or deepened (day): neighbours stay this far apart there. */
+export const EXPIRY_WALL_STEP_L = 7;
+
+export const expirySteps = (t: Tokens): string[] => [0, 1, 2, 3, 4, 5].map((i) => t.get(`--tone-exp-${i}-fill`)!);
+
+/** Every pair of neighbouring expiration steps that breaks the rule, in words; empty when the ramp is sound. */
+export function expiryStepFaults(steps: readonly string[]): string[] {
+  const faults: string[] = [];
+  for (let i = 1; i < steps.length; i += 1) {
+    const dl = Math.abs(lightness(steps[i]) - lightness(steps[i - 1]));
+    const dh = hueApart(steps[i], steps[i - 1]);
+    if (dl < EXPIRY_STEP_L) faults.push(`exp-${i - 1} ${steps[i - 1]} and exp-${i} ${steps[i]} are ${dl.toFixed(1)} L* apart (${EXPIRY_STEP_L} or more needed)`);
+    if (dh < EXPIRY_STEP_HUE) faults.push(`exp-${i - 1} ${steps[i - 1]} and exp-${i} ${steps[i]} are ${dh.toFixed(1)}° apart in hue (${EXPIRY_STEP_HUE}° or more needed)`);
+  }
+  return faults;
+}
+
+/** The colour of each expiration step's wall on the 3D map, as MapView paints it in the theme. */
+export function expiryWalls(t: Tokens, theme: 'night' | 'day'): string[] {
+  return expirySteps(t).map((fill, i) => (theme === 'night' ? mix(fill, '#ffffff', MAP_LIFT) : mix(fill, t.get(`--tone-exp-${i}-edge`)!, MAP_DEEPEN)));
+}
 /** A light-grey basemap building (mapStyle.ts, BUILDINGS_LIGHT). */
 export const BASEMAP_LIGHT = '#cfd4da';
 
@@ -165,6 +197,29 @@ export function describePalette(p: LoadedPalette): void {
       expect(contrast(get('available', 'fill'), card)).toBeGreaterThan(leased * 2);
       for (const loud of ['available', 'expiring', 'risk']) expect(contrast(get(loud, 'edge'), card), loud).toBeGreaterThan(contrast(get('leased', 'edge'), card) - 1);
       expect(get('neutral', 'fill')).toBe(get('leased', 'fill'));
+    });
+  });
+
+  // The one rule for the expiration ramp, in every palette and both themes (round 15: Vice by night had
+  // three late steps 1.4 and 2.7 L* apart; Ascendix by day had two 5.5 L* apart).
+  describe.each([
+    ['night', night],
+    ['day', day],
+  ] as const)(`${name} palette, %s: the expiration ramp`, (theme, t) => {
+    it(`keeps every pair of neighbouring steps ${EXPIRY_STEP_L} L* or more apart and of a different hue`, () => {
+      expect(expiryStepFaults(expirySteps(t))).toEqual([]);
+    });
+
+    it('runs one way in lightness from the soonest step to the latest', () => {
+      const ls = expirySteps(t).map(lightness);
+      const dir = Math.sign(ls[5] - ls[0]);
+      expect(dir).toBe(theme === 'night' ? -1 : 1);
+      for (let i = 1; i < ls.length; i += 1) expect(Math.sign(ls[i] - ls[i - 1]), `exp-${i - 1} to exp-${i}`).toBe(dir);
+    });
+
+    it(`keeps the steps apart on the 3D map as well: neighbouring walls ${EXPIRY_WALL_STEP_L} L* or more apart`, () => {
+      const walls = expiryWalls(t, theme);
+      for (let i = 1; i < walls.length; i += 1) expect(Math.abs(lightness(walls[i]) - lightness(walls[i - 1])), `exp-${i - 1} wall ${walls[i - 1]} to exp-${i} wall ${walls[i]}`).toBeGreaterThanOrEqual(EXPIRY_WALL_STEP_L);
     });
   });
 
@@ -243,10 +298,9 @@ export function describePalette(p: LoadedPalette): void {
         });
       });
 
-      it('orders the ramp from soonest (darkest) to latest, the three cool steps 5 L* or more apart', () => {
+      it('orders the ramp from soonest (darkest) to latest', () => {
+        // (How far apart neighbours must be is the shared rule above: `expiryStepFaults`.)
         for (let i = 1; i < steps.length; i += 1) expect(lightness(steps[i]), `exp-${i} lighter than exp-${i - 1}`).toBeGreaterThan(lightness(steps[i - 1]));
-        // The last three steps are neighbours in hue, so lightness is what separates them.
-        for (const i of [4, 5]) expect(lightness(steps[i]) - lightness(steps[i - 1]), `exp-${i - 1} to exp-${i}`).toBeGreaterThanOrEqual(5);
       });
 
       it('tells every pair of steps apart: a different hue family, or 5 L* or more between them', () => {

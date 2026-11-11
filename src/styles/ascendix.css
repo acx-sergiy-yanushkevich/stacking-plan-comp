@@ -54,9 +54,10 @@
        the soonest step is the brightest against the navy card and the latest is a deep blue close to it
        (the legend says so). Every step is 9 L* or more below the one before, so the order survives a
        colour-blind eye and the 3D model and the map, which have only the colour; and every step changes
-       hue as well: light orange, Primary Orange, red-orange, mauve, then two company-side blues (a steel
-       blue and a deeper indigo slate) instead of violets. Holdover / MTM is a dark maroon, far below every step. */
-    --tone-exp-0-fill: #ffd08a; --tone-exp-0-text: #2a1500; --tone-exp-0-edge: #ffe6bf;
+       hue as well: a warm yellow, Primary Orange, red-orange, mauve, then two company-side blues (a steel
+       blue and a deeper indigo slate) instead of violets. (The soonest step was a light orange of the
+       Primary Orange's own hue: the two differed in lightness alone.) Holdover / MTM is a dark maroon, far below every step. */
+    --tone-exp-0-fill: #ffe07c; --tone-exp-0-text: #2a1500; --tone-exp-0-edge: #fff0bd;
     --tone-exp-1-fill: #ff9c00; --tone-exp-1-text: #2a1500; --tone-exp-1-edge: #ffc774;
     --tone-exp-2-fill: #ec7450; --tone-exp-2-text: #1f0a04; --tone-exp-2-edge: #f8b29b;
     --tone-exp-3-fill: #bb6191; --tone-exp-3-text: #1c0a14; --tone-exp-3-edge: #e6abc8;
@@ -147,13 +148,18 @@
        white card strong means dark, so the lightness runs the other way (soonest is darkest) while the
        steps keep the night ramp's order and hues: red-orange, deep orange, Primary Orange for the three
        steps that need attention, then lavender, periwinkle and pale steel blue. Holdover / MTM (a pale pink) stands beside
-       the ramp: every warm step is 12 L* or more below it, every cool step a different hue family. */
+       the ramp: every warm step is 12 L* or more below it, every cool step a different hue family.
+       Every step is 8 L* or more above the one before (L* 42, 57, 73, 81, 89, 98) and a different hue: in
+       round 15 lavender and periwinkle were 5.5 L* apart, and the deep orange was the Primary Orange's own
+       hue. Primary Orange is fixed, so the three cool steps are pale; each is outlined at 3:1 or more, and
+       the edges step in lightness as well, so the 3D map (which deepens a fill toward its edge) keeps the
+       six walls 8 L* apart too. */
     --tone-exp-0-fill: #b03a16; --tone-exp-0-text: #ffffff; --tone-exp-0-edge: #7d260c;
-    --tone-exp-1-fill: #e07400; --tone-exp-1-text: #1f0e00; --tone-exp-1-edge: #9a4c00;
-    --tone-exp-2-fill: #ff9c00; --tone-exp-2-text: #1f0e00; --tone-exp-2-edge: #a35f00;
-    --tone-exp-3-fill: #c9bbef; --tone-exp-3-text: #292d3b; --tone-exp-3-edge: #6a52b0;
-    --tone-exp-4-fill: #c2d2f7; --tone-exp-4-text: #292d3b; --tone-exp-4-edge: #4866b0;
-    --tone-exp-5-fill: #e1eff7; --tone-exp-5-text: #292d3b; --tone-exp-5-edge: #4d7288;
+    --tone-exp-1-fill: #dc6618; --tone-exp-1-text: #1f0e00; --tone-exp-1-edge: #7a3306;
+    --tone-exp-2-fill: #ff9c00; --tone-exp-2-text: #1f0e00; --tone-exp-2-edge: #6b3c00;
+    --tone-exp-3-fill: #cfc3f2; --tone-exp-3-text: #292d3b; --tone-exp-3-edge: #6650b4;
+    --tone-exp-4-fill: #d6e1fa; --tone-exp-4-text: #292d3b; --tone-exp-4-edge: #4f72c4;
+    --tone-exp-5-fill: #f3f9fc; --tone-exp-5-text: #292d3b; --tone-exp-5-edge: #5a91b3;
 
     /* Rent lens by day: the same company blues, lightest to darkest. */
     --tone-rent-0-fill: #e6f5fd; --tone-rent-0-text: #292d3b; --tone-rent-0-edge: #5a89a8;

@@ -320,43 +320,63 @@ const latest = (spaces: Space[]): ISODate | null => spaces.map((x) => x.from).fi
  * search is offered sublease space only (never a direct or mixed alternative) and the `limit` is
  * spent on rows the tenant can use. Never offers for-sale units. Sorted by smallest shortfall first.
  *
- * One floor is one alternative. A floor with several suites is offered as their total; a suite of it
- * alone is the same space with a larger shortfall, so it is not listed again beside the total (it
- * used to be: "Floor 8 · 7,400 SF" and then "Floor 8 · 4,200 SF", Ste 850 by itself). The same goes
- * for a suite that is part of an exact option already listed (`covered`: the keys of each option).
+ * No row repeats another. `covered` is the keys of each exact option already listed.
+ *  - One floor is one alternative. A floor with several suites is offered as their total; a suite of
+ *    it alone is the same space with a larger shortfall, so it is not listed beside the total. The
+ *    same goes for a suite that is part of an exact option.
+ *  - Stacked floors that hold a whole exact option are that option with space the tenant did not ask
+ *    for added to it ("Floors 6–7 · 28,400 SF" beside the option "Floor 6 · 21,400 SF"): not listed.
+ *  - Stacked floors above `maxSize` are not an alternative: the tenant has said that is too much. A
+ *    space that falls short is never above the maximum, so those stay, with their shortfall.
+ *  - A floor that is half of a listed stack is not listed again on its own: the stack already names
+ *    its suites and meets the requirement, which the floor alone does not.
  */
-export function nearMisses(floors: FloorView[], req: number, asOf: ISODate, type: FitType = 'any', limit = 4, covered: ReadonlyArray<readonly string[]> = []): NearMiss[] {
+export function nearMisses(
+  floors: FloorView[],
+  req: number,
+  asOf: ISODate,
+  type: FitType = 'any',
+  limit = 4,
+  covered: ReadonlyArray<readonly string[]> = [],
+  maxSize: number | null = null,
+): NearMiss[] {
   const want = type === 'any' ? null : type === 'direct' ? 'Direct' : 'Sublease';
   const spaces = (f: FloorView) => spacesOn(f).filter((x) => !want || x.type === want);
-  const out: Array<Omit<NearMiss, 'suites'>> = [];
+  /** Every key of `inner` is in `outer`. */
+  const inside = (inner: readonly string[], outer: readonly string[]) => inner.every((k) => outer.includes(k));
+
+  const shorts: Array<Omit<NearMiss, 'suites'>> = [];
   for (const f of floors) {
     const sp = spaces(f);
     // whole-floor available total as one candidate when several suites exist
     const total = sp.reduce((s, x) => s + x.size, 0);
-    if (sp.length > 1 && total < req) out.push({ kind: 'short', floorName: f.floor.name, size: total, shortfall: req - total, keys: sp.map((x) => x.key), from: latest(sp), type: mixOf(sp) });
-    for (const x of sp) if (x.size < req) out.push({ kind: 'short', floorName: f.floor.name, size: x.size, shortfall: req - x.size, keys: [x.key], from: x.from, type: x.type });
+    if (sp.length > 1 && total < req) shorts.push({ kind: 'short', floorName: f.floor.name, size: total, shortfall: req - total, keys: sp.map((x) => x.key), from: latest(sp), type: mixOf(sp) });
+    for (const x of sp) if (x.size < req) shorts.push({ kind: 'short', floorName: f.floor.name, size: x.size, shortfall: req - x.size, keys: [x.key], from: x.from, type: x.type });
   }
+
+  const stacks: Array<Omit<NearMiss, 'suites'>> = [];
   for (let i = 0; i < floors.length - 1; i++) {
     const a = spaces(floors[i]);
     const b = spaces(floors[i + 1]);
     if (!a.length || !b.length) continue;
     const all = [...a, ...b];
     const size = all.reduce((s, x) => s + x.size, 0);
-    if (size < req) continue;
-    out.push({ kind: 'stack', floorName: `Floors ${floors[i + 1].floor.sequence}–${floors[i].floor.sequence}`, size, shortfall: 0, keys: all.map((x) => x.key), from: latest(all), type: mixOf(all) });
+    if (size < req || (maxSize !== null && size > maxSize)) continue;
+    const keys = all.map((x) => x.key);
+    if (covered.some((option) => inside(option, keys))) continue;
+    stacks.push({ kind: 'stack', floorName: `Floors ${floors[i + 1].floor.sequence}–${floors[i].floor.sequence}`, size, shortfall: 0, keys, from: latest(all), type: mixOf(all) });
   }
-  const seen = new Set<string>();
-  const within = (inner: readonly string[], outer: readonly string[]) => inner.length < outer.length && inner.every((k) => outer.includes(k));
-  const inside = (inner: readonly string[], outer: readonly string[]) => inner.every((k) => outer.includes(k));
-  return out
-    .filter((m) => {
-      const k = m.keys.join('+');
-      if (seen.has(k)) return false;
-      seen.add(k);
-      return true;
-    })
-    // A smaller space that is part of a larger one on the same floor, or of an exact option, is not a second alternative.
-    .filter((m, _, all) => m.kind !== 'short' || !(all.some((n) => n.kind === 'short' && n.floorName === m.floorName && within(m.keys, n.keys)) || covered.some((keys) => inside(m.keys, keys))))
+
+  const distinct = shorts.filter((m, i) => {
+    // The same suites once (a floor with one suite is its own total).
+    if (shorts.findIndex((n) => n.keys.join('+') === m.keys.join('+')) !== i) return false;
+    const partOfFloor = shorts.some((n) => n.floorName === m.floorName && n.keys.length > m.keys.length && inside(m.keys, n.keys));
+    const partOfOption = covered.some((option) => inside(m.keys, option));
+    const partOfStack = stacks.some((stack) => inside(m.keys, stack.keys));
+    return !partOfFloor && !partOfOption && !partOfStack;
+  });
+
+  return [...distinct, ...stacks]
     .sort((x, y) => x.shortfall - y.shortfall || (x.from ?? '').localeCompare(y.from ?? '') || y.size - x.size)
     .slice(0, limit)
     .map((m) => ({ ...m, suites: suitesLabel(floors, m.keys), from: m.from && m.from > asOf ? m.from : null }));
@@ -391,8 +411,34 @@ export interface NoFit {
 
 const optionCount = (n: number) => plural(n, 'option');
 
-/** The advice for a search that found nothing (see `NoFit`). `hasAlternatives`: near misses are listed below it. */
-export function noFit(floors: FloorView[], req: Requirement, inquiries: Inquiry[], asOf: ISODate, hasAlternatives = false): NoFit {
+/**
+ * What the alternatives under a search are, in a sentence, or null when there are none. It names only
+ * the kinds of row that are in the list, so the text never promises floor combinations that are not there.
+ */
+export function alternativesListed(alternatives: ReadonlyArray<Pick<NearMiss, 'kind'>>): string | null {
+  const shorts = alternatives.some((m) => m.kind === 'short');
+  const stacks = alternatives.some((m) => m.kind === 'stack');
+  if (shorts && stacks) return 'The closest spaces and floor combinations are listed below.';
+  if (shorts) return 'The closest spaces are listed below.';
+  return stacks ? 'Floor combinations that add up to it are listed below.' : null;
+}
+
+/**
+ * The note above the alternatives when there are exact options too: what the rows are, again only the
+ * kinds that are listed. `type` is the requirement's space type.
+ */
+export function alternativesNote(alternatives: ReadonlyArray<Pick<NearMiss, 'kind' | 'type'>>, type: FitType): string {
+  const stacks = alternatives.filter((m) => m.kind === 'stack');
+  const parts: string[] = [];
+  if (alternatives.some((m) => m.kind === 'short')) parts.push(type === 'any' ? 'smaller spaces with their shortfall' : `smaller ${type} spaces with their shortfall`);
+  if (stacks.length > 0) parts.push(type !== 'any' ? `stacked floors of ${type} space` : stacks.some((m) => m.type === 'Direct + sublease') ? 'stacked floors that combine direct and sublease space' : 'stacked floors');
+  const text = parts.join(', and ');
+  const sentence = text ? `${text[0].toUpperCase()}${text.slice(1)}.` : '';
+  return type === 'any' ? sentence : `${sentence} Choose “Any” to combine direct and sublease space.`.trim();
+}
+
+/** The advice for a search that found nothing (see `NoFit`). `alternatives`: the near misses listed below it. */
+export function noFit(floors: FloorView[], req: Requirement, inquiries: Inquiry[], asOf: ISODate, alternatives: ReadonlyArray<Pick<NearMiss, 'kind'>> = []): NoFit {
   const count = (max: number | null, type: FitType) => filterFits(findFits(floors, req.size, req.by, max, inquiries, asOf).options, type).length;
   const withoutMax = req.max !== null ? count(null, req.type) : 0;
   const anyType = req.type !== 'any' ? count(req.max, 'any') : 0;
@@ -406,7 +452,8 @@ export function noFit(floors: FloorView[], req: Requirement, inquiries: Inquiry[
   if (tips.length === 0) {
     // Nothing to relax: say how much space there is, so the reader knows how far off the requirement is.
     tips.push(largestNow.size > 0 ? `The largest block available now is ${num(largestNow.size)} SF${largestNow.floorName ? ` on ${largestNow.floorName}` : ''}.` : 'No direct space is available now.');
-    if (hasAlternatives) tips.push('The closest spaces and floor combinations are listed below.');
+    const listed = alternativesListed(alternatives);
+    if (listed) tips.push(listed);
   }
   return { withoutMax, anyType, withoutBoth, largestNow, message: tips.join(' ') };
 }
@@ -418,7 +465,8 @@ export interface FinderResult {
   keys: Set<string>;
   /**
    * Near misses, listed when exact options are few (smaller spaces, stacked floors), already narrowed
-   * to the requirement's space type and never a part of an option or of another alternative.
+   * to the requirement's space type and held to its maximum. None is a part of an option, none holds
+   * a whole option, and none is a part of another alternative (`nearMisses`).
    */
   alternatives: NearMiss[];
   /** The alternatives' suites that are not in an option: the plan keeps them readable instead of dimming them. */
@@ -433,14 +481,14 @@ export function searchSpace(floors: FloorView[], req: Requirement, inquiries: In
   const r = findFits(floors, req.size, req.by, req.max, inquiries, asOf);
   const options = filterFits(r.options, req.type);
   const keys = new Set(options.flatMap((o) => o.keys));
-  const alternatives = options.length < 3 ? nearMisses(floors, req.size, asOf, req.type, 4, options.map((o) => o.keys)) : [];
+  const alternatives = options.length < 3 ? nearMisses(floors, req.size, asOf, req.type, 4, options.map((o) => o.keys), req.max) : [];
   return {
     options,
     keys,
     alternatives,
     partial: new Set(alternatives.flatMap((m) => m.keys).filter((k) => !keys.has(k))),
     largestNow: r.largestNow,
-    noFit: options.length === 0 ? noFit(floors, req, inquiries, asOf, alternatives.length > 0) : null,
+    noFit: options.length === 0 ? noFit(floors, req, inquiries, asOf, alternatives) : null,
   };
 }
 

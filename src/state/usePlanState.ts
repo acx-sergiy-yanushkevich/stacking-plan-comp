@@ -1,48 +1,43 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ISODate } from '../domain/types';
 import { SAFE_TITLE, TITLE } from '../domain/safe';
-import { applyPatch, parseState, serializeState, type PlanState } from './planState';
+import { onPopState, readUrl, setTitle, writeUrl } from '../lib/host';
+import { openSession, serializeState, stepSession, type PlanSession, type PlanState } from './planState';
 
 /**
- * One state object for the whole plan, mirrored into the URL with
- * `history.replaceState` so any screen is a shareable link and the back/forward
- * buttons (popstate) restore it.
+ * One state object for the whole plan, mirrored into the address (`lib/host`: in a browser,
+ * `history.replaceState`) so any screen is a shareable link and the back/forward buttons restore it.
  */
 export function usePlanState(today: ISODate): [PlanState, (patch: Partial<PlanState>) => void] {
-  const [state, setState] = useState<PlanState>(() => parseState(window.location.search, today));
+  // The session is the state plus what the Prospect-safe switch withheld. Only the state leaves this hook.
+  const [session, setSession] = useState<PlanSession>(() => openSession(readUrl(), today));
+  const { state } = session;
 
-  // `applyPatch` holds the prospect-safe invariants on every change: turning the mode on drops a search in
-  // progress and returns the plan to today, and no control can open the worklist, an expiry highlight or
-  // another as-of date while it is on.
+  // `stepSession` holds the prospect-safe invariants on every change: turning the mode on drops a search in
+  // progress and returns the plan to today, no control can open the worklist, an expiry highlight or another
+  // as-of date while it is on, and turning it off puts back what turning it on removed.
   const patch = useCallback(
     (p: Partial<PlanState>) => {
-      setState((prev) => applyPatch(prev, p, today));
+      setSession((prev) => stepSession(prev, p, today));
     },
     [today],
   );
 
-  // Write every change to the URL (also normalises an initial URL with invalid params).
+  // Write every change to the address (also normalises an initial address with invalid params).
   useEffect(() => {
-    const qs = serializeState(state, today);
-    const url = `${window.location.pathname}${qs}${window.location.hash}`;
-    if (url !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
-      window.history.replaceState(window.history.state, '', url);
-    }
+    writeUrl(serializeState(state, today));
   }, [state, today]);
 
-  useEffect(() => {
-    const onPop = () => setState(parseState(window.location.search, today));
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
-  }, [today]);
+  // Back or Forward to another address is a link opened afresh: nothing withheld is carried into it.
+  useEffect(() => onPopState(() => setSession(openSession(readUrl(), today))), [today]);
 
   return [state, patch];
 }
 
-/** `document.title` must never leak the mode: prospect-safe gets its own title. */
+/** The tab title must never leak the mode: prospect-safe gets its own title. */
 export function useDocumentTitle(safe: boolean, propertyName?: string): void {
   useEffect(() => {
     const base = safe ? SAFE_TITLE : TITLE;
-    document.title = propertyName ? `${propertyName} · ${base}` : base;
+    setTitle(propertyName ? `${propertyName} · ${base}` : base);
   }, [safe, propertyName]);
 }

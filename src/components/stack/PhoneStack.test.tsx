@@ -43,6 +43,31 @@ describe('PhoneStack', () => {
     expect(html).toContain('2,400 SF');
   });
 
+  // Round 15: "Ste 1250 · 9,300 SF ·" ended a line on its separator before the rate wrapped under it.
+  it('writes each separator in front of the fact it introduces, never after one: a line cannot end on it', () => {
+    const { html } = render(false);
+    const runs = [...html.matchAll(/<span class="sp-psuite__facts sp-dotrun"><span class="sp-dotrun__in">(.*?)<\/span><\/span><\/span>(?=<\/span>)/g)].map((m) => m[1]);
+    expect(runs.length).toBeGreaterThan(20);
+    for (const run of runs) {
+      const parts = [...run.matchAll(/<span class="sp-dotrun__part sp-psuite__part">(.*?)<\/span>(?=<span class="sp-dotrun__part|$)/g)].map((m) => m[1]);
+      expect(parts.length).toBeGreaterThan(0);
+      // The first part has no separator; every later one starts with it; none ends with one.
+      expect(parts[0]).not.toContain('sp-dotrun__dot');
+      for (const part of parts.slice(1)) expect(part).toMatch(/^<span class="sp-dotrun__dot"> · <\/span>/);
+      for (const part of parts) expect(part.replace(/<[^>]+>/g, '').trimEnd()).not.toMatch(/·$/);
+    }
+    // Read as text the row is what it was: the facts joined by " · ".
+    const text = html.replace(/<!-- -->/g, '').replace(/<[^>]+>/g, '');
+    expect(text).toContain('Ste 1250 · 9,300 SF');
+    expect(text).not.toMatch(/· ·|·\s*·/);
+  });
+
+  it('names a sublease on its floor\'s header, as every floor label does', () => {
+    const { html } = render(false);
+    expect(html).toContain('<span class="sp-pfloor__avail">7,000 SF sublease available</span>');
+    expect(html).toContain('<span class="sp-pfloor__avail">9,300 SF available</span>');
+  });
+
   it('shows no tenant name in prospect-safe mode', () => {
     const { html } = render(true);
     for (const l of property.leases) expect(html).not.toContain(l.tenant);

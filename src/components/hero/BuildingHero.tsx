@@ -9,6 +9,7 @@ import { num, pct } from '../../domain/format';
 import { openFloor, openFloorPlate, type Patch } from '../plan/actions';
 import { setHoverFloor, useHoverFloor, useHoverKeys } from '../../state/hoverStore';
 import { usePrefersReducedMotion } from '../../lib/useMedia';
+import { spaceOf } from '../building/floorFact';
 import './hero.css';
 
 export interface BuildingHeroProps {
@@ -38,7 +39,9 @@ export interface BuildingHeroProps {
    * list of floors, one label per floor (while no floor is open). It is given the height of the drawing
    * and three shares of that height, `--sp-hero-tags-above`, `--sp-hero-tags-band` and
    * `--sp-hero-tags-below`: the room above the top floor's label, the run of the labels, and the room
-   * under the bottom one. A list laid out by them has each label level with the floor it names.
+   * under the bottom one. A list laid out by them has each label level with the floor it names. The
+   * model also marks each floor's point on its right-hand edge (`[data-anchor]`, at the angle it is
+   * turning to), for the list to draw a leader to.
    */
   after?: ReactNode;
 }
@@ -108,7 +111,8 @@ interface HeroFloor {
   level: number;
   leasedPct: number;
   leasable: number;
-  available: number;
+  /** The space on offer today in words ("7,400 SF available", "7,000 SF sublease available"); empty when none. */
+  space: string;
   keys: string[];
   slices: HeroSlice[];
   /** Where the floor-number tag sits: just right of the slab. */
@@ -216,7 +220,7 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
         .filter((x): x is HeroSlice => x !== null)
         .sort((a, b) => a.depth - b.depth);
       const edge = poly.map((p) => iso(rot(p), z0 + HZ / 2)).reduce((best, p) => (p[0] > best[0] ? p : best));
-      return { id: f.floor.id, name: f.floor.name, level, leasedPct: f.leasable ? f.leased / f.leasable : 0, leasable: f.leasable, available: f.available, keys: f.segments.map((sg) => sg.key), slices, tag: edge };
+      return { id: f.floor.id, name: f.floor.name, level, leasedPct: f.leasable ? f.leased / f.leasable : 0, leasable: f.leasable, space: spaceOf(f), keys: f.segments.map((sg) => sg.key), slices, tag: edge };
     });
     const ground = path(base.map((p) => iso(rot(p), 0)));
     // Room for the lift above (when a floor can be in focus) and the blurred ground shadow below; the floor labels sit outside the drawing.
@@ -249,7 +253,7 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
   const hot = heroFloors.find((f) => f.id === (hoverId ?? focusId)) ?? null;
   const NB = '\u00a0';
   const caption = hot
-    ? `${hot.name.replace(' ', NB)} · ${pct(hot.leasedPct)}${NB}leased · ${num(hot.leasable)}${NB}RSF${hot.available ? ` · ${num(hot.available)}${NB}SF${NB}available` : ''}`
+    ? `${hot.name.replace(' ', NB)} · ${pct(hot.leasedPct)}${NB}leased · ${num(hot.leasable)}${NB}RSF${hot.space ? ` · ${hot.space.replace(/ /g, NB)}` : ''}`
     : `${floors.length}${NB}floors · ${num(model.kpis.leasable)}${NB}RSF leasable`;
   const hint = hot ? (hot.id === focusId ? 'Click again to open the floor plan' : 'Click to focus this floor in the plan') : 'Hover a floor to trace it in the plan';
 
@@ -336,6 +340,12 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
             none where a list of floors stands beside the drawing); in a panel the top and bottom floors, plus
             the floor under the pointer or in focus. */}
         <div className="sp-hero__tags" aria-hidden="true">
+          {/* Where each floor ends on the right, at rest: the list of floors beside the drawing draws its leaders to these. */}
+          {stage &&
+            after &&
+            rest.heroFloors.map((f) => (
+              <i key={`anchor-${f.id}`} className="sp-hero__anchor" data-anchor={f.id} style={{ left: `${(((f.tag[0] - frame.x) / frame.w) * 100).toFixed(2)}%`, top: `${(((f.tag[1] - frame.y) / frame.h) * 100).toFixed(2)}%` }} />
+            ))}
           {tagged.map((f) => {
             const lifted = focusLevel !== null && f.level > focusLevel;
             return (

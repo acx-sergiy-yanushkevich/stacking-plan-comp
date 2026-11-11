@@ -53,8 +53,9 @@ export function useMapLibre(containerRef: RefObject<HTMLDivElement | null>, opts
         container: el,
         style: styleUrl,
         center: [lng, lat],
-        // Narrow viewports start further out so the whole building (roof included) is in frame.
-        zoom: el.clientWidth < 600 ? CAMERA.zoom - 1.4 : CAMERA.zoom,
+        // A small map starts further out so the whole building (roof included) is in frame: a phone, and
+        // by less a map that shares the card with the list of floors (beside it, or under it in a low window).
+        zoom: CAMERA.zoom - (el.clientWidth < 480 ? 1.4 : el.clientWidth < 720 || el.clientHeight < 560 ? 0.8 : 0),
         pitch: CAMERA.pitch,
         bearing: CAMERA.bearing,
         maxPitch: CAMERA.maxPitch,
@@ -67,6 +68,12 @@ export function useMapLibre(containerRef: RefObject<HTMLDivElement | null>, opts
       return;
     }
     styleRef.current = styleUrl;
+    // The basemap style names a sprite image its sprite sheet does not hold ("wood-pattern", a land-use
+    // fill). MapLibre asks for it here before it warns in the console on every load: it is given a
+    // transparent pixel, so the fill draws nothing, as it did, and the console stays clean.
+    m.on('styleimagemissing', (e) => {
+      if (!m.hasImage(e.id)) m.addImage(e.id, { width: 1, height: 1, data: new Uint8Array(4) });
+    });
     // Exposed for the verification scripts (read-only inspection of layers and paint).
     (window as unknown as { __spMap?: MapLibreMap }).__spMap = m;
     let settled = false;

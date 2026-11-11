@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { contrast, deltaE, describePalette, deuteranopia, hue, hueApart, lightness, loadPalette, lum, tonesOf, type Tokens } from './paletteChecks';
+import { contrast, deltaE, describePalette, deuteranopia, expiryStepFaults, expirySteps, hue, hueApart, lightness, loadPalette, lum, tonesOf, type Tokens } from './paletteChecks';
 
 /**
  * The Ascendix palette (the company colours, the default look), checked against the card colours painted
@@ -104,6 +104,21 @@ describe('Ascendix palette, the company colours', () => {
   });
 });
 
+describe('Ascendix palette: the shared rule for the expiration ramp has teeth', () => {
+  it('fails the day ramp of round 15, whose 2–3 yr and 3–5 yr steps were 5.5 L* apart', () => {
+    const faults = expiryStepFaults(['#b03a16', '#e07400', '#ff9c00', '#c9bbef', '#c2d2f7', '#e1eff7']).join('\n');
+    expect(faults).toContain('exp-3 #c9bbef and exp-4 #c2d2f7 are 5.5 L* apart');
+    // The deep orange and the Primary Orange were one hue.
+    expect(faults).toContain('exp-1 #e07400 and exp-2 #ff9c00 are 5.6° apart in hue');
+  });
+
+  it('fails the night ramp of round 15, whose two soonest steps were one hue, and passes both ramps as they are now', () => {
+    expect(expiryStepFaults(['#ffd08a', '#ff9c00', '#ec7450', '#bb6191', '#3a6a8e', '#2e4883']).join('\n')).toMatch(/exp-0 #ffd08a and exp-1 #ff9c00 are 0\.\d° apart in hue/);
+    expect(expiryStepFaults(expirySteps(night))).toEqual([]);
+    expect(expiryStepFaults(expirySteps(day))).toEqual([]);
+  });
+});
+
 describe.each([
   ['night', night, ascendix.nightCards],
   ['day', day, ascendix.dayCards],
@@ -145,8 +160,9 @@ describe.each([
       const dl = Math.abs(lightness(steps[i]) - lightness(steps[i - 1]));
       expect(dl >= 8 || (dl >= 4.5 && hueApart(steps[i], steps[i - 1]) >= 25), `exp-${i - 1} ${steps[i - 1]} to exp-${i} ${steps[i]}: ${dl.toFixed(1)} L*, ${hueApart(steps[i], steps[i - 1]).toFixed(0)}°`).toBe(true);
     }
-    // Built from the orange toward the blues: the three soonest steps are warm, the last is a blue.
-    for (const i of [0, 1, 2]) expect(hue(steps[i]), `exp-${i} is warm`).toBeLessThanOrEqual(45);
+    // Built from the orange toward the blues: the three soonest steps are warm (red through orange to a
+    // warm yellow, which sits just past the Primary Orange so that the two differ in hue), the last is a blue.
+    for (const i of [0, 1, 2]) expect(hue(steps[i]), `exp-${i} is warm`).toBeLessThanOrEqual(48);
     expect(steps).toContain(BRAND.primaryOrange);
     expect(hue(steps[5])).toBeGreaterThanOrEqual(195);
     expect(hue(steps[5])).toBeLessThanOrEqual(225);
