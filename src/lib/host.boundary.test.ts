@@ -16,7 +16,9 @@ const EXEMPT = new Set(['lib/host.ts', 'main.tsx']);
 /** Objects of the page: a use is reading something off one, or testing for it. */
 const OBJECTS = 'document|window|navigator|localStorage|sessionStorage';
 /** Functions of the page: a use is any mention of the name that is not a property or an object key. */
-const FUNCTIONS = 'requestAnimationFrame|cancelAnimationFrame|matchMedia';
+// Measuring and watching an element are host matters too (round 18): `computedStyle`, `sizeObserver`,
+// `mutationObserver` in lib/host.ts.
+const FUNCTIONS = 'requestAnimationFrame|cancelAnimationFrame|matchMedia|getComputedStyle|ResizeObserver|MutationObserver';
 
 const PATTERNS: RegExp[] = [
   // `window.x`, `document?.x`, `window['x']`, `(window as …)`: not `page.window` and not `state.window`.
@@ -105,6 +107,10 @@ describe('the host boundary', () => {
     expect(pageGlobals('const h = requestAnimationFrame(step);')).toHaveLength(1);
     expect(pageGlobals('const t = `${window.innerHeight}px`;')).toHaveLength(1);
     expect(pageGlobals('navigator?.clipboard;')).toHaveLength(1);
+    expect(pageGlobals('const cs = getComputedStyle(el);')).toHaveLength(1);
+    expect(pageGlobals('const ro = new ResizeObserver(measure);')).toHaveLength(1);
+    expect(pageGlobals("if (typeof MutationObserver === 'undefined') return;")).toHaveLength(1);
+    expect(pageGlobals('const cs = page.getComputedStyle(el); const k = { ResizeObserver: null };')).toEqual([]);
     expect(
       pageGlobals(
         [

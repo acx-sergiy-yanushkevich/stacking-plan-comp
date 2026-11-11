@@ -14,7 +14,7 @@ import { AsOfCursor } from './AsOfCursor';
 import { RolloverChips } from './RolloverChips';
 import { canShowRollover, canTimeTravel } from '../../domain/safe';
 import { barLabel, endedNameFits, SUB_FONT, tagWidth, wrapLabel, type LabelLine } from './barLabel';
-import { useWidth } from './useWidth';
+import { useWidth } from '../../lib/useWidth';
 import { measure } from '../../lib/textFit';
 import { Icon } from '../ui';
 import { rampNote } from '../stack/rampNote';
@@ -59,7 +59,7 @@ export const litKeys = (pointedAt: Set<string> | null, filter: Set<string> | nul
  */
 export default function TimelineView({ model, state, patch }: TimelineViewProps) {
   // SSR and tests have no layout: they render the wide chart.
-  const [hostRef, width] = useWidth<HTMLDivElement>(STACKED_MIN_WIDTH, MIN_WIDTH);
+  const [hostRef, width] = useWidth<HTMLDivElement>(MIN_WIDTH, STACKED_MIN_WIDTH);
   const stackedMode = width < MIN_WIDTH;
   const svgRef = useRef<SVGSVGElement | null>(null);
   // A KPI or a finder option pointed at lights its suites' bars for as long as it is pointed at.

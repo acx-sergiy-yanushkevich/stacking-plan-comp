@@ -16,7 +16,7 @@
  * Anything that cannot be exported throws an `Error` whose message says why, for the caller's toast.
  */
 
-import { createElement, readRootStyle } from './host';
+import { computedStyle, createElement, readRootStyle } from './host';
 import { createSignal } from './signal';
 
 /** Width, in CSS px, of the plan drawn off-screen for an export when no plan is on screen. */
@@ -69,7 +69,8 @@ export function imageSize(
 }
 
 function inlineStyles(src: Element, dst: Element) {
-  const cs = getComputedStyle(src);
+  const cs = computedStyle(src);
+  if (!cs) return;
   const parts: string[] = [];
   for (const p of STYLE_PROPS) {
     const v = cs.getPropertyValue(p);

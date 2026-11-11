@@ -1,5 +1,5 @@
 import { useLayoutEffect, useState } from 'react';
-import { cancelFrame, find, findAll, hasPage, on, requestFrame, scrollBy, setRootStyle, viewport } from '../../lib/host';
+import { cancelFrame, type ElementWatch, find, findAll, hasPage, on, requestFrame, scrollBy, setRootStyle, sizeObserver, viewport } from '../../lib/host';
 
 /** A vertical span on screen, in px from the top of the window. */
 export interface Span {
@@ -139,17 +139,17 @@ export function useClearOfSheet(selector: string | null, open: boolean, reduceMo
       if (frame === null) frame = requestFrame(tick);
     };
 
-    const observers: ResizeObserver[] = [];
+    const observers: ElementWatch[] = [];
     // The selection's own element, watched for its size; when another element comes to draw it, that one is.
     let follow = (_target: Element) => {};
-    if (typeof ResizeObserver !== 'undefined') {
+    let first = true;
+    const targetSizes = sizeObserver(() => {
+      // The first report on the element first placed for is the size already placed for; on one that replaced it, it is news.
+      if (first) first = false;
+      else place(!own, false);
+    });
+    if (targetSizes) {
       let followed: Element | null = null;
-      let first = true;
-      const targetSizes = new ResizeObserver(() => {
-        // The first report on the element first placed for is the size already placed for; on one that replaced it, it is news.
-        if (first) first = false;
-        else place(!own, false);
-      });
       observers.push(targetSizes);
       follow = (target) => {
         if (target === followed) return;
@@ -172,15 +172,16 @@ export function useClearOfSheet(selector: string | null, open: boolean, reduceMo
       }),
     ];
 
-    if (typeof ResizeObserver !== 'undefined') {
+    {
       // An observer reports once as it starts: that first report is the size already placed for.
       const watch = (el: Element | null, act: () => void) => {
         if (!el) return;
         let started = false;
-        const ro = new ResizeObserver(() => {
+        const ro = sizeObserver(() => {
           if (started) act();
           started = true;
         });
+        if (!ro) return;
         ro.observe(el);
         observers.push(ro);
       };

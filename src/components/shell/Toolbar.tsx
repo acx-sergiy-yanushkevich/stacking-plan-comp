@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { computedStyle, sizeObserver } from '../../lib/host';
 import { LENSES, type LensId } from '../../domain/lenses';
 import { canShowLeaseTerm, canUseLens } from '../../domain/safe';
 import { shownView, type PlanState, type View } from '../../state/planState';
@@ -40,15 +41,16 @@ function useHintRoom(): [React.RefObject<HTMLDivElement | null>, { room: number;
     const input = ref.current?.querySelector('input');
     if (!input) return;
     const read = () => {
-      const cs = getComputedStyle(input);
+      const cs = computedStyle(input);
+      if (!cs) return;
       const edges = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0) + (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.borderRightWidth) || 0);
       const room = Math.floor(input.getBoundingClientRect().width - edges - CLEAR_ROOM);
       const font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
       setFit((was) => (was && was.room === room && was.font === font ? was : { room, font }));
     };
     read();
-    if (typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(read);
+    const ro = sizeObserver(read);
+    if (!ro) return;
     ro.observe(input);
     return () => ro.disconnect();
   }, []);

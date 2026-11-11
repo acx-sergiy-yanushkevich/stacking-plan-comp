@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
+import { sizeObserver } from '../../lib/host';
 
 export interface FloorLeadersProps {
   /** The floors, top first: one leader each. */
@@ -74,8 +75,8 @@ export function FloorLeaders({ ids, hotId }: FloorLeadersProps) {
       setLeaders((prev) => (prev.length === next.length && prev.every((p, i) => p.id === next[i].id && p.d === next[i].d) ? prev : next));
     };
     measure();
-    if (typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(measure);
+    const ro = sizeObserver(measure);
+    if (!ro) return;
     ro.observe(root);
     if (canvas) ro.observe(canvas);
     const list = root.querySelector('.sp-flabels__list');

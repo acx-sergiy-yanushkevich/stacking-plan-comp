@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { Button } from './Button';
 import { canExpandSheet, dragSheetHeight, expandedSheetHeight, isSheetDrag, snapSheet } from './sheetHeight';
-import { findAll, focused, on, viewport as hostViewport } from '../../lib/host';
+import { computedStyle, findAll, focused, mutationObserver, on, sizeObserver, viewport as hostViewport } from '../../lib/host';
 
 export interface SheetProps {
   open: boolean;
@@ -30,8 +30,8 @@ function contentHeight(sheet: HTMLElement): number {
   if (inner <= scroller.clientHeight) {
     // Shorter than the room it has: the span of what is laid out in it (offsets, so a panel that is fading in at an offset measures the same).
     const shown = Array.from(scroller.children).filter((c): c is HTMLElement => c instanceof HTMLElement && c.offsetParent !== null);
-    const style = getComputedStyle(scroller);
-    const pad = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+    const style = computedStyle(scroller);
+    const pad = style ? (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0) : 0;
     inner = shown.length ? shown[shown.length - 1].offsetTop + shown[shown.length - 1].offsetHeight - shown[0].offsetTop + pad : scroller.clientHeight;
   }
   return own - scroller.clientHeight + inner;
@@ -126,8 +126,8 @@ export function Sheet({ open, onClose, title, children, snap = 'half', hideHeade
     };
     onResize();
     const stopResize = on('resize', onResize);
-    if (typeof ResizeObserver === 'undefined' || typeof MutationObserver === 'undefined') return stopResize;
-    const sizes = new ResizeObserver(measure);
+    const sizes = sizeObserver(measure);
+    if (!sizes) return stopResize;
     const watch = () => {
       sizes.disconnect();
       const scroller = sheet.querySelector<HTMLElement>('[data-sheet-scroll]') ?? sheet.querySelector<HTMLElement>('.sp-sheet__body');
@@ -137,15 +137,15 @@ export function Sheet({ open, onClose, title, children, snap = 'half', hideHeade
     };
     watch();
     // A panel swaps the elements it is made of: watch the new ones.
-    const swaps = new MutationObserver(() => {
+    const swaps = mutationObserver(() => {
       watch();
       measure();
     });
-    swaps.observe(sheet, { childList: true, subtree: true });
+    swaps?.observe(sheet, { childList: true, subtree: true });
     return () => {
       stopResize();
       sizes.disconnect();
-      swaps.disconnect();
+      swaps?.disconnect();
     };
   }, [open]);
   const clear = Math.max(keepClear ?? 0, topClear);

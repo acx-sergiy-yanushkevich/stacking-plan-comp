@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { Map as MapLibreMap } from 'maplibre-gl';
 import { CAMERA, STYLE_DARK, STYLE_LIGHT } from './mapStyle';
-import { createElement, expose } from '../../lib/host';
+import { createElement, expose, sizeObserver } from '../../lib/host';
 
 export type MapStatus = 'loading' | 'ready' | 'failed';
 
@@ -105,8 +105,8 @@ export function useMapLibre(containerRef: RefObject<HTMLDivElement | null>, opts
       clearTimeout(timer);
       setStatus('ready');
       setMap(m);
-      if (typeof ResizeObserver !== 'undefined') {
-        const ro = new ResizeObserver(() => m.resize());
+      const ro = sizeObserver(() => m.resize());
+      if (ro) {
         ro.observe(el);
         m.once('remove', () => ro.disconnect());
       }
