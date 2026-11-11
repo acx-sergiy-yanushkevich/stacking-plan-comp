@@ -31,3 +31,28 @@ export function expandedSheetHeight({ viewport, content, keepClear }: SheetMeasu
 export function canExpandSheet(m: SheetMeasure): boolean {
   return expandedSheetHeight(m) - SHEET_HALF * m.viewport >= SHEET_MIN_GROWTH;
 }
+
+/** A press on the handle that moves less than this far, px, is a tap (it toggles the sheet), not a drag. */
+export const SHEET_DRAG_SLOP = 6;
+/** A release faster than this, px per ms, is a flick: the sheet goes the way it was thrown, not to the nearer height. */
+export const SHEET_FLICK = 0.5;
+
+/** Whether a press on the handle that has moved `dy` px is a drag. */
+export function isSheetDrag(dy: number): boolean {
+  return Math.abs(dy) > SHEET_DRAG_SLOP;
+}
+
+/**
+ * The sheet's height while its handle is dragged, px: the height it started at less the drag (`dy`, negative
+ * upward), kept between the half snap and the expanded height, so a drag can never cover the selection.
+ */
+export function dragSheetHeight(start: number, dy: number, m: SheetMeasure): number {
+  return Math.min(expandedSheetHeight(m), Math.max(SHEET_HALF * m.viewport, start - dy));
+}
+
+/** Where a released drag settles: a flick goes the way it was thrown (`velocity` in px per ms, negative upward); a slower drag to the nearer of the two heights. */
+export function snapSheet(height: number, velocity: number, m: SheetMeasure): 'half' | 'full' {
+  if (Math.abs(velocity) >= SHEET_FLICK) return velocity < 0 ? 'full' : 'half';
+  const half = SHEET_HALF * m.viewport;
+  return height - half > expandedSheetHeight(m) - height ? 'full' : 'half';
+}

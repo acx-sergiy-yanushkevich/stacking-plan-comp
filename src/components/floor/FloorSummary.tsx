@@ -7,7 +7,7 @@ import type { PlanState } from '../../state/planState';
 import { useRecordAction } from '../inspector/Actions';
 import { Button, Chip } from '../ui';
 import { FloorLists } from './FloorLists';
-import { callTarget, comingText, floorComing, nextExpiry } from './floorData';
+import { callTarget, comingText, floorComing, largestNow, nextExpiry } from './floorData';
 
 export interface FloorSummaryProps {
   floor: FloorViewModel;
@@ -29,6 +29,8 @@ export function FloorSummary({ floor, model, state, patch }: FloorSummaryProps) 
   const next = nextExpiry(floor);
   // The call goes to the tenant who most needs it: a holdover or month-to-month tenant before the nearest expiry.
   const call = callTarget(floor);
+  // The largest block today: direct, else sublet (Floor 7 has only sublease space), else none.
+  const largest = largestNow(floor);
   return (
     <>
       <dl className="sp-fkpis">
@@ -59,9 +61,9 @@ export function FloorSummary({ floor, model, state, patch }: FloorSummaryProps) 
         <div className="sp-fkpi">
           <dt>Largest contiguous</dt>
           <dd>
-            <span className="sp-fkpi__value sp-nb">{sf(floor.maxContiguous)}</span>
+            <span className="sp-fkpi__value sp-nb">{sf(largest.size)}</span>
             <span className="sp-fkpi__context">
-              {floor.maxContiguous > 0 ? 'direct, available now' : coming?.from ? `no direct space until ${fmtMonthYearShort(coming.from)}` : 'no direct space now'}
+              {largest.kind ? `${largest.kind}, available now` : coming?.from ? `no direct space until ${fmtMonthYearShort(coming.from)}` : 'no direct space now'}
             </span>
           </dd>
         </div>

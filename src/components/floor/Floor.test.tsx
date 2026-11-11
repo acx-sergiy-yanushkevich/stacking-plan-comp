@@ -152,35 +152,38 @@ describe('floor plate key', () => {
   it('a key entry pairs the marker on the slice with the name, suite and SF, and the rent the slice had no room for', () => {
     const all = property.floors.map((f) => text(render(`?view=floor&floor=${f.id}`))).join('');
     const entries = [...all.matchAll(/<ol class="sp-plate__key"[^>]*>(.*?)<\/ol>/g)].flatMap((m) => [...m[1].matchAll(/<li>(.*?)<\/li>/g)].map((li) => li[1].replace(/<[^>]+>/g, '')));
-    // "1Marker 1: Name · Ste 100 · 2,400 SF", optionally followed by a whole rent: "· $34–$36/SF/yr NNN";
-    // or, for a slice that shows its name and SF itself, the suite and the rent: "Ste 850 · $31–$33/SF/yr FSG".
+    // Every entry is built from the same parts: "1Marker 1: Name · Ste 100 · 2,400 SF", then a whole rent
+    // where the slice had no room for it: "· $34–$36/SF/yr NNN".
     const rent = String.raw`\$[\d.,–$]+\/SF\/(yr|mo) (FSG|MG|NNN)`;
     const whole = new RegExp(String.raw`^\d+Marker \d+: .+ · (Ste \d+ · )?[\d,]+ SF( · ${rent})?$`);
-    const added = new RegExp(String.raw`^\d+Marker \d+: Ste \d+ · ${rent}$`);
-    for (const e of entries) expect(whole.test(e) || added.test(e), e).toBe(true);
+    for (const e of entries) expect(e).toMatch(whole);
     // As many markers drawn on the plates as entries listed under them.
     expect((all.match(/<g class="sp-seg__key"/g) ?? []).length).toBe(entries.length);
   });
 
-  it('a marked slice says its key number in its accessible name, followed by exactly the lines drawn on it', () => {
+  it('names each slice by its facts: no key number, and every line drawn on it is part of its name', () => {
     let marked = 0;
     for (const f of property.floors) {
       const html = text(render(`?view=floor&floor=${f.id}`));
       const plate = html.slice(html.indexOf('class="sp-plate"'), html.indexOf('class="sp-plate__caption"'));
       for (const g of plate.split(/<g class="sp-seg(?=[ "])/).slice(1)) {
         const label = /aria-label="([^"]*)"/.exec(g)?.[1] ?? '';
-        const marker = /<g class="sp-seg__key"[^>]*>.*?<text[^>]*>([^<]*)<\/text>/.exec(g)?.[1].trim();
-        if (!marker) {
-          expect(label, f.name).not.toMatch(/\bkey \d/);
-          continue;
-        }
-        marked += 1;
-        // What a sighted user reads on the slice, in order: the number, then each line (WCAG 2.5.3).
+        expect(label, f.name).not.toMatch(/\bkey \d/);
+        if (/<g class="sp-seg__key"/.test(g)) marked += 1;
+        // What a sighted user reads on the slice is in its name (WCAG 2.5.3); a short date stands for the full one.
         const lines = [...g.matchAll(/<text class="sp-seg__(?!key)[a-z]+"[^>]*>([^<]*)</g)].map((m) => m[1].trim());
-        expect(label, f.name).toContain([`key ${marker}`, ...lines].join(' '));
+        // The lobby is not a suite: it is an image with its own name, and is not marked.
+        if (/^[^>]*sp-seg--lobby/.test(g)) continue;
+        for (const l of lines) if (!/^(In\s)?[A-Z][a-z]{2}\s'\d\d$/.test(l)) expect(label.includes(l) || label.includes(l.replace(/ · /g, ', ')), `${f.name}: "${l}" in "${label}"`).toBe(true);
       }
     }
     expect(marked).toBeGreaterThan(0);
+  });
+
+  it('names Floor 8\'s Ste 860 the same with or without the suite selected', () => {
+    const name = (q: string) => /<g class="sp-seg[^"]*"[^>]*aria-label="([^"]*)"[^>]*data-key="A07"/.exec(text(render(q)))?.[1];
+    expect(name('?view=floor&floor=F8')).toBe('Floor 8, Available now, Ste 860, 3,200 SF, $31–$33/SF/yr FSG');
+    expect(name('?view=floor&floor=F8&select=A07')).toBe('Floor 8, Available now, Ste 860, 3,200 SF, $31–$33/SF/yr FSG');
   });
 
   it('every asking rent is on its slice or in the key, whole, with its unit and lease type: never split, never dropped', () => {

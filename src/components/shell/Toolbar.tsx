@@ -92,7 +92,8 @@ export function Toolbar({ state, patch }: ToolbarProps) {
           wraps they take the second row whole, the search filling it from the left edge. */}
       <div className="sp-toolbar__find">
         <div className="sp-toolbar__search" ref={searchRef}>
-          <TextField label="Find tenant, suite or prospect" hideLabel kind="search" placeholder={hint} value={state.q} onChange={(e) => patch({ q: e.target.value })} onClear={() => patch({ q: '' })} />
+          {/* The field is named for the search it does: a prospect-safe search finds no tenant or prospect. */}
+          <TextField label={state.safe ? SEARCH_HINTS.safe[0] : SEARCH_HINTS.owner[0]} hideLabel kind="search" placeholder={hint} value={state.q} onChange={(e) => patch({ q: e.target.value })} onClear={() => patch({ q: '' })} />
         </div>
         {/* The buttons that every mode and view has come first; the one a view adds (Area) and the one
             prospect-safe withholds (Worklist) follow, so neither moves the others. */}

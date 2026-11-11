@@ -77,6 +77,15 @@ const pickerNames = (html: string) => [...html.matchAll(/class="sp-mini__row[^"]
 const labelNames = (html: string) => labelsOf(html).map((l) => /aria-label="([^"]+)"/.exec(l.tag)?.[1] ?? '');
 
 describe('BuildingView', () => {
+  it('names the sublease as the largest block of a floor whose only space is sublet (Floor 7), as the inspector does', () => {
+    for (const safe of ['', '&safe=1']) {
+      const html = plain(render(`?floor=F7${safe}`)).replace(/<!-- -->/g, '');
+      const card = /<dt>Largest contiguous<\/dt><dd>(.*?)<\/dd>/.exec(html)?.[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      expect(card, safe).toBe('7,000 SF sublease, available now');
+      expect(html, safe).not.toContain('no direct space now');
+    }
+  });
+
   it('is the default view', () => {
     expect(parseState('', TODAY).view).toBe('building');
   });

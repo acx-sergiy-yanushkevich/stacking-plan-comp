@@ -62,6 +62,14 @@ describe('Toolbar with prospect-safe on and off: what stays keeps its place', ()
   });
 });
 
+describe('search field name', () => {
+  const name = (html: string) => /<label for="[^"]*" class="sp-sr-only">([^<]*)<\/label>/.exec(html.slice(html.indexOf('sp-toolbar__search')))?.[1];
+  it('names the search for what it finds: tenants and prospects for the owner, suites and floors for a prospect (round 17)', () => {
+    expect(name(render('?view=stack'))).toBe(SEARCH_HINTS.owner[0]);
+    expect(name(render('?view=stack&safe=1'))).toBe(SEARCH_HINTS.safe[0]);
+  });
+});
+
 describe('hintThatFits', () => {
   // 6 px a character, as a stand-in for the field's font.
   const widthOf = (t: string) => t.length * 6;

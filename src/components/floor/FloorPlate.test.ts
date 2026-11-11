@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import type { SegmentText } from '../plan/segmentText';
-import { keyEntry, keyText, linesFor, rentOf } from './FloorPlate';
+import { keyText, linesFor, rentOf, sliceName } from './FloorPlate';
 
 // Without a canvas the text measure is the average-glyph estimate: 0.55 × font size per character
 // (13 px name 7.15, 12 px fact 6.6, 11 px 6.05). The widths below are chosen against that.
@@ -88,16 +88,35 @@ describe('floor plate label lines', () => {
     expect(keyText(text(), '$31–$33/SF/yr FSG')).toBe('Available now · Ste 860 · 3,200 SF · $31–$33/SF/yr FSG');
   });
 
-  it('writes in the key only what the slice does not show: the whole entry, or the suite and the rent', () => {
+  it('never breaks a state ("Available now") inside a slice: one line at 13 px, at 11 px, or not drawn (the key carries it)', () => {
+    // "Available now" is 93 px at 13 px and 79 px at 11 px.
+    expect(drawn(linesFor(text(), 1, 100, 200, 'name', 1)).slice(0, 1)).toEqual(['Available now']);
+    expect(px(linesFor(text(), 1, 100, 200, 'name', 1)).slice(0, 1)).toEqual([13]);
+    // Too narrow at 13 px: not broken at that size but left to the 11 px pass, where it is one line;
+    // with no room at either, the slice says its state in a word under the SF.
+    expect(drawn(linesFor(text(), 1, 88, 200, 'name', 1))).toEqual(['Ste 860', '3,200 SF', 'Available']);
+    expect(drawn(linesFor(text(), 1, 88, 200, 'tiny', 1))[0]).toBe('Available now');
+    for (let fw = 40; fw <= 240; fw += 2)
+      for (const mode of ['name', 'tiny', 'none'] as const) {
+        const ls = drawn(linesFor(text(), 1, fw, 200, mode, 1));
+        expect(ls, `${fw} px ${mode}`).not.toContain('now');
+      }
+    // A tenant's name still wraps once rather than being dropped.
+    const t = text({ name: 'S&P Enterprises', sub: 'Ste 325 · 4,900 SF', sfShort: '4,900', tone: 'leased' });
+    expect(drawn(linesFor(t, 2, 88, 180, 'name')).slice(0, 2)).toEqual(['S&P', 'Enterprises']);
+  });
+
+  it('builds every key entry from the same parts: name, suite and SF, then the rent the slice had no room for', () => {
     const rent = '$31–$33/SF/yr FSG';
-    // Nothing but the marker on the slice: everything is in the key.
-    expect(keyEntry(text(), rent, [])).toBe('Available now · Ste 860 · 3,200 SF · $31–$33/SF/yr FSG');
-    // Name and SF are on the slice (the name wrapped over two lines): the key adds the rent, under the suite number.
-    expect(keyEntry(text(), rent, ['Available', 'now', 'Ste 860', '3,200 SF'])).toBe('Ste 860 · $31–$33/SF/yr FSG');
-    // The SF is not on the slice: the whole entry again, so the figure is on screen.
-    expect(keyEntry(text(), rent, ['Available now', 'Ste 860'])).toBe('Available now · Ste 860 · 3,200 SF · $31–$33/SF/yr FSG');
-    // No rent to add: the name's entry, as before.
-    expect(keyEntry(text(), '', [])).toBe('Available now · Ste 860 · 3,200 SF');
+    expect(keyText(text({ sub: 'Ste 850 · 4,200 SF', sfShort: '4,200' }), rent)).toBe('Available now · Ste 850 · 4,200 SF · $31–$33/SF/yr FSG');
+    expect(keyText(text(), rent)).toBe('Available now · Ste 860 · 3,200 SF · $31–$33/SF/yr FSG');
+    expect(keyText(text())).toBe('Available now · Ste 860 · 3,200 SF');
+  });
+
+  it('names a slice by its facts alone: no key number, the same whatever is drawn or selected', () => {
+    expect(sliceName(text({ aria: 'Floor 8, Available now, Ste 860 · 3,200 SF, $31–$33/SF/yr FSG' }))).toBe('Floor 8, Available now, Ste 860, 3,200 SF, $31–$33/SF/yr FSG');
+    const t = text({ name: 'Meridian Health Partners', sub: 'Ste 800 · 14,000 SF', meta: 'Exp Dec 2033 · 7 yr 1 mo', aria: 'Floor 8, Meridian Health Partners', tone: 'leased', badges: [{ kind: 'deal', text: '2' }] });
+    expect(sliceName(t)).toBe('Floor 8, Meridian Health Partners, Ste 800, 14,000 SF, Exp Dec 2033 · 7 yr 1 mo, 2 live deals');
   });
 
   it('breaks "Tenant · sublease" at its separator, never leaving the dot at the end or start of a line', () => {

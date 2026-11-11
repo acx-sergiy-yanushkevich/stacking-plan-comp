@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { ISODate } from '../../domain/types';
-import { dateToX, yearTicks } from '../../domain/timeline';
+import { barSegment, dateToX, yearTicks } from '../../domain/timeline';
 import { toneFor } from '../../domain/lenses';
 import { AsOfCursor } from './AsOfCursor';
 import { viewAxis } from './layout';
@@ -52,7 +52,7 @@ export function MiniTimeline({ model, asOf, onChange, width = 300, height = 56 }
       {rows.map((row, i) => {
         const y = plotTop + i * pitch + (pitch - barH) / 2;
         return row.bars.map((bar) => {
-          const seg = model.segIndex.get(bar.segKey);
+          const seg = barSegment(bar, model.segIndex);
           if (!seg) return null;
           const tone = toneFor(seg, 'status', model.safe);
           const x0 = X(bar.start);

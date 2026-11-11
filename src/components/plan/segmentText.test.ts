@@ -155,3 +155,25 @@ describe('largest block badge', () => {
     expect(segmentText(safe, { ...opts, safe: true, largest: true }).badges[0].text).toBe('Largest block');
   });
 });
+
+describe('term: the lease term in a few words, for a narrow block on paper', () => {
+  it('names the expiry, a holdover or a month-to-month lease in the lenses that are about dates', () => {
+    expect(segmentText(byTenant('Preston Park Café'), opts).term).toBe('Exp Feb \'27');
+    expect(segmentText(byTenant('Preston Park Café'), { ...opts, lens: 'expiry' }).term).toBe('Exp Feb \'27');
+    expect(segmentText(byTenant('Argosy Partners'), opts).term).toBe('Holdover');
+    expect(segmentText(byTenant('Bowline Consulting'), opts).term).toBe('Month-to-month');
+  });
+
+  it('is empty in the rent and deals lenses, and wherever lease terms are withheld (prospect-safe)', () => {
+    const cafe = byTenant('Preston Park Café');
+    expect(segmentText(cafe, { ...opts, lens: 'rent' }).term).toBe('');
+    expect(segmentText(cafe, { ...opts, lens: 'deals' }).term).toBe('');
+    const safe = segmentIndex(safeFloors(deriveFloors(property, TODAY, TODAY), true)).get(cafe.key)!;
+    for (const lens of ['status', 'expiry'] as const) expect(segmentText(safe, { ...opts, safe: true, lens }).term).toBe('');
+  });
+
+  it('leaves the on-screen lines as they were', () => {
+    const t = segmentText(byTenant('Preston Park Café'), opts);
+    expect([t.name, t.sub, t.meta]).toEqual(['Preston Park Café', 'Ste 100 · 2,400 SF', 'Exp Feb 2027 · 3 mo']);
+  });
+});

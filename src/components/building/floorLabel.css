@@ -27,6 +27,8 @@
    wide as its longest label; where a list is narrower than that, the run breaks between parts. */
 .sp-flabel__fact { display: flex; align-items: center; min-width: 0; color: var(--sp-color-text); }
 .sp-flabel__fact > .sp-dotrun { flex: 0 1 auto; }
+/* The last fact and the "Largest block" tag: one run that does not break, so the tag never stands alone on a line. */
+.sp-flabel__last { display: flex; align-items: center; }
 /* "Largest block": the floor that holds the block the KPI reports. A word in the badge style, never colour alone. */
 .sp-flabel__tag {
   display: inline-flex; align-items: center; height: 18px; padding: 0 7px; border-radius: 999px;

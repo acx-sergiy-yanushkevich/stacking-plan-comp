@@ -151,7 +151,13 @@ button.sp-chip[aria-pressed='true'] { background: var(--sp-color-brand-strong); 
   height: 48vh; transition: height var(--sp-ease-slow); max-height: 92vh; border-top: 1px solid var(--sp-color-border);
 }
 .sp-sheet--full { height: 92vh; }
-.sp-sheet__handle { display: flex; justify-content: center; padding: 8px 0 4px; width: 100%; }
+.sp-sheet__handle { display: flex; justify-content: center; padding: 12px 0 10px; width: 100%; }
+/* The handle is dragged (Sheet.tsx): a finger on it moves the sheet, never the page behind it. While it is
+   dragged the sheet follows the finger at once; let go, it eases to where it settles. Its padding makes
+   it a 26 px target across the sheet's width. */
+button.sp-sheet__handle { touch-action: none; cursor: grab; }
+button.sp-sheet__handle:active { cursor: grabbing; }
+.sp-sheet--dragging { transition: none; }
 .sp-sheet__handle span { width: 40px; height: 4px; border-radius: 2px; background: var(--sp-color-border-strong); display: block; }
 .sp-sheet__head { display: flex; align-items: center; justify-content: space-between; padding: 4px 12px 8px 16px; border-bottom: 1px solid var(--sp-color-border); }
 .sp-sheet__title { font-size: var(--sp-text-15); font-weight: 600; }

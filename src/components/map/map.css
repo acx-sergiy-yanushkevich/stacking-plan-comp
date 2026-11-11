@@ -53,29 +53,55 @@
    are the shared floor label (building/floorLabel.css), the same text at the same size as the list beside
    the Building view's model; only the swatch before the label is the map's own.
 
-   The column is as wide as its longest label and no wider than `--sp-map-list-max`: 372 px, up to 420 px
-   where the map still keeps 560 px beside it. The rest of the stage is the map's. A label longer than
-   the column breaks between its parts (base.css, `.sp-dotrun`): the swatches, the numbers and the leased
-   shares keep their columns, and the facts wrap in theirs. The list starts at the top of the stage, level
-   with the top of the map, so its first row is where the eye and the Tab key arrive. */
+   The column is as wide as its longest label, the lens fact included, and no wider than `--sp-map-list-max`:
+   372 px, up to 420 px where the map still keeps 540 px beside it (at 1366 px the status labels, 410 px,
+   are one line each). The rest of the stage is the map's. A label longer than the column breaks between
+   its parts (base.css, `.sp-dotrun`), never inside a figure, and never with the "Largest block" tag alone
+   on a line (`.sp-flabel__last`). The list starts at the top of the stage, level with the top of the map,
+   so its first row is where the eye and the Tab key arrive. */
 .sp-map-floors {
-  --sp-map-list-max: clamp(372px, calc(100cqw - 560px), 420px);
+  /* The leased-share column: "100.0% leased" at the label's size. Fixed, so a wrapped line can start under it. */
+  --sp-map-pct: 7.3em;
+  --sp-map-list-max: clamp(372px, calc(100cqw - 540px), 420px);
   flex: none; display: flex; flex-direction: column; justify-content: flex-start; max-width: min(100%, var(--sp-map-list-max));
   padding: 8px; overflow-y: auto;
   background: var(--sp-color-card); border-right: 1px solid var(--sp-color-border);
 }
-.sp-map-floors__list { width: auto; grid-template-columns: repeat(4, auto) minmax(0, 1fr); grid-auto-rows: minmax(26px, auto); }
-/* A row is one line of 18 px in a row of 26 px, as before; a label that wraps takes another line of 18 px,
-   and its swatch, number and leased share stay on the first. */
+.sp-map-floors__list { width: auto; grid-template-columns: repeat(3, auto) var(--sp-map-pct) minmax(0, 1fr); grid-auto-rows: minmax(26px, auto); }
+/* A row is one line of 18 px in a row of 26 px, as before. A label that wraps hangs its next line under the
+   leased share, not under the facts: the swatch and the number keep their columns, and the wrapped line
+   has the width of both the share and the facts, so a long rent or expiry label takes two lines, not three,
+   and the tag stays beside the last fact. The facts' cell spans the share's column and its first line
+   starts after a spacer as wide as the share and its separator; the separator before the first fact is the
+   run's own dot (base.css, `.sp-dotrun__dot`), so it goes where the fact goes and is hidden at the start of
+   a line like every other. */
 .sp-map-floor { padding-block: 3px; line-height: 18px; align-items: start; }
-.sp-map-floor .sp-flabel__fact { align-items: flex-start; }
-.sp-map-floor .sp-flabel__tag { vertical-align: top; }
-/* A low window (a laptop of 768 or 800 px): the rows are 24 px, as beside the Building view's model, so
-   the twelve floors stay on the first screen beside the map. */
+.sp-map-floor > .sp-flabel__pct { grid-row: 1; grid-column: 4; }
+.sp-map-floor > .sp-flabel__fact { grid-row: 1; grid-column: 4 / -1; align-items: flex-start; }
+/* Drawn by the run's own dot instead. It stays rendered text, out of the flow and without ink, not removed or
+   clipped: a hidden separator leaves "leased" and "9,300 SF" run together in the row's visible text, which
+   then no longer matches its accessible name (axe: label-content-name-mismatch). */
+.sp-map-floor > .sp-flabel__fact > .sp-flabel__sep { position: absolute; color: transparent; pointer-events: none; }
+/* An empty spacer (a flex item keeps its width): a zero-width space here would be read by axe as text between
+   the share and the first fact, so the row's words would no longer match its name. */
+.sp-map-floor .sp-dotrun__in::before { content: ''; flex: none; width: calc(var(--sp-map-pct) + 0.8em); }
+.sp-map-floor .sp-dotrun__in > .sp-dotrun__part:first-child::before,
+.sp-map-floor .sp-dotrun__in > .sp-flabel__last:first-child > .sp-dotrun__part:first-child::before {
+  content: '·' / ''; position: absolute; left: 0; top: 0; width: 0.8em; text-align: center;
+}
+/* The tag is its cell's only box, so its line is the tag's 18 px, not a pixel taller. */
+.sp-map-floor .sp-flabel__tagcell { display: flex; }
+/* A low window (a laptop of 720 to 820 px): the rows are 24 px, as beside the Building view's model, a
+   wrapped line is 16 px and the key above the map is one line shorter, so the twelve floors stay on the
+   first screen beside the map in every lens (at 1280 × 768 the last row ends at 728 px in the Rent lens, with
+   seven two-line labels). */
 @media (max-height: 820px) {
-  .sp-map-floors { padding-block: 6px; }
+  .sp-map-legend { padding-block: 6px; }
+  .sp-map-legend .sp-legend { gap: 2px 10px; }
+  .sp-map-legend .sp-legend__note { width: auto; }
+  .sp-map-floors { padding-block: 4px; }
   .sp-map-floors__list { grid-auto-rows: minmax(24px, auto); }
-  .sp-map-floor { padding-block: 2px; }
+  .sp-map-floor { padding-block: 2px; line-height: 16px; }
 }
 .sp-map-floor:hover { background: var(--sp-color-card-2); border-color: var(--sp-color-border-strong); }
 .sp-map-floor:hover .sp-flabel__num { color: var(--sp-color-brand-strong); }
@@ -193,7 +219,7 @@
   .sp-map-floors__list > li { display: block; break-inside: avoid; }
   .sp-map-floor {
     width: 100%; min-height: 26px; white-space: normal;
-    grid-template-columns: auto 2.4ch 0.8em 7.2em minmax(0, 1fr);
+    grid-template-columns: auto 2.4ch 0.8em var(--sp-map-pct) minmax(0, 1fr);
   }
   .sp-map-floor .sp-flabel__num, .sp-map-floor .sp-flabel__sep, .sp-map-floor .sp-flabel__pct, .sp-map-floor .sp-dotrun__part { white-space: pre; }
 }

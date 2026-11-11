@@ -110,19 +110,15 @@ function chord(pts: Pt[], y: number): [number, number] | null {
 }
 
 /**
- * Accessible name of a slice: floor, the full name when it is not drawn, exactly what is drawn, then the undrawn facts.
- * A slice with a numbered marker says "key 2" where the marker stands, before its lines: the number is on
- * screen, so it is part of the name (WCAG 2.5.3), and it is how the entry under the plate is found.
+ * Accessible name of a slice, from its facts alone: "Floor 8, Available now, Ste 860, 3,200 SF,
+ * $31–$33/SF/yr FSG". It holds every line a slice can draw (WCAG 2.5.3) and does not depend on which of
+ * them fit, so it is the same at every width and when the suite is selected (the inspector opening
+ * narrows the plate). A numbered marker is decorative: its number follows the layout, and the entry
+ * under the plate it points to says the same facts.
  */
-function sliceName(text: SegmentText, lines: string[], badges: string[], keyNo?: number): string {
-  const drawnText = [...lines, ...badges].filter(Boolean).join(' ');
-  const visible = [keyNo !== undefined ? `key ${keyNo}` : '', drawnText].filter(Boolean).join(' ');
-  if (!visible) return text.aria;
+export function sliceName(text: SegmentText): string {
   const floorName = text.aria.split(',')[0];
-  // A fact drawn over two lines ("Ste 350" / "5,500 SF") is drawn all the same.
-  const drawn = (t: string) => drawnText.includes(t) || drawnText.includes(t.replace(/^Asking /, '')) || t.split(' · ').every((part) => drawnText.includes(part));
-  const extras = [text.sub, text.meta].filter((t, i, all) => t && !drawn(t) && all.indexOf(t) === i);
-  return `${[floorName, drawnText.includes(text.name) ? null : text.name, visible].filter(Boolean).join(', ')}${extras.length ? `. ${extras.join(', ')}` : ''}`;
+  return [floorName, text.name, ...text.sub.split(' · '), text.meta, ...text.badges.map(badgeLabel)].filter(Boolean).join(', ');
 }
 
 type NameMode = 'name' | 'tiny' | 'none';
@@ -143,7 +139,7 @@ export function rentOf(text: SegmentText): string {
  * ("$31–$33/SF/yr" over a lone "FSG"). It takes a line whole, at 12 px or at 11 px, or it is left off
  * the slice, and `FloorPlate` then writes it in the numbered key under the plate.
  */
-export function linesFor(text: SegmentText, tier: 0 | 1 | 2 | 3, fw: number, bh: number, mode: NameMode): Line[] {
+export function linesFor(text: SegmentText, tier: 0 | 1 | 2 | 3, fw: number, bh: number, mode: NameMode, nameLines: 1 | 2 = 2): Line[] {
   const lines: Line[] = [];
   const unit = `${text.sfShort} SF`;
   const budget = Math.max(1, Math.floor((bh - 2 * PAD) / LINE));
@@ -152,13 +148,14 @@ export function linesFor(text: SegmentText, tier: 0 | 1 | 2 | 3, fw: number, bh:
   // the name once ("Preston Park" / "Café"); a name is never dropped from a slice that can hold it on two
   // lines. One that needs three, or has a word wider than the slice, gets a numbered marker instead and
   // is written out in the key under the plate (see `FloorPlate`), so the name is still on screen.
+  // A state ("Available now") is one phrase, not a name: `nameLines` 1 keeps it on one line or off the slice.
   if (tier <= 2 && mode !== 'none') {
     const font = mode === 'name' ? FONT_NAME : FONT_TINY;
     const cls = mode === 'name' ? 'sp-seg__name' : 'sp-seg__tiny';
-    const ls = wrapWords(text.name, fw, font, 2);
+    const ls = wrapWords(text.name, fw, font, nameLines);
     // "Tenant · sublease" breaks at its separator, never leaving the dot at the end or start of a line.
     const parts = text.name.split(' · ');
-    if (ls.length === 2 && parts.length === 2 && parts.every((p) => fits(p, fw, font))) for (const l of parts) lines.push({ t: l, cls, font });
+    if (nameLines === 2 && ls.length === 2 && parts.length === 2 && parts.every((p) => fits(p, fw, font))) for (const l of parts) lines.push({ t: l, cls, font });
     else if (ls.length && ls.join(' ') === text.name) for (const l of ls) lines.push({ t: l, cls, font });
   }
   const named = lines.length > 0;
@@ -261,9 +258,13 @@ interface Slice {
   tier: 0 | 1 | 2 | 3;
   /** Its number in the key under the plate, when its name or its rent could not be drawn on the slice. */
   keyNo?: number;
-  /** What the key writes for it (see `keyEntry`). */
+  /** What the key writes for it (see `keyText`). */
   keyLabel?: string;
 }
+
+/** A tenant's name (it may wrap once), as against a state such as "Available now" (it never wraps). */
+const tenantNamed = (seg: Segment, text: SegmentText): boolean =>
+  !!seg.lease && text.name !== 'Tenant' && (seg.kind === 'leased' || seg.kind === 'holdover' || seg.kind === 'mtm' || seg.kind === 'sublease' || seg.kind === 'committed');
 
 /**
  * Does a slice whose name is not drawn need an entry in the key? A tenant always does (a tenant name
@@ -274,28 +275,15 @@ function needsKey(seg: Segment, text: SegmentText, drawn: PlacedLine[], lobby: b
   if (lobby) return false;
   // Nothing drawn, or only the suite and SF: nothing on the slice says what it is.
   if (!drawn.some((l) => !l.t.startsWith('Ste ') && !/ SF$/.test(l.t))) return true;
-  return !!seg.lease && text.name !== 'Tenant' && (seg.kind === 'leased' || seg.kind === 'holdover' || seg.kind === 'mtm' || seg.kind === 'sublease' || seg.kind === 'committed');
+  return tenantNamed(seg, text);
 }
 
 /**
- * The key entry: "Preston Park Café · Ste 100 · 2,400 SF". When the slice had no room for its rent the
- * entry carries it too, whole: "Available now · Ste 860 · 3,200 SF · $31–$33/SF/yr FSG".
+ * The key entry, built from the same parts for every marked slice: the name, the suite and SF, then the
+ * rent when the slice had no room for it, whole. "① Available now · Ste 850 · 4,200 SF · $31–$33/SF/yr FSG",
+ * "② Available now · Ste 860 · 3,200 SF · $31–$33/SF/yr FSG", "③ Preston Park Café · Ste 100 · 2,400 SF".
  */
 export const keyText = (text: SegmentText, rent = ''): string => [text.name, text.sub, rent].filter(Boolean).join(' · ');
-
-/**
- * What the key says of a marked slice. It writes out what the slice could not: the whole entry when the
- * name is not on the slice, and only the suite and the rent ("Ste 850 · $31–$33/SF/yr FSG") when the
- * slice already carries its name and SF and had no room for the rent alone. Nothing is said twice, so
- * two such entries share a line under a narrow plate.
- */
-export function keyEntry(text: SegmentText, rent: string, drawn: string[]): string {
-  const named = text.name.split(' ').every((word) => drawn.some((line) => line.includes(word)));
-  const sized = drawn.some((line) => line === text.sub || line === `${text.sfShort} SF`);
-  if (!rent || !named || !sized) return keyText(text, rent);
-  const suite = text.sub.startsWith('Ste ') ? text.sub.split(' · ')[0] : text.sub;
-  return `${suite} · ${rent}`;
-}
 
 /** The floor plate: the footprint sliced into suites along its long axis, in lens tones. */
 export function FloorPlate({ floor, model, state, patch, width, height }: FloorPlateProps) {
@@ -340,7 +328,8 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
       // The whole name at 13 px, then at 11 px; failing both, no name and the state under the SF figure.
       const fw = usable - 2 * SIDE;
       const hasName = (ls: PlacedLine[]) => ls.some((l) => l.cls === 'sp-seg__name' || l.cls === 'sp-seg__tiny');
-      let cand = linesFor(text, tier, fw, b.h, 'name');
+      const nameLines = tenantNamed(seg, text) ? 2 : 1;
+      let cand = linesFor(text, tier, fw, b.h, 'name', nameLines);
       let lines = placeLines(poly, cy, cand);
       let keyed = false;
       const marker: Line = { t: '0', cls: KEY_CLS, font: FONT_TINY };
@@ -350,7 +339,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
         return out.some((l) => l.cls === KEY_CLS) ? out : [{ ...marker, x: c ? (c[0] + c[1]) / 2 : b.minX + b.w / 2, y: cy + 4 }, ...out];
       };
       if (!hasName(lines)) {
-        const tinyCand = linesFor(text, tier, fw, b.h, 'tiny');
+        const tinyCand = linesFor(text, tier, fw, b.h, 'tiny', nameLines);
         const tiny = placeLines(poly, cy, tinyCand);
         if (hasName(tiny)) {
           lines = tiny;
@@ -373,7 +362,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
       }
       const blockTop = lines.length ? lines[0].y - 11 : NaN;
       const badges = usable >= 120 ? placeBadges(poly, text, blockTop, cy) : [];
-      const keyLabel = keyed ? keyEntry(text, keyRent, lines.filter((l) => l.cls !== KEY_CLS).map((l) => l.t)) : undefined;
+      const keyLabel = keyed ? keyText(text, keyRent) : undefined;
       return { seg, text, poly, lines, badges, tier, keyNo: keyed ? 0 : undefined, keyLabel };
     });
     // Number the keyed slices in plan order, left to right.
@@ -460,7 +449,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
             className={['sp-seg', selected ? 'is-selected' : '', dim ? 'is-dim' : '', p === 'dashed' ? 'sp-seg--dashed' : '', s.seg.key.endsWith('-lobby') ? 'sp-seg--lobby' : '', patternFill ? 'sp-seg--patterned' : ''].filter(Boolean).join(' ')}
             role={s.seg.key.endsWith('-lobby') ? 'img' : 'button'}
             tabIndex={s.seg.key.endsWith('-lobby') ? undefined : i === tabStop ? 0 : -1}
-            aria-label={sliceName(s.text, s.lines.filter((l) => l.cls !== KEY_CLS).map((l) => l.t), s.badges.map((b) => (b.kind === 'deal' ? badgeLabel({ kind: 'deal', text: b.text }) : b.text)), s.keyNo)}
+            aria-label={s.seg.key.endsWith('-lobby') ? s.text.aria : sliceName(s.text)}
             aria-pressed={s.seg.key.endsWith('-lobby') ? undefined : selected}
             data-key={s.seg.key}
             style={{ color: edge }}
@@ -510,7 +499,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
     </svg>
     {keyed.length > 0 && (
       // Names and rents the plate had no room for, directly under it, so each is on screen whole:
-      // "1 Preston Park Café · Ste 100 · 2,400 SF", "2 Available now · Ste 860 · 3,200 SF · $31–$33/SF/yr FSG".
+      // "1 Available now · Ste 850 · 4,200 SF · $31–$33/SF/yr FSG", "2 Available now · Ste 860 · 3,200 SF · $31–$33/SF/yr FSG".
       <ol className="sp-plate__key" aria-label={`${floor.floor.name}: names and rents not drawn on the plate`}>
         {keyed.map((s) => (
           <li key={s.seg.key}>

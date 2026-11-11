@@ -26,6 +26,7 @@ const attr = (el: string, name: string) => (new RegExp(`^<[^>]* ${name}="([^"]*)
 const spoken = (el: string) =>
   el
     .replace(/<span class="sp-kpi__context" aria-hidden="true">.*?<\/span><\/span>/, '')
+    .replace(/<span class="sp-kpi__dot" aria-hidden="true"><\/span>/g, '')
     .replace(/<!-- -->/g, '')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&#x27;/g, "'")
@@ -61,11 +62,25 @@ describe('WALT figure', () => {
 });
 
 describe('KpiStrip', () => {
-  it('is one surface holding six figures, each label a single phrase', () => {
+  it('is two surfaces: the figures that color the plan, and the figures that open something', () => {
     const { html } = render(TODAY);
-    // One card for the bar; no figure is a card of its own.
-    expect(html).toMatch(/^<section class="sp-card sp-kpis sp-no-print" aria-label="Key figures">/);
-    expect(html.match(/sp-card/g)?.length).toBe(1);
+    expect(html).toMatch(/^<section class="sp-kpis sp-no-print" aria-label="Key figures">/);
+    // One card per group; no figure is a card of its own.
+    expect(html.match(/sp-card/g)?.length).toBe(2);
+    const group = (kind: string) => new RegExp(`<div role="group" class="sp-card sp-kpis__group sp-kpis__group--${kind}" aria-label="([^"]+)">(.*?)</div><span class="sp-kpis__caption" aria-hidden="true">([^<]+)</span></div>`).exec(html);
+    const lens = group('lens');
+    const open = group('open');
+    expect([lens?.[1], lens?.[3]]).toEqual(['Color the plan by', 'Color by']);
+    expect([open?.[1], open?.[3]]).toEqual(['Open a detail', 'Open']);
+    const ids = (part = '') => [...part.matchAll(/data-kpi="([^"]+)"/g)].map((m) => m[1]);
+    expect(ids(lens?.[2])).toEqual(['status', 'deals']);
+    expect(ids(open?.[2])).toEqual(['find', 'find-largest', 'expiry-worklist', 'timeline']);
+    // A switch carries a dot that fills when it is on; a figure that opens something is styled as one
+    // (kpis.css draws its arrow, so the label's text is the label alone).
+    expect(lens?.[2].match(/class="sp-kpi__dot"/g)?.length).toBe(2);
+    expect(lens?.[2].match(/class="sp-kpi sp-kpi--lens/g)?.length).toBe(2);
+    expect(open?.[2].match(/class="sp-kpi sp-kpi--open"/g)?.length).toBe(4);
+    expect(open?.[2]).not.toContain('sp-kpi__dot');
     expect(html.match(/class="sp-kpi__label sp-label"/g)?.length).toBe(6);
     for (const label of ['Leased', 'Available', 'Largest block', 'Expiring 12 mo', 'WALT', 'Pipeline']) expect(html).toContain(`>${label}</span>`);
   });
@@ -115,15 +130,21 @@ describe('KpiStrip', () => {
     expect(html).not.toContain('…');
   });
 
-  it('marks the figure in use with aria-pressed and a class, one at a time', () => {
+  it('marks only the switches as pressed, one at a time; a figure that opens something is never pressed', () => {
     const pressed = (html: string) => [...html.matchAll(/data-kpi="([^"]+)"[^>]*aria-pressed="true"/g)].map((m) => m[1]);
     expect(pressed(render(TODAY).html)).toEqual(['status']);
-    expect(pressed(render(TODAY, false, '?lens=deals').html)).toEqual(['deals']);
-    expect(pressed(render(TODAY, false, '?mode=find').html)).toEqual(['find']);
-    const expiry = render(TODAY, false, '?lens=expiry&window=12&mode=worklist').html;
-    expect(pressed(expiry)).toEqual(['expiry-worklist']);
-    expect(kpiOf(expiry, 'expiry-worklist')).toContain('class="sp-kpi is-active"');
-    expect(kpiOf(expiry, 'status')).not.toContain('is-active');
+    const deals = render(TODAY, false, '?lens=deals').html;
+    expect(pressed(deals)).toEqual(['deals']);
+    expect(kpiOf(deals, 'deals')).toContain('class="sp-kpi sp-kpi--lens is-active"');
+    expect(kpiOf(deals, 'status')).not.toContain('is-active');
+    for (const search of ['?mode=find', '?lens=expiry&window=12&mode=worklist']) {
+      const html = render(TODAY, false, search).html;
+      expect(pressed(html)).toEqual([]);
+      for (const id of ['find', 'find-largest', 'expiry-worklist', 'timeline']) {
+        expect(kpiOf(html, id)).not.toContain('aria-pressed');
+        expect(kpiOf(html, id)).not.toContain('is-active');
+      }
+    }
   });
 
   it('carries the time-travel change beside each figure, and in its name', () => {
@@ -138,6 +159,14 @@ describe('KpiStrip', () => {
       expect(spoken(el)).toContain(` ${chip} against today `);
     }
     expect(render(TODAY).html).not.toContain('sp-kpi__delta');
+  });
+
+  it('writes a fall in every change with a true minus, the Pipeline\'s too (round 17: "-2 deals")', () => {
+    const { html } = render('2030-10-01');
+    const chips = [...html.matchAll(/<span class="sp-kpi__delta[^"]*" title="Change against today">(.*?)<span/g)].map((m) => m[1]);
+    expect(chips.some((c) => c.startsWith('−'))).toBe(true);
+    for (const c of chips) expect(c).not.toMatch(/^-/);
+    expect(chips.join(' ')).toMatch(/−\d+ deals?/);
   });
 
   it('withholds the pipeline in prospect-safe mode', () => {
@@ -186,7 +215,7 @@ describe('KpiStrip', () => {
 
   it('names each figure for the action it stands for, so focus and the checks can find it', () => {
     const { html } = render(TODAY);
-    expect([...html.matchAll(/data-kpi="([^"]+)"/g)].map((m) => m[1])).toEqual(['status', 'find', 'find-largest', 'expiry-worklist', 'timeline', 'deals']);
+    expect([...html.matchAll(/data-kpi="([^"]+)"/g)].map((m) => m[1])).toEqual(['status', 'deals', 'find', 'find-largest', 'expiry-worklist', 'timeline']);
     expect([...render(TODAY, true).html.matchAll(/data-kpi="([^"]+)"/g)].length).toBe(6);
   });
 });

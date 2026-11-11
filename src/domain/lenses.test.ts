@@ -149,6 +149,14 @@ describe('prospect-safe', () => {
     expect(tones).toContain('available-later');
     expect(tones).toContain('muted');
   });
+  it('the safe status legend calls space in use "Occupied", the word of the KPI it matches, never a second "Leased" (round 17)', () => {
+    const items = legendFor('status', true, today);
+    const occupied = items.find((i) => i.tone === 'leased')!;
+    expect(occupied.label).toBe('Occupied');
+    expect(occupied.sf).toBe(196700);
+    expect(items.filter((i) => /^Leased/.test(i.label))).toEqual([]);
+    expect(toneLabel('leased', 'status', true)).toBe('Occupied');
+  });
 });
 
 describe('legendFor', () => {

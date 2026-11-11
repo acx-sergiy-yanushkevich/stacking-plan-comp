@@ -134,6 +134,27 @@ describe('MapFloorList', () => {
     expect(tag('expiry', 'F11').replace(/\u00a0/g, ' ')).toContain("title=\"Floor 11 · 20,800 RSF leasable · 100.0% leased · 0 SF available · expires May '30 – Jan '32 · mostly ");
   });
 
+  it('draws the status swatch in the color of the space on offer the row leads with, the risk below it', () => {
+    const html = renderToString(<MapFloorList floors={floorsFor(false)} lens="status" safe={false} asOf={TODAY} selected={null} largestId={largestId} onSelect={() => {}} />);
+    const swatch = (id: string) => new RegExp(`data-floor="${id}"[^>]*>(?:<!-- -->)?<span class="sp-map-floor__swatch" style="([^"]*)"`).exec(html)![1];
+    // Round 17: "9,300 SF available" and "7,400 SF available" stood beside a grey "leased" swatch.
+    expect(swatch('F12')).toBe('background:var(--tone-available-fill);border-color:var(--tone-available-edge)');
+    expect(swatch('F8')).toBe('background:var(--tone-available-fill);border-color:var(--tone-available-edge)');
+    // "5,500 SF available · holdover": green over red. "4,000 SF available · expires < 12 mo": green over orange.
+    expect(swatch('F3')).toContain('linear-gradient(135deg, var(--tone-available-fill) 0 50%, var(--tone-risk-edge) 50%)');
+    expect(swatch('F1')).toContain('linear-gradient(135deg, var(--tone-available-fill) 0 50%, var(--tone-expiring-edge) 50%)');
+    expect(swatch('F7')).toContain('var(--tone-sublease-fill)');
+  });
+
+  it('holds the "Largest block" tag to the last fact, so it never stands alone on a line', () => {
+    for (const lens of LENSES) {
+      const html = renderToString(<MapFloorList floors={floorsFor(false)} lens={lens} safe={false} asOf={TODAY} selected={null} largestId={largestId} onSelect={() => {}} />);
+      const held = /<span class="sp-flabel__last"><span class="sp-dotrun__part">(.*?)<\/span>(?:<!-- -->)? (?:<!-- -->)?<span class="sp-dotrun__part sp-flabel__tagcell"><span class="sp-flabel__tag">Largest block<\/span><\/span><\/span>/.exec(html);
+      expect(held, lens).not.toBeNull();
+      expect(html.match(/sp-flabel__last/g), lens).toHaveLength(1);
+    }
+  });
+
   it('gives the swatch a second colour where the floor holds an at-risk lease, and none for a prospect', () => {
     const html = (safe: boolean) => renderToString(<MapFloorList floors={floorsFor(safe)} lens="status" safe={safe} asOf={TODAY} selected={null} largestId={largestId} onSelect={() => {}} />);
     expect(html(false)).toContain('linear-gradient');

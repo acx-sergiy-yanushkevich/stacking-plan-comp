@@ -4,7 +4,7 @@ import type { FloorView } from '../../domain/derive';
 import { fmtMonthYear, fmtMonthYearShort } from '../../domain/dates';
 import { pct, plural, sf } from '../../domain/format';
 import { canShowIssues, canShowLeaseTerm, tenantLabel } from '../../domain/safe';
-import { comingText, floorComing, nextExpiry } from '../floor/floorData';
+import { comingText, floorComing, largestNow, nextExpiry } from '../floor/floorData';
 import { Button, Icon } from '../ui';
 import { openFloorPlate, selectSegment, type Patch } from '../plan/actions';
 import { segmentText } from '../plan/segmentText';
@@ -25,6 +25,8 @@ export function FloorPanel({ floor, model, state, patch }: FloorPanelProps) {
   const direct = floor.segments.some((s) => s.kind === 'available' && !s.availableFrom);
   const sublease = floor.segments.some((s) => s.kind === 'sublease');
   const coming = floorComing(floor, asOf, safe);
+  // The largest block today, as the floor's card in the Building view gives it: direct, else sublet (Floor 7).
+  const largest = largestNow(floor);
   const nowText = direct && sublease ? 'Direct and sublease, now' : sublease ? 'Sublease, now' : direct ? 'Direct, now' : null;
   const availableText = [nowText, coming ? comingText(coming) : null].filter(Boolean).join(' · ') || 'Nothing on the market now';
 
@@ -48,8 +50,8 @@ export function FloorPanel({ floor, model, state, patch }: FloorPanelProps) {
           </div>
           <div className="sp-ins__kpi">
             <span className="sp-label">Largest contiguous</span>
-            <span className="sp-ins__kpi-value">{floor.maxContiguous > 0 ? sf(floor.maxContiguous) : '—'}</span>
-            <span className="sp-ins__kpi-sub">{floor.bestRun.length > 1 ? `${floor.bestRun.length} adjacent direct suites` : floor.bestRun.length === 1 ? 'One direct suite' : coming?.from ? `No direct space until ${fmtMonthYearShort(coming.from)}` : 'No direct space now'}</span>
+            <span className="sp-ins__kpi-value">{largest.kind ? sf(largest.size) : '—'}</span>
+            <span className="sp-ins__kpi-sub">{largest.suites > 1 ? `${largest.suites} adjacent ${largest.kind} suites` : largest.suites === 1 ? `One ${largest.kind} suite` : coming?.from ? `No direct space until ${fmtMonthYearShort(coming.from)}` : 'No direct space now'}</span>
           </div>
           {/* Prospect-safe shows no lease term, so there is no "next expiry" to name. */}
           {canShowLeaseTerm(safe) && (

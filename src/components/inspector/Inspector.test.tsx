@@ -76,6 +76,14 @@ describe('Inspector', () => {
     expect(html).toContain('Argosy Partners');
   });
 
+  it('Floor: the largest block of a floor whose only space is sublet is that sublease (Floor 7), not a dash', () => {
+    for (const safe of ['', '&safe=1']) {
+      const html = render(`?floor=F7${safe}`).html.replace(/ /g, ' ');
+      const card = /<span class="sp-label">Largest contiguous<\/span>(.*?)<\/div>/.exec(html)?.[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      expect(card, safe).toBe('7,000 SF One sublease suite');
+    }
+  });
+
   it('Find: results and empty state', () => {
     const r = render('?req=12000');
     expect(r.html).toContain('Find space');

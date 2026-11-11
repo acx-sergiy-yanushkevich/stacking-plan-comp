@@ -5,6 +5,9 @@
 //  - the running heads count what is printed: "Section n of N" runs 1…N with no gap, and N is the number
 //    of sections in the report (read from the page that was printed);
 //  - the cover is whole: the plan, its legend and its footnote are all on page 1;
+//  - every lease on the owner's plan says when it ends: each leased block's drawn text carries "Exp …",
+//    "Expired …", "Holdover" or "Month-to-month" (in the expiry lens, its date or the time left), narrow
+//    suites on the cover included (round 17: the Café and Conner CPA lost their date);
 //  - the report does not depend on the screen: printed from the preview at three window widths, and from
 //    the app itself (Export → PDF report prints the app, not the preview), it has the same pages.
 //
@@ -43,6 +46,19 @@ for (const [name, qs] of REPORTS) {
     await page.waitForTimeout(400);
     // The real section count: the sections the report is made of, whether or not they are on screen.
     const sections = await page.evaluate(() => document.querySelectorAll('.sp-print .sp-print__page').length);
+    // The drawn text of every lease in place on the printed plan (prospect-safe prints no lease term at all).
+    const leases = qs.includes('safe=1')
+      ? []
+      : await page.evaluate(() =>
+          [...document.querySelectorAll('.sp-print .sp-print__plan .sp-seg')]
+            .filter((g) => ['leased', 'holdover', 'mtm'].includes(g.getAttribute('data-kind')))
+            .map((g) => ({ key: g.getAttribute('data-key'), text: [...g.querySelectorAll('text')].map((t) => t.textContent.trim()).join(' | ') })),
+        );
+    const said = qs.includes('lens=expiry') ? /\bExp|Holdover|Month-to-month|\bleft\b|'\d\d\b/ : /\bExp|Holdover|Month-to-month/;
+    if (!qs.includes('safe=1')) {
+      const mute = leases.filter((l) => !said.test(l.text));
+      check(leases.length >= 10 && mute.length === 0, `${label}: every lease on the plan says when it ends (${leases.length} leases${mute.map((l) => `; ${l.key} reads “${l.text}”`).join('')})`);
+    }
     const path = `${out}/${name}.${way.id}.pdf`;
     await page.pdf({ path, ...PDF_OPTIONS });
     await page.close();
