@@ -230,8 +230,10 @@ function Shell() {
     // Closing the panel a KPI opened returns focus to that KPI.
     rememberTrigger();
     switch (a) {
+      // Leased and Pipeline are the "Color by" switches: they change how the plan is coloured and nothing
+      // else. An open panel, a search or a selection stays as it was (round 18: Leased closed the brief).
       case 'status':
-        patch({ lens: 'status', mode: 'building', select: null, q: '', window: null, req: null, inquiry: null, bucket: null });
+        patch({ lens: 'status', bucket: null });
         break;
       case 'find':
         patch({ mode: 'find', select: null, floor: null, window: null, bucket: null });
@@ -246,7 +248,7 @@ function Shell() {
         patch({ view: 'timeline' });
         break;
       case 'deals':
-        patch({ lens: 'deals', mode: 'building', select: null, window: null, req: null, inquiry: null, bucket: null });
+        patch({ lens: 'deals', bucket: null });
         break;
     }
     focusAfterKpi(a);

@@ -137,9 +137,11 @@ describe('KpiStrip', () => {
     expect(pressed(deals)).toEqual(['deals']);
     expect(kpiOf(deals, 'deals')).toContain('class="sp-kpi sp-kpi--lens is-active"');
     expect(kpiOf(deals, 'status')).not.toContain('is-active');
+    // A panel open over a status plan keeps Leased pressed: the plan is still coloured by status (round 18).
+    for (const search of ['?mode=find', '?mode=area', '?mode=brief', '?q=cirrus']) expect(pressed(render(TODAY, false, search).html), search).toEqual(['status']);
     for (const search of ['?mode=find', '?lens=expiry&window=12&mode=worklist']) {
       const html = render(TODAY, false, search).html;
-      expect(pressed(html)).toEqual([]);
+      expect(pressed(html)).toEqual(search === '?mode=find' ? ['status'] : []);
       for (const id of ['find', 'find-largest', 'expiry-worklist', 'timeline']) {
         expect(kpiOf(html, id)).not.toContain('aria-pressed');
         expect(kpiOf(html, id)).not.toContain('is-active');
