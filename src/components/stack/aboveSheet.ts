@@ -1,4 +1,5 @@
-import { useLayoutEffect } from 'react';
+import { useLayoutEffect, useState } from 'react';
+import { find, hasPage, on, scrollBy, setRootStyle, viewport } from '../../lib/host';
 
 /** A vertical span on screen, in px from the top of the window. */
 export interface Span {
@@ -19,8 +20,17 @@ export function scrollToClear(target: Span, room: Span): number {
 }
 
 /** The air kept above the selection, and between it and the sheet's top edge, in px. */
-const AIR_ABOVE = 8;
-const AIR_BELOW = 16;
+export const AIR_ABOVE = 8;
+export const AIR_BELOW = 16;
+
+/**
+ * The strip at the top of the window a selection `height` px tall needs to stand whole with its air: the
+ * sheet is never grown into it (ui/sheetHeight.ts), so however far the sheet is expanded there is a
+ * scroll position that shows the complete block above the sheet's top edge.
+ */
+export function roomToKeep(height: number): number {
+  return AIR_ABOVE + Math.ceil(height) + AIR_BELOW;
+}
 
 /**
  * Where the inspector is a bottom sheet (a tablet, a phone) it opens over the lower half of the plan,
@@ -30,8 +40,10 @@ const AIR_BELOW = 16;
  *
  *   - when the sheet opens or the selection changes, the page scrolls the selection clear of it
  *     (smoothly; at once under reduced motion);
- *   - when the sheet grows or shrinks (its handle, a rotated tablet) the page follows it, so the
- *     selection stays above the sheet's top edge;
+ *   - when the sheet grows or shrinks (its handle, a rotated tablet) the page follows it frame by frame,
+ *     so the selection stays above the sheet's top edge at every height on the way;
+ *   - the sheet is told how much of the window the selection needs (the value returned: `roomToKeep` of
+ *     its height, or null when there is nothing selected), and stops growing short of it;
  *   - when the plan under it changes size (the stack widens a focused floor, the web font arrives) it is
  *     put back, until the reader scrolls the page themselves: from then on only the sheet moves it.
  *
@@ -39,22 +51,28 @@ const AIR_BELOW = 16;
  * app's bottom padding reads), so the lowest floor can be scrolled clear as well. It runs as the change is
  * committed, in a layout effect, with the sheet already in the page; no timer is involved.
  */
-export function useClearOfSheet(selector: string | null, open: boolean, reduceMotion: boolean): void {
+export function useClearOfSheet(selector: string | null, open: boolean, reduceMotion: boolean): number | null {
+  const [keep, setKeep] = useState<number | null>(null);
   useLayoutEffect(() => {
-    if (!open || !selector || typeof document === 'undefined') return;
-    const sheet = document.querySelector<HTMLElement>('.sp-sheet');
+    if (!open || !selector || !hasPage()) {
+      setKeep(null);
+      return;
+    }
+    const sheet = find('.sp-sheet');
     if (!sheet) return;
-    const root = document.documentElement;
-    const place = (smooth: boolean) => {
+    /** Note how much of the window the sheet covers and how much the selection needs; `move` also scrolls the selection clear. */
+    const place = (move: boolean, smooth: boolean) => {
       const edge = sheet.getBoundingClientRect().top;
-      root.style.setProperty('--sp-sheet-cover', `${Math.max(0, Math.round(window.innerHeight - edge))}px`);
-      const target = document.querySelector(selector);
+      setRootStyle('--sp-sheet-cover', `${Math.max(0, Math.round(viewport().height - edge))}px`);
+      const target = find<Element>(selector);
       if (!target) return;
       const r = target.getBoundingClientRect();
+      setKeep(roomToKeep(r.height));
+      if (!move) return;
       const by = scrollToClear({ top: r.top, bottom: r.bottom }, { top: AIR_ABOVE, bottom: edge - AIR_BELOW });
-      if (Math.abs(by) >= 1) window.scrollBy({ top: by, behavior: smooth && !reduceMotion ? 'smooth' : 'auto' });
+      if (Math.abs(by) >= 1) scrollBy(by, smooth && !reduceMotion);
     };
-    place(true);
+    place(true, true);
 
     // From the reader's own scroll on, a change in the plan's size no longer moves the page.
     let own = false;
@@ -64,9 +82,8 @@ export function useClearOfSheet(selector: string | null, open: boolean, reduceMo
     const keys = (e: KeyboardEvent) => {
       if (['PageDown', 'PageUp', 'Home', 'End', 'ArrowDown', 'ArrowUp', ' '].includes(e.key)) own = true;
     };
-    window.addEventListener('wheel', mine, { passive: true });
-    window.addEventListener('touchmove', mine, { passive: true });
-    window.addEventListener('keydown', keys);
+    // Keys are heard on the document, which every key the reader scrolls with reaches before the window.
+    const stops = [on('wheel', mine, { passive: true }), on('touchmove', mine, { passive: true }), on('keydown', keys)];
 
     const observers: ResizeObserver[] = [];
     if (typeof ResizeObserver !== 'undefined') {
@@ -81,19 +98,23 @@ export function useClearOfSheet(selector: string | null, open: boolean, reduceMo
         ro.observe(el);
         observers.push(ro);
       };
-      watch(sheet, () => place(false));
-      watch(document.querySelector('.sp-stage'), () => {
-        if (!own) place(false);
-      });
+      watch(sheet, () => place(true, false));
+      // The plan changing size always re-measures the selection (the sheet's cap depends on it); it moves the page only until the reader has.
+      watch(find('.sp-stage'), () => place(!own, false));
     }
+    // The last frame of the sheet's height transition, measured once more when it is over.
+    const settled = (e: TransitionEvent) => {
+      if (e.target === sheet && e.propertyName === 'height') place(true, false);
+    };
+    sheet.addEventListener('transitionend', settled);
     return () => {
       for (const ro of observers) ro.disconnect();
-      window.removeEventListener('wheel', mine);
-      window.removeEventListener('touchmove', mine);
-      window.removeEventListener('keydown', keys);
-      root.style.removeProperty('--sp-sheet-cover');
+      sheet.removeEventListener('transitionend', settled);
+      for (const stop of stops) stop();
+      setRootStyle('--sp-sheet-cover', null);
     };
   }, [selector, open, reduceMotion]);
+  return keep;
 }
 
 /** The element a selection stands for in the plan, as a selector: the chosen suite, else the open floor's row. */

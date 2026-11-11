@@ -78,7 +78,16 @@ describe('the Building view\'s list of floors and the Map view\'s floor list', (
   it('say what round 15 found missing: the space in the expiration lens, a sublease by name, one wording', () => {
     const text = (rows: Array<{ id: string; text: string }>, id: string) => rows.find((r) => r.id === id)!.text.replace(/ /g, ' ');
     for (const list of [building, map]) {
-      expect(text(list('expiry', false), 'F8')).toBe('8 · 65.4% leased · 7,400 SF available');
+      expect(text(list('expiry', false), 'F8')).toBe("8 · 65.4% leased · 7,400 SF available · expires Dec '33");
+      // Round 16: every floor with a lease says when it expires; holdover and month-to-month each by name.
+      expect(text(list('expiry', false), 'F9')).toBe("9 · 100.0% leased · expires May '30");
+      expect(text(list('expiry', false), 'F11')).toBe("11 · 100.0% leased · expires May '30 – Jan '32");
+      expect(text(list('expiry', false), 'F3')).toBe("3 · 74.3% leased · 5,500 SF available · holdover · expires Jun '29");
+      expect(text(list('expiry', false), 'F2')).toBe("2 · 74.8% leased · month-to-month · expires Dec '31");
+      // Round 16: the rent beside space on offer is the asking rent of that space, and says so.
+      expect(text(list('rent', false), 'F12')).toBe('12 · 50.0% leased · 9,300 SF available · asking $38–$40/SF/yr FSG Largest block');
+      expect(text(list('rent', false), 'F10')).toBe('10 · 100.0% leased · in place $31/SF/yr FSG');
+      for (const row of list('rent', true)) expect(row.text, row.id).not.toMatch(/in place/);
       expect(text(list('expiry', false), 'F12')).toBe("12 · 50.0% leased · 9,300 SF available · expires Jun '28 Largest block");
       expect(text(list('status', false), 'F7')).toBe('7 · 100.0% leased · 7,000 SF sublease available');
       expect(text(list('status', false), 'F2')).toBe('2 · 74.8% leased · month-to-month');
@@ -105,6 +114,24 @@ describe('MapFloorList', () => {
     expect(stops(map('status', false))).toEqual(['F12']);
     expect(stops(map('status', false, 'F8'))).toEqual(['F8']);
     expect(map('status', false, 'F8').filter((r) => r.tag.includes('aria-pressed="true"')).map((r) => r.id)).toEqual(['F8']);
+  });
+
+  it('draws the swatch in the colour of the fact the row names: on the expiration lens, the step of the first expiry', () => {
+    const html = renderToString(<MapFloorList floors={floorsFor(false)} lens="expiry" safe={false} asOf={TODAY} selected={null} largestId={largestId} onSelect={() => {}} />);
+    const swatch = (id: string) => new RegExp(`data-floor="${id}"[^>]*>(?:<!-- -->)?<span class="sp-map-floor__swatch" style="([^"]*)"`).exec(html)![1];
+    // Floor 5 reads "expires Apr '27 – Sep '28": the "< 6 mo" step, not the "1–2 yr" that colours most of the floor.
+    expect(swatch('F5')).toContain('var(--tone-exp-0-fill)');
+    expect(swatch('F5')).not.toContain('exp-2');
+    expect(swatch('F1')).toContain('var(--tone-exp-0-fill)');
+    // Floor 3: the step of its dated lease, and the at-risk colour for its holdover, which the row also names.
+    expect(swatch('F3')).toContain('var(--tone-exp-3-fill)');
+    expect(swatch('F3')).toContain('var(--tone-risk-edge)');
+  });
+
+  it('gives each row a tooltip that is the Building label\'s tooltip, then what the map adds', () => {
+    const tag = (lens: LensId, id: string) => map(lens, false).find((r) => r.id === id)!.tag.replace(/&#x27;/g, "'");
+    expect(tag('rent', 'F12')).toContain('title="Floor 12 · 18,600 RSF leasable · 50.0% leased · 9,300 SF available · asking $38–$40/SF/yr FSG · in place $36/SF/yr FSG · the largest block in the building · mostly ');
+    expect(tag('expiry', 'F11').replace(/\u00a0/g, ' ')).toContain("title=\"Floor 11 · 20,800 RSF leasable · 100.0% leased · 0 SF available · expires May '30 – Jan '32 · mostly ");
   });
 
   it('gives the swatch a second colour where the floor holds an at-risk lease, and none for a prospect', () => {

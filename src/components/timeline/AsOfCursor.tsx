@@ -3,6 +3,7 @@ import type { ISODate } from '../../domain/types';
 import { addMonths, fmtDate, fmtMonthYear, monthsBetween } from '../../domain/dates';
 import { dateToX, xToDate } from '../../domain/timeline';
 import { measure } from '../../lib/textFit';
+import { cancelFrame, requestFrame } from '../../lib/host';
 
 export interface AsOfCursorProps {
   asOf: ISODate;
@@ -58,7 +59,7 @@ export function AsOfCursor({ asOf, today, start, end, svgRef, plotLeft, plotWidt
 
   useEffect(
     () => () => {
-      if (frame.current !== null && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(frame.current);
+      cancelFrame(frame.current);
     },
     [],
   );
@@ -87,8 +88,9 @@ export function AsOfCursor({ asOf, today, start, end, svgRef, plotLeft, plotWidt
   const schedule = (clientX: number) => {
     pendingX.current = clientX;
     if (frame.current !== null) return;
-    if (typeof requestAnimationFrame === 'function') frame.current = requestAnimationFrame(flush);
-    else flush();
+    frame.current = requestFrame(flush);
+    // Where nothing is painted there is no frame to wait for: the date follows at once.
+    if (frame.current === null) flush();
   };
 
   const onPointerDown = (e: PointerEvent<SVGGElement>) => {
@@ -108,8 +110,8 @@ export function AsOfCursor({ asOf, today, start, end, svgRef, plotLeft, plotWidt
     if (!dragging.current) return;
     dragging.current = false;
     if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
-    if (frame.current !== null && typeof cancelAnimationFrame === 'function') {
-      cancelAnimationFrame(frame.current);
+    if (frame.current !== null) {
+      cancelFrame(frame.current);
       frame.current = null;
     }
     flush();

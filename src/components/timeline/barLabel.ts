@@ -12,6 +12,12 @@ export const NAME_FONT = '600 12px Inter, system-ui, sans-serif';
 export const SUB_FONT = '11px Inter, system-ui, sans-serif';
 export const TAG_FONT = '600 11px Inter, system-ui, sans-serif';
 
+/** The word an ended lease's name closes with ("Kinetic Ventures · vacated"). */
+export const VACATED = 'vacated';
+const VACATED_SUFFIX = ` · ${VACATED}`;
+/** The tenant of an ended lease's name, without the word; null for any other name. */
+export const tenantOfEnded = (name: string): string | null => (name.endsWith(VACATED_SUFFIX) ? name.slice(0, -VACATED_SUFFIX.length) : null);
+
 export interface BarLabelContext {
   safe: boolean;
   asOf: ISODate;
@@ -50,7 +56,7 @@ export function barLabel(bar: TimelineBar, seg: Segment, ctx: BarLabelContext): 
     : isMkt || isSubBar || isAvail
       ? bar.label
       : isProjected && seg.lease
-        ? `${tenantLabel(seg.lease, safe)} · vacated`
+        ? `${tenantLabel(seg.lease, safe)}${VACATED_SUFFIX}`
         : text.name;
   const sub = isNext && seg.next
     ? `Ste ${seg.next.unit.suite} · ${sf(seg.next.unit.size)} · moves in ${fmtDate(seg.next.lease.commencement)}`
@@ -65,6 +71,27 @@ export function barLabel(bar: TimelineBar, seg: Segment, ctx: BarLabelContext): 
             : text.sub;
   const risk = safe ? null : bar.kind === 'mtm' ? 'MTM' : bar.kind === 'holdover' ? 'Holdover' : null;
   return { text, name, sub, risk };
+}
+
+/** A bar under this many px carries no name; and the room a label keeps clear of a bar's ends and of an extension's. */
+export const MIN_NAMED_BAR = 90;
+export const BAR_PAD = 16;
+export const EXT_PAD = 12;
+
+/**
+ * Whether an ended lease can say who it was and that the tenant has left on the bar itself, given the
+ * width of the bar and of its extension to the as-of line (px): the whole name in the bar, or the whole
+ * name in the extension, or the tenant in the bar and the word in the extension. When it cannot, the
+ * label is written to the right of the as-of line, and the bar keeps that part of its lane for it
+ * (TimelineView, `packLanes`): an ended lease always reads "· vacated", as its neighbours do.
+ */
+export function endedNameFits(name: string, barPx: number, extPx: number): boolean {
+  const nameW = measure(name, NAME_FONT);
+  const barRoom = barPx >= MIN_NAMED_BAR ? barPx - BAR_PAD : 0;
+  const extRoom = Math.max(0, extPx - EXT_PAD);
+  if (nameW <= barRoom || nameW <= extRoom) return true;
+  const tenant = tenantOfEnded(name);
+  return tenant !== null && measure(tenant, NAME_FONT) <= barRoom && measure(VACATED, NAME_FONT) <= extRoom;
 }
 
 /** Width of a Holdover / MTM tag, including its padding. */

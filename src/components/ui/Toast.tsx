@@ -48,7 +48,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (message, opts) => {
       const id = ++seq.current;
       setItems((xs) => nextToasts(xs, { id, message, icon: opts?.icon, action: opts?.action }, { named: opts?.named, withheld: withheld.current }));
-      window.setTimeout(() => remove(id), opts?.duration ?? 6000);
+      setTimeout(() => remove(id), opts?.duration ?? 6000);
     },
     [remove],
   );

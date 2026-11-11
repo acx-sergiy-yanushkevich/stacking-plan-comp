@@ -1,19 +1,26 @@
+import { find, findAll, focused, hasPage, requestFrame } from '../lib/host';
 import type { PlanState } from './planState';
 
 /** Remembers the element that opened a panel so closing it can return keyboard focus there. */
 let trigger: HTMLElement | null = null;
-export function rememberTrigger(el: Element | null = document.activeElement) {
+/** True when the panel was opened with the keyboard nowhere in the plan: closing it then moves nothing. */
+let fromNowhere = false;
+export function rememberTrigger(el: Element | null = focused()) {
   trigger = el instanceof HTMLElement ? el : null;
+  fromNowhere = el === null;
 }
 export function refocusTrigger() {
   const t = trigger;
+  const nowhere = fromNowhere;
   trigger = null;
-  requestAnimationFrame(() => (t && t.isConnected ? t.focus() : document.querySelector<HTMLElement>('#sp-plan')?.focus()));
+  fromNowhere = false;
+  if (nowhere) return;
+  requestFrame(() => (t && t.isConnected ? t.focus() : find('#sp-plan')?.focus()));
 }
 /** Focus a plan block (stack cell, timeline bar or plate slice) by segment key. */
 export function focusSegment(key: string) {
   const sel = `.sp-stage [data-key="${CSS.escape(key)}"], .sp-stage [data-bar="tl-${CSS.escape(key)}"]`;
-  requestAnimationFrame(() => document.querySelector<HTMLElement>(sel)?.focus());
+  requestFrame(() => find(sel)?.focus());
 }
 
 /** The tool panel (Issues, Worklist) that located a block, so clearing that selection returns there. */
@@ -50,11 +57,11 @@ const labelOf = (el: Element) => el.getAttribute('aria-label') ?? el.textContent
 
 /** Call before navigating to the Floor view. Moving between floors inside it changes nothing. */
 export function noteFloorEntry(): void {
-  if (typeof document === 'undefined') return;
-  const el = document.activeElement;
-  if (el instanceof Element && el.closest('.sp-floor')) return;
-  const shown = document.querySelector('.sp-app')?.getAttribute('data-view');
-  const trigger = el instanceof HTMLElement && el !== document.body ? el : null;
+  if (!hasPage()) return;
+  const el = focused();
+  if (el?.closest('.sp-floor')) return;
+  const shown = find('.sp-app')?.getAttribute('data-view');
+  const trigger = el instanceof HTMLElement ? el : null;
   floorEntry = { from: shown === 'building' ? 'building' : 'stack', tag: trigger?.tagName ?? '', cls: trigger?.className ?? '', label: trigger ? labelOf(trigger) : '' };
   floorFocusDue = true;
 }
@@ -76,14 +83,14 @@ export const floorOrigin = (): FloorOrigin => floorEntry?.from ?? 'stack';
 export function refocusFloorTrigger(floorId: string): void {
   const entry = floorEntry;
   floorEntry = null;
-  const find = (): HTMLElement | null => {
-    const again = entry?.tag ? Array.from(document.querySelectorAll<HTMLElement>(`.sp-stage ${entry.tag.toLowerCase()}, .sp-inspector ${entry.tag.toLowerCase()}`)).find((el) => el.className === entry.cls && labelOf(el) === entry.label) : null;
-    return again ?? document.querySelector<HTMLElement>(`.sp-stage [data-floor="${CSS.escape(floorId)}"]`);
+  const locate = (): HTMLElement | null => {
+    const again = entry?.tag ? findAll(`.sp-stage ${entry.tag.toLowerCase()}, .sp-inspector ${entry.tag.toLowerCase()}`).find((el) => el.className === entry.cls && labelOf(el) === entry.label) : null;
+    return again ?? find(`.sp-stage [data-floor="${CSS.escape(floorId)}"]`);
   };
   // The returning view renders on the next frame; one more frame covers a view that mounts in two passes.
-  requestAnimationFrame(() => {
-    const el = find();
+  requestFrame(() => {
+    const el = locate();
     if (el) el.focus();
-    else requestAnimationFrame(() => (find() ?? document.querySelector<HTMLElement>('#sp-plan'))?.focus());
+    else requestFrame(() => (locate() ?? find('#sp-plan'))?.focus());
   });
 }

@@ -121,7 +121,11 @@ describe('PrintLayout', () => {
     const pages = html.slice(html.indexOf('<h2>Rent roll</h2>'));
     expect(pages.length).toBeGreaterThan(1000);
     expect(pages).not.toMatch(/Not placed|over-allocated|records exceed/i);
-    expect(pages).toContain('leased is capped at the leasable area');
+    // The total line admits no data issue either (round 16: "rows sum to 211,700 SF; leased is capped…" told a
+    // prospect that the records over-allocate). It states the leased figure, the share and the space, as on screen.
+    expect(html).not.toMatch(/rows sum to|capped|exceed/i);
+    const total = /<tr class="sp-print__total">(.*?)<\/tr>/.exec(pages)?.[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() ?? '';
+    expect(total).toMatch(/^Total · [\d,]+ RSF leasable [\d,]+ leased [\d.]+% leased · [\d,]+ SF available · [\d,]+ SF signed, not in$/);
     expect(html).not.toMatch(/\b(Tour|Proposal|LOI|Lease Out)\b/);
     for (const l of property.leases) {
       expect(html, `names ${l.tenant}`).not.toContain(l.tenant);
@@ -138,6 +142,15 @@ describe('PrintLayout', () => {
     const leased = [...roll.matchAll(/<tr>(.*?)<\/tr>/g)].map((m) => [...m[1].matchAll(/<td[^>]*>(.*?)<\/td>/g)].map((c) => c[1])).filter((r) => r[4] === 'Leased');
     expect(leased.length).toBeGreaterThan(10);
     for (const r of leased) expect(r.slice(5), `Ste ${r[1]}`).toEqual(['—', 'Withheld']);
+  });
+
+  it('owner report: the total line explains why the rows add up to more than the leased figure', () => {
+    const { html, model } = render('?print=1');
+    const over = model.roll.overAllocated.reduce((t, o) => t + o.sf, 0);
+    expect(over).toBeGreaterThan(0);
+    const total = /<tr class="sp-print__total">(.*?)<\/tr>/.exec(html)?.[1].replace(/<[^>]+>/g, ' ') ?? '';
+    expect(total).toContain('rows sum to');
+    expect(total).toMatch(/records exceed its leasable area by [\d,]+ SF, so leased is capped at [\d,]+ SF/);
   });
 
   it('prospect-safe report has no rollover by period, no expiring figure and no lease count', () => {

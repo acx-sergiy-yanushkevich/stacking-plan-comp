@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { scrollToClear, selectionSelector } from './aboveSheet';
+import { AIR_ABOVE, AIR_BELOW, roomToKeep, scrollToClear, selectionSelector } from './aboveSheet';
 
 describe('scrollToClear', () => {
   // A 768 px window with the sheet's top edge at 400: the room for the selection is 8 to 384.
@@ -29,6 +29,22 @@ describe('scrollToClear', () => {
   it('shows the top of something taller than the room (a floor card, or any block under a full-height sheet)', () => {
     expect(scrollToClear({ top: 300, bottom: 900 }, room)).toBe(292);
     expect(scrollToClear({ top: 200, bottom: 272 }, { top: 8, bottom: 45 })).toBe(192);
+  });
+});
+
+describe('roomToKeep', () => {
+  it('is the block, whole, with the air above it and between it and the sheet', () => {
+    expect(roomToKeep(109)).toBe(AIR_ABOVE + 109 + AIR_BELOW);
+    // A fraction of a pixel is rounded up: the block is never a hair under the sheet.
+    expect(roomToKeep(66.9)).toBe(AIR_ABOVE + 67 + AIR_BELOW);
+  });
+
+  it('is room in which the scroll helper can place the complete block (round 16: only its top edge was placed)', () => {
+    // A sheet whose top edge is exactly at the kept room: the block fits it to the pixel.
+    const edge = roomToKeep(109);
+    const by = scrollToClear({ top: 409, bottom: 518 }, { top: AIR_ABOVE, bottom: edge - AIR_BELOW });
+    expect(409 - by).toBe(AIR_ABOVE);
+    expect(518 - by).toBe(edge - AIR_BELOW);
   });
 });
 

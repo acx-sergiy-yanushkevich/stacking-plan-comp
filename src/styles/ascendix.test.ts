@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { contrast, deltaE, describePalette, deuteranopia, expiryStepFaults, expirySteps, hue, hueApart, lightness, loadPalette, lum, tonesOf, type Tokens } from './paletteChecks';
+import { contrast, deltaE, describePalette, deuteranopia, expiryStepFaults, expirySteps, hue, hueApart, lightness, loadPalette, lum, rampCardFaults, tokens, tonesOf, type Tokens } from './paletteChecks';
 
 /**
  * The Ascendix palette (the company colours, the default look), checked against the card colours painted
@@ -119,6 +119,35 @@ describe('Ascendix palette: the shared rule for the expiration ramp has teeth', 
   });
 });
 
+describe('Ascendix palette, day: every ramp step is a fill a reader can see on the white card', () => {
+  const cards = ascendix.dayCards;
+  const fill = (tone: string) => fillOf(day, tone);
+  const off = (hex: string) => Math.min(...cards.map((card) => deltaE(hex, card)));
+
+  it('5+ yr is a steel blue 7 L* or more below the card and 11 ΔE or more from it (round 16: #f3f9fc, the card\'s own white)', () => {
+    for (const card of cards) expect(lightness(card) - lightness(fill('exp-5')), `below ${card}`).toBeGreaterThanOrEqual(7);
+    expect(off(fill('exp-5'))).toBeGreaterThanOrEqual(11);
+    expect(hue(fill('exp-5'))).toBeGreaterThanOrEqual(195);
+    expect(hue(fill('exp-5'))).toBeLessThanOrEqual(225);
+    // It is still the palest step, 8 L* above the one before it.
+    expect(lightness(fill('exp-5')) - lightness(fill('exp-4'))).toBeGreaterThanOrEqual(8);
+  });
+
+  it('the lowest rent step is a blue of its own as well, 8 L* above the next', () => {
+    expect(off(fill('rent-0'))).toBeGreaterThanOrEqual(10);
+    expect(lightness(fill('rent-0')) - lightness(fill('rent-1'))).toBeGreaterThanOrEqual(8);
+    expect(lightness(fill('rent-1')) - lightness(fill('rent-2'))).toBeGreaterThanOrEqual(8);
+  });
+
+  it('has teeth: the fills they replaced fail the shared rule', () => {
+    const was = (name: string, hex: string) => rampCardFaults(tokens([...day].map(([k, v]) => `${k}: ${k === name ? hex : v};`).join(' ')), cards).join('\n');
+    expect(was('--tone-exp-5-fill', '#f3f9fc')).toContain('exp-5 #f3f9fc is 0.9 ΔE from the card #f5f9fb');
+    expect(was('--tone-rent-0-fill', '#e6f5fd')).toContain('rent-0 #e6f5fd is 5.2 ΔE from the card #f5f9fb');
+    expect(rampCardFaults(day, cards)).toEqual([]);
+    expect(rampCardFaults(night, ascendix.nightCards)).toEqual([]);
+  });
+});
+
 describe.each([
   ['night', night, ascendix.nightCards],
   ['day', day, ascendix.dayCards],
@@ -163,7 +192,20 @@ describe.each([
     // Built from the orange toward the blues: the three soonest steps are warm (red through orange to a
     // warm yellow, which sits just past the Primary Orange so that the two differ in hue), the last is a blue.
     for (const i of [0, 1, 2]) expect(hue(steps[i]), `exp-${i} is warm`).toBeLessThanOrEqual(48);
-    expect(steps).toContain(BRAND.primaryOrange);
+    // The Primary Orange is a step of the night ramp as the brand gives it. By day it is the 1–2 yr step's
+    // hue, deepened: with the orange itself (L* 73) the three steps after it, 8 L* apart, end at L* 97,
+    // which is the white of the card (the round-16 fault). So the step keeps the hue and gives up lightness.
+    if (theme === 'night') expect(steps).toContain(BRAND.primaryOrange);
+    else {
+      expect(hueApart(steps[2], BRAND.primaryOrange), `1–2 yr ${steps[2]} hue against the Primary Orange`).toBeLessThanOrEqual(2);
+      expect(lightness(steps[2])).toBeLessThan(lightness(BRAND.primaryOrange));
+      expect(lightness(steps[2])).toBeGreaterThanOrEqual(64);
+      // The orange as given stays where the brand's highlight is: the deals lens and the focus ring's hue.
+      expect(fill('deal-2')).toBe(BRAND.primaryOrange);
+      // Why: a day ramp that keeps the Primary Orange cannot keep its last step off the card.
+      const pinned = lightness(BRAND.primaryOrange) + 3 * 8;
+      for (const card of cards) expect(lightness(card) - pinned, `room left under the card ${card}`).toBeLessThan(3);
+    }
     expect(hue(steps[5])).toBeGreaterThanOrEqual(195);
     expect(hue(steps[5])).toBeLessThanOrEqual(225);
     for (const step of steps) {

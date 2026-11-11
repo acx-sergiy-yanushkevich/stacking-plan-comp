@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
-import { EXPORT_PLAN_WIDTH, PLAN_SVG_REQUEST, type PlanSvgRequest } from '../../lib/exportPng';
+import { EXPORT_PLAN_WIDTH, PLAN_SVG_REQUEST } from '../../lib/exportPng';
+import { expose, requestFrame } from '../../lib/host';
 import StackView from '../stack/StackView';
 
 export interface ExportStageProps {
@@ -28,12 +29,11 @@ export function ExportStage({ model, state }: ExportStageProps) {
   const host = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const onRequest = (e: Event) => {
-      const { provide } = (e as CustomEvent<PlanSvgRequest>).detail;
+    // The verification scripts ask for the off-screen plan the way the export does (scripts/exportcheck.mjs).
+    expose('__spPlanSvg', PLAN_SVG_REQUEST);
+    return PLAN_SVG_REQUEST.on(({ provide }) => {
       provide(new Promise<Plan>((resolve, reject) => setPending({ resolve, reject })));
-    };
-    window.addEventListener(PLAN_SVG_REQUEST, onRequest);
-    return () => window.removeEventListener(PLAN_SVG_REQUEST, onRequest);
+    });
   }, []);
 
   // Once the stage is in the page the stack measures its width and draws again; two frames later it has settled.
@@ -41,8 +41,8 @@ export function ExportStage({ model, state }: ExportStageProps) {
     if (!pending) return;
     let cancelled = false;
     const release = () => setPending(null);
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
+    requestFrame(() =>
+      requestFrame(() => {
         if (cancelled) return;
         const svg = host.current?.querySelector<SVGSVGElement>('.sp-stack__body > svg');
         if (svg) pending.resolve({ svg, release });

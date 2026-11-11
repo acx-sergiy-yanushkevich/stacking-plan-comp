@@ -46,8 +46,10 @@ export interface LaidOutRow {
 }
 
 /** When a bar stops occupying its lane (open-ended bars hold the lane to the axis end). */
-function occupiedUntil(bar: TimelineBar, asOf: ISODate, safe: boolean): ISODate {
+function occupiedUntil(bar: TimelineBar, asOf: ISODate, safe: boolean, keepsLane?: (bar: TimelineBar) => boolean): ISODate {
   if (bar.end === null || bar.kind === 'available' || bar.kind === 'forsale') return '9999-12-31';
+  // A bar whose label has to be written to its right (an ended lease too short to say "vacated" on itself).
+  if (keepsLane?.(bar)) return '9999-12-31';
   // Prospect-safe: a holdover's term is not disclosed, so its bar fades open-ended past the cursor.
   if (safe && (bar.kind === 'holdover' || bar.kind === 'mtm')) return '9999-12-31';
   // Holdover and projected bars are drawn out to the cursor.
@@ -57,8 +59,11 @@ function occupiedUntil(bar: TimelineBar, asOf: ISODate, safe: boolean): ISODate 
   return bar.end;
 }
 
-/** Greedy interval packing: each bar takes the first lane that is free at its start. */
-export function packLanes(bars: TimelineBar[], asOf: ISODate, safe = false): TimelineBar[][] {
+/**
+ * Greedy interval packing: each bar takes the first lane that is free at its start. `keepsLane` names
+ * the bars that keep the rest of their lane free, for a label written to the right of the bar.
+ */
+export function packLanes(bars: TimelineBar[], asOf: ISODate, safe = false, keepsLane?: (bar: TimelineBar) => boolean): TimelineBar[][] {
   const sorted = bars.slice().sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.key < b.key ? -1 : 1));
   const lanes: TimelineBar[][] = [];
   const free: ISODate[] = [];
@@ -70,16 +75,16 @@ export function packLanes(bars: TimelineBar[], asOf: ISODate, safe = false): Tim
       free.push('');
     }
     lanes[i].push(bar);
-    free[i] = occupiedUntil(bar, asOf, safe);
+    free[i] = occupiedUntil(bar, asOf, safe, keepsLane);
   }
   return lanes;
 }
 
 /** Rows with their lanes, vertical position and height, stacked from `top`. */
-export function layoutRows(rows: TimelineRow[], asOf: ISODate, top: number, safe = false): LaidOutRow[] {
+export function layoutRows(rows: TimelineRow[], asOf: ISODate, top: number, safe = false, keepsLane?: (bar: TimelineBar) => boolean): LaidOutRow[] {
   let y = top;
   return rows.map((row) => {
-    const lanes = packLanes(row.bars, asOf, safe);
+    const lanes = packLanes(row.bars, asOf, safe, keepsLane);
     const height = Math.max(MIN_ROW_HEIGHT, Math.max(1, lanes.length) * LANE_PITCH + ROW_PAD * 2 - (LANE_PITCH - BAR_HEIGHT));
     const out = { row, lanes, laneTop: lanes.map((_, li) => ROW_PAD + li * LANE_PITCH), top: y, height };
     y += height;

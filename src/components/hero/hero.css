@@ -36,8 +36,18 @@
 .sp-hero__slice.is-dim { opacity: 0.28; }
 .sp-hero__slice.is-selected .sp-hero__face { stroke: var(--sp-color-brand); stroke-width: 1.6; stroke-opacity: 1; }
 .sp-hero__cap { display: flex; flex-direction: column; gap: 1px; margin-top: 4px; min-height: 34px; }
-.sp-hero__cap-main { font-size: var(--sp-text-12); font-weight: 600; color: var(--sp-color-text); font-variant-numeric: tabular-nums; }
+.sp-hero__cap-main { font-size: var(--sp-text-12); font-weight: 600; color: var(--sp-color-text); font-variant-numeric: tabular-nums; --sp-dot: 0.072em; --sp-dot-gap: 0.585em; }
 .sp-hero__cap-hint { font-size: var(--sp-text-11); color: var(--sp-color-text-weak); }
+/* Facts in running text with a "·" between them (DotJoin). A fact never breaks inside; the separator is
+   one space, as wide as " · " and drawn as the dot (its size and height in the line are the glyph's, in
+   em, so it follows the type; measured against the glyph at 4x). At a line break the browser drops the
+   space, and the dot with it: no separator ends a line or begins one, at any width. `--sp-dot` is the
+   dot's radius and `--sp-dot-gap` what the space is widened by, for bolder type. */
+.sp-dotjoin__part { white-space: nowrap; }
+.sp-dotjoin__sep {
+  white-space: normal; word-spacing: var(--sp-dot-gap, 0.558em);
+  background: radial-gradient(circle at 48.9% 53.2%, currentColor calc(var(--sp-dot, 0.061em) - 0.2px), transparent calc(var(--sp-dot, 0.061em) + 0.3px)) no-repeat;
+}
 /* The phone sheet has no room for it; the floor cards carry the same information. */
 .sp-sheet .sp-hero { display: none; }
 @media print { .sp-hero { display: none; } }

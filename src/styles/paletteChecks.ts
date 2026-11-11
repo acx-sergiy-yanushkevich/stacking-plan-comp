@@ -112,6 +112,35 @@ export const EXPIRY_WALL_STEP_L = 7;
 
 export const expirySteps = (t: Tokens): string[] => [0, 1, 2, 3, 4, 5].map((i) => t.get(`--tone-exp-${i}-fill`)!);
 
+/**
+ * Every step of a ramp is a fill a reader can see: far enough from the card behind it, wherever the
+ * backdrop glow puts the card, to read as a colour and not as the card showing through. The step at the
+ * quiet end of a ramp is the one at risk: the latest expiry and the lowest rent are pale by day and dark
+ * at night, like the card. Measured as CIE76 ΔE, where about 2 is just noticeable and 10 is plainly two
+ * colours (in round 16 the daytime 5+ yr step was 0.9 from the card under the glow, and read as an empty
+ * outline). One rule for every palette, by night and by day.
+ */
+export const RAMP_OFF_CARD = 8;
+export const RAMPS: ReadonlyArray<readonly [name: string, steps: number]> = [
+  ['exp', 6],
+  ['rent', 5],
+  ['deal', 4],
+];
+
+/** Every ramp step too close to a card colour, in words; empty when every step is a fill of its own. */
+export function rampCardFaults(t: Tokens, cards: readonly string[]): string[] {
+  const faults: string[] = [];
+  for (const [name, steps] of RAMPS)
+    for (let i = 0; i < steps; i += 1) {
+      const fill = t.get(`--tone-${name}-${i}-fill`)!;
+      for (const card of cards) {
+        const d = deltaE(fill, card);
+        if (d < RAMP_OFF_CARD) faults.push(`${name}-${i} ${fill} is ${d.toFixed(1)} ΔE from the card ${card} (${RAMP_OFF_CARD} or more needed)`);
+      }
+    }
+  return faults;
+}
+
 /** Every pair of neighbouring expiration steps that breaks the rule, in words; empty when the ramp is sound. */
 export function expiryStepFaults(steps: readonly string[]): string[] {
   const faults: string[] = [];
@@ -188,6 +217,10 @@ export function describePalette(p: LoadedPalette): void {
         const fill = get(tone, 'fill');
         for (const ground of fill === 'transparent' ? cards : [fill]) expect(contrast(get(tone, 'text'), ground), `${tone} text on ${ground}`).toBeGreaterThanOrEqual(4.5);
       }
+    });
+
+    it(`draws every step of the expiration, rent and deal ramps as a fill of its own: ${RAMP_OFF_CARD} ΔE or more from the card, wherever the glow puts it`, () => {
+      expect(rampCardFaults(t, cards)).toEqual([]);
     });
 
     it('keeps leased calmer than the states that need attention', () => {

@@ -118,15 +118,20 @@
        does: red, orange, amber for the three steps that need attention, then lavender, periwinkle and
        pale blue. No step is pink: Holdover / MTM (`--tone-risk-fill`, a pale pink) stands beside this ramp
        in the same lens, and every step is far from it in hue or in lightness (vice.test.ts). Every
-       step is 9 L* or more above the one before (L* 36, 49, 63, 73, 82, 93), and each edge is 3:1 or more
+       step is 9 L* or more above the one before (L* 36, 49, 63, 73, 82, 91), and each edge is 3:1 or more
        on the day card at its darkest. The edges step in lightness too: the 3D map deepens each fill
-       toward its edge, and there the six walls stay 7 L* or more apart (paletteChecks.ts). */
+       toward its edge, and there the six walls stay 7 L* or more apart (paletteChecks.ts). The last step,
+       5+ yr, is a fill a reader can see wherever the glow puts the card (it was #e0eef5, 3.5 ΔE from the
+       card under the cyan glow). */
     --tone-exp-0-fill: #9d2e18; --tone-exp-0-text: #ffffff; --tone-exp-0-edge: #74200f;
     --tone-exp-1-fill: #bd551a; --tone-exp-1-text: #ffffff; --tone-exp-1-edge: #7c3208;
     --tone-exp-2-fill: #da8516; --tone-exp-2-text: #181818; --tone-exp-2-edge: #774603;
     --tone-exp-3-fill: #bea7ea; --tone-exp-3-text: #181818; --tone-exp-3-edge: #6f58bd;
     --tone-exp-4-fill: #b8ccf6; --tone-exp-4-text: #181818; --tone-exp-4-edge: #5273c2;
-    --tone-exp-5-fill: #e0eef5; --tone-exp-5-text: #181818; --tone-exp-5-edge: #55869f;
+    --tone-exp-5-fill: #cdebf9; --tone-exp-5-text: #181818; --tone-exp-5-edge: #55869f;
+    /* Rent lens by day: the two lightest steps are a little stronger than the default light theme's
+       (#e3f1fa was 3.8 ΔE from the card under the cyan glow), and still 8 L* apart. */
+    --tone-rent-0-fill: #d1ebfd; --tone-rent-1-fill: #a8d6f5;
     --tone-rent-0-edge: #5d87a8; --tone-rent-1-edge: #4f82ad; --tone-rent-2-edge: #3d76a6; --tone-rent-3-edge: #2f6c9e;
     --tone-deal-0-edge: #5f80cf; --tone-deal-1-edge: #4f74c8;
 

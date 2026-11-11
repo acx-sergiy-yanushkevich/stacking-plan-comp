@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
+import { focused, on, viewport } from '../../lib/host';
 
 export interface PopoverTriggerProps {
   ref: RefObject<HTMLButtonElement | null>;
@@ -22,6 +23,20 @@ export interface PopoverProps {
 
 const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/** The air a panel keeps from the window's edge, px. */
+const EDGE_AIR = 8;
+
+/**
+ * How far to move a panel that spans `left`..`right` so that it is inside a window `width` px wide with
+ * its air (px; positive moves right, 0 when it already is). A panel wider than the window keeps its left
+ * edge in view: that is where its text starts.
+ */
+export function shiftIntoWindow(left: number, right: number, width: number): number {
+  if (left < EDGE_AIR || right - left > width - 2 * EDGE_AIR) return EDGE_AIR - left;
+  if (right > width - EDGE_AIR) return width - EDGE_AIR - right;
+  return 0;
+}
+
 /**
  * Anchored popover: Esc and outside click close it, focus moves inside on open and
  * returns to the trigger on close, Tab cycles within the panel.
@@ -43,6 +58,19 @@ export function Popover({ open, onOpenChange, trigger, children, align = 'start'
     }
   }, [open]);
 
+  // The panel hangs from its trigger's left or right edge. Where that would put part of it outside the
+  // window (a phone: a 290 px menu under a button near the left edge), it is moved back in, whole.
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    if (!open || !panel) return;
+    const edge = align === 'end' ? 'right' : 'left';
+    panel.style.removeProperty(edge);
+    const r = panel.getBoundingClientRect();
+    const shift = shiftIntoWindow(r.left, r.right, viewport().width);
+    // `left` grows to the right, `right` to the left.
+    if (shift) panel.style.setProperty(edge, `${align === 'end' ? -shift : shift}px`);
+  }, [open, align]);
+
   useEffect(() => {
     if (!open) return;
     const onDown = (e: PointerEvent) => {
@@ -50,8 +78,7 @@ export function Popover({ open, onOpenChange, trigger, children, align = 'start'
       if (panelRef.current?.contains(t) || triggerRef.current?.contains(t)) return;
       onOpenChange(false);
     };
-    document.addEventListener('pointerdown', onDown);
-    return () => document.removeEventListener('pointerdown', onDown);
+    return on('pointerdown', onDown);
   }, [open, onOpenChange]);
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -65,10 +92,10 @@ export function Popover({ open, onOpenChange, trigger, children, align = 'start'
       if (items.length === 0) return;
       const first = items[0];
       const last = items[items.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
+      if (e.shiftKey && focused() === first) {
         e.preventDefault();
         last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
+      } else if (!e.shiftKey && focused() === last) {
         e.preventDefault();
         first.focus();
       }

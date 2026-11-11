@@ -13,7 +13,7 @@ import { layoutRows, layoutStackedRows, rowsHeight, viewAxis } from './layout';
 import { AsOfCursor } from './AsOfCursor';
 import { RolloverChips } from './RolloverChips';
 import { canShowRollover, canTimeTravel } from '../../domain/safe';
-import { barLabel, SUB_FONT, tagWidth, wrapLabel, type LabelLine } from './barLabel';
+import { barLabel, endedNameFits, SUB_FONT, tagWidth, wrapLabel, type LabelLine } from './barLabel';
 import { useWidth } from './useWidth';
 import { measure } from '../../lib/textFit';
 import { Icon } from '../ui';
@@ -89,20 +89,31 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
     }
     return out;
   }, [stackedMode, rows, model.segIndex, model.safe, model.asOf, model.today, state.lens, plotWidth]);
-  const laid = useMemo(
-    () => (labels ? layoutStackedRows(rows, rowsTop, (bar) => labels.get(bar.key)?.length ?? 1) : layoutRows(rows, model.asOf, rowsTop, model.safe)),
-    [labels, rows, model.asOf, model.safe, rowsTop],
-  );
-  const height = rowsTop + rowsHeight(laid) + BOTTOM_PAD;
-  const clipId = `sp-tl-plot-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
-  const legendStates = model.legend.filter((i) => i.sf > 0).length;
-
   // The axis follows as-of (as-of + 10 yr). Freeze it while dragging so the chart does not
   // rescale under the pointer; it snaps to the new extent on release.
   const axis = viewAxis(model.timeline, model.asOf, model.today);
   const [frozen, setFrozen] = useState<{ start: ISODate; end: ISODate } | null>(null);
   const start = frozen?.start ?? axis.start;
   const end = frozen?.end ?? axis.end;
+
+  const laid = useMemo(() => {
+    if (labels) return layoutStackedRows(rows, rowsTop, (bar) => labels.get(bar.key)?.length ?? 1);
+    // A lease that has ended says "· vacated" like its neighbours. Where its bar and the dashed box after
+    // it are too short for that, the label is written right of the as-of line, and the bar keeps that part
+    // of its lane free for it (as a holdover does), so nothing else is drawn there.
+    const px = (d: ISODate) => Math.min(plotWidth, Math.max(0, dateToX(d, start, end, plotWidth)));
+    const keepsLane = (bar: (typeof rows)[number]['bars'][number]): boolean => {
+      if (bar.kind !== 'projected' || !bar.end || bar.end >= model.asOf) return false;
+      const seg = model.segIndex.get(bar.segKey);
+      if (!seg) return false;
+      const { name } = barLabel(bar, seg, { safe: model.safe, asOf: model.asOf, today: model.today, lens: state.lens, floorName: '' });
+      return !endedNameFits(name, px(bar.end) - px(bar.start), px(model.asOf) - px(bar.end));
+    };
+    return layoutRows(rows, model.asOf, rowsTop, model.safe, keepsLane);
+  }, [labels, rows, model.asOf, model.safe, model.today, model.segIndex, state.lens, rowsTop, plotWidth, start, end]);
+  const height = rowsTop + rowsHeight(laid) + BOTTOM_PAD;
+  const clipId = `sp-tl-plot-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
+  const legendStates = model.legend.filter((i) => i.sf > 0).length;
 
   const [hover, setHover] = useState<BarHover | null>(null);
 
@@ -229,7 +240,8 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
       )}
       <p className="sp-timeline__note">
         {!timeTravel
-          ? 'Prospect-safe shows the plan as of today: the date cannot be moved, and no lease shows when it began or ends.'
+          ? // A no-break space after the comma: where the note wraps, the line does not end on it.
+            'Prospect-safe shows the plan as of today: the date cannot be moved,\u00a0and no lease shows when it began or ends.'
           : stackedMode
             ? 'Drag the date handle to move the as-of date; the whole plan recomputes. Tap a lease for its details.'
             : 'Drag the cursor or use ← → to move the as-of date; the whole plan recomputes.'}

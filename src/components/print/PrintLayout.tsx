@@ -138,10 +138,11 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
             <td className="num">{num(k.leased)} leased</td>
             <td colSpan={rows[0].length - 4}>
               {pct(k.occupancy)} leased · {num(k.availableDirect + k.availableSublease)} SF available · {num(k.committed)} SF signed, not in
+              {/* Why the rows add up to more than the leased figure is a data issue, and an owner's matter:
+                  the owner report explains it; a prospect is shown no data issue, on screen or on paper. */}
               {overBy > 0 &&
-                (canShowIssues(safe)
-                  ? ` · rows sum to ${num(k.leased + overBy)} SF; ${model.roll.overAllocated.map((o) => `${o.floor} records exceed its leasable area by ${num(o.sf)} SF`).join(', ')}, so leased is capped at ${num(k.leased)} SF`
-                  : ` · rows sum to ${num(k.leased + overBy)} SF; leased is capped at the leasable area (${num(k.leased)} SF)`)}
+                canShowIssues(safe) &&
+                ` · rows sum to ${num(k.leased + overBy)} SF; ${model.roll.overAllocated.map((o) => `${o.floor} records exceed its leasable area by ${num(o.sf)} SF`).join(', ')}, so leased is capped at ${num(k.leased)} SF`}
             </td>
           </tr>
         </tbody>

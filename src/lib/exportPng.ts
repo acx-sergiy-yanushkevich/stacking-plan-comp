@@ -16,17 +16,20 @@
  * Anything that cannot be exported throws an `Error` whose message says why, for the caller's toast.
  */
 
+import { createElement, readRootStyle } from './host';
+import { createSignal } from './signal';
+
 /** Width, in CSS px, of the plan drawn off-screen for an export when no plan is on screen. */
 export const EXPORT_PLAN_WIDTH = 1200;
 
-/**
- * Window event asking for a rendered plan SVG. The listener calls `detail.provide` with a promise of
- * the SVG and a function that releases it (unmounts the off-screen plan). No listener, no plan.
- */
-export const PLAN_SVG_REQUEST = 'sp:plan-svg';
 export interface PlanSvgRequest {
   provide: (plan: Promise<{ svg: SVGSVGElement; release: () => void }>) => void;
 }
+/**
+ * Asks for a rendered plan SVG. The listener calls `provide` with a promise of the SVG and a function
+ * that releases it (unmounts the off-screen plan). No listener, no plan.
+ */
+export const PLAN_SVG_REQUEST = createSignal<PlanSvgRequest>();
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const STYLE_PROPS = [
@@ -139,8 +142,7 @@ const isRendered = (svg: SVGSVGElement) => {
 /** Ask the page for a plan drawn off-screen at `EXPORT_PLAN_WIDTH`; null when nothing answers. */
 async function offscreenPlan(): Promise<{ svg: SVGSVGElement; release: () => void } | null> {
   let answer: Promise<{ svg: SVGSVGElement; release: () => void }> | null = null;
-  const detail: PlanSvgRequest = { provide: (plan) => (answer = plan) };
-  window.dispatchEvent(new CustomEvent<PlanSvgRequest>(PLAN_SVG_REQUEST, { detail }));
+  PLAN_SVG_REQUEST.emit({ provide: (plan) => (answer = plan) });
   return answer;
 }
 
@@ -154,12 +156,13 @@ async function rasterise(xml: string, w: number, h: number, scale: number, backg
       img.onerror = () => rej(new Error('The browser could not draw the plan as an image.'));
       img.src = url;
     });
-    const canvas = document.createElement('canvas');
+    const canvas = createElement('canvas');
+    if (!canvas) throw new Error('The browser could not draw the plan as an image.');
     canvas.width = w * scale;
     canvas.height = h * scale;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('The browser could not draw the plan as an image.');
-    ctx.fillStyle = background ?? (getComputedStyle(document.documentElement).getPropertyValue('--sp-color-card').trim() || '#fff');
+    ctx.fillStyle = background ?? (readRootStyle('--sp-color-card') || '#fff');
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.scale(scale, scale);
     ctx.drawImage(img, 0, 0, w, h);

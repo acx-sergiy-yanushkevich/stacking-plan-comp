@@ -6,7 +6,7 @@ import { usePlanModel } from './model/usePlanModel';
 import { usePlanState, useDocumentTitle } from './state/usePlanState';
 import { useAnnouncement } from './state/useAnnouncement';
 import { canShowRollover } from './domain/safe';
-import { readUrl, setRootData, shareUrl } from './lib/host';
+import { copyText, find, focused, hasPage, on, print, readUrl, requestFrame, setRootData, shareUrl } from './lib/host';
 import { deriveMode, paletteOf, shownView } from './state/planState';
 import { rentRollRows, toCsv } from './domain/exportCsv';
 import { Header, type ExportKind } from './components/shell/Header';
@@ -25,6 +25,7 @@ const AreaPanel = lazy(() => import('./components/map/AreaPanel').then((m) => ({
 import { PrintLayout } from './components/print/PrintLayout';
 import { csvBlob, download } from './lib/exportFile';
 import { svgToPng } from './lib/exportPng';
+import { RECORD_REQUEST } from './components/map/recordSignal';
 import { useIsNarrow, useIsPhone, usePrefersReducedMotion } from './lib/useMedia';
 import { selectionSelector, useClearOfSheet } from './components/stack/aboveSheet';
 import { clearSelection } from './components/plan/actions';
@@ -47,11 +48,11 @@ const opensPanel = (action: KpiAction): boolean => action === 'find' || action =
  * view keeps the focus it has.
  */
 function focusAfterKpi(action: KpiAction): void {
-  if (typeof document === 'undefined' || !opensPanel(action)) return;
+  if (!hasPage() || !opensPanel(action)) return;
   // Two frames: the new state renders in the first; a panel that mounts with it is in the page by the second.
-  requestAnimationFrame(() =>
-    requestAnimationFrame(() => {
-      document.querySelector<HTMLElement>('.sp-inspector .sp-ins__title, .sp-sheet .sp-ins__title')?.focus({ preventScroll: true });
+  requestFrame(() =>
+    requestFrame(() => {
+      find('.sp-inspector .sp-ins__title, .sp-sheet .sp-ins__title')?.focus({ preventScroll: true });
     }),
   );
 }
@@ -67,8 +68,8 @@ interface FocusMark {
 const nameOf = (el: Element) => el.getAttribute('aria-label') ?? el.textContent?.trim() ?? '';
 
 function focusMark(root: HTMLElement | null): FocusMark | null {
-  const el = document.activeElement;
-  if (!root || !el || el === document.body || !root.contains(el)) return null;
+  const el = focused();
+  if (!root || !el || !root.contains(el)) return null;
   const tag = el.tagName.toLowerCase();
   const cls = el.getAttribute('class') ?? '';
   for (const attr of ['data-key', 'data-bar', 'data-floor']) {
@@ -105,8 +106,8 @@ class Stage extends Component<{ epoch: string; children: ReactNode }> {
 
   componentDidUpdate(_props: unknown, _state: unknown, mark: FocusMark | null) {
     if (!mark) return;
-    const active = document.activeElement;
-    if (active && active !== document.body && active.isConnected) return;
+    const active = focused();
+    if (active && active.isConnected) return;
     findMarked(this.el.current, mark)?.focus({ preventScroll: true });
   }
 
@@ -136,14 +137,14 @@ function Shell() {
   // for the broker ("Opened Cirrus Energy…") never outlives the moment the mode is turned on.
   const [announce, setAnnounce] = useAnnouncement(state.safe);
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const t = setTimeout(() => {
       const k = model.kpis;
       const d = model.deltas;
       setAnnounce(
         `As of ${fmtDate(state.asOf)}${model.isProjected ? ' (projected)' : ''}: leased ${pct(k.occupancy)}${d ? `, ${d.occupancy >= 0 ? 'up' : 'down'} ${Math.abs(d.occupancy * 100).toFixed(1)} points` : ''}; available ${num(k.availableDirect + k.availableSublease)} SF${canShowRollover(state.safe) ? `; expiring in 12 months ${num(k.expiring12)} SF` : ''}.`,
       );
     }, 400);
-    return () => window.clearTimeout(t);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.asOf]);
 
@@ -172,11 +173,11 @@ function Shell() {
     // Paper is white: a dark screen theme must not reach the printed report.
     const before = () => apply('light');
     const after = () => apply(theme);
-    window.addEventListener('beforeprint', before);
-    window.addEventListener('afterprint', after);
+    const stopBefore = on('beforeprint', before);
+    const stopAfter = on('afterprint', after);
     return () => {
-      window.removeEventListener('beforeprint', before);
-      window.removeEventListener('afterprint', after);
+      stopBefore();
+      stopAfter();
     };
   }, [theme]);
   useEffect(() => {
@@ -189,7 +190,7 @@ function Shell() {
       const stamp = `${property.name.replace(/\s+/g, '-')}-${state.asOf}${state.safe ? '-prospect-safe' : ''}`;
       switch (kind) {
         case 'link':
-          await navigator.clipboard?.writeText(shareUrl());
+          await copyText(shareUrl());
           toast.push('Link to this view copied', { icon: 'link' });
           return;
         case 'csv': {
@@ -198,7 +199,7 @@ function Shell() {
           return;
         }
         case 'png': {
-          const svg = document.querySelector<SVGSVGElement>('.sp-stack__body > svg');
+          const svg = find<SVGSVGElement>('.sp-stack__body > svg');
           if (!svg) {
             toast.push('Switch to the Stack view to export the plan as an image', { icon: 'info' });
             return;
@@ -213,10 +214,10 @@ function Shell() {
         }
         case 'pdf':
           toast.push('Opening the print dialog: choose "Save as PDF", landscape', { icon: 'file' });
-          setTimeout(() => window.print(), 250);
+          setTimeout(() => print(), 250);
           return;
         case 'video':
-          window.dispatchEvent(new CustomEvent('sp:record'));
+          RECORD_REQUEST.emit();
           return;
       }
     },
@@ -262,15 +263,14 @@ function Shell() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return;
-      const el = document.activeElement as HTMLElement | null;
-      if (el && el !== document.body && el.closest(`.sp-ins, .sp-pop__panel, .sp-sheet, ${stageOwnsEscape ? '.sp-stage, ' : ''}input, select, textarea`)) return;
+      const el = focused();
+      if (el && el.closest(`.sp-ins, .sp-pop__panel, .sp-sheet, ${stageOwnsEscape ? '.sp-stage, ' : ''}input, select, textarea`)) return;
       if (state.bucket !== null || state.q || state.window || state.req !== null || state.inquiry) {
         patch({ bucket: null, q: '', window: null, req: null, max: null, by: null, inquiry: null, mode: 'building' });
         refocusTrigger();
       }
     };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    return on('keydown', onKey);
   }, [state.bucket, state.q, state.window, state.req, state.inquiry, patch, stageOwnsEscape]);
 
   const inspector = useMemo(
@@ -283,9 +283,10 @@ function Shell() {
   const showInspector = view === 'building' ? mode !== 'building' && mode !== 'floor' : view !== 'floor' || mode === 'block';
   const sheetOpen = narrow && mode !== 'building';
   // A sheet that opened for a selection (a suite, a floor) must not hide it: the page keeps the chosen block
-  // or row whole above the sheet's top edge, and follows the sheet when it grows (stack/aboveSheet.ts).
+  // or row whole above the sheet's top edge, follows the sheet when it grows, and tells the sheet how much
+  // of the window the selection needs, so the expanded sheet stops short of it (stack/aboveSheet.ts).
   const sheetShown = narrow && showInspector && sheetOpen;
-  useClearOfSheet(sheetShown && (mode === 'block' || mode === 'floor') ? selectionSelector(state.select, state.floor) : null, sheetShown, reduceMotion);
+  const keepClear = useClearOfSheet(sheetShown && (mode === 'block' || mode === 'floor') ? selectionSelector(state.select, state.floor) : null, sheetShown, reduceMotion);
   // While a sheet is open the page ends with as much room as the sheet covers, so its last rows can be scrolled clear of it.
   const appStyle = sheetShown ? ({ paddingBottom: 'calc(var(--sp-sheet-cover, 48vh) + var(--sp-space-4))' } as CSSProperties) : undefined;
   const sheetTitle = mode === 'block' ? 'Suite' : mode === 'floor' ? 'Floor' : mode === 'find' ? 'Find space' : mode === 'worklist' ? 'Renewal worklist' : mode === 'issues' ? 'Data issues' : 'Area';
@@ -341,6 +342,7 @@ function Shell() {
           title={sheetTitle}
           hideHeader
           modeless={mode === 'find' || mode === 'worklist' || mode === 'issues'}
+          keepClear={keepClear}
         >
           {inspector}
         </Sheet>

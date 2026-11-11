@@ -1,11 +1,14 @@
 import type { ExpressionSpecification } from 'maplibre-gl';
-import type { FloorView } from '../../domain/derive';
+import type { FloorView, Segment } from '../../domain/derive';
 import type { ExtrusionCollection, ExtrusionProperties } from '../../domain/geometry';
 import { num } from '../../domain/format';
-import { toneFor, type Tone } from '../../domain/lenses';
-import { canShowIssues } from '../../domain/safe';
+import { stageRank, toneFor, type Tone } from '../../domain/lenses';
+import { canShowIssues, canShowTenantRisk } from '../../domain/safe';
+import { askingSegments, furthestStage, inPlaceSegments } from '../building/floorFact';
+import { nextExpiry } from '../floor/floorData';
 import type { GeoPolygon } from '../../domain/types';
 import type { Lens } from '../../state/planState';
+import { readRootStyle } from '../../lib/host';
 
 /** Pure helpers behind the map: tone selection, colour resolution, geometry tweaks, expressions. */
 
@@ -27,9 +30,13 @@ export const LAYER_BUILDINGS = 'sp-buildings-3d';
  * Ties go to `leased`; a floor without segments reads as empty.
  */
 export function dominantTone(f: FloorView, lens: Lens, safe: boolean): Tone {
-  if (f.segments.length === 0) return 'empty';
+  return dominantAmong(f.segments, lens, safe);
+}
+
+function dominantAmong(segments: Segment[], lens: Lens, safe: boolean): Tone {
+  if (segments.length === 0) return 'empty';
   const sfBy = new Map<Tone, number>();
-  for (const s of f.segments) {
+  for (const s of segments) {
     const t = toneFor(s, lens, safe);
     sfBy.set(t, (sfBy.get(t) ?? 0) + s.size);
   }
@@ -61,16 +68,43 @@ export function floorAlso(f: FloorView, safe: boolean): string {
 }
 
 /**
- * A second colour for a floor's swatch: the at-risk tone when the floor holds a holdover or
- * month-to-month tenant, else (status lens) the expiring tone when a lease ends within 12 months, unless
- * that state already colours most of the floor. Null when there is none, and always in prospect-safe
- * mode, where those leases are drawn as plain leased (`toneFor`).
+ * The colours of a floor's swatch in the map's list of floors. The swatch stands beside the floor's label,
+ * so it shows the fact the label's words name (building/floorFact.ts), in the legend's colour for it; it
+ * is not the floor's dominant colour where the two differ (the 3D floors are drawn suite by suite, each
+ * in its own colour):
+ *
+ *   expiration  the step of the floor's next lease expiry, the first date the label gives ("expires
+ *               Apr '27 – Sep '28" is the "< 6 mo" step, whatever colours most of the floor); the
+ *               at-risk tone as the second colour where the label says holdover or month-to-month
+ *   deals       the furthest stage a live deal has reached, the stage the label names
+ *   rent        the band of the asking rent where the label gives one (the largest space on offer),
+ *               else the band of most of the rent in place that the label gives
+ *   status      the state of most of the floor
+ *
+ * and, in the status and expiration lenses, a second colour: the at-risk tone where the floor holds a
+ * holdover or month-to-month lease, else the expiring tone where a lease ends within 12 months, unless
+ * that is the swatch's colour already. The label says the same in words ("holdover", "month-to-month",
+ * "expires < 12 mo"). There is none in prospect-safe mode, where those leases are drawn as plain leased
+ * (`toneFor`).
+ *
+ * A floor whose label has no such fact (nothing leased, no deal, no rent to show) keeps its dominant tone.
  */
-export function accentTone(f: FloorView, lens: Lens, safe: boolean): Tone | null {
-  const dominant = dominantTone(f, lens, safe);
+export function swatchTones(f: FloorView, lens: Lens, safe: boolean): { tone: Tone; accent: Tone | null } {
+  let tone = dominantTone(f, lens, safe);
+  if (lens === 'expiry') {
+    const next = canShowTenantRisk(safe) ? nextExpiry(f) : null;
+    if (next) tone = toneFor(next, lens, safe);
+  } else if (lens === 'deals') {
+    const stage = furthestStage(f, safe);
+    if (stage) tone = `deal-${stageRank(stage)}` as Tone;
+  } else if (lens === 'rent') {
+    const asking = askingSegments(f, safe);
+    const named = asking.length > 0 ? asking : inPlaceSegments(f, safe);
+    if (named.length > 0) tone = dominantAmong(named, lens, safe);
+  }
   const tones = new Set(f.segments.map((s) => toneFor(s, lens, safe)));
-  for (const t of ['risk', 'expiring'] as const) if (tones.has(t) && dominant !== t) return t;
-  return null;
+  const accent = (['risk', 'expiring'] as const).find((t) => tones.has(t) && tone !== t) ?? null;
+  return { tone, accent };
 }
 
 /** `#rgb` or `#rrggbb` (any case, surrounding space) → lowercase `#rrggbb`; anything else → null. */
@@ -84,7 +118,7 @@ export function normalizeHex(raw: string): string | null {
 }
 
 type ReadVar = (name: string) => string;
-const readCssVar: ReadVar = (name) => (typeof document === 'undefined' ? '' : getComputedStyle(document.documentElement).getPropertyValue(name));
+const readCssVar: ReadVar = (name) => readRootStyle(name);
 
 /** The `--tone-<tone>-fill` token as a hex; `transparent`/unset tones fall back to a neutral grey. */
 export function resolveToneHex(tone: string, read: ReadVar = readCssVar): string {

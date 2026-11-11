@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Map as MapLibreMap } from 'maplibre-gl';
 import { addMonths } from '../../domain/dates';
 import type { ISODate } from '../../domain/types';
+import { cancelFrame, requestFrame } from '../../lib/host';
 
 export const PRESENT_MONTHS = 60;
 export const PRESENT_STEP_MS = 900;
@@ -30,7 +31,7 @@ export function usePresent({ map, today, patch, enabled }: UsePresentOptions) {
       if (presenting && !enabled) setPresenting(false);
       return;
     }
-    let raf = 0;
+    let raf: number | null = null;
     let last = performance.now();
     let month = 0;
     const step = (ts: number) => {
@@ -40,14 +41,14 @@ export function usePresent({ map, today, patch, enabled }: UsePresentOptions) {
         month = (month + 1) % (PRESENT_MONTHS + 1);
         patchRef.current({ asOf: addMonths(today, month) });
       }
-      raf = requestAnimationFrame(step);
+      raf = requestFrame(step);
     };
-    raf = requestAnimationFrame(step);
+    raf = requestFrame(step);
     const stop = () => setPresenting(false);
     map.on('dragstart', stop);
     map.on('wheel', stop);
     return () => {
-      cancelAnimationFrame(raf);
+      cancelFrame(raf);
       map.off('dragstart', stop);
       map.off('wheel', stop);
       patchRef.current({ asOf: today });

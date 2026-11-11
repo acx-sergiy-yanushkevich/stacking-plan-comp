@@ -9,7 +9,9 @@ import { num, pct } from '../../domain/format';
 import { openFloor, openFloorPlate, type Patch } from '../plan/actions';
 import { setHoverFloor, useHoverFloor, useHoverKeys } from '../../state/hoverStore';
 import { usePrefersReducedMotion } from '../../lib/useMedia';
+import { cancelFrame, requestFrame } from '../../lib/host';
 import { spaceOf } from '../building/floorFact';
+import { DotJoin } from './DotJoin';
 import './hero.css';
 
 export interface BuildingHeroProps {
@@ -53,22 +55,24 @@ function useTween(target: number, ms = 760): number {
   const [value, setValue] = useState(target);
   useEffect(() => {
     if (cur.current === target) return;
-    if (reduce || typeof requestAnimationFrame === 'undefined') {
+    const jump = () => {
       cur.current = target;
       setValue(target);
-      return;
-    }
+    };
+    if (reduce) return jump();
     const from = cur.current;
     const t0 = performance.now();
-    let raf = 0;
+    let raf: number | null = null;
     const step = (now: number) => {
       const k = Math.min(1, (now - t0) / ms);
       cur.current = from + (target - from) * (1 - Math.pow(1 - k, 3));
       setValue(cur.current);
-      if (k < 1) raf = requestAnimationFrame(step);
+      if (k < 1) raf = requestFrame(step);
     };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
+    raf = requestFrame(step);
+    // Where nothing is painted there are no frames to ease across: the number jumps.
+    if (raf === null) return jump();
+    return () => cancelFrame(raf);
   }, [target, ms, reduce]);
   return value;
 }
@@ -251,10 +255,8 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
 
   const focusLevel = focusId ? (heroFloors.find((f) => f.id === focusId)?.level ?? null) : null;
   const hot = heroFloors.find((f) => f.id === (hoverId ?? focusId)) ?? null;
-  const NB = '\u00a0';
-  const caption = hot
-    ? `${hot.name.replace(' ', NB)} · ${pct(hot.leasedPct)}${NB}leased · ${num(hot.leasable)}${NB}RSF${hot.space ? ` · ${hot.space.replace(/ /g, NB)}` : ''}`
-    : `${floors.length}${NB}floors · ${num(model.kpis.leasable)}${NB}RSF leasable`;
+  // The facts of the caption line, each in one piece: the line breaks between them, never with a separator at either end (DotJoin).
+  const caption = hot ? [hot.name, `${pct(hot.leasedPct)} leased`, `${num(hot.leasable)} RSF`, hot.space] : [`${floors.length} floors`, `${num(model.kpis.leasable)} RSF leasable`];
   const hint = hot ? (hot.id === focusId ? 'Click again to open the floor plan' : 'Click to focus this floor in the plan') : 'Hover a floor to trace it in the plan';
 
   // Every floor is numbered on the stage while no floor is open and the numbers have room: with less than a
@@ -363,7 +365,9 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
       {stage && after && <div className="sp-hero__after">{after}</div>}
       {!stage && (
         <p className="sp-hero__cap">
-          <span className="sp-hero__cap-main">{caption}</span>
+          <span className="sp-hero__cap-main">
+            <DotJoin parts={caption} />
+          </span>
           {!compact && <span className="sp-hero__cap-hint">{hint}</span>}
         </p>
       )}

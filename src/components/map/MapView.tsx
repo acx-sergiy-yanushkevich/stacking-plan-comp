@@ -36,6 +36,8 @@ import {
 import { useMapLibre } from './useMapLibre';
 import { usePresent } from './usePresent';
 import { useRecorder } from './useRecorder';
+import { RECORD_REQUEST } from './recordSignal';
+import { cancelFrame, requestFrame } from '../../lib/host';
 import '../plan/plan.css';
 import './map.css';
 
@@ -199,7 +201,7 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
   const [hexByTone, setHexByTone] = useState<Record<string, string>>({});
   const [brandHex, setBrandHex] = useState('#0176d3');
   useEffect(() => {
-    let second = 0;
+    let second: number | null = null;
     const read = () => {
       const out: Record<string, string> = {};
       // Night tokens sit a little dark for a wall against the dark basemap: lift them slightly.
@@ -214,13 +216,13 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
     };
     // The app writes the palette and the theme to the root element in its own effects, which run after
     // this one: read on the next frame, and once more on the frame after, when they are certain to be there.
-    const first = requestAnimationFrame(() => {
+    const first = requestFrame(() => {
       read();
-      second = requestAnimationFrame(read);
+      second = requestFrame(read);
     });
     return () => {
-      cancelAnimationFrame(first);
-      cancelAnimationFrame(second);
+      cancelFrame(first);
+      cancelFrame(second);
     };
   }, [toneKey, dark, palette, skin]);
 
@@ -310,6 +312,9 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
   const present = usePresent({ map, today: model.today, patch, enabled: !reducedMotion });
   const notify = useCallback((message: string, icon?: 'video' | 'warning' | 'download') => toast.push(message, { icon }), [toast]);
   const recorder = useRecorder({ map, onStart: present.start, onStop: present.stop, notify });
+  // "Record video" in the header's Export menu starts a recording, or stops the one under way.
+  const toggleRecording = recorder.toggle;
+  useEffect(() => RECORD_REQUEST.on(toggleRecording), [toggleRecording]);
 
   const selectFloor = useCallback((id: string) => openFloor(patch, id), [patch]);
   const floorCount = floors.length;

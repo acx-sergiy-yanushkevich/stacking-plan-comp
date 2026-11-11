@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Button } from './Button';
+import { canExpandSheet, expandedSheetHeight } from './sheetHeight';
+import { focused, on, viewport as hostViewport } from '../../lib/host';
 
 export interface SheetProps {
   open: boolean;
@@ -12,11 +14,39 @@ export interface SheetProps {
   hideHeader?: boolean;
   /** Non-modal: the page behind stays reachable (tool panels on phones). */
   modeless?: boolean;
+  /**
+   * The strip at the top of the window the sheet must leave uncovered, px: what it was opened for (the
+   * chosen suite, bar or floor) with the air round it. The expanded sheet stops short of it.
+   */
+  keepClear?: number | null;
 }
 
-/** Non-modal bottom sheet for phones. The handle toggles between half and full height. */
-export function Sheet({ open, onClose, title, children, snap = 'half', hideHeader, modeless }: SheetProps) {
+/** What the sheet's content needs to show whole, px: the sheet's own height with the scrolling part at its content's height. */
+function contentHeight(sheet: HTMLElement): number {
+  const scroller = sheet.querySelector<HTMLElement>('[data-sheet-scroll]') ?? sheet.querySelector<HTMLElement>('.sp-sheet__body');
+  const own = sheet.getBoundingClientRect().height;
+  if (!scroller) return own;
+  let inner = scroller.scrollHeight;
+  if (inner <= scroller.clientHeight) {
+    // Shorter than the room it has: the span of what is laid out in it (offsets, so a panel that is fading in at an offset measures the same).
+    const shown = Array.from(scroller.children).filter((c): c is HTMLElement => c instanceof HTMLElement && c.offsetParent !== null);
+    const style = getComputedStyle(scroller);
+    const pad = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+    inner = shown.length ? shown[shown.length - 1].offsetTop + shown[shown.length - 1].offsetHeight - shown[0].offsetTop + pad : scroller.clientHeight;
+  }
+  return own - scroller.clientHeight + inner;
+}
+
+/**
+ * Non-modal bottom sheet for phones and tablets. The handle toggles between the half snap and the expanded
+ * height, which is the height of the content: never more than 92% of the window, and never so much that
+ * the selection the sheet was opened for is covered (`keepClear`). When the half snap already shows
+ * everything, or there is no room to grow into, the handle is a plain grab bar and not a control.
+ */
+export function Sheet({ open, onClose, title, children, snap = 'half', hideHeader, modeless, keepClear = null }: SheetProps) {
   const [full, setFull] = useState(snap === 'full');
+  const [content, setContent] = useState<number | null>(null);
+  const [viewport, setViewport] = useState(() => hostViewport().height);
   const [labelId, setLabelId] = useState<string | null>(null);
   // The dialog takes its name from the panel's own heading ("Floor 12 · Suite 1210"), when there is one.
   useEffect(() => {
@@ -33,7 +63,7 @@ export function Sheet({ open, onClose, title, children, snap = 'half', hideHeade
   }, [open, snap]);
   useEffect(() => {
     if (!open) return;
-    const first = ref.current?.querySelector<HTMLElement>('.sp-sheet__body button, .sp-sheet__body [tabindex="0"], .sp-sheet__handle');
+    const first = ref.current?.querySelector<HTMLElement>('.sp-sheet__body button, .sp-sheet__body [tabindex="0"], button.sp-sheet__handle');
     first?.focus({ preventScroll: true });
   }, [open]);
   useEffect(() => {
@@ -45,24 +75,85 @@ export function Sheet({ open, onClose, title, children, snap = 'half', hideHeade
         if (!items.length) return;
         const first = items[0];
         const last = items[items.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
+        if (e.shiftKey && focused() === first) {
           e.preventDefault();
           last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
+        } else if (!e.shiftKey && focused() === last) {
           e.preventDefault();
           first.focus();
         }
       }
     };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    return on('keydown', onKey);
   }, [open, onClose]);
+  // The content's height is measured as it is laid out, and again whenever it changes: another suite's
+  // panel, a section that opens, the web font arriving.
+  useLayoutEffect(() => {
+    const sheet = ref.current;
+    if (!open || !sheet) return;
+    const measure = () => {
+      const next = contentHeight(sheet);
+      setContent((was) => (was !== null && Math.abs(was - next) < 0.5 ? was : next));
+    };
+    const onResize = () => {
+      setViewport(hostViewport().height);
+      measure();
+    };
+    onResize();
+    const stopResize = on('resize', onResize);
+    if (typeof ResizeObserver === 'undefined' || typeof MutationObserver === 'undefined') return stopResize;
+    const sizes = new ResizeObserver(measure);
+    const watch = () => {
+      sizes.disconnect();
+      const scroller = sheet.querySelector<HTMLElement>('[data-sheet-scroll]') ?? sheet.querySelector<HTMLElement>('.sp-sheet__body');
+      if (!scroller) return;
+      sizes.observe(scroller);
+      for (const child of Array.from(scroller.children)) sizes.observe(child);
+    };
+    watch();
+    // A panel swaps the elements it is made of: watch the new ones.
+    const swaps = new MutationObserver(() => {
+      watch();
+      measure();
+    });
+    swaps.observe(sheet, { childList: true, subtree: true });
+    return () => {
+      stopResize();
+      sizes.disconnect();
+      swaps.disconnect();
+    };
+  }, [open]);
+  const measured = { viewport, content, keepClear };
+  const canExpand = viewport > 0 && canExpandSheet(measured);
+  const expanded = full && canExpand;
+  // A handle that held the keyboard and stops being a control hands it to the panel, not to the page.
+  const handleRef = useRef<HTMLButtonElement | null>(null);
+  const handleHadFocus = useRef(false);
+  handleHadFocus.current = !!handleRef.current && focused() === handleRef.current;
+  useLayoutEffect(() => {
+    if (canExpand || !handleHadFocus.current) return;
+    ref.current?.querySelector<HTMLElement>('.sp-sheet__body button:not([disabled]), .sp-sheet__body [tabindex="0"]')?.focus({ preventScroll: true });
+  }, [canExpand]);
   if (!open) return null;
   return (
-    <div ref={ref} role="dialog" aria-modal={modeless ? undefined : 'true'} aria-labelledby={labelId ?? undefined} aria-label={labelId ? undefined : typeof title === 'string' ? title : 'Details'} className={`sp-sheet ${full ? 'sp-sheet--full' : ''}`}>
-      <button type="button" className="sp-sheet__handle" aria-label={full ? 'Collapse panel' : 'Expand panel'} aria-expanded={full} onClick={() => setFull((f) => !f)}>
-        <span />
-      </button>
+    <div
+      ref={ref}
+      role="dialog"
+      aria-modal={modeless ? undefined : 'true'}
+      aria-labelledby={labelId ?? undefined}
+      aria-label={labelId ? undefined : typeof title === 'string' ? title : 'Details'}
+      className={`sp-sheet ${expanded ? 'sp-sheet--full' : ''}`}
+      style={expanded ? { height: expandedSheetHeight(measured) } : undefined}
+    >
+      {canExpand ? (
+        <button ref={handleRef} type="button" className="sp-sheet__handle" aria-label={expanded ? 'Collapse panel' : 'Expand panel'} aria-expanded={expanded} onClick={() => setFull(!expanded)}>
+          <span />
+        </button>
+      ) : (
+        <div className="sp-sheet__handle" aria-hidden="true">
+          <span />
+        </div>
+      )}
       {!hideHeader && (
         <div className="sp-sheet__head">
           <div className="sp-sheet__title">{title}</div>
