@@ -49,7 +49,9 @@
 .sp-hero--compact .sp-hero__cap { min-height: 0; text-align: center; align-items: center; }
 
 /* Stage: the model as a view of its own (BuildingView). No panel chrome; lifted floors stay reachable. */
-.sp-hero--stage { margin: 0; padding: 0; border-bottom: 0; display: flex; align-items: stretch; gap: var(--sp-hero-gap, var(--sp-space-4)); }
+.sp-hero--stage { position: relative; margin: 0; padding: 0; border-bottom: 0; display: flex; align-items: stretch; gap: var(--sp-hero-gap, var(--sp-space-4)); }
+/* A floor's point on the right-hand edge of the drawing, for the leader from its label (building/FloorLeaders). */
+.sp-hero__anchor { position: absolute; width: 0; height: 0; }
 /* What stands to the left of the drawing (the floor picker) is as tall as the drawing, and centred on it. */
 .sp-hero__beside { flex: none; position: relative; display: flex; flex-direction: column; justify-content: center; }
 /* What stands to its right in place of the model's own numbers (the list of floors) is as tall as the

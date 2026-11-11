@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TODAY } from '../data/mock/property';
-import { DEFAULT_STATE, applyPatch, defaultState, deriveMode, enterSafe, isDark, palettePatch, paletteOf, parseState, safeState, serializeState, type PlanState } from './planState';
+import { DEFAULT_STATE, applyPatch, defaultState, deriveMode, enterSafe, isDark, openSession, palettePatch, paletteOf, parseState, safeState, serializeState, stepSession, type PlanSession, type PlanState } from './planState';
 
 describe('parseState', () => {
   it('reads every supported field', () => {
@@ -128,7 +128,7 @@ describe('the prospect-safe boundary in the state layer', () => {
     expect(applyPatch(on, { mode: 'find', req: 5000 })).toMatchObject({ mode: 'find', req: 5000 });
   });
 
-  it('turning the mode off restores nothing and changes nothing else', () => {
+  it('the state alone keeps no trace of what the mode took: applyPatch restores nothing (the session does, see below)', () => {
     const on = applyPatch({ ...d, q: 'vantage' }, { safe: true });
     expect(applyPatch(on, { safe: false })).toEqual({ ...d, safe: false });
   });
@@ -150,7 +150,7 @@ describe('the prospect-safe boundary in the state layer', () => {
     // The as-of popover, the timeline cursor and the map's presenter all go through applyPatch.
     for (const asOf of ['2027-02-01', '2030-06-01', '2026-01-01']) expect(applyPatch(on, { asOf }, TODAY).asOf, asOf).toBe(TODAY);
     expect(applyPatch(on, { asOf: '2028-01-01', lens: 'rent' }, TODAY)).toMatchObject({ asOf: TODAY, lens: 'rent' });
-    // Turning the mode off does not bring the old date back; from there the date moves again.
+    // The state holds no memory of the old date (the session does): from here the date moves again.
     const off = applyPatch(on, { safe: false }, TODAY);
     expect(off.asOf).toBe(TODAY);
     expect(applyPatch(off, { asOf: '2028-01-01' }, TODAY).asOf).toBe('2028-01-01');
@@ -180,7 +180,7 @@ describe('the prospect-safe boundary in the state layer', () => {
     expect(applyPatch(on, { inquiry: 'I02' }, TODAY).inquiry).toBeNull();
     expect(applyPatch(on, { inquiry: 'I01', req: null, max: null, by: null }, TODAY)).toMatchObject({ inquiry: null, req: null });
     expect(safeState({ ...d, safe: true, inquiry: 'I02' }).inquiry).toBeNull();
-    // Turning the mode off does not bring it back.
+    // The state holds no memory of it (the session does).
     expect(applyPatch(on, { safe: false }, TODAY).inquiry).toBeNull();
     // Outside the mode it is matched as before.
     expect(applyPatch(d, { inquiry: 'I02' }, TODAY).inquiry).toBe('I02');
@@ -293,5 +293,115 @@ describe('skin and theme', () => {
     expect(isDark({ skin: 'classic', theme: null }, true)).toBe(true);
     expect(isDark({ skin: 'aurora', theme: 'dark' }, false)).toBe(true);
     expect(isDark({ skin: 'aurora', palette: 'vice', theme: null }, false)).toBe(false);
+  });
+});
+
+describe('the Prospect-safe switch gives back what it took, in the same session', () => {
+  const d = defaultState(TODAY);
+  const session = (search: string): PlanSession => openSession(search, TODAY);
+  const step = (prev: PlanSession, patch: Partial<PlanState>) => stepSession(prev, patch, TODAY);
+  const url = (s: PlanSession) => serializeState(s.state, TODAY);
+
+  it('a projected date comes back: 2028 → on → off ends where it began', () => {
+    const start = session('?view=stack&asOf=2028-06-01&select=A05');
+    const on = step(start, { safe: true });
+    expect(url(on)).toBe('?view=stack&select=A05&safe=1');
+    const off = step(on, { safe: false });
+    expect(url(off)).toBe('?view=stack&asOf=2028-06-01&select=A05');
+    expect(off.state).toEqual(start.state);
+    expect(off.withheld).toBeNull();
+  });
+
+  it('the expiration lens, the 12-month worklist and the as-of date all come back together', () => {
+    const start = session('?view=stack&lens=expiry&asOf=2028-06-01&mode=worklist&window=12');
+    const on = step(start, { safe: true });
+    expect(on.state).toMatchObject({ safe: true, lens: 'status', asOf: TODAY, mode: 'building', window: null });
+    const off = step(on, { safe: false });
+    expect(off.state).toEqual(start.state);
+    expect(deriveMode(off.state)).toBe('worklist');
+  });
+
+  it('a rollover highlight, a search, a matched inquiry, the deals lens and the issues panel come back', () => {
+    for (const search of ['?view=stack&bucket=2', '?view=stack&q=vantage', '?view=stack&inquiry=I02&mode=find', '?view=stack&lens=deals&select=A02', '?view=stack&mode=issues', '?view=timeline&window=risk']) {
+      const start = session(search);
+      const on = step(start, { safe: true });
+      expect(on.state, search).not.toEqual({ ...start.state, safe: true });
+      expect(step(on, { safe: false }).state, search).toEqual(start.state);
+    }
+  });
+
+  it('while the mode is on, nothing remembered is in the state or in the URL', () => {
+    const start = session('?view=stack&lens=expiry&asOf=2028-06-01&mode=worklist&window=12&bucket=1&q=cirrus&inquiry=I02');
+    const on = step(start, { safe: true });
+    expect(url(on)).toBe('?view=stack&safe=1');
+    // The state a component is handed is exactly the state a link with safe=1 gives: it carries no memory.
+    expect(on.state).toEqual(parseState('?view=stack&lens=expiry&asOf=2028-06-01&mode=worklist&window=12&bucket=1&q=cirrus&inquiry=I02&safe=1', TODAY));
+    expect(JSON.stringify(on.state)).not.toMatch(/2028|expiry|worklist|cirrus|I02/);
+    expect(Object.keys(on.state).sort()).toEqual(Object.keys(start.state).sort());
+    // Whatever is done while it is on, the same holds, and the withheld values cannot be set by a control.
+    let s = on;
+    for (const patch of [{ view: 'timeline' as const }, { select: 'A02' }, { lens: 'expiry' as const }, { asOf: '2028-06-01' }, { mode: 'worklist' as const, window: '12' as const }, { inquiry: 'I02' }, { bucket: 1 }, { select: null }]) {
+      s = step(s, patch);
+      expect(url(s), JSON.stringify(patch)).not.toMatch(/asOf|lens=|window|bucket|inquiry|q=|worklist/);
+      expect(s.state.safe).toBe(true);
+    }
+    // The memory is what was there before the mode, not what was asked for while it was on.
+    expect(s.withheld).toEqual(on.withheld);
+  });
+
+  it('a link opened with safe=1 has nothing to restore, whatever else it asked for', () => {
+    const start = session('?view=stack&safe=1&asOf=2028-06-01&lens=expiry&window=12&mode=worklist&q=cirrus&inquiry=I02&bucket=0');
+    expect(start.withheld).toBeNull();
+    expect(url(start)).toBe('?view=stack&safe=1');
+    const off = step(start, { safe: false });
+    expect(url(off)).toBe('?view=stack');
+    expect(off.state).toEqual({ ...d, view: 'stack' });
+  });
+
+  it('the memory does not outlive the session: opening the address again starts with none', () => {
+    const on = step(session('?view=stack&asOf=2028-06-01'), { safe: true });
+    expect(on.withheld).not.toBeNull();
+    // A reload, or Back to this address, parses the URL: only what the URL holds is there.
+    const reopened = session(url(on));
+    expect(reopened.withheld).toBeNull();
+    expect(step(reopened, { safe: false }).state.asOf).toBe(TODAY);
+  });
+
+  it('what the user changed while the mode was on is kept, not overwritten by the old value', () => {
+    // The lens was Expiration; the prospect was shown Rent. Turning the mode off keeps Rent and brings the date back.
+    const on = step(session('?view=stack&lens=expiry&asOf=2028-06-01'), { safe: true });
+    const off = step(step(on, { lens: 'rent' }), { safe: false });
+    expect(off.state).toMatchObject({ lens: 'rent', asOf: '2028-06-01' });
+    // A suite searched for during the meeting stays in the box; the broker's old search does not replace it.
+    const searched = step(step(step(session('?view=stack&q=vantage'), { safe: true }), { q: '350' }), { safe: false });
+    expect(searched.state.q).toBe('350');
+    // The finder opened during the meeting stays open in place of the worklist that was there before.
+    const found = step(step(step(session('?view=stack&mode=worklist&window=12'), { safe: true }), { mode: 'find', req: 5000 }), { safe: false });
+    expect(found.state).toMatchObject({ mode: 'find', req: 5000, window: '12' });
+  });
+
+  it('a matched inquiry does not come back over a requirement typed in its place', () => {
+    const on = step(session('?view=stack&inquiry=I02&mode=find'), { safe: true });
+    const typed = step(on, { req: 12000 });
+    expect(step(typed, { safe: false }).state).toMatchObject({ inquiry: null, req: 12000 });
+    expect(step(on, { safe: false }).state).toMatchObject({ inquiry: 'I02', req: null });
+  });
+
+  it('turning the mode on a second time remembers the state of that moment, not the first', () => {
+    let s = step(session('?view=stack&asOf=2028-06-01'), { safe: true });
+    s = step(s, { safe: false });
+    s = step(s, { asOf: '2027-04-15', lens: 'expiry' });
+    s = step(s, { safe: true });
+    expect(url(s)).toBe('?view=stack&safe=1');
+    expect(step(s, { safe: false }).state).toMatchObject({ asOf: '2027-04-15', lens: 'expiry' });
+  });
+
+  it('nothing is remembered when the mode had nothing to take, and a change that is not the switch is applyPatch', () => {
+    const on = step(session('?view=stack&select=A02&lens=rent'), { safe: true });
+    expect(on.withheld).toBeNull();
+    expect(step(on, { safe: false }).state).toEqual(parseState('?view=stack&select=A02&lens=rent', TODAY));
+    const open = session('?view=stack');
+    expect(step(open, { lens: 'expiry', window: '12' }).state).toEqual(applyPatch(open.state, { lens: 'expiry', window: '12' }, TODAY));
+    expect(step(on, { lens: 'expiry' }).state).toEqual(applyPatch(on.state, { lens: 'expiry' }, TODAY));
   });
 });

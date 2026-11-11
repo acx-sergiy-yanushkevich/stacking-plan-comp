@@ -1,5 +1,6 @@
 import type { FloorView } from '../../domain/derive';
-import { num, pct } from '../../domain/format';
+import { pct } from '../../domain/format';
+import { spaceOf } from '../building/floorFact';
 import { useFloorRoving } from './useFloorRoving';
 
 export interface MiniStackProps {
@@ -18,9 +19,10 @@ export interface MiniStackProps {
 
 const leasedShare = (f: FloorView) => (f.leasable > 0 ? f.leased / f.leasable : 0);
 
-/** "Floor 8, 65.4% leased, 7,400 SF available": what a row says when no lens adds to it. */
+/** "Floor 8, 65.4% leased, 7,400 SF available": what a row says when no lens adds to it (a sublease is named, as on every floor label). */
 export function miniStackLabel(f: FloorView): string {
-  return `${f.floor.name}, ${pct(leasedShare(f))} leased${f.available > 0 ? `, ${num(f.available)} SF available` : ''}`;
+  const space = spaceOf(f);
+  return `${f.floor.name}, ${pct(leasedShare(f))} leased${space ? `, ${space}` : ''}`;
 }
 
 /**

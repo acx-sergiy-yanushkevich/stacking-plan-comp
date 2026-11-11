@@ -3,55 +3,85 @@
 .sp-export-stage .sp-card { border: 0; }
 .sp-export-stage .sp-stack__body { padding: 0; overflow: visible; }
 
+/* ── The report ─────────────────────────────────────────── */
+/* Not on screen unless it is the preview (?print=1). Paper is white whatever the screen theme. */
 .sp-print { display: none; color: #181818; background: #fff; font-size: 11px; }
 .sp-print--visible { display: block; }
-.sp-print__page { padding: 10mm 12mm; page-break-after: always; break-after: page; background: #fff; }
-.sp-print__page:last-child { page-break-after: auto; }
-.sp-print__head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #181818; padding-bottom: 8px; margin-bottom: 10px; }
-.sp-print__eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #5c5c5c; font-weight: 600; }
+.sp-print, .sp-print * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 .sp-print h1 { font-size: 20px; font-weight: 700; margin: 2px 0; }
 .sp-print h2 { font-size: 15px; font-weight: 700; margin: 0 0 6px; }
+/* A heading under a table or its note starts a new block. */
+.sp-print__table + h2, .sp-print__note + h2 { margin-top: 14px; }
+
+/* A section of the report. In the preview each is a padded sheet; on paper the page's own margin
+   (@page, styles/print.css) is that padding. */
+.sp-print__page { padding: 10mm 12mm; background: #fff; }
+.sp-print__running { display: flex; justify-content: space-between; font-size: 9px; color: #5c5c5c; border-bottom: 1px solid #e5e5e5; padding-bottom: 4px; margin-bottom: 10px; break-after: avoid; }
+
+/* The cover: head, six figures, legend, plan, footnote. */
+.sp-print__head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #181818; padding-bottom: 8px; margin-bottom: 8px; }
+.sp-print__eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #5c5c5c; font-weight: 600; }
 .sp-print__sub { color: #5c5c5c; font-size: 11px; }
 .sp-print__meta { text-align: right; color: #5c5c5c; font-size: 11px; line-height: 1.5; }
-.sp-print__kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin: 8px 0 10px; }
+/* Margins below only: the cover is a flex column on paper, where margins do not collapse as they do in the preview. */
+.sp-print__kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin: 0 0 8px; }
 .sp-print__kpi { border: 1px solid #e5e5e5; border-radius: 6px; padding: 6px 10px; }
 .sp-print__kpi-label { font-size: 9px; text-transform: uppercase; letter-spacing: .05em; color: #5c5c5c; font-weight: 600; }
 .sp-print__kpi-value { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .sp-print__kpi-note { font-size: 10px; color: #5c5c5c; }
 .sp-print .sp-legend { font-size: 10px; margin-bottom: 6px; }
-.sp-print__plan .sp-card { border: 0; }
+/* The plan is drawn at one width (pageFit PLAN_WIDTH) and scaled to the width it is given here. */
+.sp-print__plan .sp-card { border: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .sp-print__plan .sp-stack__body { padding: 0; overflow: visible; }
-.sp-print__foot { margin-top: 8px; font-size: 9.5px; color: #5c5c5c; border-top: 1px solid #e5e5e5; padding-top: 6px; }
-.sp-print__table { width: 100%; border-collapse: collapse; font-size: 9px; font-variant-numeric: tabular-nums; }
+.sp-print__foot { margin-top: 6px; font-size: 9.5px; color: #5c5c5c; border-top: 1px solid #e5e5e5; padding-top: 6px; }
+
+/* Tables. A row is never split across pages; the column heads repeat on every page a table reaches. */
+.sp-print__table { width: 100%; border-collapse: collapse; table-layout: auto; font-size: 9px; font-variant-numeric: tabular-nums; }
+.sp-print__table thead { display: table-header-group; }
+.sp-print__table tr { break-inside: avoid; }
 .sp-print__table th { text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: .04em; color: #5c5c5c; border-bottom: 1px solid #181818; padding: 4px 6px; }
 .sp-print__table td { padding: 2px 6px; border-bottom: 1px solid #e5e5e5; vertical-align: top; }
 .sp-print__table .num, .sp-print__table th.num { text-align: right; }
+.sp-print__table td:first-child, .sp-print__table th:first-child { white-space: nowrap; }
+.sp-print__table td:nth-child(6), .sp-print__table td:nth-child(7), .sp-print__table td:nth-child(9), .sp-print__table th:nth-child(6), .sp-print__table th:nth-child(7), .sp-print__table th:nth-child(9) { white-space: nowrap; }
 .sp-print__table--tight td, .sp-print__table--tight th { padding: 3px 5px; white-space: normal; }
 .sp-print__table--tight td.num, .sp-print__table--tight th.num { white-space: nowrap; }
-.sp-print__table tr { break-inside: avoid; }
-.sp-print, .sp-print * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-.sp-print__two { display: grid; grid-template-columns: 1fr 1.4fr; gap: 24px; }
-.sp-print__note { color: #5c5c5c; margin: 0 0 6px; }
+.sp-print__total { break-inside: avoid; break-before: avoid; }
+.sp-print__total td { font-weight: 600; border-top: 1px solid #181818; border-bottom: 0; white-space: normal; }
+/* A note belongs to the table or heading it stands under: it is never the first thing on a page. */
+.sp-print__note { color: #5c5c5c; margin: 0 0 6px; break-inside: avoid; break-before: avoid; }
+.sp-print__table + .sp-print__note { margin-top: 6px; }
+
+/* Two columns: the owner's rollover beside the worklist, or a prospect's rent roll beside the space on offer. */
+.sp-print__two { display: grid; grid-template-columns: 1fr 1.4fr; gap: 24px; align-items: start; }
+.sp-print__two--roll { grid-template-columns: 1.35fr 1fr; }
 
 @media print {
   html { font-size: 11px; }
   body { background: #fff; }
   .sp-app > *:not(.sp-print):not(.sp-defs) { display: none !important; }
-  .sp-app { padding: 0; gap: 0; max-width: none; }
+  /* The page is the paper inside its margins and nothing else. The selector outranks the app frame's own
+     rules, including the tablet ones, which would otherwise apply here: a Letter page is 965 px wide. */
+  html .sp-app { padding: 0; gap: 0; max-width: none; min-height: 0; }
+  .sp-toasts, .sp-sheet { display: none !important; }
   .sp-print { display: block; }
   .sp-print__page { padding: 0; }
-  .sp-toasts, .sp-sheet { display: none !important; }
-}
-.sp-print__running { display: flex; justify-content: space-between; font-size: 9px; color: #5c5c5c; border-bottom: 1px solid #e5e5e5; padding-bottom: 4px; margin-bottom: 10px; }
-.sp-print__total td { font-weight: 600; border-top: 1px solid #181818; border-bottom: 0; }
 
-.sp-print__table td:first-child, .sp-print__table th:first-child { white-space: nowrap; }
-.sp-print__note, .sp-print__total { break-inside: avoid; }
-@media print {
-}
+  /* The cover is exactly one sheet, by construction. The section is as tall as the page (100vh is the
+     page inside its margins when printing) and lays its parts out in a column. Everything but the plan
+     keeps its own height. The plan is drawn to fit what is left (pageFit) and normally does, with the
+     footnote straight under it; if it would not (a legend that wraps to a third row), the plan alone
+     gives way and is scaled down whole. So the footnote is always on page 1, never the first thing on
+     page 2. */
+  .sp-print__page--plan { height: calc(100vh - 1px); display: flex; flex-direction: column; break-after: page; }
+  .sp-print__page--plan > * { flex: none; }
+  .sp-print__page--plan > .sp-print__plan,
+  .sp-print__plan > .sp-stack { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  .sp-print__plan .sp-stack__body { flex: 0 1 auto; min-height: 0; }
+  .sp-print__plan .sp-stack__body > svg { width: auto; height: auto; max-width: 100%; max-height: 100%; }
 
-.sp-print__table { table-layout: auto; }
-.sp-print__table td:nth-child(6), .sp-print__table td:nth-child(7), .sp-print__table td:nth-child(9), .sp-print__table th:nth-child(6), .sp-print__table th:nth-child(7), .sp-print__table th:nth-child(9) { white-space: nowrap; }
-.sp-print__total td { white-space: normal; }
-.sp-print__table thead { display: table-header-group; }
-.sp-print__running { break-after: avoid; }
+  /* Every later section is kept whole and starts a new sheet only when it does not fit under the one
+     before it: a short section shares a page instead of leaving one nearly empty. */
+  .sp-print__page:not(.sp-print__page--plan) { break-inside: avoid; }
+  .sp-print__page:not(.sp-print__page--plan) + .sp-print__page { margin-top: 18px; }
+}

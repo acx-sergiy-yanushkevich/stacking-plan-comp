@@ -16,6 +16,7 @@ import { clearSelection, openFloor, selectSegment } from '../plan/actions';
 import { Legend } from '../plan/Legend';
 import { segmentText } from '../plan/segmentText';
 import { availabilityFact } from '../floor/floorData';
+import { spaceOf } from '../building/floorFact';
 import { Block } from './Block';
 import { rampNote } from './rampNote';
 import { FilterBar } from './FilterBar';
@@ -207,13 +208,8 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
 
   // Keep focus on the selected block when selection changes from elsewhere (worklist, finder)
   useEffect(() => {
-    if (state.select && segIndex.has(state.select)) {
-      setFocusKey(state.select);
-      // With the bottom sheet open (narrow layouts), keep the chosen block in view above it.
-      // (Deferred: on a deep link the sheet and the rows are not laid out yet.)
-      const key = state.select;
-      if (typeof window !== 'undefined' && window.innerWidth < 1100) window.setTimeout(() => document.querySelector<SVGGElement>(`.sp-stage [data-key="${CSS.escape(key)}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 250);
-    }
+    // (Where the inspector is a bottom sheet, App keeps the chosen block in view above it: stack/aboveSheet.ts.)
+    if (state.select && segIndex.has(state.select)) setFocusKey(state.select);
   }, [state.select, segIndex]);
 
   const over = state.safe ? [] : floors.filter((f) => f.overAllocatedBy > 0);
@@ -324,7 +320,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                         (() => {
                           // What the floor offers, whole: wrapped to the gutter's width on up to three lines
                           // that end at the foot of the row ("21,400 SF marketed" / "from Apr '27"). Never cut.
-                          const fact = f.available > 0 ? `${num(f.available)} SF available` : availabilityFact(f, model.asOf, state.safe);
+                          const fact = f.available > 0 ? spaceOf(f) : availabilityFact(f, model.asOf, state.safe);
                           const lines = wrapWords(fact, gutter - 20, GUTTER_FONT, 3);
                           if (lines.join(' ') !== fact) return null;
                           return (

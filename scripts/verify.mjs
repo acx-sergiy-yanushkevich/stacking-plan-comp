@@ -61,6 +61,37 @@ for (const v of ['timeline', 'floor&floor=F6', 'map']) {
   check(ok, `view ${v} renders`);
 }
 
+// Prospect-safe on and off: the header, the KPI bar and the toolbar are the same size in the same place,
+// so turning the mode on or off moves nothing above the plan. Checked by the switch, on a desktop, a
+// narrow desktop, a tablet and a phone. Turning it off also brings back what turning it on removed.
+for (const [w, h] of [[1440, 1000], [1280, 900], [1100, 900], [1024, 768], [768, 1024], [390, 844]]) {
+  await page.setViewportSize({ width: w, height: h });
+  await page.goto(base + '?view=stack', { waitUntil: 'networkidle' });
+  await page.waitForTimeout(250);
+  const bands = () =>
+    page.evaluate(() => {
+      const box = (el) => { const r = el.getBoundingClientRect(); return [Math.round(r.top * 10) / 10, Math.round(r.height * 10) / 10]; };
+      return { header: box(document.querySelector('.sp-header')), kpis: box(document.querySelector('.sp-kpis')), toolbar: box(document.querySelector('.sp-toolbar')) };
+    });
+  const off = JSON.stringify(await bands());
+  await page.getByRole('switch', { name: 'Prospect-safe' }).focus();
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(250);
+  const on = JSON.stringify(await bands());
+  check(page.url().includes('safe=1') && on === off, `${w} px: header, KPI bar and toolbar do not move when Prospect-safe is turned on${on === off ? '' : ` (off ${off}, on ${on})`}`);
+}
+await page.setViewportSize({ width: 1440, height: 1100 });
+await page.goto(base + '?view=stack&lens=expiry&asOf=2028-06-01&mode=worklist&window=12', { waitUntil: 'networkidle' });
+const before = new URL(page.url()).search;
+await page.getByRole('switch', { name: 'Prospect-safe' }).click();
+await page.waitForTimeout(150);
+const during = new URL(page.url()).search;
+check(during === '?view=stack&safe=1', `Prospect-safe on leaves nothing withheld in the URL (${during})`);
+await page.getByRole('switch', { name: 'Prospect-safe' }).click();
+await page.waitForTimeout(150);
+check(new URL(page.url()).search === before, `Prospect-safe off restores the date, the lens and the worklist (${new URL(page.url()).search})`);
+check((await page.locator('.sp-header__asof--projected').count()) === 1 && (await page.locator('.sp-kpi__delta').count()) >= 3, 'the restored plan is drawn for the restored date');
+
 await browser.close();
 check(errors.length === 0, `no console errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
 if (fails.length) {

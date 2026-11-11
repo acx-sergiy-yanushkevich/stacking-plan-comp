@@ -15,6 +15,7 @@
     "leakcheck": "node scripts/leakcheck.mjs",
     "exportcheck": "node scripts/exportcheck.mjs",
     "pdf": "node scripts/pdf.mjs",
+    "pdfcheck": "node scripts/pdfcheck.mjs",
     "preview:next": "vite preview --port 4181 --outDir dist-next --strictPort"
   },
   "dependencies": {

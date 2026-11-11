@@ -66,6 +66,9 @@ button.sp-chip[aria-pressed='true'] { background: var(--sp-color-brand-strong); 
 }
 .sp-switch[aria-checked='true'] .sp-switch__track { background: var(--sp-color-brand); }
 .sp-switch[aria-checked='true'] .sp-switch__track::after { transform: translateX(14px); }
+.sp-switch__label { display: inline-grid; }
+.sp-switch__label > * { grid-area: 1 / 1; white-space: nowrap; }
+.sp-switch__label-hold { font-weight: 600; visibility: hidden; }
 .sp-switch--on .sp-switch__label { font-weight: 600; }
 
 /* ── Field ──────────────────────────────────────────────── */

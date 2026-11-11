@@ -5,6 +5,7 @@ import { num, pct } from '../../domain/format';
 import { fmtDate } from '../../domain/dates';
 import { openFloor, selectSegment } from '../plan/actions';
 import { Legend } from '../plan/Legend';
+import { spaceOf } from '../building/floorFact';
 import type { SegmentText } from '../plan/segmentText';
 import { Icon } from '../ui';
 import { FilterBar } from './FilterBar';
@@ -62,7 +63,7 @@ export function PhoneStack({ model, state, patch, title, legendNote, textFor, hi
                 <span className="sp-pfloor__facts">
                   <span className="sp-pfloor__pct">{pct(leasedPct)} leased</span>
                   <span>{num(f.leasable)} RSF</span>
-                  {f.available > 0 && <span className="sp-pfloor__avail">{num(f.available)} SF available</span>}
+                  {f.available > 0 && <span className="sp-pfloor__avail">{spaceOf(f)}</span>}
                   {f.overAllocatedBy > 0 && !state.safe && <span className="sp-pfloor__warn">+{num(f.overAllocatedBy)} SF over</span>}
                 </span>
                 <span className="sp-sr-only">. Open floor summary</span>
@@ -100,13 +101,17 @@ export function PhoneStack({ model, state, patch, title, legendNote, textFor, hi
                         <span className="sp-psuite__main">
                           <span className="sp-sr-only">{f.floor.name}, </span>
                           <span className="sp-psuite__name">{text.name}</span>
-                          <span className="sp-psuite__facts">
-                            {[...text.sub.split(' · '), ...(text.meta ? text.meta.split(' · ') : [])].map((part, i, all) => (
-                              <span key={i} className="sp-psuite__part">
-                                {part}
-                                {i < all.length - 1 ? ' ·' : ''}{' '}
-                              </span>
-                            ))}
+                          {/* The facts break between parts only, and a separator neither ends a line nor begins one
+                              (base.css, `.sp-dotrun`): "Ste 1250 · 9,300 SF" then "$38–$40/SF/yr FSG" on the next. */}
+                          <span className="sp-psuite__facts sp-dotrun">
+                            <span className="sp-dotrun__in">
+                              {[...text.sub.split(' · '), ...(text.meta ? text.meta.split(' · ') : [])].map((part, i) => (
+                                <span key={i} className="sp-dotrun__part sp-psuite__part">
+                                  {i > 0 && <span className="sp-dotrun__dot">{' · '}</span>}
+                                  {part}
+                                </span>
+                              ))}
+                            </span>
                           </span>
                         </span>
                         {text.badges.length > 0 && (

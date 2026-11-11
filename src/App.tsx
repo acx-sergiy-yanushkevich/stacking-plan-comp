@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { Component, createRef, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
 import { getFontEpoch, subscribeFonts } from './lib/textFit';
 import { segmentText } from './components/plan/segmentText';
 import { property, TODAY } from './data/mock/property';
@@ -6,6 +6,7 @@ import { usePlanModel } from './model/usePlanModel';
 import { usePlanState, useDocumentTitle } from './state/usePlanState';
 import { useAnnouncement } from './state/useAnnouncement';
 import { canShowRollover } from './domain/safe';
+import { readUrl, setRootData, shareUrl } from './lib/host';
 import { deriveMode, paletteOf, shownView } from './state/planState';
 import { rentRollRows, toCsv } from './domain/exportCsv';
 import { Header, type ExportKind } from './components/shell/Header';
@@ -24,7 +25,8 @@ const AreaPanel = lazy(() => import('./components/map/AreaPanel').then((m) => ({
 import { PrintLayout } from './components/print/PrintLayout';
 import { csvBlob, download } from './lib/exportFile';
 import { svgToPng } from './lib/exportPng';
-import { useIsNarrow, useIsPhone } from './lib/useMedia';
+import { useIsNarrow, useIsPhone, usePrefersReducedMotion } from './lib/useMedia';
+import { selectionSelector, useClearOfSheet } from './components/stack/aboveSheet';
 import { clearSelection } from './components/plan/actions';
 import { focusSegment, refocusTrigger, rememberTrigger } from './state/focusStore';
 import { Patterns } from './components/plan/Patterns';
@@ -54,7 +56,70 @@ function focusAfterKpi(action: KpiAction): void {
   );
 }
 
-const PRINT_PREVIEW = typeof location !== 'undefined' && new URLSearchParams(location.search).get('print') === '1';
+/** What had the keyboard inside the stage, noted so that the same control can be found again after the stage is re-created. */
+interface FocusMark {
+  /** Tag and, where the control stands for a suite, a bar or a floor, that attribute: `button[data-floor="F8"]`. */
+  selector: string;
+  cls: string;
+  label: string;
+}
+
+const nameOf = (el: Element) => el.getAttribute('aria-label') ?? el.textContent?.trim() ?? '';
+
+function focusMark(root: HTMLElement | null): FocusMark | null {
+  const el = document.activeElement;
+  if (!root || !el || el === document.body || !root.contains(el)) return null;
+  const tag = el.tagName.toLowerCase();
+  const cls = el.getAttribute('class') ?? '';
+  for (const attr of ['data-key', 'data-bar', 'data-floor']) {
+    const value = el.getAttribute(attr);
+    if (value) return { selector: `${tag}[${attr}="${CSS.escape(value)}"]`, cls, label: '' };
+  }
+  return { selector: tag, cls, label: nameOf(el) };
+}
+
+function findMarked(root: HTMLElement | null, mark: FocusMark): HTMLElement | SVGElement | null {
+  if (!root) return null;
+  const all = Array.from(root.querySelectorAll<HTMLElement | SVGElement>(mark.selector));
+  // A suite, a bar or a floor is found by what it stands for; any other control by its class and its name.
+  return mark.label ? (all.find((el) => (el.getAttribute('class') ?? '') === mark.cls && nameOf(el) === mark.label) ?? null) : (all[0] ?? null);
+}
+
+/**
+ * The stage: the one view on screen. Its labels are fitted by measuring text, so the whole stage is
+ * re-created (`epoch` is its key) when the web font arrives, which on a first visit can be a second or
+ * more after the page is in use. Re-creating it destroys whatever control had the keyboard, and focus
+ * would fall to the page: a floor opened by keyboard just before the font loaded lost its place this way.
+ *
+ * So the stage notes what has focus immediately before it is replaced (`getSnapshotBeforeUpdate`: React
+ * calls it after rendering and before it touches the page) and hands focus to the same control in the new
+ * stage as soon as that is in the page (`componentDidUpdate`, in the same commit). Nothing waits on a
+ * timer, so there is no moment at which a key press finds no focused control.
+ */
+class Stage extends Component<{ epoch: string; children: ReactNode }> {
+  private el = createRef<HTMLDivElement>();
+
+  getSnapshotBeforeUpdate(prev: { epoch: string }): FocusMark | null {
+    return prev.epoch === this.props.epoch ? null : focusMark(this.el.current);
+  }
+
+  componentDidUpdate(_props: unknown, _state: unknown, mark: FocusMark | null) {
+    if (!mark) return;
+    const active = document.activeElement;
+    if (active && active !== document.body && active.isConnected) return;
+    findMarked(this.el.current, mark)?.focus({ preventScroll: true });
+  }
+
+  render() {
+    return (
+      <div className="sp-stage" key={this.props.epoch} ref={this.el}>
+        {this.props.children}
+      </div>
+    );
+  }
+}
+
+const PRINT_PREVIEW = new URLSearchParams(readUrl()).get('print') === '1';
 
 function Shell() {
   const [rawState, patch] = usePlanState(TODAY);
@@ -64,6 +129,7 @@ function Shell() {
   const toast = useToast();
   const narrow = useIsNarrow();
   const phone = useIsPhone();
+  const reduceMotion = usePrefersReducedMotion();
   useDocumentTitle(state.safe, state.skin === 'classic' ? undefined : property.name);
   const mode = deriveMode(state);
   // The live region's text is dropped in the render in which prospect-safe changes, so a sentence written
@@ -100,11 +166,8 @@ function Shell() {
   const palette = paletteOf(state);
   const theme = state.theme ?? (palette && !PRINT_PREVIEW ? 'dark' : null);
   useEffect(() => {
-    const root = document.documentElement;
-    const apply = (t: string | null) => {
-      if (t) root.dataset.theme = t;
-      else delete root.dataset.theme;
-    };
+    // The page's root attributes go through the host adapter, so an embedding host can supply its own root.
+    const apply = (t: string | null) => setRootData('theme', t);
     apply(theme);
     // Paper is white: a dark screen theme must not reach the printed report.
     const before = () => apply('light');
@@ -117,10 +180,8 @@ function Shell() {
     };
   }, [theme]);
   useEffect(() => {
-    const root = document.documentElement;
-    root.dataset.skin = state.skin === 'classic' ? 'classic' : 'glass';
-    if (palette) root.dataset.palette = palette;
-    else delete root.dataset.palette;
+    setRootData('skin', state.skin === 'classic' ? 'classic' : 'glass');
+    setRootData('palette', palette);
   }, [state.skin, palette]);
 
   const onExport = useCallback(
@@ -128,7 +189,7 @@ function Shell() {
       const stamp = `${property.name.replace(/\s+/g, '-')}-${state.asOf}${state.safe ? '-prospect-safe' : ''}`;
       switch (kind) {
         case 'link':
-          await navigator.clipboard?.writeText(location.href);
+          await navigator.clipboard?.writeText(shareUrl());
           toast.push('Link to this view copied', { icon: 'link' });
           return;
         case 'csv': {
@@ -221,10 +282,16 @@ function Shell() {
   // The building view shows a floor itself; the inspector joins it for a suite, a search, the worklist or issues.
   const showInspector = view === 'building' ? mode !== 'building' && mode !== 'floor' : view !== 'floor' || mode === 'block';
   const sheetOpen = narrow && mode !== 'building';
+  // A sheet that opened for a selection (a suite, a floor) must not hide it: the page keeps the chosen block
+  // or row whole above the sheet's top edge, and follows the sheet when it grows (stack/aboveSheet.ts).
+  const sheetShown = narrow && showInspector && sheetOpen;
+  useClearOfSheet(sheetShown && (mode === 'block' || mode === 'floor') ? selectionSelector(state.select, state.floor) : null, sheetShown, reduceMotion);
+  // While a sheet is open the page ends with as much room as the sheet covers, so its last rows can be scrolled clear of it.
+  const appStyle = sheetShown ? ({ paddingBottom: 'calc(var(--sp-sheet-cover, 48vh) + var(--sp-space-4))' } as CSSProperties) : undefined;
   const sheetTitle = mode === 'block' ? 'Suite' : mode === 'floor' ? 'Floor' : mode === 'find' ? 'Find space' : mode === 'worklist' ? 'Renewal worklist' : mode === 'issues' ? 'Data issues' : 'Area';
 
   return (
-    <div className="sp-app" data-view={view} data-mode={mode}>
+    <div className="sp-app" data-view={view} data-mode={mode} style={appStyle}>
       <svg className="sp-defs" width="0" height="0" aria-hidden="true" focusable="false">
         <Patterns />
       </svg>
@@ -240,7 +307,7 @@ function Shell() {
       <KpiStrip model={model} state={state} onAction={onKpi} />
       <Toolbar state={state} patch={patch} />
       <main className={`sp-main sp-no-print ${showInspector ? '' : 'sp-main--wide'}`} id="sp-plan" tabIndex={-1}>
-        <div className="sp-stage" key={view === 'map' ? 'map' : `fonts-${fontTick}`}>
+        <Stage epoch={view === 'map' ? 'map' : `fonts-${fontTick}`}>
           {view === 'building' && <BuildingView model={model} state={state} patch={patch} />}
           {view === 'stack' && <StackView model={model} state={state} patch={patch} />}
           {view === 'floor' && <FloorView model={model} state={state} patch={patch} />}
@@ -250,7 +317,7 @@ function Shell() {
               <MapView model={model} state={state} patch={patch} dataSource={dataSource} />
             </Suspense>
           )}
-        </div>
+        </Stage>
         {!narrow && showInspector && (
           <aside className="sp-inspector sp-card" aria-label="Inspector">
             {inspector}

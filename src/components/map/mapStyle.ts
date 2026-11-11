@@ -6,7 +6,6 @@ import { toneFor, type Tone } from '../../domain/lenses';
 import { canShowIssues } from '../../domain/safe';
 import type { GeoPolygon } from '../../domain/types';
 import type { Lens } from '../../state/planState';
-import { floorFact } from '../building/floorFact';
 
 /** Pure helpers behind the map: tone selection, colour resolution, geometry tweaks, expressions. */
 
@@ -46,29 +45,16 @@ export function dominantTone(f: FloorView, lens: Lens, safe: boolean): Tone {
 }
 
 /**
- * What the floor list writes after a floor's leased share: the short fact for that floor (`floorFact`,
- * building/floorFact.ts), built from the same `lensFact` as the labels beside the Building view's model.
- * The two views show one building, so a floor reads the same in both: "7,000 SF available" on Floor 7
- * here as there, "Month-to-month" on Floor 2, the next expiry in the expiration lens, the live deals,
- * the rents. Nothing is added to it and nothing reworded; prospect-safe follows with it, since
- * `floorFact` says nothing a prospect may not be told.
- */
-export function floorState(f: FloorView, lens: Lens, safe: boolean): string {
-  return floorFact(f, lens, safe);
-}
-
-/**
- * What a row's tooltip and accessible name add to that fact, in exact SF: how much of the space on
- * offer is a sublease, a unit for sale, an area with no record ("not on the market" for a prospect).
- * These are kept off the row itself so that the row and the Building view say the same thing.
+ * What a row's tooltip and accessible name add to the floor's label, in exact SF: a unit for sale, an
+ * area with no record ("not on the market" for a prospect). The label itself is the Building view's
+ * (`floorLabelParts`, building/floorFact.ts), which already says when the space on offer is a sublease;
+ * these are kept off the row so that the row and the Building view say the same thing.
  */
 export function floorAlso(f: FloorView, safe: boolean): string {
   const sum = (kind: FloorView['segments'][number]['kind']) => f.segments.filter((s) => s.kind === kind).reduce((t, s) => t + s.size, 0);
-  const sublet = Math.min(sum('sublease'), f.available);
   const forSale = sum('forsale');
   const gap = sum('unmarketed');
   const also: string[] = [];
-  if (sublet > 0) also.push(sublet === f.available ? 'the space on offer is a sublease' : `${num(sublet)} SF of the space on offer is a sublease`);
   if (forSale > 0) also.push(`${num(forSale)} SF for sale`);
   if (gap > 0) also.push(`${num(gap)} SF ${canShowIssues(safe) ? 'unaccounted' : 'not on the market'}`);
   return also.join(', ');
@@ -180,4 +166,31 @@ export function floorColorExpression(hexByTone: Record<string, string>): Express
     toneColorExpression(hexByTone, 0.35),
     toneColorExpression(hexByTone, 0),
   ] as ExpressionSpecification;
+}
+
+const ORDERED = new Set(['<', '<=', '>', '>=']);
+const isGet = (x: unknown): x is ['get', string] => Array.isArray(x) && x.length === 2 && x[0] === 'get' && typeof x[1] === 'string';
+
+/**
+ * A basemap filter with its ordered comparisons made safe for features that lack the property compared.
+ * The light basemap filters its road shields with `["<=", ["get", "ref_length"], 6]`; a road without a
+ * `ref_length` makes that comparison an error, which MapLibre reports in the console on every load (and
+ * then leaves the feature out). Here the property falls back to a number that fails the comparison, so
+ * the same features are left out and nothing is reported. Returns the filter itself when it has no such
+ * comparison, so the caller can tell whether there is anything to set.
+ */
+export function guardedFilter<T>(filter: T): T {
+  let changed = false;
+  const walk = (x: unknown): unknown => {
+    if (!Array.isArray(x)) return x;
+    const [op, a, b] = x;
+    if (x.length === 3 && typeof op === 'string' && ORDERED.has(op) && isGet(a) && typeof b === 'number') {
+      changed = true;
+      // Less-than fails for a huge number, greater-than for a hugely negative one.
+      return [op, ['coalesce', a, op.startsWith('<') ? Number.MAX_SAFE_INTEGER : -Number.MAX_SAFE_INTEGER], b];
+    }
+    return x.map(walk);
+  };
+  const out = walk(filter);
+  return changed ? (out as T) : filter;
 }

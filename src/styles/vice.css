@@ -39,15 +39,18 @@
     --tone-projected-fill: #14343a; --tone-projected-text: #adf2e5; --tone-projected-edge: #2fd1b8;
     --tone-confidential-fill: #3a3350; --tone-confidential-text: #d6d0e6; --tone-confidential-edge: #847d9f;
 
-    /* Expiration lens: a sunset, lightness ordered (soonest is brightest), each step also stepping in hue
-       (amber, orange, rose, magenta, violet, slate) so neighbours stay apart; every edge is ≥ 6:1 on the card.
-       1–2 yr is a light rose with dark text, well away from the dark maroon of Holdover / MTM. */
-    --tone-exp-0-fill: #ffb95c; --tone-exp-0-text: #2a1203; --tone-exp-0-edge: #ffdba6;
-    --tone-exp-1-fill: #f47a42; --tone-exp-1-text: #2a1203; --tone-exp-1-edge: #ffae85;
-    --tone-exp-2-fill: #e55f86; --tone-exp-2-text: #2a0612; --tone-exp-2-edge: #f9a6bd;
-    --tone-exp-3-fill: #9c4277; --tone-exp-3-text: #ffffff; --tone-exp-3-edge: #d58ab2;
-    --tone-exp-4-fill: #74508f; --tone-exp-4-text: #ffffff; --tone-exp-4-edge: #b896d6;
-    --tone-exp-5-fill: #505584; --tone-exp-5-text: #ffffff; --tone-exp-5-edge: #9aa0d4;
+    /* Expiration lens: a sunset, lightness ordered (soonest is brightest): amber, coral, rose, magenta,
+       violet, indigo. Every step is 9 L* or more below the one before (L* 82, 71, 60, 49, 38, 28) and a
+       different hue, so the three late steps read as three on the building model and on the map, which
+       have only the colour (in round 15 magenta, violet and slate were 1.4 and 2.7 L* apart). Every edge
+       is 5:1 or more on the card. 1–2 yr is a light rose with dark text, well away from the dark maroon of
+       Holdover / MTM. */
+    --tone-exp-0-fill: #ffc069; --tone-exp-0-text: #2a1203; --tone-exp-0-edge: #ffdba6;
+    --tone-exp-1-fill: #ff905d; --tone-exp-1-text: #2a1203; --tone-exp-1-edge: #ffb898;
+    --tone-exp-2-fill: #e9628d; --tone-exp-2-text: #2a0612; --tone-exp-2-edge: #f9a6bd;
+    --tone-exp-3-fill: #b64b99; --tone-exp-3-text: #ffffff; --tone-exp-3-edge: #e39ccd;
+    --tone-exp-4-fill: #6f4796; --tone-exp-4-text: #ffffff; --tone-exp-4-edge: #b896d6;
+    --tone-exp-5-fill: #373e75; --tone-exp-5-text: #ffffff; --tone-exp-5-edge: #9aa0d4;
 
     /* Rent lens: night-sky blue to neon cyan (gross scale). Five even lightness steps (L* 18, 33, 48, 67, 84),
        so neighbours differ at a glance; the text flips from light to dark between steps 2 and 3. */
@@ -114,14 +117,16 @@
     /* Daytime expiration lens: lightness ordered (soonest is darkest) and stepping in hue as the night ramp
        does: red, orange, amber for the three steps that need attention, then lavender, periwinkle and
        pale blue. No step is pink: Holdover / MTM (`--tone-risk-fill`, a pale pink) stands beside this ramp
-       in the same lens, and every step is far from it in hue or in lightness (vice.test.ts). The three
-       cool steps are 6 L* or more apart, and each edge is 4:1 or more on the day card at its darkest. */
-    --tone-exp-0-fill: #a8321a; --tone-exp-0-text: #ffffff; --tone-exp-0-edge: #7a2210;
-    --tone-exp-1-fill: #d9641f; --tone-exp-1-text: #1a0d05; --tone-exp-1-edge: #9c4310;
-    --tone-exp-2-fill: #f2a640; --tone-exp-2-text: #181818; --tone-exp-2-edge: #a8650f;
-    --tone-exp-3-fill: #c9b5ee; --tone-exp-3-text: #181818; --tone-exp-3-edge: #6a4fb0;
-    --tone-exp-4-fill: #bfd2f7; --tone-exp-4-text: #181818; --tone-exp-4-edge: #4a66b0;
-    --tone-exp-5-fill: #d7e8f1; --tone-exp-5-text: #181818; --tone-exp-5-edge: #4f7285;
+       in the same lens, and every step is far from it in hue or in lightness (vice.test.ts). Every
+       step is 9 L* or more above the one before (L* 36, 49, 63, 73, 82, 93), and each edge is 3:1 or more
+       on the day card at its darkest. The edges step in lightness too: the 3D map deepens each fill
+       toward its edge, and there the six walls stay 7 L* or more apart (paletteChecks.ts). */
+    --tone-exp-0-fill: #9d2e18; --tone-exp-0-text: #ffffff; --tone-exp-0-edge: #74200f;
+    --tone-exp-1-fill: #bd551a; --tone-exp-1-text: #ffffff; --tone-exp-1-edge: #7c3208;
+    --tone-exp-2-fill: #da8516; --tone-exp-2-text: #181818; --tone-exp-2-edge: #774603;
+    --tone-exp-3-fill: #bea7ea; --tone-exp-3-text: #181818; --tone-exp-3-edge: #6f58bd;
+    --tone-exp-4-fill: #b8ccf6; --tone-exp-4-text: #181818; --tone-exp-4-edge: #5273c2;
+    --tone-exp-5-fill: #e0eef5; --tone-exp-5-text: #181818; --tone-exp-5-edge: #55869f;
     --tone-rent-0-edge: #5d87a8; --tone-rent-1-edge: #4f82ad; --tone-rent-2-edge: #3d76a6; --tone-rent-3-edge: #2f6c9e;
     --tone-deal-0-edge: #5f80cf; --tone-deal-1-edge: #4f74c8;
 

@@ -47,7 +47,6 @@
   .sp-stack__foot span:last-child { display: none; }
 }
 
-@media (max-width: 1099px) { .sp-stage .sp-seg { scroll-margin-bottom: 50vh; } }
 
 /* Focus + hover link with the building model */
 .sp-stack__rowbg.is-floor-selected { stroke: var(--sp-color-brand); stroke-opacity: 0.35; }
@@ -104,4 +103,7 @@
 .sp-psuite--lobby { min-height: 36px; background: transparent; }
 .sp-pstack__foot { padding: 0 12px 12px; margin: 0; font-size: var(--sp-text-11); color: var(--sp-color-text-faint); }
 
-.sp-psuite__part { white-space: nowrap; display: inline-block; margin-right: 4px; }
+/* A part of a suite's facts stays whole (a figure with its unit, a rate with its lease type); only a part
+   wider than the whole row may break inside. The separators are the run's (base.css, `.sp-dotrun`). */
+.sp-psuite__facts .sp-dotrun__in { align-items: baseline; }
+.sp-psuite__part { white-space: normal; }

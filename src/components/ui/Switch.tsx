@@ -21,7 +21,18 @@ export function Switch({ checked, onChange, label, hideLabel, title, className =
       onClick={() => onChange(!checked)}
     >
       <span className="sp-switch__track" aria-hidden="true" />
-      <span className={hideLabel ? 'sp-sr-only' : 'sp-switch__label'}>{label}</span>
+      {hideLabel ? (
+        <span className="sp-sr-only">{label}</span>
+      ) : (
+        // The label is bold while the switch is on. An unseen bold copy holds that width all the time, so
+        // turning the switch on or off never moves what stands beside it.
+        <span className="sp-switch__label">
+          <span>{label}</span>
+          <span className="sp-switch__label-hold" aria-hidden="true">
+            {label}
+          </span>
+        </span>
+      )}
     </button>
   );
 }

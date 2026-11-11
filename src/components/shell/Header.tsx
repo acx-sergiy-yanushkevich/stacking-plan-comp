@@ -56,11 +56,6 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
               </span>
             </>
           )}
-          {state.safe && (
-            <Chip tone="brand" icon="shield">
-              Prospect-safe on
-            </Chip>
-          )}
         </div>
         <div className="sp-header__facts">
           <span>{property.propertyClass}</span>
@@ -100,20 +95,29 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
         <AsOfPopover asOf={planDate(state.asOf, today, state.safe)} today={today} onChange={(asOf) => patch({ asOf })} miniTimeline={miniTimeline} locked={!canTimeTravel(state.safe)} />
         {/* Turning it on drops a search in progress, the worklist, a projected as-of date and any toast: the state layer (applyPatch) and useToastBoundary do it, not this handler. */}
         <Switch checked={state.safe} onChange={(safe) => patch({ safe })} label="Prospect-safe" title="Hide tenant names, contacts, rents, lease dates and prospects, and show the plan as of today" />
-        {!state.safe && (
-        <Button
-          icon="warning"
-          count={issueTotal}
-          active={state.mode === 'issues'}
-          onClick={() => {
-            if (state.mode !== 'issues') rememberTrigger();
-            patch({ mode: state.mode === 'issues' ? 'building' : 'issues', select: null, floor: null });
-          }}
-          title={`${counts.error} errors, ${counts.warning} warnings, ${counts.info} notes. Open the list.`}
-        >
-          Data issues
-        </Button>
-        )}
+        {/* One slot, two tenants. Data issues are withheld from a prospect, so in prospect-safe mode the slot
+            holds the chip that says the mode is on. The slot is the same width either way (shell.css), so the
+            controls wrap at the same point and the header is the same height with the mode on and off. */}
+        <div className="sp-header__slot">
+          {state.safe ? (
+            <Chip tone="brand" icon="shield" title="Tenant names, contacts, rents, lease dates and prospects are hidden">
+              Prospect-safe on
+            </Chip>
+          ) : (
+            <Button
+              icon="warning"
+              count={issueTotal}
+              active={state.mode === 'issues'}
+              onClick={() => {
+                if (state.mode !== 'issues') rememberTrigger();
+                patch({ mode: state.mode === 'issues' ? 'building' : 'issues', select: null, floor: null });
+              }}
+              title={`${counts.error} errors, ${counts.warning} warnings, ${counts.info} notes. Open the list.`}
+            >
+              Data issues
+            </Button>
+          )}
+        </div>
         <Menu
           label="Export"
           trigger={(p) => (

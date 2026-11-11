@@ -10,7 +10,7 @@ import { findIssues, issueCounts, recentChanges } from '../../domain/issues';
 import { timelineModel } from '../../domain/timeline';
 import { parseState } from '../../state/planState';
 import type { PlanModel } from '../../model/usePlanModel';
-import TimelineView from './TimelineView';
+import TimelineView, { litKeys } from './TimelineView';
 import { MiniTimeline } from './MiniTimeline';
 import { TimelineRows } from './TimelineRows';
 import { TimelineAxis } from './TimelineAxis';
@@ -134,6 +134,27 @@ describe('TimelineView', () => {
     const html = renderToString(<TimelineView model={model} state={{ ...parseState('', TODAY), select: first.segKey }} patch={() => {}} />);
     expect(html).toContain('is-selected');
     expect(html).toContain('is-dim');
+  });
+
+  // Round 15: pointing at "Largest block" or "Available" lit the inspector's small model only; the bars did not answer.
+  it('lights the bars of what is pointed at (a KPI, a finder option) before the filter in force, as the Stack view does', () => {
+    const filter = new Set(['A01']);
+    const pointed = new Set(['A02', 'A03']);
+    expect(litKeys(pointed, filter)).toBe(pointed);
+    expect(litKeys(null, filter)).toBe(filter);
+    expect(litKeys(pointed, null)).toBe(pointed);
+    // Nothing pointed at and no filter: every bar at full strength.
+    expect(litKeys(null, null)).toBeNull();
+  });
+
+  it('dims every bar outside the largest block when its suites are the lit set, and none of the block\'s own', () => {
+    const base = buildModel(TODAY, false);
+    const largest = base.kpis.maxContiguous.keys;
+    expect(largest.length).toBeGreaterThan(0);
+    const html = renderToString(<TimelineView model={{ ...base, highlight: litKeys(new Set(largest), null) }} state={parseState('', TODAY)} patch={() => {}} />);
+    const bars = [...html.matchAll(/<g class="([^"]*sp-tl-bar[^"]*)"[^>]*data-seg="([^"]+)"/g)].map((m) => ({ cls: m[1], seg: m[2] }));
+    expect(bars.length).toBeGreaterThan(largest.length);
+    for (const b of bars) expect(b.cls.includes('is-dim'), b.seg).toBe(!largest.includes(b.seg));
   });
 });
 

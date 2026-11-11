@@ -103,6 +103,26 @@ describe('Inspector', () => {
     expect(near).not.toContain('7,800 SF short');
   });
 
+  it('Find: the alternatives never repeat an option, never exceed the maximum, and the text names only what is listed', () => {
+    // 12,000 SF: Floor 6 (Ste 600) is the option; Floors 6–7 is that suite with the sublease under it.
+    const twelve = render('?req=12000&mode=find').html;
+    const near = twelve.slice(twelve.indexOf('aria-label="Near misses"'));
+    expect(near).toContain('<span>Floors 7–8</span>');
+    expect(near).not.toContain('Floors 6–7');
+    expect(near).not.toContain('Ste 600');
+    expect(twelve).toContain('Smaller spaces with their shortfall, and stacked floors that combine direct and sublease space.');
+    // 9,000–9,500 SF: every stack is over the maximum, so none is listed and the note names none.
+    const capped = render('?req=9000&max=9500&mode=find').html;
+    expect(capped).toContain('aria-label="Near misses"');
+    expect(capped).not.toMatch(/over max|stacked floors|Floors \d+–\d+|14,400 SF|28,400 SF/);
+    expect(capped).toContain('Smaller spaces with their shortfall.');
+    expect(capped).toContain('1,600 SF short');
+    // 40,000 SF: nothing fits and only single spaces are listed.
+    const forty = render('?req=40000&mode=find').html;
+    expect(forty).toContain('The closest spaces are listed below.');
+    expect(forty).not.toMatch(/floor combinations|stacked floors/i);
+  });
+
   it('Find: the empty state suggests only what would help, with a button that does it', () => {
     const max = render('?req=1000&max=1200&mode=find').html;
     expect(max).toContain('No space fits 1,000–1,200 SF');

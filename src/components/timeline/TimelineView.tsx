@@ -18,6 +18,7 @@ import { useWidth } from './useWidth';
 import { measure } from '../../lib/textFit';
 import { Icon } from '../ui';
 import { rampNote } from '../stack/rampNote';
+import { useHoverKeys } from '../../state/hoverStore';
 import './timeline.css';
 
 export interface TimelineViewProps {
@@ -44,6 +45,14 @@ const BOTTOM_PAD = 6;
 const TIP_MAX_WIDTH = 320;
 
 /**
+ * The suites whose bars stay lit while the rest are dimmed: what is being pointed at just now (a KPI
+ * such as "Available" or "Largest block", a finder option) before the filter in force (a search, the
+ * finder, the worklist, a rollover period). Null lights everything. The Stack view and the building
+ * model follow the same rule, so pointing at a KPI answers in every view.
+ */
+export const litKeys = (pointedAt: Set<string> | null, filter: Set<string> | null): Set<string> | null => pointedAt ?? filter;
+
+/**
  * Lease timeline (DESIGN.md §2.5): one SVG with a floor gutter, a rollover band measured
  * from the cursor, year gridlines, a bar per lease or availability and the draggable as-of
  * cursor. Moving the cursor patches `asOf`, so every view recomputes from the same model.
@@ -53,6 +62,8 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
   const [hostRef, width] = useWidth<HTMLDivElement>(STACKED_MIN_WIDTH, MIN_WIDTH);
   const stackedMode = width < MIN_WIDTH;
   const svgRef = useRef<SVGSVGElement | null>(null);
+  // A KPI or a finder option pointed at lights its suites' bars for as long as it is pointed at.
+  const highlight = litKeys(useHoverKeys(), model.highlight);
   const rows = model.timeline.rows;
   // Stacked: the gutter is as wide as its widest line ("Floor 12" over "20,800 SF"), no wider.
   const gutter = stackedMode
@@ -186,7 +197,7 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
           plotLeft={gutter}
           plotWidth={plotWidth}
           clipId={clipId}
-          highlight={model.highlight}
+          highlight={highlight}
           selected={state.select}
           hovered={hover?.key ?? null}
           stacked={labels}

@@ -33,7 +33,10 @@ button.sp-kpi:hover { background: var(--sp-color-card-2); }
 .sp-kpi__label { flex: none; line-height: 16px; white-space: nowrap; }
 .sp-kpi__value { display: contents; }
 .sp-kpi__figure { flex: none; font-size: var(--sp-text-18); font-weight: 600; letter-spacing: -0.015em; line-height: 22px; white-space: nowrap; color: var(--sp-color-text); }
-.sp-kpi__unit { font-size: var(--sp-text-12); font-weight: 500; color: var(--sp-color-text-weak); letter-spacing: 0; }
+/* The unit is smaller type on the figure's line. It takes no line height of its own: a smaller font with the
+   figure's line height would push the line 2 px taller, and a figure without a unit ("Withheld", in
+   prospect-safe) would then stand in a shorter cell than one with it, which moved the toolbar on a phone. */
+.sp-kpi__unit { font-size: var(--sp-text-12); font-weight: 500; line-height: 1; color: var(--sp-color-text-weak); letter-spacing: 0; }
 .sp-kpi__delta { order: 2; flex: none; font-size: var(--sp-text-11); font-weight: 600; line-height: 15px; padding: 0 5px; border-radius: 8px; white-space: nowrap; background: var(--sp-color-card-2); color: var(--sp-color-text-weak); }
 .sp-kpi__delta--up { background: var(--sp-color-success-soft); color: var(--sp-color-success); }
 .sp-kpi__delta--down { background: var(--sp-color-error-soft); color: var(--sp-color-error); }
