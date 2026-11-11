@@ -54,6 +54,10 @@
 .sp-legend__label { color: var(--sp-color-text); }
 .sp-legend__num { color: var(--sp-color-text-faint); }
 .sp-legend__note { width: 100%; font-size: var(--sp-text-11); color: var(--sp-color-text-faint); }
+/* On screen the legend's caveats sit behind this mark: its tooltip and accessible name are the note. */
+.sp-legend__info { display: inline-flex; align-items: center; color: var(--sp-color-text-faint); cursor: help; border-radius: 50%; }
+.sp-legend__info:hover, .sp-legend__info:focus-visible { color: var(--sp-color-text-weak); }
+.sp-legend__info:focus-visible { outline: 2px solid var(--sp-color-focus, var(--sp-color-brand)); outline-offset: 2px; }
 
 /* Non-leasable area (lobby, loading, mechanical): drawn, never counted */
 .sp-nonleasable rect { fill: var(--sp-color-card-2); stroke: var(--sp-color-border); }

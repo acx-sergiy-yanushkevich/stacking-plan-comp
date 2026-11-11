@@ -211,7 +211,7 @@ describe('BuildingView', () => {
       expect(entry).toContain('sp-legend__swatch--hatch');
       expect(entry).toContain('var(--tone-muted-edge)');
       expect(entry).toContain('<span class="sp-legend__label">Lobby · building use</span>');
-      expect(entry).toContain(`<span class="sp-legend__num">${lobbySf.toLocaleString('en-US')}</span>`);
+      expect(entry).toContain(`${lobbySf.toLocaleString('en-US')} SF non-leasable`);
       expect(entry).toContain('Not counted in occupancy');
     }
     // A building with no lobby has no such entry.
@@ -221,8 +221,10 @@ describe('BuildingView', () => {
     expect(none).not.toContain('building use');
   });
 
-  it('explains an over-allocated floor beside the legend', () => {
-    expect(render('')).toContain('Floor 7 records exceed its leasable area by 500 SF');
+  it('explains an over-allocated floor in the legend\'s info mark, not as a line beside it', () => {
+    const html = render('');
+    expect(html).toMatch(/<span class="sp-legend__info"[^>]*title="[^"]*Floor 7 records exceed its leasable area by 500 SF/);
+    expect(html).not.toContain('<p class="sp-legend__note">');
   });
 
   it('opens on the first floor a search or the finder is lighting, and says so in plain words', () => {

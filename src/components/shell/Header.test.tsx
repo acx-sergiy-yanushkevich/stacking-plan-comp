@@ -310,13 +310,13 @@ describe('Header building card: the facts, then when the plan last changed at th
   });
 });
 
-describe('Header freshness chip (round 19)', () => {
-  it('counts the records unverified for 120+ days, for the owner only', () => {
-    const own = render('').html.replace(/<!-- -->/g, '');
-    expect(own).toMatch(/sp-header__verified--stale/);
-    expect(own).toMatch(/<span class="sp-header__unverified"> · \d+ unverified since [A-Z][a-z]{2} \d{1,2}<\/span>/);
-    const safe = render('?safe=1').html;
-    expect(safe).not.toContain('sp-header__unverified');
-    expect(safe).not.toContain('unverified');
+describe('Header freshness: one quiet line, no warning on the card', () => {
+  it('says when the plan last changed, in the same quiet tone for owner and prospect; unverified records are listed under Data issues', () => {
+    for (const q of ['', '?safe=1']) {
+      const html = render(q).html.replace(/<!-- -->/g, '');
+      expect(html, q).toContain('Latest change Nov 6, 2026');
+      expect(html, q).not.toContain('sp-header__verified--stale');
+      expect(html, q).not.toContain('unverified');
+    }
   });
 });

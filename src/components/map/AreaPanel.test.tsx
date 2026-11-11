@@ -67,7 +67,9 @@ describe('AreaPanel (charts in the side panel)', () => {
 
   it('flags sample figures and names the sources', () => {
     const html = render(area);
-    expect(html).toContain('Sample data');
+    // Said plainly, in a neutral chip: sample figures are expected in a demo, not a warning.
+    expect(html).toMatch(/<span class="sp-chip sp-chip--neutral[^"]*"[^>]*>(?:<svg.*?<\/svg>)?Sample figures<\/span>/);
+    expect(html).not.toContain('Sample data');
     expect(html).toContain('US Census Bureau ACS 5-year');
     expect(html).toContain('US figures: US Census Bureau, ACS 5-year 2020–2024');
   });

@@ -283,13 +283,22 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
         </span>
       </div>
       {/* The model draws the lobby as a grey hatch; the Stack view labels it in the block, here the legend names it. */}
-      <Legend items={model.legend} extras={lobby ? [lobby] : undefined} compact id="sp-legend" note={rampNote(state.lens, safe)} />
-      {over.length > 0 && canShowIssues(model.safe) && (
-        <p className="sp-legend__note">
-          {/* A no-break space after the comma: where the note wraps, the line does not end on it. */}
-          {over.map((f) => `${f.floor.name} records exceed its leasable area by ${num(f.overAllocatedBy)} SF`).join('; ')}; legend shares use recorded SF,{'\u00a0'}leased occupancy is capped.
-        </p>
-      )}
+      {/* The caveats (which end of a colour ramp is which, a floor whose records exceed its area) are the
+          legend's info mark: there for whoever asks, never a line of warnings over the plan. */}
+      <Legend
+        items={model.legend}
+        extras={lobby ? [lobby] : undefined}
+        compact
+        id="sp-legend"
+        note={
+          [
+            rampNote(state.lens, safe),
+            over.length > 0 && canShowIssues(model.safe) ? `${over.map((f) => `${f.floor.name} records exceed its leasable area by ${num(f.overAllocatedBy)} SF`).join('; ')}; legend shares use recorded SF, leased occupancy is capped.` : null,
+          ]
+            .filter(Boolean)
+            .join(' ') || null
+        }
+      />
     </div>
   );
 

@@ -55,8 +55,8 @@ export function AreaPanel({ model, area, expanded }: AreaPanelProps) {
           Rings around the property
         </p>
         {area?.sample && (
-          <Chip tone="warn" icon="warning" title={area.source}>
-            Sample data
+          <Chip tone="neutral" title={area.source}>
+            Sample figures
           </Chip>
         )}
       </header>

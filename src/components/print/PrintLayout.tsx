@@ -115,7 +115,7 @@ export function PrintLayout({ model, state, area = null, visible }: PrintLayoutP
         <Kpi label="Pipeline" value={showDeals ? `${k.pipeline.deals} deals` : 'Withheld'} note={showDeals ? `${sf(k.pipeline.sf)} requested` : 'Prospect-safe'} />
       </div>
       {/* The cover's legend says why its shares add up to more than 100%, as the Stack legend does. */}
-      <Legend items={model.legend} compact note={sharesNote(model.legend, k.leasable, safe ? [] : model.floors.filter((f) => f.overAllocatedBy > 0).map((f) => ({ name: f.floor.name, by: f.overAllocatedBy })))} />
+      <Legend items={model.legend} compact full note={sharesNote(model.legend, k.leasable, safe ? [] : model.floors.filter((f) => f.overAllocatedBy > 0).map((f) => ({ name: f.floor.name, by: f.overAllocatedBy })))} />
       {/* Drawn at one width on every screen (and when the report is not on screen at all), then scaled to the page. */}
       <div className="sp-print__plan">
         <FixedWidth value={PLAN_WIDTH}>

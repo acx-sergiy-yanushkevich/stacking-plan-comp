@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
 import { isDark, paletteOf, type PlanState } from '../../state/planState';
-import { daysBetween, fmtDate } from '../../domain/dates';
+import { fmtDate } from '../../domain/dates';
 import { num, pct, usd, usd0 } from '../../domain/format';
 import { Button, Chip, Icon, Menu, Switch, useToastBoundary } from '../ui';
 import type { MenuItem } from '../ui/Menu';
@@ -9,8 +9,7 @@ import { paletteMenuItems } from './paletteMenu';
 import { switcherItems } from './switcher';
 import { MiniStack, StaxLockup } from './Brand';
 import { LIVE_STACK } from '../../data/mock/portfolio';
-import { canShowIssues, canTimeTravel, planDate } from '../../domain/safe';
-import { STALE_DAYS, unverifiedRecords } from '../../domain/issues';
+import { canTimeTravel, planDate } from '../../domain/safe';
 import { AsOfPopover } from './AsOfPopover';
 import { useIsPhone, useMedia, usePrefersDark } from '../../lib/useMedia';
 
@@ -29,7 +28,6 @@ export interface HeaderProps {
 export function Header({ model, state, patch, onExport, miniTimeline }: HeaderProps) {
   const { property, kpis, today } = model;
   const verifiedAt = [...property.leases.map((l) => l.verifiedAt), ...property.availabilities.map((a) => a.verifiedAt)].sort().at(-1) ?? property.dataUpdated;
-  const staleDays = daysBetween(verifiedAt, today);
   // Standalone app (glass skin): the product bar names the product and the building, and the app owns its
   // theme. Embedded on a record page (classic skin) the host page names the property and sets the theme:
   // there is no bar, and the card keeps the controls.
@@ -128,17 +126,11 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
     </div>
   );
 
-  // The newest change alone would say the plan is fresh while a record has gone unverified for months: the
-  // owner is told how many records are past STALE_DAYS, and since when (round 19). A prospect is told neither.
-  const unverified = canShowIssues(state.safe) ? unverifiedRecords(model.issues) : [];
-  const stale = staleDays > 30 || unverified.length > 0;
+  // When the plan last changed, in one quiet line. Records that have gone unverified are a data-quality
+  // matter: they are listed under Data issues (toolbar), not flagged on the building's card.
   const verified = (
-    <span
-      className={`sp-header__verified ${stale ? 'sp-header__verified--stale' : ''}`}
-      title={unverified.length ? `Most recent change ${fmtDate(verifiedAt)}. Not verified for ${STALE_DAYS}+ days: ${unverified.map((i) => i.recordLabel).join(', ')}.. The issues panel (toolbar) lists them.` : 'Most recent change to a lease or availability on this plan'}
-    >
-      <Icon name={stale ? 'clock' : 'check'} size={12} /> Latest change {fmtDate(verifiedAt)}
-      {unverified.length > 0 && <span className="sp-header__unverified"> · {unverified.length} unverified since {fmtDate(unverified[0].unverifiedSince!).replace(/, \d{4}$/, '')}</span>}
+    <span className="sp-header__verified" title="Most recent change to a lease or availability on this plan">
+      <Icon name="check" size={12} /> Latest change {fmtDate(verifiedAt)}
     </span>
   );
 
