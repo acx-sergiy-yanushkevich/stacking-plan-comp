@@ -36,7 +36,8 @@ One model of the building, shown four ways, with the answers to the questions ab
 - **Space finder.** Enter a size, a date and direct or sublease; matching blocks light up, including pairs of adjacent floors and near misses. An open inquiry can be matched to space the same way.
 - **Renewal worklist.** Leases at risk or expiring within 90 days, 180 days, 12 or 24 months, with the last touch on each.
 - **Data issues.** Over-allocated floors, unaccounted area, leases without a floor, holdover and month-to-month leases and stale deals are listed and marked on the plan.
-- **Timeline and 3D map.** Every lease as a bar against time; the building extruded floor by floor on a real map with nearby demographics and amenities.
+- **Timeline and 3D map.** Every lease as a bar against time; the building extruded floor by floor on a real map.
+- **The area around the building.** Demographics, amenities and transit as charts from the Area button in every view, compared with the US. One toggle widens the panel to the location brief, a full-width page to show a client or decision maker, which also closes the PDF report.
 
 **For the prospect, tenant or buyer**
 
@@ -75,7 +76,7 @@ It works with a keyboard and a screen reader, and on a phone. It opens in the As
 **Public data**
 
 - OpenStreetMap, through the Overpass API, for the building footprint and nearby amenities
-- US Census Bureau ACS 5-year data for demographics (live mode only)
+- US Census Bureau ACS 5-year data for demographics (live mode only), and the national ACS 5-year 2020–2024 figures the area is compared with (fixed in `src/domain/areaBrief.ts`)
 
 ## Assumptions
 
@@ -163,7 +164,7 @@ All state lives in the URL, so every view can be linked to.
 | `window` | `risk`, `90`, `180`, `12`, `24` | Renewal worklist window |
 | `bucket` | `0`, `1`, … | Highlight one 12-month rollover period |
 | `q` | text | Search tenant, suite or prospect |
-| `mode` | `issues`, `area`, … | Inspector panel, when not implied by the above |
+| `mode` | `issues`, `area`, `brief`, … | Inspector panel, when not implied by the above (`brief`: the Area panel widened to the location brief) |
 | `theme` | `light`, `dark` | Theme (default `dark`) |
 | `palette` | `vice` | The Vice City palette instead of the default Ascendix colors |
 | `skin` | `aurora`, `classic` | The original blue glass, or the flat Salesforce Lightning look, instead of either palette |

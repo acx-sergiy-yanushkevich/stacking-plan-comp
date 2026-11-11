@@ -1,10 +1,6 @@
-import type { DataSource } from '../../data/sources/DataSource';
 import { num, usd0 } from '../../domain/format';
 import type { Area } from '../../domain/types';
-import type { PlanModel } from '../../model/usePlanModel';
-import type { PlanState } from '../../state/planState';
 import { rememberTrigger } from '../../state/focusStore';
-import { useArea } from '../map/useArea';
 import { openArea, type Patch } from '../plan/actions';
 import { Button } from '../ui';
 import { Section } from './parts';
@@ -79,15 +75,13 @@ export function AreaGlance({ area, onOpen }: AreaGlanceProps) {
 }
 
 export interface AreaPreviewProps {
-  model: PlanModel;
-  state: PlanState;
+  /** The area the app has loaded (`useArea`), the same the Area panel shows: null while it loads. */
+  area: Area | null;
   patch: Patch;
-  dataSource: DataSource;
 }
 
-/** The preview with its data: the same source and Census key as the Area panel it opens. */
-export function AreaPreview({ model, state, patch, dataSource }: AreaPreviewProps) {
-  const area = useArea(dataSource, model.property, state.census);
+/** The preview, wired to open the Area panel. */
+export function AreaPreview({ area, patch }: AreaPreviewProps) {
   return (
     <AreaGlance
       area={area}

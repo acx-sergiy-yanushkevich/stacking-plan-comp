@@ -53,6 +53,20 @@
 .sp-print__table + .sp-print__note { margin-top: 6px; }
 
 /* Two columns: the owner's rollover beside the worklist, or a prospect's rent roll beside the space on offer. */
+/* The location brief on paper (LocationBrief print): the report's ink and rules, not the screen's tokens. */
+.sp-print .sp-brief { color: #181818; font-size: 11px; gap: 12px; }
+.sp-print .sp-brief__head { padding-right: 0; border-bottom: 2px solid #181818; padding-bottom: 6px; }
+.sp-print .sp-brief__title { font-size: 15px; font-weight: 700; }
+.sp-print .sp-brief__sub, .sp-print .sp-brief__label, .sp-print .sp-brief__hero-note, .sp-print .sp-brief__bar-name, .sp-print .sp-brief__us, .sp-print .sp-brief__table th[scope='row'], .sp-print .sp-brief__table thead th { color: #5c5c5c; }
+.sp-print .sp-brief__label { font-size: 9px; }
+.sp-print .sp-brief__hero { border-color: #e5e5e5; padding: 8px 10px; }
+.sp-print .sp-brief__hero-value { font-size: 18px; }
+.sp-print .sp-brief__bar-fill { background: #1a6fb0; opacity: 1; }
+.sp-print .sp-brief__bar, .sp-print .sp-brief__stops { font-size: 11px; }
+.sp-print .sp-brief__table th, .sp-print .sp-brief__table td { border-bottom-color: #e5e5e5; padding: 3px 6px; font-size: 10px; }
+.sp-print .sp-brief__foot { border-top-color: #e5e5e5; color: #5c5c5c; font-size: 9px; }
+.sp-print .sp-brief__cols, .sp-print .sp-brief__heroes { break-inside: avoid; }
+
 .sp-print__two { display: grid; grid-template-columns: 1fr 1.4fr; gap: 24px; align-items: start; }
 .sp-print__two--roll { grid-template-columns: 1.35fr 1fr; }
 
