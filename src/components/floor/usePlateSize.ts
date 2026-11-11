@@ -1,4 +1,5 @@
 import { useCallback, useState, type RefCallback } from 'react';
+import { sizeObserver } from '../../lib/host';
 import type { GeoPolygon } from '../../domain/types';
 import { levelPolygon, projectPolygon } from '../../domain/geometry';
 
@@ -34,7 +35,7 @@ export function plateSize(containerWidth: number, aspect: number): PlateSize {
   return { width, height };
 }
 
-/** Just enough of an element and of ResizeObserver for `observeWidth` (and its test) to work with. */
+/** Just enough of an element and of a size observer for `observeWidth` (and its test) to work with. */
 export interface Measurable {
   getBoundingClientRect(): { width: number };
 }
@@ -42,17 +43,18 @@ type ObserverCtor = new (onResize: () => void) => { observe(el: never): void; di
 
 /**
  * Reports an element's width now and again whenever its box changes. Returns what stops it.
- * Without a ResizeObserver (SSR, tests) it reports once.
+ * It watches with the host's size observer, or with `Observer` when one is given (a test); without either
+ * (SSR, tests) it reports once.
  */
 export function observeWidth(
   el: Measurable,
   onWidth: (width: number) => void,
-  Observer: ObserverCtor | undefined = typeof ResizeObserver === 'undefined' ? undefined : (ResizeObserver as unknown as ObserverCtor),
+  Observer?: ObserverCtor,
 ): () => void {
   const measure = () => onWidth(Math.max(0, Math.floor(el.getBoundingClientRect().width)));
   measure();
-  if (!Observer) return () => {};
-  const ro = new Observer(measure);
+  const ro = Observer ? new Observer(measure) : sizeObserver(measure);
+  if (!ro) return () => {};
   ro.observe(el as never);
   return () => ro.disconnect();
 }

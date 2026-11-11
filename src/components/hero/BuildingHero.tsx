@@ -9,7 +9,7 @@ import { num, pct } from '../../domain/format';
 import { openFloor, openFloorPlate, type Patch } from '../plan/actions';
 import { setHoverFloor, useHoverFloor, useHoverKeys } from '../../state/hoverStore';
 import { usePrefersReducedMotion } from '../../lib/useMedia';
-import { cancelFrame, requestFrame } from '../../lib/host';
+import { cancelFrame, requestFrame, sizeObserver } from '../../lib/host';
 import { spaceOf } from '../building/floorFact';
 import { DotJoin } from './DotJoin';
 import './hero.css';
@@ -272,8 +272,8 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
     // The laid-out height: a transform in progress (the dock animation) must not count.
     const measure = () => setDrawnHeight(el.clientHeight || null);
     measure();
-    if (typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(measure);
+    const ro = sizeObserver(measure);
+    if (!ro) return;
     ro.observe(el);
     return () => ro.disconnect();
   }, [stage]);

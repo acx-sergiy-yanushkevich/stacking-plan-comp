@@ -6,10 +6,13 @@ import { num, pct, usd, usd0 } from '../../domain/format';
 import { Button, Chip, Icon, Menu, Switch, useToastBoundary } from '../ui';
 import { paletteMenuItems } from './paletteMenu';
 import { switcherItems } from './switcher';
-import { StaxLockup } from './Brand';
+import { MiniStack, StaxLockup } from './Brand';
+import { LIVE_STACK } from '../../data/mock/portfolio';
 import { canTimeTravel, planDate } from '../../domain/safe';
 import { AsOfPopover } from './AsOfPopover';
 import { useIsPhone, useMedia, usePrefersDark } from '../../lib/useMedia';
+
+const SAFE_TITLE = 'Hide tenant names, contacts, rents, lease dates and prospects, and show the plan as of today';
 
 export type ExportKind = 'pdf' | 'png' | 'csv' | 'link' | 'video';
 
@@ -46,12 +49,28 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
   const actions = (
     <div className="sp-header__actions">
       {/* The date the plan is drawn for: in prospect-safe mode that is today, whatever was asked for. */}
-      <AsOfPopover asOf={planDate(state.asOf, today, state.safe)} today={today} onChange={(asOf) => patch({ asOf })} miniTimeline={miniTimeline} locked={!canTimeTravel(state.safe)} compact={compact} />
+      <AsOfPopover asOf={planDate(state.asOf, today, state.safe)} today={today} onChange={(asOf) => patch({ asOf })} miniTimeline={miniTimeline} locked={!canTimeTravel(state.safe)} compact={compact} plain={standalone} />
       {/* Turning it on drops a search in progress, the worklist, a projected as-of date and any toast: the state layer (applyPatch) and useToastBoundary do it, not this handler. */}
-      <Switch checked={state.safe} onChange={(safe) => patch({ safe })} label="Prospect-safe" shortLabel={compact ? 'Safe' : undefined} title="Hide tenant names, contacts, rents, lease dates and prospects, and show the plan as of today" />
-      {/* The slot that says prospect-safe is on. It is drawn at one width whether the chip is in it or not, so the
-          controls wrap at the same point and the header is the same height with the mode on and off. */}
-      {!compact && (
+      {standalone ? (
+        // The product bar: a text button like its neighbours, still a switch to assistive technology. Pressed,
+        // it takes the brand fill: that is what says the mode is on, so the bar needs no chip beside it.
+        <button type="button" role="switch" aria-checked={state.safe} className="sp-btn sp-btn--neutral sp-safe" title={SAFE_TITLE} onClick={() => patch({ safe: !state.safe })}>
+          <Icon name="contrast" size={16} />
+          {compact ? (
+            <>
+              <span className="sp-sr-only">Prospect-safe</span>
+              <span aria-hidden="true">Safe</span>
+            </>
+          ) : (
+            'Prospect-safe'
+          )}
+        </button>
+      ) : (
+        <Switch checked={state.safe} onChange={(safe) => patch({ safe })} label="Prospect-safe" shortLabel={compact ? 'Safe' : undefined} title={SAFE_TITLE} />
+      )}
+      {/* The embedded skin: the slot that says prospect-safe is on. It is drawn at one width whether the chip is in
+          it or not, so the controls wrap at the same point and the header is the same height with the mode on and off. */}
+      {!standalone && !compact && (
         <div className="sp-header__slot">
           {state.safe && (
             <Chip tone="brand" icon="shield" title="Tenant names, contacts, rents, lease dates and prospects are hidden">
@@ -63,7 +82,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
       <Menu
         label="Export"
         trigger={(p) => (
-          <Button {...p} icon="download" iconRight={compact ? undefined : 'chevron-down'}>
+          <Button {...p} icon={standalone && !compact ? undefined : 'download'} iconRight={compact ? undefined : standalone ? 'caret-down' : 'chevron-down'}>
             <span className="sp-header__export-label">Export</span>
           </Button>
         )}
@@ -153,21 +172,26 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
   return (
     <>
       {/* The product bar: who made this, which building is open (and that there are others), and the controls. */}
-      <div className="sp-card sp-topbar sp-no-print">
+      {/* An expanded bottom sheet stops under the bar, so its controls are never cut in half (ui/Sheet.tsx). */}
+      <div className="sp-card sp-topbar sp-no-print" data-sheet-keep-clear="">
         <StaxLockup />
         <span className="sp-topbar__divider" aria-hidden="true" />
         <Menu
           label="Building"
           align="start"
           trigger={(p) => (
-            <Button {...p} iconRight="chevron-down" aria-label={`Switch building: ${property.name}`} title="Switch building" className="sp-switcher">
+            <Button {...p} iconRight="caret-down" aria-label={`Switch building: ${property.name}`} title="Switch building" className="sp-switcher">
+              <MiniStack drawing={LIVE_STACK} />
               <span className="sp-switcher__name">{property.name}</span>
             </Button>
           )}
           items={switcherItems(property)}
         />
-        {actions}
-        {look}
+        {/* The controls and the look as one group at the right: they wrap together, never one button alone. */}
+        <div className="sp-topbar__controls">
+          {actions}
+          {look}
+        </div>
       </div>
       <header className="sp-card sp-header sp-no-print">
         <div className="sp-header__icon" aria-hidden="true">

@@ -1,4 +1,4 @@
-import { locationBrief, US_BENCHMARK } from '../../domain/areaBrief';
+import { BACHELORS_LABEL, locationBrief, pct1, US_BENCHMARK } from '../../domain/areaBrief';
 import { num, usd0 } from '../../domain/format';
 import type { Area, AreaRing, Property } from '../../domain/types';
 import { DotJoin } from '../hero/DotJoin';
@@ -12,7 +12,6 @@ export interface LocationBriefProps {
   print?: boolean;
 }
 
-const wholePct = (ratio: number) => `${Math.round(ratio * 100)}%`;
 
 /** A figure and its unit stay on one line: "1 mile", "0.2 mi", "24.1 minutes" break before the figure, not inside. */
 const keepUnits = (text: string) => text.replace(/(\d) (miles?|mi|minutes|min|years)\b/g, '$1\u00a0$2');
@@ -25,7 +24,7 @@ const ROWS: Array<{ label: string; ring: (r: AreaRing) => string; us: string }> 
   { label: 'Households', ring: (r) => num(r.households), us: '—' },
   { label: 'Median household income', ring: (r) => usd0(r.medianIncome), us: usd0(US_BENCHMARK.medianIncome) },
   { label: 'Median age', ring: (r) => r.medianAge.toFixed(1), us: US_BENCHMARK.medianAge.toFixed(1) },
-  { label: "Bachelor's degree", ring: (r) => wholePct(r.bachelorsPct), us: wholePct(US_BENCHMARK.bachelorsPct) },
+  { label: BACHELORS_LABEL, ring: (r) => pct1(r.bachelorsPct), us: pct1(US_BENCHMARK.bachelorsPct) },
   { label: 'Mean commute', ring: (r) => `${r.meanCommuteMin.toFixed(1)} min`, us: `${US_BENCHMARK.meanCommuteMin.toFixed(1)} min` },
 ];
 
@@ -133,8 +132,10 @@ export function LocationBrief({ property, area, print }: LocationBriefProps) {
             <ul className="sp-brief__stops">
               {stops.map((t) => (
                 <li key={`${t.name}-${t.distanceMi}`}>
-                  <Icon name={t.type === 'Rail' ? 'train' : 'people'} size={14} label={t.type} />
+                  {/* The kind of stop is a word as well as an icon: bus and rail are not told apart by the drawing alone. */}
+                  <Icon name={t.type === 'Rail' ? 'train' : 'bus'} size={14} />
                   <span className="sp-brief__stop-name">{t.name}</span>
+                  <span className="sp-transit-kind">{t.type === 'Rail' ? 'Rail' : 'Bus'}</span>
                   <span className="sp-num">{t.distanceMi.toFixed(1)}&nbsp;mi</span>
                 </li>
               ))}

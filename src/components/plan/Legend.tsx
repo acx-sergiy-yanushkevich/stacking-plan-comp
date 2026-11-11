@@ -1,5 +1,5 @@
 import type { LegendItem } from '../../domain/lenses';
-import { num, pct } from '../../domain/format';
+import { apportion, num, pct } from '../../domain/format';
 
 /** An entry for something drawn on the plan that is not a state of the lens: building use (the lobby). */
 export interface LegendExtra {
@@ -36,12 +36,16 @@ export function buildingUse(floors: ReadonlyArray<{ floor: { nonLeasable: number
 
 /** Legend whose items carry the SF and share they currently cover; an overlay carries its SF only. */
 export function Legend({ items, extras, note, id, compact }: LegendProps) {
+  // The shares as printed: apportioned together, so the legend's percentages add up to its total.
+  const counted = items.filter((i) => !i.overlay && i.sf > 0 && i.share > 0);
+  const printed = new Map(apportion(counted.map((i) => i.share)).map((s, k) => [counted[k], s]));
+  const share = (i: LegendItem) => printed.get(i) ?? i.share;
   return (
     <div className="sp-legend" id={id} aria-label="Legend">
       {items
         .filter((i) => i.sf > 0 || !compact)
         .map((i) => (
-          <span key={i.tone + i.label} className="sp-legend__item" title={i.overlay ? `${i.label}: ${num(i.sf)} SF, also counted in its rent band` : `${i.label}: ${num(i.sf)} SF${i.share > 0 ? `, ${pct(i.share)} of leasable` : ''}`}>
+          <span key={i.tone + i.label} className="sp-legend__item" title={i.overlay ? `${i.label}: ${num(i.sf)} SF, also counted in its rent band` : `${i.label}: ${num(i.sf)} SF${i.share > 0 ? `, ${pct(share(i))} of leasable` : ''}`}>
             <span
               className={`sp-legend__swatch ${i.pattern ? `sp-legend__swatch--${i.pattern}` : ''}`}
               style={{ backgroundColor: i.pattern === 'dashed' ? 'transparent' : `var(--tone-${i.tone}-fill)`, borderColor: `var(--tone-${i.tone}-edge)`, color: `var(--tone-${i.tone}-edge)` }}
@@ -52,7 +56,7 @@ export function Legend({ items, extras, note, id, compact }: LegendProps) {
                 carries its SF and says so, and no share, so the shares printed add up to 100%. */}
             {i.sf > 0 && (
               <span className="sp-legend__num">
-                {i.overlay ? `${num(i.sf)} SF · also in its band` : `${num(i.sf)}${i.share > 0 ? ` · ${pct(i.share)}` : ''}`}
+                {i.overlay ? `${num(i.sf)} SF · also in its band` : `${num(i.sf)}${i.share > 0 ? ` · ${pct(share(i))}` : ''}`}
               </span>
             )}
           </span>

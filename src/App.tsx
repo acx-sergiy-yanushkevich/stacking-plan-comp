@@ -30,7 +30,7 @@ import { svgToPng } from './lib/exportPng';
 import { RECORD_REQUEST } from './components/map/recordSignal';
 import { useIsNarrow, useIsPhone, usePrefersReducedMotion } from './lib/useMedia';
 import { selectionSelector, useClearOfSheet } from './components/stack/aboveSheet';
-import { clearSelection } from './components/plan/actions';
+import { clearSelection, floorKept, isToolPanel, TOOL_CLOSE } from './components/plan/actions';
 import { focusSegment, refocusTrigger, rememberTrigger } from './state/focusStore';
 import { Patterns } from './components/plan/Patterns';
 import { fmtDate } from './domain/dates';
@@ -230,23 +230,25 @@ function Shell() {
     // Closing the panel a KPI opened returns focus to that KPI.
     rememberTrigger();
     switch (a) {
+      // Leased and Pipeline are the "Color by" switches: they change how the plan is coloured and nothing
+      // else. An open panel, a search or a selection stays as it was (round 18: Leased closed the brief).
       case 'status':
-        patch({ lens: 'status', mode: 'building', select: null, q: '', window: null, req: null, inquiry: null, bucket: null });
+        patch({ lens: 'status', bucket: null });
         break;
       case 'find':
-        patch({ mode: 'find', select: null, floor: null, window: null, bucket: null });
+        patch({ mode: 'find', select: null, floor: floorKept(state.view, state.floor), window: null, bucket: null });
         break;
       case 'find-largest':
-        patch({ mode: 'find', req: model.kpis.maxContiguous.size, max: null, by: null, inquiry: null, select: null, floor: null, window: null, bucket: null });
+        patch({ mode: 'find', req: model.kpis.maxContiguous.size, max: null, by: null, inquiry: null, select: null, floor: floorKept(state.view, state.floor), window: null, bucket: null });
         break;
       case 'expiry-worklist':
-        patch({ lens: 'expiry', mode: 'worklist', window: '12', select: null, floor: null, req: null, inquiry: null, bucket: null });
+        patch({ lens: 'expiry', mode: 'worklist', window: '12', select: null, floor: floorKept(state.view, state.floor), req: null, inquiry: null, bucket: null });
         break;
       case 'timeline':
         patch({ view: 'timeline' });
         break;
       case 'deals':
-        patch({ lens: 'deals', mode: 'building', select: null, window: null, req: null, inquiry: null, bucket: null });
+        patch({ lens: 'deals', bucket: null });
         break;
     }
     focusAfterKpi(a);
@@ -270,6 +272,18 @@ function Shell() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return;
       const el = focused();
+      // An open tool panel answers Escape wherever focus is, outside a field or a popover: after a link to
+      // `?mode=brief` focus is on the page, and a click on the brief's text moves it to <main> (round 18).
+      // The brief narrows first; the panel closes next. Inside the panel its own handler does the same.
+      if (!el?.closest('.sp-ins, .sp-pop__panel, input, select, textarea') && (mode === 'brief' || isToolPanel(mode))) {
+        e.preventDefault();
+        if (mode === 'brief') patch({ mode: 'area' });
+        else {
+          patch(TOOL_CLOSE[mode as keyof typeof TOOL_CLOSE]);
+          refocusTrigger();
+        }
+        return;
+      }
       if (el && el.closest(`.sp-ins, .sp-pop__panel, .sp-sheet, ${stageOwnsEscape ? '.sp-stage, ' : ''}input, select, textarea`)) return;
       if (state.bucket !== null || state.q || state.window || state.req !== null || state.inquiry) {
         patch({ bucket: null, q: '', window: null, req: null, max: null, by: null, inquiry: null, mode: 'building' });
@@ -277,19 +291,26 @@ function Shell() {
       }
     };
     return on('keydown', onKey);
-  }, [state.bucket, state.q, state.window, state.req, state.inquiry, patch, stageOwnsEscape]);
+  }, [state.bucket, state.q, state.window, state.req, state.inquiry, patch, stageOwnsEscape, mode]);
 
+  // Set after the first render: a tool panel that mounts later was opened by a click and takes focus (Inspector).
+  const pageReady = useRef(false);
+  useEffect(() => {
+    pageReady.current = true;
+  }, []);
   // `brief` is the Area panel widened to the full page: laid out as the Area panel, with the plan put away.
   const panel = mode === 'brief' ? 'area' : mode;
   const wide = mode === 'brief';
   const inspector = useMemo(
-    () => <Inspector model={model} state={state} patch={patch} mode={mode} areaPanel={areaPanel} areaPreview={areaPreview} />,
+    () => <Inspector model={model} state={state} patch={patch} mode={mode} areaPanel={areaPanel} areaPreview={areaPreview} pageReady={pageReady.current} />,
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [model, state, patch, mode, area],
   );
   const view = shownView(state.view, phone);
   // The building view shows a floor itself; the inspector joins it for a suite, a search, the worklist or issues.
-  const showInspector = view === 'building' ? panel !== 'building' && panel !== 'floor' : view !== 'floor' || panel === 'block';
+  // The Floor view is a floor itself too: there the inspector joins it for a suite or a tool panel (round 18:
+  // only a suite opened it, so Area, Find space, the worklist and the KPI shortcuts opened nothing).
+  const showInspector = view === 'building' || view === 'floor' ? panel !== 'building' && panel !== 'floor' : true;
   const sheetOpen = narrow && panel !== 'building';
   // A sheet that opened for a selection (a suite, a floor) must not hide it: the page keeps the chosen block
   // or row whole above the sheet's top edge, follows the sheet when it grows, and tells the sheet how much

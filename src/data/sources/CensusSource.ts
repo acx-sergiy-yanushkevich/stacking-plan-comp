@@ -2,7 +2,7 @@ import type { Area, AreaRing, Property } from '../../domain/types';
 import type { AreaOptions } from './DataSource';
 
 export const TIGERWEB_URL = 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer/0/query';
-export const ACS_URL = 'https://api.census.gov/data/2023/acs/acs5';
+export const ACS_URL = 'https://api.census.gov/data/2024/acs/acs5';
 export const ACS_VARS = ['B01003_001E', 'B19013_001E', 'B01002_001E', 'B11001_001E', 'B15003_022E', 'B15003_001E', 'B08013_001E', 'B08012_001E'] as const;
 export const METRES_PER_MILE = 1609.34;
 const RING_MILES: Array<AreaRing['miles']> = [1, 3, 5];
@@ -160,7 +160,7 @@ export async function acsCounty(stateFips: string, countyFips: string, key: stri
   return parseAcs(table);
 }
 
-export const CENSUS_SOURCE_LABEL = 'US Census Bureau, ACS 5-year 2023 (tract aggregate, medians approximated)';
+export const CENSUS_SOURCE_LABEL = 'US Census Bureau, ACS 5-year 2020–2024 (tract aggregate, medians approximated)';
 
 /**
  * Demographics from the Census Bureau: TIGERweb lists the tracts inside each ring, the ACS API
@@ -193,7 +193,7 @@ export class CensusSource {
       if (rings.every((r) => r.population === 0)) return sample;
       return {
         source: CENSUS_SOURCE_LABEL,
-        asOf: '2023',
+        asOf: '2024',
         sample: false,
         rings,
         transit: p.area.transit,

@@ -84,7 +84,10 @@
 .sp-map-floor > .sp-flabel__fact > .sp-flabel__sep { position: absolute; color: transparent; pointer-events: none; }
 /* An empty spacer (a flex item keeps its width): a zero-width space here would be read by axe as text between
    the share and the first fact, so the row's words would no longer match its name. */
-.sp-map-floor .sp-dotrun__in::before { content: ''; flex: none; width: calc(var(--sp-map-pct) + 0.8em); }
+/* It is one line tall: when the first fact does not fit beside it, the fact wraps to a line of its own under
+   the share, instead of onto an empty line of no height, where it was drawn over the share (round 18:
+   Floor 12 at 1180–1320 px). */
+.sp-map-floor .sp-dotrun__in::before { content: ''; flex: none; width: calc(var(--sp-map-pct) + 0.8em); height: 1lh; }
 .sp-map-floor .sp-dotrun__in > .sp-dotrun__part:first-child::before,
 .sp-map-floor .sp-dotrun__in > .sp-flabel__last:first-child > .sp-dotrun__part:first-child::before {
   content: '·' / ''; position: absolute; left: 0; top: 0; width: 0.8em; text-align: center;
@@ -151,11 +154,12 @@
 .sp-map-fallback__band:hover rect { stroke: var(--sp-color-brand-strong); }
 
 /* Area panel (inspector). */
-.sp-area { display: flex; flex-direction: column; gap: var(--sp-space-3); padding: var(--sp-space-4); font-size: var(--sp-text-13); }
+/* The panel body already has its inset: the Area content starts flush with the panel header, as every other panel does. */
+.sp-area { display: flex; flex-direction: column; gap: var(--sp-space-3); padding: 0 0 var(--sp-space-4); font-size: var(--sp-text-13); }
 .sp-area__head { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 .sp-area__sub { margin-top: var(--sp-space-2); }
 .sp-area-transit { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.sp-area-transit li { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.sp-area-transit li { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
 .sp-area-transit__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-area--wide { padding: var(--sp-space-2) 0 0; }
 .sp-area__households { grid-column: 1 / -1; font-size: var(--sp-text-11); color: var(--sp-color-text-faint); margin-top: -2px; }

@@ -17,8 +17,10 @@
  * flags and queries on the component's own element, focus read from its shadow root) and no other
  * file changes.
  *
- * What is not a host matter and is used directly: an element's own API (`getBoundingClientRect`,
- * `getComputedStyle(el)`, `ResizeObserver`, `MutationObserver`, `CSS.escape`), the browser's media
+ * Measuring and watching an element also goes through here (`computedStyle`, `sizeObserver`,
+ * `mutationObserver`): they are globals of the window, which a host without one supplies or leaves out
+ * (each caller then measures once). What is not a host matter and is used directly: an element's own
+ * API (`getBoundingClientRect`, `CSS.escape`), the browser's media
  * APIs a feature probes for itself (`MediaRecorder`, `canvas.captureStream`), and the language's own
  * timers, `performance.now()` and `URL`. They work the same on an element wherever it is hosted.
  *
@@ -84,6 +86,21 @@ export interface Host {
   cancelFrame(handle: number | null): void;
   /** Leave a named handle where a test script driving the page can find it. */
   expose(name: string, value: unknown): void;
+
+  // ── Measuring and watching an element ──────────────────────────────────────────────────────────
+  /** The element's computed style: its padding, font and the like, as the page lays it out. */
+  computedStyle(element: Element): CSSStyleDeclaration | null;
+  /** An observer that calls `callback` when an observed element changes size; `null` where there is none. */
+  sizeObserver(callback: () => void): ElementWatch | null;
+  /** An observer that calls `callback` when the children under an observed node change; `null` where there is none. */
+  mutationObserver(callback: () => void): ElementWatch | null;
+}
+
+/** The part of a `ResizeObserver` or `MutationObserver` the plan uses. */
+export interface ElementWatch {
+  observe(target: Element, options?: MutationObserverInit): void;
+  unobserve?(target: Element): void;
+  disconnect(): void;
 }
 
 /** What can be listened for on the whole page, and the event each one brings. */
@@ -95,6 +112,7 @@ export interface HostEvents {
   resize: UIEvent;
   beforeprint: Event;
   afterprint: Event;
+  scroll: Event;
 }
 
 export interface HostMedia {
@@ -125,6 +143,8 @@ export interface BrowserPage extends Listens {
   };
   requestAnimationFrame?(callback: (time: number) => void): number;
   cancelAnimationFrame?(handle: number): void;
+  ResizeObserver?: new (callback: () => void) => { observe(target: Element): void; unobserve(target: Element): void; disconnect(): void };
+  MutationObserver?: new (callback: () => void) => { observe(target: Node, options?: MutationObserverInit): void; disconnect(): void };
   document: Listens & {
     title: string;
     documentElement: Element & {
@@ -235,6 +255,13 @@ export function createBrowserHost(page: BrowserPage): Host {
     expose: (name, value) => {
       (page as unknown as Record<string, unknown>)[name] = value;
     },
+    computedStyle: (element) => page.getComputedStyle(element) as CSSStyleDeclaration,
+    sizeObserver: (callback) => (page.ResizeObserver ? new page.ResizeObserver(callback) : null),
+    mutationObserver: (callback) => {
+      if (!page.MutationObserver) return null;
+      const watch = new page.MutationObserver(callback);
+      return { observe: (target, options) => watch.observe(target, options ?? { childList: true, subtree: true }), disconnect: () => watch.disconnect() };
+    },
   };
 }
 
@@ -264,6 +291,9 @@ export const NO_HOST: Host = {
   requestFrame: () => null,
   cancelFrame: () => {},
   expose: () => {},
+  computedStyle: () => null,
+  sizeObserver: () => null,
+  mutationObserver: () => null,
 };
 
 let host: Host | null = null;
@@ -315,3 +345,7 @@ export const onFontsLoaded = (listener: () => void): void => current().onFontsLo
 export const requestFrame = (callback: (time: number) => void): number | null => current().requestFrame(callback);
 export const cancelFrame = (handle: number | null): void => current().cancelFrame(handle);
 export const expose = (name: string, value: unknown): void => current().expose(name, value);
+
+export const computedStyle = (element: Element): CSSStyleDeclaration | null => current().computedStyle(element);
+export const sizeObserver = (callback: () => void): ElementWatch | null => current().sizeObserver(callback);
+export const mutationObserver = (callback: () => void): ElementWatch | null => current().mutationObserver(callback);

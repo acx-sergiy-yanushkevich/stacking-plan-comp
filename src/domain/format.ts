@@ -9,6 +9,25 @@ export const sf = (n: number) => `${int.format(n)} SF`;
 export const num = (n: number) => int.format(n);
 export const pct = (ratio: number) => pct1.format(ratio);
 
+/**
+ * Shares rounded to tenths of a percent so that, printed, they add up to their own total rounded once
+ * (largest remainder): eight legend shares of 245,900 recorded SF over 245,400 leasable print a sum of
+ * 100.2%, not the 100.4% that rounding each one alone gave (round 18). Each result is within 0.1 point of
+ * its share; the order of the input is kept.
+ */
+export function apportion(shares: readonly number[]): number[] {
+  const units = shares.map((s) => s * 1000);
+  const floors = units.map(Math.floor);
+  let left = Math.round(units.reduce((a, b) => a + b, 0)) - floors.reduce((a, b) => a + b, 0);
+  const order = units.map((u, i) => [u - floors[i], i] as const).sort((a, b) => b[0] - a[0] || a[1] - b[1]);
+  for (const [, i] of order) {
+    if (left <= 0) break;
+    floors[i] += 1;
+    left -= 1;
+  }
+  return floors.map((f) => f / 1000);
+}
+
 const dollars = (v: number) => (Number.isInteger(v) ? `$${int.format(v)}` : money.format(v));
 
 /** "$31.50/SF/yr FSG": a rate always carries its unit and lease type. */

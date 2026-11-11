@@ -1,4 +1,5 @@
 import { createContext, useContext, useLayoutEffect, useRef, useState } from 'react';
+import { computedStyle, sizeObserver } from './host';
 
 /**
  * A width, in CSS px, for everything inside to be drawn at instead of the width it measures. The
@@ -8,25 +9,29 @@ import { createContext, useContext, useLayoutEffect, useRef, useState } from 're
  */
 export const FixedWidth = createContext<number | null>(null);
 
-/** Element width tracked with a ResizeObserver (falls back to the initial measure), or the `FixedWidth` it sits in. */
-export function useWidth<T extends HTMLElement>(fallback = 960): [React.RefObject<T | null>, number] {
+/**
+ * The content-box width of the referenced element (its padding is not drawable space), never below `min`,
+ * tracked as it resizes; or the `FixedWidth` it sits in. Measured before paint, so an SVG is never drawn at
+ * the wrong width for a frame. Where nothing is laid out (SSR, tests) it is `fallback`; where the host has
+ * no size observer it is measured once. The Stack and the Timeline both use it (round 18: there were two).
+ */
+export function useWidth<T extends HTMLElement>(fallback = 960, min = 0): [React.RefObject<T | null>, number] {
   const ref = useRef<T | null>(null);
   const fixed = useContext(FixedWidth);
   const [width, setWidth] = useState(fallback);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el || fixed !== null) return;
-    // Content box: an SVG drawn at this width inside a padded container must not be rescaled.
     const measure = () => {
-      const cs = getComputedStyle(el);
-      const pad = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
-      setWidth(Math.max(0, Math.floor(el.getBoundingClientRect().width - pad)));
+      const cs = computedStyle(el);
+      const pad = cs ? (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0) : 0;
+      setWidth(Math.max(min, Math.floor(el.clientWidth - pad)));
     };
     measure();
-    if (typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [fixed]);
+    const watch = sizeObserver(measure);
+    if (!watch) return;
+    watch.observe(el);
+    return () => watch.disconnect();
+  }, [fixed, min]);
   return [ref, fixed ?? width];
 }

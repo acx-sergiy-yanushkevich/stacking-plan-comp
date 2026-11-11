@@ -1,10 +1,11 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { computedStyle, sizeObserver } from '../../lib/host';
 import { LENSES, type LensId } from '../../domain/lenses';
 import { canShowLeaseTerm, canUseLens } from '../../domain/safe';
 import { shownView, type PlanState, type View } from '../../state/planState';
 import { Button, Icon, Segmented, SelectField, TextField } from '../ui';
 import { rememberTrigger } from '../../state/focusStore';
-import { openArea } from '../plan/actions';
+import { floorKept, openArea } from '../plan/actions';
 import { useIsPhone } from '../../lib/useMedia';
 import { measure } from '../../lib/textFit';
 import { SEARCH_HINTS, hintThatFits, prospectFirst } from './toolbarRules';
@@ -40,15 +41,16 @@ function useHintRoom(): [React.RefObject<HTMLDivElement | null>, { room: number;
     const input = ref.current?.querySelector('input');
     if (!input) return;
     const read = () => {
-      const cs = getComputedStyle(input);
+      const cs = computedStyle(input);
+      if (!cs) return;
       const edges = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0) + (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.borderRightWidth) || 0);
       const room = Math.floor(input.getBoundingClientRect().width - edges - CLEAR_ROOM);
       const font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
       setFit((was) => (was && was.room === room && was.font === font ? was : { room, font }));
     };
     read();
-    if (typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(read);
+    const ro = sizeObserver(read);
+    if (!ro) return;
     ro.observe(input);
     return () => ro.disconnect();
   }, []);
@@ -68,20 +70,23 @@ export function Toolbar({ state, patch }: ToolbarProps) {
     if (state.mode === mode) patch({ mode: 'building', req: null, max: null, by: null, inquiry: null, window: null });
     else {
       rememberTrigger();
-      patch({ mode, select: null, floor: null, window: mode === 'worklist' ? state.window ?? '12' : null });
+      patch({ mode, select: null, floor: floorKept(state.view, state.floor), window: mode === 'worklist' ? state.window ?? '12' : null });
     }
   };
+  // While the brief has the page, the plan is put away: a change of view, lens or search narrows the brief
+  // back to the Area panel, so the change is seen (round 18: the tabs changed the URL and nothing else).
+  const toPlan = (p: Partial<PlanState>) => patch(state.mode === 'brief' ? { ...p, mode: 'area' } : p);
   const [searchRef, hintFit] = useHintRoom();
   const hint = hintThatFits(state.safe ? SEARCH_HINTS.safe : SEARCH_HINTS.owner, hintFit ? hintFit.room : null, (text) => measure(text, hintFit?.font ?? ''));
   return (
     <section className="sp-card sp-toolbar sp-no-print" aria-label="Views and filters">
-      <Segmented aria-label="View" size="lg" options={views} value={view} onChange={(v) => patch({ view: v, floor: v === 'stack' ? null : state.floor })} />
+      <Segmented aria-label="View" size="lg" options={views} value={view} onChange={(v) => toPlan({ view: v, floor: v === 'stack' ? null : state.floor })} />
       <div className="sp-toolbar__group sp-toolbar__lens">
         <span className="sp-toolbar__label">Color by</span>
-        <Segmented aria-label="Color lens" options={lenses.map((l) => ({ id: l.id, label: l.label, title: l.hint }))} value={lens} onChange={(next) => patch({ lens: next })} />
+        <Segmented aria-label="Color lens" options={lenses.map((l) => ({ id: l.id, label: l.label, title: l.hint }))} value={lens} onChange={(next) => toPlan({ lens: next })} />
       </div>
       <div className="sp-toolbar__lens-select">
-        <SelectField label="Color by" hideLabel value={lens} onChange={(e) => patch({ lens: e.target.value as LensId })}>
+        <SelectField label="Color by" hideLabel value={lens} onChange={(e) => toPlan({ lens: e.target.value as LensId })}>
           {lenses.map((l) => (
             <option key={l.id} value={l.id}>
               Color by {l.label}
@@ -94,7 +99,7 @@ export function Toolbar({ state, patch }: ToolbarProps) {
       <div className="sp-toolbar__find">
         <div className="sp-toolbar__search" ref={searchRef}>
           {/* The field is named for the search it does: a prospect-safe search finds no tenant or prospect. */}
-          <TextField label={state.safe ? SEARCH_HINTS.safe[0] : SEARCH_HINTS.owner[0]} hideLabel kind="search" placeholder={hint} value={state.q} onChange={(e) => patch({ q: e.target.value })} onClear={() => patch({ q: '' })} />
+          <TextField label={state.safe ? SEARCH_HINTS.safe[0] : SEARCH_HINTS.owner[0]} hideLabel kind="search" placeholder={hint} value={state.q} onChange={(e) => toPlan({ q: e.target.value })} onClear={() => toPlan({ q: '' })} />
         </div>
         {/* Every view has Find space and Area (the area around the building was too hidden as a Map-only
             button); the one prospect-safe withholds (Worklist) comes last, so its empty place moves nothing. */}
@@ -109,7 +114,7 @@ export function Toolbar({ state, patch }: ToolbarProps) {
               if (state.mode === 'area' || state.mode === 'brief') patch({ mode: 'building' });
               else {
                 rememberTrigger();
-                openArea(patch);
+                openArea(patch, floorKept(state.view, state.floor));
               }
             }}
             title="Demographics, transit and amenities around the property"

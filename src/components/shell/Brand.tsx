@@ -1,3 +1,5 @@
+import type { MiniStackDrawing } from '../../data/mock/portfolio';
+
 /**
  * The product's own drawings: the Stax mark (a small stacking plan: floor bars, one suite open) and the
  * lockup that sets it beside the name. Colours live in shell.css as literal hex, keyed to the theme and
@@ -36,5 +38,29 @@ export function StaxLockup({ size }: { size?: number }) {
         <span className="sp-lockup__by">by Ascendix</span>
       </span>
     </span>
+  );
+}
+
+/**
+ * A building's icon: a tiny stacking plan on a tile, four floors of suites in the building's tone and one
+ * suite open in the brand orange. Each building draws its own (data/mock/portfolio.ts), so the switcher's
+ * rows tell apart at a glance. Decorative: the row's name says which building it is.
+ */
+export function MiniStack({ drawing, size = 22 }: { drawing: MiniStackDrawing; size?: number }) {
+  const x0 = 4, width = 14, gap = 1, h = 3, step = 4;
+  return (
+    <svg className="sp-ministack" width={size} height={size} viewBox="0 0 22 22" aria-hidden="true" focusable="false">
+      <rect x="0.5" y="0.5" width="21" height="21" rx="5" className="sp-ministack__tile" />
+      {drawing.floors.map((suites, f) => {
+        const free = width - gap * (suites.length - 1);
+        let x = x0;
+        return suites.map((share, i) => {
+          const w = free * share;
+          const rect = <rect key={`${f}-${i}`} x={x} y={4 + f * step} width={w} height={h} rx={0.8} fill={drawing.open[0] === f && drawing.open[1] === i ? '#ff9c00' : drawing.tone} />;
+          x += w + gap;
+          return rect;
+        });
+      })}
+    </svg>
   );
 }

@@ -74,10 +74,13 @@ describe('Header with Prospect-safe on and off: the same controls in the same pl
     expect(text(/<div class="sp-header__asof[^"]*">(.*?)<\/button>/.exec(actions('?safe=1&asOf=2028-01-01'))![1])).toBe('As of Nov 9, 2026');
   });
 
-  it('the slot is empty, or holds the chip that says prospect-safe is on; Data issues is not in the header', () => {
+  it('embedded: the slot is empty, or holds the chip that says prospect-safe is on; Data issues is not in the header', () => {
     const slot = (query: string) => /<div class="sp-header__slot">(.*?)<\/div>/.exec(actions(query))?.[1] ?? 'MISSING';
-    expect(slot('')).toBe('');
-    expect(text(slot('?safe=1'))).toBe('Prospect-safe on');
+    expect(slot('?skin=classic')).toBe('');
+    expect(text(slot('?skin=classic&safe=1'))).toBe('Prospect-safe on');
+    // The product bar has no slot: the pressed Prospect-safe button is what says the mode is on.
+    expect(slot('')).toBe('MISSING');
+    expect(slot('?safe=1')).toBe('MISSING');
     for (const q of ['', '?safe=1', '?skin=classic', '?skin=aurora']) {
       expect(render(q).html, q).not.toContain('Data issues');
       expect(render(q).html, q).not.toContain('sp-header__stale');
@@ -85,16 +88,36 @@ describe('Header with Prospect-safe on and off: the same controls in the same pl
     // The chip is in the slot and nowhere else: the title row is the same with the mode on and off.
     const title = (query: string) => { const { html } = render(query); return text(html.slice(html.indexOf('class="sp-header__title"'), html.indexOf('class="sp-header__facts"'))); };
     expect(title('?safe=1')).toBe(title(''));
-    expect(render('?safe=1').html.match(/Prospect-safe on/g)).toHaveLength(1);
+    expect(render('?skin=classic&safe=1').html.match(/Prospect-safe on/g)).toHaveLength(1);
   });
 
-  it('the switch keeps the width of its bold label whether it is on or off', () => {
-    for (const query of ['', '?safe=1']) {
+  it('embedded: the switch keeps the width of its bold label whether it is on or off', () => {
+    for (const query of ['?skin=classic', '?skin=classic&safe=1']) {
       const sw = /<button type="button" role="switch"[^>]*>(.*?)<\/button>/.exec(actions(query))![1];
       expect(sw, query).toContain('<span class="sp-switch__label"><span>Prospect-safe</span><span class="sp-switch__label-hold" aria-hidden="true">Prospect-safe</span></span>');
     }
-    expect(actions('?safe=1')).toMatch(/role="switch" aria-checked="true"/);
-    expect(actions('')).toMatch(/role="switch" aria-checked="false"/);
+  });
+
+  it('product bar: Prospect-safe is a text button with the half-filled circle, still a switch, the same label on and off', () => {
+    for (const [query, on] of [['', 'false'], ['?safe=1', 'true']]) {
+      const tag = /<button type="button" role="switch"[^>]*>/.exec(actions(query))![0];
+      expect(tag, query).toContain(`aria-checked="${on}"`);
+      expect(tag, query).toContain('class="sp-btn sp-btn--neutral sp-safe"');
+      const sw = /<button type="button" role="switch"[^>]*>(.*?)<\/button>/.exec(actions(query))![1];
+      expect(text(sw), query).toBe('Prospect-safe');
+      expect(sw.match(/<svg/g), query).toHaveLength(1);
+    }
+  });
+
+  it('product bar: the as-of and Export buttons are words and a caret, no calendar or download icon', () => {
+    for (const query of ['', '?safe=1']) {
+      const asOf = /<div class="sp-header__asof[^"]*">.*?(<button.*?<\/button>)/.exec(actions(query))![1];
+      expect(asOf.match(/<svg/g), query).toHaveLength(1);
+      expect(asOf.indexOf('<svg'), query).toBeGreaterThan(asOf.indexOf('Nov 9, 2026'));
+    }
+    const exp = /<button[^>]*>(?:(?!<\/button>).)*?sp-header__export-label.*?<\/button>/.exec(actions(''))![0];
+    expect(exp.match(/<svg/g)).toHaveLength(1);
+    expect(exp.indexOf('<svg')).toBeGreaterThan(exp.indexOf('>Export<'));
   });
 });
 
@@ -157,7 +180,7 @@ describe('Header on a phone: the palette and the theme are a menu, not a row of 
 });
 
 describe('Header product bar and building card', () => {
-  const bar = (query: string) => /<div class="sp-card sp-topbar sp-no-print">(.*?)<\/div><header/.exec(render(query).html)?.[1] ?? null;
+  const bar = (query: string) => /<div class="sp-card sp-topbar sp-no-print"[^>]*>(.*?)<\/div><header/.exec(render(query).html)?.[1] ?? null;
   const strip = (html: string) => html.replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
   it('standalone: the bar carries the lockup, the switcher, the controls and the look, in that order', () => {
@@ -167,10 +190,13 @@ describe('Header product bar and building card', () => {
     expect(strip(b)).toMatch(/^Stax by Ascendix Preston Park Financial Center/);
     // The accessible name keeps the visible text (WCAG 2.5.3): a screen reader hears which building is open.
     expect(b).toMatch(/<button(?=[^>]*aria-label="Switch building: Preston Park Financial Center")(?=[^>]*aria-haspopup="menu")/);
-    // The switcher is the building's name and a chevron: no photo, no icon before the name.
+    // The switcher is the building's mini stack, the building's name and a caret: no photo.
     expect(b).not.toContain('<img');
     const sw = /<button[^>]*aria-label="Switch building: [^"]*"[^>]*>(.*?)<\/button>/.exec(b)![1];
-    expect(sw.indexOf('<svg')).toBeGreaterThan(sw.indexOf('sp-switcher__name'));
+    expect(sw.indexOf('class="sp-ministack"')).toBeLessThan(sw.indexOf('sp-switcher__name'));
+    expect(sw.lastIndexOf('<svg')).toBeGreaterThan(sw.indexOf('sp-switcher__name'));
+    // The controls and the look are one group, so they wrap together.
+    expect(b.indexOf('sp-topbar__controls')).toBeLessThan(b.indexOf('sp-header__actions'));
   });
 
   it('standalone: the card is the icon, the name and the facts; the controls are not in it', () => {
@@ -191,14 +217,21 @@ describe('Header product bar and building card', () => {
     expect(classic).toContain('sp-header__actions');
   });
 
-  it('the switcher menu lists the live building checked and five disabled sample entries', () => {
+  it('the switcher menu lists the live building checked, then every sample entry disabled, each with its own mini stack', () => {
     // Menu renders its items only when open: test the items through the helper the header builds them with.
     const items = switcherItems(property);
-    const labels = items.filter((i) => !('kind' in i) || i.kind === 'item').map((i) => (i as { label: string }).label);
-    expect(labels[0]).toBe('Preston Park Financial Center');
-    expect(labels.slice(1, 6)).toEqual(['Legacy West Tower II', 'Galleria Commerce Plaza', 'Trinity Riverfront Offices', 'Cedar Springs Exchange', 'Las Colinas Gateway']);
-    expect(items[1]).toMatchObject({ checked: true });
-    for (const i of items.slice(2, 7)) expect(i).toMatchObject({ disabled: true });
+    const rows = items.filter((i) => !('kind' in i) || i.kind === 'item') as Array<{ label: string; adornment?: unknown; disabled?: boolean; checked?: boolean }>;
+    expect(items[0]).toMatchObject({ kind: 'heading', label: 'Portfolio · 10 buildings' });
+    expect(rows).toHaveLength(10);
+    expect(rows[0]).toMatchObject({ label: 'Preston Park Financial Center', checked: true });
+    expect(rows.slice(1, 4).map((r) => r.label)).toEqual(['Legacy West Tower II', 'Galleria Commerce Plaza', 'Trinity Riverfront Offices']);
+    for (const r of rows.slice(1)) expect(r).toMatchObject({ disabled: true });
+    for (const r of rows) expect(r.adornment, r.label).toBeTruthy();
+    expect(items.at(-1)).toMatchObject({ kind: 'heading', label: 'Sample entries · only Preston Park Financial Center opens' });
+    // Each mini stack is drawn: four floors, one suite open in orange, in the building's own tone.
+    const html = renderToString(<>{rows.map((r, i) => <span key={i}>{r.adornment as never}</span>)}</>);
+    expect(html.match(/class="sp-ministack"/g)).toHaveLength(10);
+    expect(html.match(/fill="#ff9c00"/g)).toHaveLength(10);
   });
 });
 
@@ -230,12 +263,14 @@ describe('Header at 420 px and under: the title and one row of controls (round 1
     expect(drawn(asOf(at(421)))).toBe('As of Nov 9, 2026');
   });
 
-  it('the switch draws "Safe" and is read as "Prospect-safe", at the width of its bold word on and off', () => {
+  it('the switch draws "Safe" and is read as "Prospect-safe", on and off', () => {
     for (const query of ['', '?safe=1']) {
       const html = sw(at(390, query));
       expect(html).toContain('<span class="sp-sr-only">Prospect-safe</span>');
-      expect(html).toContain('<span class="sp-switch__label" aria-hidden="true"><span>Safe</span><span class="sp-switch__label-hold">Safe</span></span>');
+      expect(html).toContain('<span aria-hidden="true">Safe</span>');
     }
+    // Embedded: the switch keeps the width of its bold word.
+    expect(sw(at(390, '?skin=classic'))).toContain('<span class="sp-switch__label" aria-hidden="true"><span>Safe</span><span class="sp-switch__label-hold">Safe</span></span>');
   });
 
   it('no slot and no Data issues; Export keeps its word without a chevron; the same controls with prospect-safe on and off', () => {
@@ -253,9 +288,9 @@ describe('Header at 420 px and under: the title and one row of controls (round 1
     expect(order(own)).toEqual(['button', 'switch', 'button', 'menu']);
   });
 
-  it('from 421 px the slot is back, and the menu holds only the colors and the theme', () => {
+  it('from 421 px the embedded slot is back, and the menu holds only the colors and the theme', () => {
+    expect(at(421, '?skin=classic')).toContain('class="sp-header__slot"');
     const html = at(421);
-    expect(html).toContain('class="sp-header__slot"');
     expect(html).toContain('aria-label="Colors and theme"');
   });
 });

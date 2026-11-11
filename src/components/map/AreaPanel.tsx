@@ -52,7 +52,7 @@ export function AreaPanel({ model, area, expanded }: AreaPanelProps) {
     <section className="sp-area" aria-label="Area demographics and amenities">
       <header className="sp-area__head">
         <p className="sp-weak">
-          {property.city}, {property.state} · rings around the property
+          Rings around the property
         </p>
         {area?.sample && (
           <Chip tone="warn" icon="warning" title={area.source}>
@@ -140,15 +140,17 @@ export function AreaPanel({ model, area, expanded }: AreaPanelProps) {
           <div>
             <h3 className="sp-label sp-area__sub">Nearby transit</h3>
             {area.transit.length === 0 ? (
-              <p className="sp-weak">No stops within half a mile.</p>
+              <p className="sp-weak">No stops on record.</p>
             ) : (
               <ul className="sp-area-transit">
                 {[...area.transit]
                   .sort((a, b) => a.distanceMi - b.distanceMi)
                   .map((t) => (
                     <li key={`${t.name}-${t.distanceMi}`}>
-                      <Icon name={t.type === 'Rail' ? 'train' : 'people'} size={14} label={t.type} />
+                      {/* The kind of stop is a word as well as an icon: bus and rail are not told apart by the drawing alone. */}
+                  <Icon name={t.type === 'Rail' ? 'train' : 'bus'} size={14} />
                       <span className="sp-area-transit__name">{t.name}</span>
+                  <span className="sp-transit-kind">{t.type === 'Rail' ? 'Rail' : 'Bus'}</span>
                       <span className="sp-num sp-weak">{t.distanceMi.toFixed(1)} mi</span>
                     </li>
                   ))}
@@ -157,18 +159,10 @@ export function AreaPanel({ model, area, expanded }: AreaPanelProps) {
           </div>
 
           <footer className="sp-area__foot">
-            <p>Data: US Census Bureau ACS 5-year · OpenStreetMap</p>
-            <p className="sp-faint">{area.source}</p>
+            {/* Sample figures say so first; only live figures are credited to the Census. How to turn live
+                mode on is for the team (docs), not for a client looking at this panel. */}
+            <p>{area.sample ? area.source : `Area figures: ${area.source}. Amenities and transit: OpenStreetMap.`}</p>
             <p className="sp-faint">{US_BENCHMARK.source}</p>
-            {area.sample && (
-              <p className="sp-faint">
-                Add <code>?live=1&amp;census=KEY</code> for live figures (free key at{' '}
-                <a href="https://api.census.gov/data/key_signup.html" target="_blank" rel="noreferrer">
-                  api.census.gov/data/key_signup.html
-                </a>
-                )
-              </p>
-            )}
           </footer>
         </>
       )}

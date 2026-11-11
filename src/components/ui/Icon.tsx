@@ -6,9 +6,21 @@ export type IconName =
   | 'phone' | 'external' | 'close' | 'chevron-down' | 'chevron-left' | 'chevron-right' | 'play' | 'pause' | 'record'
   | 'map' | 'layers' | 'list' | 'info' | 'check' | 'arrow-left' | 'stack' | 'timeline' | 'floor' | 'plus' | 'file'
   | 'image' | 'table' | 'link' | 'video' | 'sparkle' | 'shield' | 'clock' | 'user' | 'compass' | 'tilt' | 'minus'
-  | 'dollar' | 'home' | 'people' | 'train' | 'coffee' | 'sun' | 'moon' | 'more' | 'expand' | 'collapse' | 'palette';
+  | 'dollar' | 'home' | 'people' | 'train' | 'coffee' | 'sun' | 'moon' | 'more' | 'expand' | 'collapse' | 'palette'
+  | 'contrast' | 'caret-down' | 'bus';
+
+/** Icons with a filled part, drawn under the stroke. */
+const FILLS: Partial<Record<IconName, string>> = {
+  contrast: 'M12 3a9 9 0 0 0 0 18z',
+  'caret-down': 'M8.5 10h7L12 14.5z',
+};
 
 const PATHS: Record<IconName, string> = {
+  // A circle, its left half filled (FILLS): the prospect-safe mode, half of the plan held back.
+  contrast: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 3v18',
+  bus: 'M6 3h12a2 2 0 0 1 2 2v12H4V5a2 2 0 0 1 2-2zM4 11h16M8 3v8M16 3v8M7 17v3M17 17v3M7.5 14h.01M16.5 14h.01',
+  // A small solid triangle, drawn in the box of a 14 px icon so it takes the chevron's place at its width.
+  'caret-down': 'M8.5 10h7L12 14.5z',
   more: 'M5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM19 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z',
   palette: 'M12 3a9 9 0 1 0 0 18c1.2 0 2-.8 2-1.8 0-.6-.3-1-.6-1.4-.3-.4-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8h1.8A4.5 4.5 0 0 0 21 10.2C21 6.2 17 3 12 3zM7.5 11.5h.01M10.5 7.5h.01M15 7.5h.01',
   sun: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
@@ -87,6 +99,7 @@ export function Icon({ name, size = 16, label, ...rest }: IconProps) {
       className="sp-icon"
       {...rest}
     >
+      {FILLS[name] && <path d={FILLS[name]} fill="currentColor" stroke="none" />}
       <path d={PATHS[name]} />
     </svg>
   );

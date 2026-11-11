@@ -29,7 +29,7 @@
 .sp-brief__table thead th { font-size: var(--sp-text-11); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sp-color-text-weak); }
 .sp-brief__us { color: var(--sp-color-text-weak); }
 .sp-brief__stops { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: var(--sp-text-12); }
-.sp-brief__stops li { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: var(--sp-space-2); align-items: center; }
+.sp-brief__stops li { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto auto; gap: var(--sp-space-2); align-items: center; }
 .sp-brief__foot { border-top: 1px solid var(--sp-color-border); padding-top: var(--sp-space-3); font-size: var(--sp-text-11); color: var(--sp-color-text-faint); display: flex; flex-direction: column; gap: 2px; }
 .sp-brief__foot p { margin: 0; }
 
@@ -37,3 +37,5 @@
   .sp-brief__heroes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sp-brief__cols { grid-template-columns: minmax(0, 1fr); }
 }
+/* The kind of stop, in words beside its icon. */
+.sp-transit-kind { font-size: var(--sp-text-11); color: var(--sp-color-text-weak); text-transform: uppercase; letter-spacing: .04em; }
