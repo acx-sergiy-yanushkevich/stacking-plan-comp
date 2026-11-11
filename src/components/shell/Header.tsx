@@ -7,7 +7,7 @@ import { Button, Chip, Icon, Menu, Segmented, Switch, useToastBoundary } from '.
 import { canTimeTravel, planDate } from '../../domain/safe';
 import { AsOfPopover } from './AsOfPopover';
 import { rememberTrigger } from '../../state/focusStore';
-import { useIsPhone, usePrefersDark } from '../../lib/useMedia';
+import { useIsPhone, useMedia, usePrefersDark } from '../../lib/useMedia';
 
 export type ExportKind = 'pdf' | 'png' | 'csv' | 'link' | 'video';
 
@@ -34,6 +34,20 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
   const palette = paletteOf(state);
   // A phone has no row to spare for how the plan looks: there the palette and the theme are a menu beside Export.
   const phone = useIsPhone();
+  // A phone of 420 px or less: the title and one row of controls. The date is an icon and the date, the
+  // switch says "Safe", Export drops its chevron, and Data issues moves into the menu beside Export (its
+  // count is on that button), because five full-size controls do not fit 352 px, nor 322 at 360.
+  const compact = useMedia('(max-width: 420px)');
+  const openIssues = () => {
+    if (state.mode !== 'issues') rememberTrigger();
+    patch({ mode: state.mode === 'issues' ? 'building' : 'issues', select: null, floor: null });
+  };
+  const issuesTitle = `${counts.error} errors, ${counts.warning} warnings, ${counts.info} notes. Open the list.`;
+  // Data issues are withheld from a prospect, so in prospect-safe mode the menu is the colors and theme alone.
+  const menuIssues = compact && !state.safe;
+  const menuLook = standalone && phone;
+  const menuLabel = menuIssues && menuLook ? 'Data issues, colors and theme' : menuIssues ? 'Data issues' : 'Colors and theme';
+  const menuName = menuIssues && issueTotal ? menuLabel.replace('Data issues', `Data issues (${issueTotal})`) : menuLabel;
   const themeLabel = dark ? 'Switch to light theme' : 'Switch to dark theme';
   const toggleTheme = () => patch({ theme: dark ? 'light' : 'dark' });
   // A toast may name a tenant or a prospect ("Would open Deal D8 (Vantage Robotics)…"): none survives the mode turning on.
@@ -96,37 +110,30 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
       </div>
       <div className="sp-header__actions">
         {/* The date the plan is drawn for: in prospect-safe mode that is today, whatever was asked for. */}
-        <AsOfPopover asOf={planDate(state.asOf, today, state.safe)} today={today} onChange={(asOf) => patch({ asOf })} miniTimeline={miniTimeline} locked={!canTimeTravel(state.safe)} />
+        <AsOfPopover asOf={planDate(state.asOf, today, state.safe)} today={today} onChange={(asOf) => patch({ asOf })} miniTimeline={miniTimeline} locked={!canTimeTravel(state.safe)} compact={compact} />
         {/* Turning it on drops a search in progress, the worklist, a projected as-of date and any toast: the state layer (applyPatch) and useToastBoundary do it, not this handler. */}
-        <Switch checked={state.safe} onChange={(safe) => patch({ safe })} label="Prospect-safe" title="Hide tenant names, contacts, rents, lease dates and prospects, and show the plan as of today" />
+        <Switch checked={state.safe} onChange={(safe) => patch({ safe })} label="Prospect-safe" shortLabel={compact ? 'Safe' : undefined} title="Hide tenant names, contacts, rents, lease dates and prospects, and show the plan as of today" />
         {/* One slot, two tenants. Data issues are withheld from a prospect, so in prospect-safe mode the slot
             holds the chip that says the mode is on. The slot is the same width either way (shell.css), so the
             controls wrap at the same point and the header is the same height with the mode on and off. */}
-        <div className="sp-header__slot">
-          {state.safe ? (
-            <Chip tone="brand" icon="shield" title="Tenant names, contacts, rents, lease dates and prospects are hidden">
-              Prospect-safe on
-            </Chip>
-          ) : (
-            <Button
-              icon="warning"
-              count={issueTotal}
-              active={state.mode === 'issues'}
-              onClick={() => {
-                if (state.mode !== 'issues') rememberTrigger();
-                patch({ mode: state.mode === 'issues' ? 'building' : 'issues', select: null, floor: null });
-              }}
-              title={`${counts.error} errors, ${counts.warning} warnings, ${counts.info} notes. Open the list.`}
-            >
-              Data issues
-            </Button>
-          )}
-        </div>
+        {!compact && (
+          <div className="sp-header__slot">
+            {state.safe ? (
+              <Chip tone="brand" icon="shield" title="Tenant names, contacts, rents, lease dates and prospects are hidden">
+                Prospect-safe on
+              </Chip>
+            ) : (
+              <Button icon="warning" count={issueTotal} active={state.mode === 'issues'} onClick={openIssues} title={issuesTitle}>
+                Data issues
+              </Button>
+            )}
+          </div>
+        )}
         <Menu
           label="Export"
           trigger={(p) => (
-            <Button {...p} icon="download" iconRight="chevron-down">
-              Export
+            <Button {...p} icon="download" iconRight={compact ? undefined : 'chevron-down'}>
+              <span className="sp-header__export-label">Export</span>
             </Button>
           )}
           items={[
@@ -138,13 +145,30 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
             { id: 'link', label: 'Copy link to this view', icon: 'link', onSelect: () => onExport('link') },
           ]}
         />
-        {/* A phone: the same two controls as a menu, on the row the other controls already take. */}
-        {standalone && phone && (
+        {/* A phone: the palette and the theme as a menu, on the row the other controls already take; at 420 px
+            or less, Data issues too, first. Its count is a badge on the button, drawn over it so that the
+            button is the same width with the mode on and off and nothing beside it moves. */}
+        {(menuLook || menuIssues) && (
           <Menu
-            label="Colors and theme"
-            trigger={(p) => <Button {...p} iconOnly icon="more" aria-label="Colors and theme" title="Colors and theme" />}
+            label={menuLabel}
+            trigger={(p) => (
+              <span className="sp-header__more">
+                <Button {...p} iconOnly icon="more" aria-label={menuName} title={menuIssues ? `${menuLabel}. ${issuesTitle}` : menuLabel} />
+                {menuIssues && issueTotal > 0 && (
+                  <span className="sp-btn__count sp-header__more-count" aria-hidden="true">
+                    {issueTotal}
+                  </span>
+                )}
+              </span>
+            )}
             items={[
-              ...(palette
+              ...(menuIssues
+                ? [
+                    { id: 'issues', label: state.mode === 'issues' ? 'Close data issues' : 'Data issues', icon: 'warning' as const, hint: `${counts.error} errors · ${counts.warning} warnings · ${counts.info} notes`, onSelect: openIssues },
+                    ...(menuLook ? [{ kind: 'separator' as const, id: 'issues-sep' }] : []),
+                  ]
+                : []),
+              ...(menuLook && palette
                 ? [
                     { kind: 'heading' as const, id: 'palette', label: 'Colors' },
                     ...PALETTES.map((p) => ({
@@ -157,7 +181,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
                     { kind: 'separator' as const, id: 'look-sep' },
                   ]
                 : []),
-              { id: 'theme', label: themeLabel, icon: dark ? ('sun' as const) : ('moon' as const), onSelect: toggleTheme },
+              ...(menuLook ? [{ id: 'theme', label: themeLabel, icon: dark ? ('sun' as const) : ('moon' as const), onSelect: toggleTheme }] : []),
             ]}
           />
         )}

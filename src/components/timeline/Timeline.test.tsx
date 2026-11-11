@@ -17,7 +17,7 @@ import { TimelineAxis } from './TimelineAxis';
 import { RolloverChips } from './RolloverChips';
 import { BAR_PAD, barLabel, endedNameFits, EXT_PAD, labelText, MIN_NAMED_BAR, NAME_FONT, SUB_FONT, tagWidth, tenantOfEnded, VACATED, wrapLabel, type LabelLine } from './barLabel';
 import { layoutStackedRows, packLanes, stackedLaneHeight, STACK_LANE_GAP, viewAxis } from './layout';
-import type { TimelineBar } from '../../domain/timeline';
+import { barSegment, type TimelineBar } from '../../domain/timeline';
 import { measure } from '../../lib/textFit';
 import { buildModel as planModel } from '../inspector/testModel';
 import { fmtDate } from '../../domain/dates';
@@ -224,7 +224,7 @@ describe('timeline labels when the as-of date has moved on', () => {
     expect(text('tl-hist-L13-U1')).toContain('Cirrus Energy · vacated');
   });
 
-  it('writes a label inside the bar, inside its extension or to the right of both: never across the bar\'s end', () => {
+  it('writes a label inside the bar, inside its extension, right after an ended bar or to the right of both: never across the bar\'s end', () => {
     let checked = 0;
     for (const asOf of DATES) {
       for (const bar of drawn(asOf).filter((b) => b.ext)) {
@@ -237,6 +237,11 @@ describe('timeline labels when the as-of date has moved on', () => {
           else if (t.place === 'ext') {
             expect(t.x, `${asOf} ${bar.key} "${t.name}" starts inside the extension`).toBeGreaterThanOrEqual(bar.ext!.x);
             expect(right, `${asOf} ${bar.key} "${t.name}" ends inside the extension`).toBeLessThanOrEqual(extEnd);
+          } else if (t.place === 'after') {
+            // Only an ended lease too short to say so on its bar or in its dashed box: it starts at the bar's end.
+            expect(bar.cls, `${asOf} ${bar.key}`).toContain('sp-tl-bar--projected');
+            expect(t.x, `${asOf} ${bar.key} "${t.name}" starts at the bar's end`).toBeGreaterThanOrEqual(barEnd);
+            expect(t.x, `${asOf} ${bar.key} "${t.name}" starts at the bar's end`).toBeLessThanOrEqual(barEnd + 8);
           } else expect(t.x, `${asOf} ${bar.key} "${t.name}" starts after the extension`).toBeGreaterThanOrEqual(extEnd);
         }
       }
@@ -251,11 +256,13 @@ describe('timeline labels when the as-of date has moved on', () => {
 
   it('keeps the lane to the right of an ended lease free when its bar is too short to say so on itself', () => {
     // As of May 2027 the café has been gone two months: its bar holds "Preston Park Café" and the dashed box
-    // after it is a few px wide. The label goes right of the as-of line, and the for-sale bar takes another lane.
+    // after it is a few px wide. The label starts at the bar's end and runs on across the as-of line, and
+    // the for-sale bar takes another lane.
     const bars = drawn('2027-05-01');
     const cafe = bars.find((b) => b.key === 'tl-L01-U1')!;
     const forSale = bars.find((b) => b.key === 'tl-A10')!;
-    expect(cafe.texts[0]).toMatchObject({ place: 'outside', name: 'Preston Park Café · vacated' });
+    expect(cafe.texts[0]).toMatchObject({ place: 'after', name: 'Preston Park Café · vacated' });
+    expect(cafe.texts[0].x - (cafe.rect.x + cafe.rect.w)).toBeLessThanOrEqual(8);
     expect(forSale.rect.y).not.toBe(cafe.rect.y);
   });
 
@@ -313,6 +320,86 @@ describe('timeline labels when the as-of date has moved on', () => {
     expect(packLanes([ended, next], asOf, false, () => false).map((l) => l.map((b) => b.key))).toEqual([['ended', 'next']]);
   });
 
+  /** The markup of one bar's group, as drawn as of `asOf`. */
+  function barMarkup(asOf: string, key: string, query = ''): string {
+    const html = renderToString(<TimelineView model={buildModel(asOf, false)} state={parseState(`?asOf=${asOf}${query}`, TODAY)} patch={() => {}} />).replace(/<!-- -->/g, '');
+    const at = html.indexOf(`data-bar="${key}"`);
+    expect(at, key).toBeGreaterThan(-1);
+    const open = html.lastIndexOf('<g class="sp-seg sp-tl-bar', at);
+    return html.slice(open, html.indexOf('<g class="sp-seg sp-tl-bar', at) === -1 ? undefined : html.indexOf('<g class="sp-seg sp-tl-bar', at));
+  }
+
+  // Round 17: from Jun 2027 Cirrus Energy's 2018–2027 bar took the tone, words and selection of availability
+  // A04, the suite's occupant now: "Available now · Ste 600 · $32–$34/SF/yr FSG · Quiet, 2 live deals" said of a past term.
+  it('an ended lease\'s history bar is the lease\'s own: the vacated tone, its own words, and it selects nothing', () => {
+    const cirrus = barMarkup('2027-06-01', 'tl-hist-L13-U1');
+    const aria = plain(/aria-label="([^"]*)"/.exec(cirrus)![1]);
+    const title = plain(/<title>([^<]*)<\/title>/.exec(cirrus)![1]);
+    expect(cirrus).toContain('fill="var(--tone-projected-fill)"');
+    expect(cirrus).not.toContain('--tone-available');
+    for (const said of [aria, title]) {
+      // (Month and year are joined by no-break spaces, so the date never breaks over a line.)
+      expect(said).toContain("Vacated\u00a0Mar\u00a0'27");
+      expect(said).toContain("Cirrus Energy left Mar\u00a0'27");
+      expect(said).toContain('Ste 600 · 21,400 SF');
+      expect(said).toContain('Sep 10, 2018 – Mar 31, 2027');
+      expect(said).not.toMatch(/Available|\$|live deal|Quiet/);
+    }
+    expect(aria).toMatch(/^Cirrus Energy · vacated/);
+    // Not a toggle that selects something else: it is marked unavailable and never shows as selected.
+    expect(cirrus).toContain('aria-disabled="true"');
+    expect(cirrus).not.toContain('aria-pressed');
+    const withA04 = barMarkup('2027-06-01', 'tl-hist-L13-U1', '&select=A04');
+    expect(withA04).not.toContain('is-selected');
+    expect(barMarkup('2027-06-01', 'tl-A04', '&select=A04')).toContain('is-selected');
+  });
+
+  // Round 17: as of Oct 2030 "Cirrus Energy · vacated" and the other ended leases were written right of the
+  // as-of line, years from bars that ended in 2027–2028 and carried no text.
+  it('writes an ended lease\'s label on its bar or right after its end, never past the as-of line', () => {
+    let after = 0;
+    for (const asOf of [...DATES, '2030-10-01']) {
+      for (const bar of drawn(asOf).filter((b) => b.cls.includes('sp-tl-bar--projected') && b.ext)) {
+        const barEnd = bar.rect.x + bar.rect.w;
+        for (const t of bar.texts) {
+          if (t.place === 'bar') continue;
+          after += 1;
+          expect(t.x, `${asOf} ${bar.key} "${t.name}" starts right after the bar's end`).toBeLessThanOrEqual(barEnd + 8);
+          expect(t.x, `${asOf} ${bar.key} "${t.name}"`).toBeGreaterThanOrEqual(barEnd);
+        }
+      }
+    }
+    expect(after).toBeGreaterThan(10);
+    const cirrus = drawn('2030-10-01').find((b) => b.key === 'tl-hist-L13-U1')!;
+    const label = cirrus.texts.find((t) => t.name.startsWith('Cirrus Energy'))!;
+    expect(`${label.name}${label.sub}`).toContain('Cirrus Energy · vacated');
+    expect(Math.abs(label.x - (cirrus.rect.x + cirrus.rect.w))).toBeLessThanOrEqual(8);
+  });
+
+  it('no label runs into another bar or another bar\'s label in its lane, at any as-of date', () => {
+    let checked = 0;
+    for (let y = 2026; y <= 2032; y += 1)
+      for (const m of ['01', '04', '07', '10']) {
+        const asOf = `${y}-${m}-01`;
+        const bars = drawn(asOf);
+        const spans = bars.flatMap((b) => [
+          { key: b.key, y: b.rect.y, x0: b.rect.x, x1: b.rect.x + b.rect.w, what: 'bar' },
+          ...b.texts.map((t) => ({ key: b.key, y: b.rect.y, x0: t.x, x1: t.x + widthOf(t), what: `"${t.name}"` })),
+        ]);
+        for (const b of bars)
+          for (const t of b.texts) {
+            checked += 1;
+            const x0 = t.x;
+            const x1 = t.x + widthOf(t);
+            for (const o of spans) {
+              if (o.key === b.key || o.y !== b.rect.y) continue;
+              expect(x1 <= o.x0 + 0.5 || x0 >= o.x1 - 0.5, `${asOf} ${b.key} "${t.name}" runs into ${o.key} ${o.what}`).toBe(true);
+            }
+          }
+      }
+    expect(checked).toBeGreaterThan(200);
+  });
+
   it('changes nothing as of today: no lease has ended, and the holdover is labelled as before', () => {
     const today = drawn(TODAY);
     expect(today.filter((b) => b.cls.includes('sp-tl-bar--projected'))).toHaveLength(0);
@@ -340,7 +427,7 @@ function stackedLabels(model: PlanModel, plotWidth: number) {
   const whole = new Map<string, { name: string; sub: string; risk: string | null }>();
   for (const row of model.timeline.rows) {
     for (const bar of row.bars) {
-      const seg = model.segIndex.get(bar.segKey);
+      const seg = barSegment(bar, model.segIndex);
       if (!seg) continue;
       const l = barLabel(bar, seg, { safe: model.safe, asOf: model.asOf, today: model.today, lens: 'status', floorName: row.floor.name });
       whole.set(bar.key, l);

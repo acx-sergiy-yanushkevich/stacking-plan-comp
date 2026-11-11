@@ -52,6 +52,10 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
   const showDeals = canShowDeals(safe);
   const showRent = canShowInPlaceRent(safe);
   const offers = showRollover ? [] : spaceOnOffer(model);
+  // Prospect-safe, on an over-allocated building: the rows under lease add up to more than the leased figure
+  // and a floor's suites to more than its 100%. A prospect is shown no data issue, so a neutral footnote
+  // says how the exact figures relate, with the sum of the rows as printed (`recordedUnderLease`).
+  const recorded = safe && overBy > 0 ? recordedUnderLease(rows) : 0;
   const noop = () => {};
   const comingTable = (
     <>
@@ -107,7 +111,7 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
         </FixedWidth>
       </div>
       <footer className="sp-print__foot">
-        Floor width is proportional to gross floor area; suite width to RSF. Figures are exact RSF from AscendixRE records. {safe ? 'Tenant names, contacts, in-place rents, lease and sublease dates, WALT and rollover are withheld.' : ''}
+        Floor width is proportional to gross floor area; suite width to RSF. Figures are exact RSF from AscendixRE records.{recorded > 0 ? ' Suite areas are as recorded; floor totals are capped at the floor’s leasable area.' : ''} {safe ? 'Tenant names, contacts, in-place rents, lease and sublease dates, WALT and rollover are withheld.' : ''}
       </footer>
     </>
   );
@@ -147,6 +151,11 @@ export function PrintLayout({ model, state, visible }: PrintLayoutProps) {
           </tr>
         </tbody>
       </table>
+      {recorded > 0 && (
+        <p className="sp-print__note sp-print__note--recorded">
+          Suite areas are as recorded: the leased, sublease and committed rows add up to {num(recorded)} SF. Floor totals, and the {num(k.leased)} SF leased, are capped at each floor’s leasable area.
+        </p>
+      )}
       {unplaced > 0 && (
         <p className="sp-print__note">
           {unplaced} lease{unplaced === 1 ? ' is' : 's are'} not placed on the plan (no floor or unit records) and {unplaced === 1 ? 'is' : 'are'} listed above as “Not placed”; see Data issues.
@@ -394,6 +403,16 @@ function spaceOnOffer(model: PlanModel): Offer[] {
     }
   }
   return out;
+}
+
+/** The states of a prospect-safe rent-roll row that are space under lease: in place, sublet, signed and not yet in. */
+const UNDER_LEASE = new Set(['Leased', 'Sublease', 'Committed']);
+
+/** Exact sum of the RSF of the rent-roll rows under lease, read from the rows as they are printed. */
+export function recordedUnderLease(rows: ReadonlyArray<ReadonlyArray<string>>): number {
+  const rsf = rows[0].indexOf('RSF');
+  const state = rows[0].indexOf('State');
+  return rows.slice(1).reduce((t, r) => (UNDER_LEASE.has(r[state]) ? t + (Number(r[rsf].replace(/,/g, '')) || 0) : t), 0);
 }
 
 /** In-place rent of a worklist row; a dash when it is confidential or not on record. */

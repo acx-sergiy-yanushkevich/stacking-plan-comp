@@ -14,11 +14,20 @@ import './floorLabel.css';
  *
  * The facts are a run of whole parts ("7,400 SF available", "$36/SF/yr FSG"). Where a list is given
  * less width than its longest label (the map's list on a phone) the run breaks between parts only, and
- * a separator neither ends a line nor begins one (base.css, `.sp-dotrun`): a figure stays with its unit
- * and a rate with its lease type.
+ * a separator neither ends a line nor begins one (base.css, `.sp-dotrun`): a figure stays with its unit,
+ * a rate with its lease type and the "Largest block" tag with the last fact (`.sp-flabel__last`).
  */
 export function FloorLabelText({ parts }: { parts: FloorLabelParts }) {
   const chunks = [parts.space, ...(parts.fact ? parts.fact.split(' · ') : [])].filter(Boolean);
+  // A space before the tag: read as text, the label is "… 9,300 SF available Largest block", as its name says it.
+  const tag = (
+    <>
+      {' '}
+      <span className="sp-dotrun__part sp-flabel__tagcell">
+        <span className="sp-flabel__tag">{LARGEST_BLOCK}</span>
+      </span>
+    </>
+  );
   return (
     <>
       <span className="sp-flabel__num">{parts.number}</span>
@@ -28,19 +37,24 @@ export function FloorLabelText({ parts }: { parts: FloorLabelParts }) {
         {chunks.length > 0 && <span className="sp-flabel__sep">{' · '}</span>}
         <span className="sp-dotrun">
           <span className="sp-dotrun__in">
-            {chunks.map((chunk, i) => (
-              <span key={i} className="sp-dotrun__part">
-                {i > 0 && <span className="sp-dotrun__dot">{' · '}</span>}
-                {chunk}
-              </span>
-            ))}
-            {/* A space before the tag: read as text, the label is "… 9,300 SF available Largest block", as its name says it. */}
-            {parts.largest && ' '}
-            {parts.largest && (
-              <span className="sp-dotrun__part sp-flabel__tagcell">
-                <span className="sp-flabel__tag">{LARGEST_BLOCK}</span>
-              </span>
-            )}
+            {chunks.map((chunk, i) => {
+              const part = (
+                <span key={i} className="sp-dotrun__part">
+                  {i > 0 && <span className="sp-dotrun__dot">{' · '}</span>}
+                  {chunk}
+                </span>
+              );
+              // The tag never stands alone on a line: it is held to the last fact by a run that does not break.
+              return parts.largest && i === chunks.length - 1 ? (
+                <span key={i} className="sp-flabel__last">
+                  {part}
+                  {tag}
+                </span>
+              ) : (
+                part
+              );
+            })}
+            {parts.largest && chunks.length === 0 && tag}
           </span>
         </span>
       </span>

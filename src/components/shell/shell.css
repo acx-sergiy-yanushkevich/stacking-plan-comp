@@ -172,7 +172,7 @@
   :root[data-skin] .sp-header__title h1 { font-size: 16px; }
   :root[data-skin] .sp-header__property { font-size: var(--sp-text-11); }
   .sp-header__title { gap: 2px 6px; }
-  /* The controls flow as the header's own items: date and mode on one row; issues, export and the colours menu on the next. */
+  /* The controls flow as the header's own items, on the row under the title (two rows from 421 to 760 px). */
   .sp-header__actions { display: contents; }
   .sp-header .sp-btn { height: 28px; font-size: var(--sp-text-12); padding: 0 9px; gap: 5px; }
   .sp-header .sp-btn--icon { padding: 0; }
@@ -181,6 +181,20 @@
   .sp-toolbar__lens-select { flex: 1 1 150px; min-width: 0; }
   .sp-toolbar__lens-select .sp-field, .sp-toolbar__lens-select .sp-select { width: 100%; }
   .sp-toolbar__find { gap: 5px; }
+}
+/* A phone of 420 px or less: the title and one row of controls (Header.tsx makes each one compact). The
+   menu button carries the count of data issues as a badge over its corner, so it is the same width with
+   prospect-safe on and off. */
+@media (max-width: 420px) {
+  .sp-header .sp-btn { padding: 0 8px; }
+  .sp-header__more { position: relative; display: inline-flex; flex: none; }
+  .sp-header__more-count { position: absolute; top: -5px; right: -5px; min-width: 16px; height: 16px; padding: 0 4px; font-size: 10px; pointer-events: none; }
+  .sp-header .sp-switch { gap: 6px; }
+}
+/* Under 360 px (a 320 px phone) Export is its icon alone; the word is still its accessible name. */
+@media (max-width: 359px) {
+  .sp-header .sp-btn:has(.sp-header__export-label) { min-width: 40px; }
+  .sp-header__export-label { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
 /* Touch: 40 px rows in the phone header and 36 px tabs (the toolbar's buttons keep 44), all well over the 24 px minimum. */
 @media (max-width: 760px) and (pointer: coarse) {

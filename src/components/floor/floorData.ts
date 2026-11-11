@@ -157,3 +157,36 @@ export function availabilityFact(floor: FloorView, asOf: ISODate, safe: boolean)
   if (floor.available > 0) return `${sf(floor.available)} available${coming ? ` · ${comingText(coming)}` : ''}`;
   return coming ? comingText(coming) : 'Nothing available';
 }
+
+export interface LargestNow {
+  size: number;
+  /** What the block is: direct space, or sublet space where the floor has no direct space now; null when it has neither. */
+  kind: 'direct' | 'sublease' | null;
+  /** How many adjacent suites make it up. */
+  suites: number;
+}
+
+/**
+ * The largest block a tenant could take on this floor today. The direct run (`maxContiguous`) where
+ * there is one; on a floor whose only space is sublet (Floor 7), the largest run of adjacent sublet
+ * suites, so the floor's card says "7,000 SF · sublease" rather than "0 SF". The building's "Largest
+ * block" KPI stays direct-only (`domain/kpis.ts`). A sublet suite is space on offer, shown to a prospect
+ * too; the floors a prospect-safe caller passes in already lack every quiet listing (`safeFloors`).
+ */
+export function largestNow(floor: FloorView): LargestNow {
+  if (floor.maxContiguous > 0) return { size: floor.maxContiguous, kind: 'direct', suites: floor.bestRun.length };
+  let best: LargestNow = { size: 0, kind: null, suites: 0 };
+  let run = 0;
+  let n = 0;
+  for (const s of floor.segments) {
+    if (s.kind === 'sublease') {
+      run += s.size;
+      n += 1;
+      if (run > best.size) best = { size: run, kind: 'sublease', suites: n };
+    } else {
+      run = 0;
+      n = 0;
+    }
+  }
+  return best;
+}

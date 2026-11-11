@@ -3,7 +3,7 @@ import type { ISODate } from '../../domain/types';
 import type { Segment } from '../../domain/derive';
 import type { TimelineBar } from '../../domain/timeline';
 import type { LensId } from '../../domain/lenses';
-import { dateToX } from '../../domain/timeline';
+import { barSegment, dateToX, selectionKey } from '../../domain/timeline';
 import { num, sf } from '../../domain/format';
 import { fmtDate, fmtMonths, monthsBetween } from '../../domain/dates';
 import { PATTERN_IDS } from '../plan/Patterns';
@@ -87,7 +87,7 @@ export function TimelineRows({ rows, segIndex, start, end, asOf, today, lens, sa
   const [focusKey, setFocusKey] = useState<string | null>(null);
   const order = rows.map((r) => [...r.lanes.flat()].sort((a, b) => a.start.localeCompare(b.start)));
   const allKeys = order.flat().map((b) => b.key);
-  const selectedBar = order.flat().find((b) => b.segKey === selected)?.key ?? null;
+  const selectedBar = order.flat().find((b) => selected !== null && selectionKey(b) === selected)?.key ?? null;
   const activeKey = focusKey && allKeys.includes(focusKey) ? focusKey : (selectedBar ?? allKeys[0] ?? null);
   const focusBar = (key: string) => {
     setFocusKey(key);
@@ -143,7 +143,7 @@ export function TimelineRows({ rows, segIndex, start, end, asOf, today, lens, sa
               <g clipPath={`url(#${clipId})`}>
                 {lanes.map((lane, li) =>
                   lane.map((bar) => {
-                    const seg = segIndex.get(bar.segKey);
+                    const seg = barSegment(bar, segIndex);
                     if (!seg) return null;
                     const nextStart = lane.filter((b) => b.start > bar.start).map((b) => b.start).sort()[0];
                     const freeRight = nextStart ? X(nextStart) : plotRight;
@@ -169,7 +169,7 @@ export function TimelineRows({ rows, segIndex, start, end, asOf, today, lens, sa
                         lens={lens}
                         safe={safe}
                         dim={highlight !== null && !highlight.has(bar.segKey)}
-                        selected={selected === bar.segKey}
+                        selected={selected !== null && selectionKey(bar) === selected}
                         hovered={hovered === bar.key}
                         onSelect={onSelect}
                         onHover={onHover}
@@ -265,14 +265,17 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
   const hover = (e: PointerEvent<SVGGElement>) => {
     if (e.pointerType !== 'touch') onHover({ key: bar.key, text: tooltip, clientX: e.clientX, clientY: e.clientY });
   };
+  // An ended lease selects nothing (`selectionKey`): it stays in the arrow-key order, so its tooltip and
+  // accessible name can be read, but it is marked unavailable rather than offered as a toggle.
+  const target = selectionKey(bar);
   const onKeyDown = (e: KeyboardEvent<SVGGElement>) => {
     const dirs: Record<string, 'left' | 'right' | 'up' | 'down' | 'home' | 'end'> = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', Home: 'home', End: 'end' };
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      onSelect(bar.segKey);
-    } else if (e.key === 'Escape' && selected) {
+      if (target) onSelect(target);
+    } else if (e.key === 'Escape' && selected && target) {
       e.preventDefault();
-      onSelect(bar.segKey); // toggles the selection off (see TimelineView.onSelect)
+      onSelect(target); // toggles the selection off (see TimelineView.onSelect)
     } else if (dirs[e.key]) {
       e.preventDefault();
       onNavigate(dirs[e.key]);
@@ -284,11 +287,13 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
     role: 'button',
     tabIndex: focusable ? 0 : -1,
     'aria-label': aria,
-    'aria-pressed': selected,
+    ...(target ? { 'aria-pressed': selected } : { 'aria-disabled': true }),
     'data-seg': bar.segKey,
     'data-bar': bar.key,
     style: { color: edge },
-    onClick: () => onSelect(bar.segKey),
+    onClick: () => {
+      if (target) onSelect(target);
+    },
     onKeyDown,
     onPointerEnter: hover,
     onPointerMove: hover,
@@ -397,8 +402,10 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
     return rest > 24 ? fitParts(sub, rest, SUB_FONT) : '';
   };
   const sfOnly = measure(`${text.sfShort} SF`, NAME_FONT) <= textRoom ? `${text.sfShort} SF` : measure(text.sfShort, NAME_FONT) <= textRoom ? text.sfShort : '';
-  // Where the label goes: inside the bar, inside its extension, or in the free lane to its right.
-  let place: 'bar' | 'ext' | 'outside' = 'bar';
+  // Where the label goes: inside the bar, inside its extension, or in the free lane to its right. An ended
+  // lease's label that fits neither its bar nor its dashed box starts at the bar's end all the same
+  // ('after') and runs on across the as-of line: written right of the line, it sat years from its bar.
+  let place: 'bar' | 'ext' | 'outside' | 'after' = 'bar';
   let nameText = '';
   let subText = '';
   if (visibleW >= MIN_NAMED_BAR && nameW <= textRoom) {
@@ -412,12 +419,13 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
   const trailingNeed = !tagText && !safe && (isHoldover || isMtm) ? trailingW + 6 : 0;
   const outsideRoom = isAvail ? 0 : freeRight - (x1 + extW) - 10 - trailingNeed;
   // A label that fits inside only without its suite or SF moves out whole when the lane to the right is free.
+  // An ended lease's name stays on its own bar: the right of the lane is past the as-of line, away from it.
   const cut = nameText === name && subText !== sub;
-  if (name && !isAvail && (!nameText || (cut && plotRight >= 800))) {
+  if (name && !isAvail && (!nameText || (cut && plotRight >= 800 && !isProjected))) {
     const wholeW = nameW + sepW + measure(sub, SUB_FONT);
-    // An ended lease keeps its label where its neighbours have theirs, right of the as-of line; a holdover
-    // keeps its name beside its tag, on the rose extension, when the whole label fits there.
-    const order: Array<'ext' | 'outside'> = isHoldover ? ['ext', 'outside'] : ['outside', 'ext'];
+    // An ended lease writes its label in the dashed box straight after its bar, never beyond the as-of
+    // line; a holdover keeps its name beside its tag, on the rose extension, when the whole label fits there.
+    const order: Array<'ext' | 'outside'> = isProjected ? ['ext'] : isHoldover ? ['ext', 'outside'] : ['outside', 'ext'];
     const roomOf = (where: 'ext' | 'outside') => (where === 'ext' ? extRoom : outsideRoom);
     // First a place that holds the whole label; failing that, when the bar holds no name at all, the roomiest place that holds the name.
     const whole = order.find((where) => wholeW <= roomOf(where));
@@ -438,6 +446,13 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
     nameText = tenantOnly;
     extWord = VACATED;
   }
+  // An ended lease too short for all of that: the whole name from the bar's end, across the as-of line. The
+  // bar has kept the rest of its lane for it (`endedNameFits`, `packLanes`), so nothing else is drawn there.
+  if (!nameText && isProjected && name) {
+    place = 'after';
+    nameText = name;
+    subText = subFor(freeRight - (x1 + 6) - 10);
+  }
   // Last resort, a bar too narrow for any of that: as much of the name as fits in whole parts, else the SF.
   if (!nameText && textRoom > 0) {
     if (visibleW >= MIN_NAMED_BAR) nameText = fitParts(name, textRoom, NAME_FONT) || sfOnly;
@@ -447,9 +462,9 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
   }
   const outside = place === 'outside';
   const trailingTag = !tagText && !safe && (isHoldover || isMtm) && freeRight - (x1 + extW) >= trailingW + 8 ? trailingWord : null;
-  const labelX = place === 'outside' ? x1 + extW + 6 + (trailingTag ? trailingW + 6 : 0) : place === 'ext' ? x1 + 6 : textX;
+  const labelX = place === 'outside' ? x1 + extW + 6 + (trailingTag ? trailingW + 6 : 0) : place === 'ext' || place === 'after' ? x1 + 6 : textX;
   // On the card (right of the bar, or in an ended lease's dashed box) the label is in the card's text colour; on a fill it is in the tone's.
-  const onCard = outside || (place === 'ext' && isProjected);
+  const onCard = outside || place === 'after' || (place === 'ext' && isProjected);
   // DOM order: the (trailing) tag group is rendered before the label text, so the accessible name must match that order.
   // It says the whole name whenever any of it is on screen, so an ended lease is "vacated" to a screen reader as well.
   const visibleLabel = extWord || (nameText && nameText !== sfOnly && nameText !== name) ? [name, subText].filter(Boolean).join(' · ') : [nameText, subText].filter(Boolean).join(' · ');

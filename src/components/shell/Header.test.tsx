@@ -154,10 +154,10 @@ describe('Header on a phone: the palette and the theme are a menu, not a row of 
       const html = at(width);
       expect(html, `${width}`).not.toContain('class="sp-header__look"');
       expect(html, `${width}`).not.toContain('aria-label="Color palette"');
-      const menu = /<button[^>]*aria-label="Colors and theme"[^>]*>/.exec(html)?.[0] ?? '';
+      const menu = /<button[^>]*aria-label="[^"]*olors and theme"[^>]*>/.exec(html)?.[0] ?? '';
       expect(menu, `${width}`).toContain('aria-haspopup="menu"');
       // It follows Export: the same row of controls.
-      expect(html.indexOf('aria-label="Colors and theme"')).toBeGreaterThan(html.indexOf('>Export<'));
+      expect(html.indexOf('olors and theme"')).toBeGreaterThan(html.indexOf('>Export<'));
     }
   });
 
@@ -172,7 +172,69 @@ describe('Header on a phone: the palette and the theme are a menu, not a row of 
   });
 
   it('the embedded skin has neither: its host page sets the theme', () => {
-    expect(at(390, '?skin=classic')).not.toContain('aria-label="Colors and theme"');
+    expect(at(390, '?skin=classic')).not.toContain('olors and theme');
+    expect(at(760, '?skin=classic')).not.toContain('aria-label="Colors and theme"');
     expect(at(1440, '?skin=classic')).not.toContain('class="sp-header__look"');
+  });
+});
+
+describe('Header at 420 px and under: the title and one row of controls (round 17)', () => {
+  const at = (width: number, query = '') => {
+    const matches = (q: string) => (/max-width: (\d+)px/.test(q) ? width <= Number(/max-width: (\d+)px/.exec(q)![1]) : false);
+    const before = setHost({ ...NO_HOST, media: (q) => ({ matches: () => matches(q), onChange: () => () => {} }) });
+    try {
+      return render(query).html;
+    } finally {
+      setHost(before);
+    }
+  };
+  const actions = (html: string) => html.slice(html.indexOf('class="sp-header__actions"'));
+  const drawn = (html: string) => html.replace(/<span class="sp-sr-only">.*?<\/span>/g, '').replace(/<span[^>]*aria-hidden="true"[^>]*>[^<]*<\/span>/g, '').replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, '');
+  const read = (html: string) => html.replace(/<span[^>]*aria-hidden="true"[^>]*>.*?<\/span><\/span>/g, '').replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, '');
+  const asOf = (html: string) => /<div class="sp-header__asof[^"]*">.*?(<button.*?<\/button>)/.exec(actions(html))![1];
+  const sw = (html: string) => /<button type="button" role="switch".*?<\/button>/.exec(actions(html))![0];
+
+  it('the date is an icon and the date, its accessible name still "As of Nov 9, 2026", locked or not', () => {
+    for (const width of [360, 390, 420])
+      for (const query of ['', '?safe=1']) {
+        const button = asOf(at(width, query));
+        expect(drawn(button), `${width}${query}`).toBe('Nov 9, 2026');
+        expect(read(button), `${width}${query}`).toBe('As of Nov 9, 2026');
+        // One icon either way, so the button is the same width: the calendar, or the lock in its place.
+        expect(button.match(/<svg/g), `${width}${query}`).toHaveLength(1);
+      }
+    expect(drawn(asOf(at(421)))).toBe('As of Nov 9, 2026');
+  });
+
+  it('the switch draws "Safe" and is read as "Prospect-safe", at the width of its bold word on and off', () => {
+    for (const query of ['', '?safe=1']) {
+      const html = sw(at(390, query));
+      expect(html).toContain('<span class="sp-sr-only">Prospect-safe</span>');
+      expect(html).toContain('<span class="sp-switch__label" aria-hidden="true"><span>Safe</span><span class="sp-switch__label-hold">Safe</span></span>');
+    }
+  });
+
+  it('Data issues moves into the menu beside Export, its count on the menu button; prospect-safe drops it and keeps every button', () => {
+    const own = at(390);
+    const safe = at(390, '?safe=1');
+    expect(own).not.toContain('class="sp-header__slot"');
+    expect(safe).not.toContain('class="sp-header__slot"');
+    expect(own).toMatch(/aria-label="Data issues \(\d+\), colors and theme"/);
+    expect(own).toMatch(/class="sp-btn__count sp-header__more-count" aria-hidden="true">\d+</);
+    expect(safe).toContain('aria-label="Colors and theme"');
+    expect(safe).not.toContain('Data issues');
+    expect(safe).not.toContain('sp-header__more-count');
+    // The same controls in the same order with the mode on and off: the date, the switch, Export, the menu.
+    const order = (html: string) => [...actions(html).matchAll(/<button[^>]*>/g)].map(([tag]) => (tag.includes('role="switch"') ? 'switch' : tag.includes('aria-haspopup="menu"') && tag.includes('aria-label=') ? 'menu' : 'button'));
+    expect(order(own)).toEqual(order(safe));
+    expect(order(own)).toEqual(['button', 'switch', 'button', 'menu']);
+    // Export has no chevron there, and keeps its word for a screen reader.
+    expect(own).toContain('<span class="sp-header__export-label">Export</span>');
+  });
+
+  it('from 421 px the header is as before: the slot with Data issues, and the menu holds only the colors and the theme', () => {
+    const html = at(421);
+    expect(html).toContain('class="sp-header__slot"');
+    expect(html).toContain('aria-label="Colors and theme"');
   });
 });

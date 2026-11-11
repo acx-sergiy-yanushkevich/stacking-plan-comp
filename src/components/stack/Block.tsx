@@ -292,7 +292,69 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   // the plain layout had none to lose) and the suite really is drawn.
   const suited = keepSuite && tier >= 1 && text.sub.startsWith('Ste ') && !plain.picked?.lines.some((l) => l.t.startsWith(text.sub)) ? solve(place, true) : null;
   const useSuited = !!suited?.picked && suited.picked.lines.some((l) => l.t.startsWith(text.sub)) && (suited.picked.named || !plain.picked?.named);
-  const { picked, cap15, innerBody, pitch, top } = useSuited && suited ? suited : plain;
+  const chosen = useSuited && suited ? suited : plain;
+  // Print: a lease's term ("Exp Feb '27", "Holdover", "Month-to-month") is not given up for want of a line.
+  // On paper there is no tooltip to ask, and a box with no date says nothing about a lease ending soon.
+  const termed = keepSuite && text.term && tier >= 1 && place !== 'row' && chosen.picked?.named && !termShown(chosen.picked.lines) ? keepTerm(text.term) : null;
+  const { picked, cap15, innerBody, pitch, top } = termed ?? chosen;
+  /** The deal pill sits in the bottom-right corner on narrow blocks, and where that keeps a term on paper. */
+  const pillDown = pillBottom || !!termed?.pillDown;
+
+  /** Do these lines (or the badges drawn beside them) say when the lease ends? */
+  function termShown(ls: Line[]): boolean {
+    const said = [...ls.map((l) => l.t), drawOther && other ? other.text : '', showSecond && second ? second.text : ''];
+    return said.some((t) => !!t && (t.includes(text.term!) || /\bExp\b|Expired|Holdover|Month-to-month|\bMTM\b| left\b/.test(t) || (!!text.lensShort && t.includes(text.lensShort))));
+  }
+
+  /**
+   * The print layouts that keep the term, tried in order once the usual ones have left it out:
+   *  1. the name on one line at 13 px (running to 4 px from the edge, as a fact may; the deal pill moved to
+   *     the bottom-right corner if that is what clears it), then suite and SF, then the term;
+   *  2. the name wrapped at 13 px, then suite and SF, then the term, where the row has four lines;
+   *  3. the name wrapped at 13 px over one merged line, "Ste 100 · 2,400 SF · Exp Feb '27";
+   *  4. the same without the "Ste" prefix, "100 · 2,400 SF · Exp Feb '27".
+   * Facts may step down to 11 and 10 px; the name is never set smaller (one name size on paper). Null when
+   * none fits: the block keeps the layout it had.
+   */
+  function keepTerm(term: string) {
+    const cap = h >= 3 * CP + 10 ? Math.floor((h - 9) / CP) : 0;
+    const corner = (drawOther && place === 'corner' ? badgeW + 6 : 0) + (showSecond ? badge2W + 6 : 0);
+    const geom = (n: number) => {
+      const open = tier <= 1 ? Math.min(LINE, Math.floor((h - PAD - 11 - 9.5) / Math.max(1, n - 1))) : 0;
+      return open >= 14 ? { top: PAD + 11, pitch: open } : { top: 6 + 11, pitch: CP };
+    };
+    /** Room on line i of an n-line layout: from where its type starts to 4 px from the right edge, clear of the badges. */
+    const roomAt = (i: number, n: number, font: string, down: boolean) => {
+      const g = geom(n);
+      const pill = showDeal && (down || pillBottom ? g.top + g.pitch * i + 3 > h - 22 : i === 0) ? 22 : 0;
+      const start = font === FONT_MICRO ? 2 : font === FONT_TINY ? 4 : PAD;
+      return w - start - 4 - accentPad - pill - (i === 0 ? corner : 0);
+    };
+    const factAt = (t: string, i: number, n: number, down: boolean, cls: string): Line | null => {
+      if (fits(t, roomAt(i, n, FONT_SUB, down), FONT_SUB)) return { t, cls, font: FONT_SUB };
+      if (fits(t, roomAt(i, n, FONT_TINY, down), FONT_TINY)) return { t, cls: 'sp-seg__tiny', font: FONT_TINY };
+      if (fits(t, roomAt(i, n, FONT_MICRO, down), FONT_MICRO)) return { t, cls: 'sp-seg__micro', font: FONT_MICRO };
+      return null;
+    };
+    const done = (ls: Array<Line | null>, down: boolean) =>
+      ls.every(Boolean) && ls.length <= cap ? { picked: { lines: ls as Line[], compact: true, named: true }, cap15: 0, innerBody: w - PAD * 2, ...geom(ls.length), pillDown: down } : null;
+    const bare = text.sub.startsWith('Ste ') ? text.sub.slice(4) : null;
+    // 1. One line of name.
+    for (const down of showDeal && !pillBottom ? [false, true] : [false]) {
+      if (!fits(text.name, roomAt(0, 3, FONT_NAME, down), FONT_NAME)) continue;
+      const r = done([nameLine(text.name), factAt(text.sub, 1, 3, down, 'sp-seg__sub'), factAt(term, 2, 3, down, 'sp-seg__meta')], down);
+      if (r) return r;
+    }
+    // 2–4. Two lines of name, as the usual layout wraps it.
+    const two = wrapWordsVar(text.name, (i) => roomAt(i, 3, FONT_NAME, false), FONT_NAME, 2);
+    if (two.length !== 2 || two.join(' ') !== text.name) return null;
+    const names = two.map(lineText).map(nameLine);
+    return (
+      done([...names, factAt(text.sub, 2, 4, false, 'sp-seg__sub'), factAt(term, 3, 4, false, 'sp-seg__meta')], false) ??
+      done([...names, factAt(`${text.sub} · ${term}`, 2, 3, false, 'sp-seg__sub')], false) ??
+      (bare ? done([...names, factAt(`${bare} · ${term}`, 2, 3, false, 'sp-seg__sub')], false) : null)
+    );
+  }
   const lines: Line[] = picked?.lines ?? [];
   const compactPitch = picked?.compact ?? false;
   if (extra && picked && !compactPitch) {
@@ -333,6 +395,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
       aria-label={ariaLabel}
       aria-selected={selected}
       data-key={seg.key}
+      data-kind={seg.kind}
       transform={`translate(${x} ${y})`}
       onClick={onSelect}
       onFocus={onFocus}
@@ -374,7 +437,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
         </text>
       ))}
       {showSecond && second && (
-        <g className={`sp-badge sp-badge--${second.kind}`} transform={`translate(${w - badgeW - 6 - (showDeal && !pillBottom ? 22 : 0) - badge2W - 6} 6)`}>
+        <g className={`sp-badge sp-badge--${second.kind}`} transform={`translate(${w - badgeW - 6 - (showDeal && !pillDown ? 22 : 0) - badge2W - 6} 6)`}>
           <title>{second.title ?? second.text}</title>
           <rect width={badge2W} height={16} rx={8} />
           <text x={badge2W / 2} y={11.5} textAnchor="middle">
@@ -383,7 +446,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
         </g>
       )}
       {drawOther && other && (
-        <g className={`sp-badge sp-badge--${other.kind}`} transform={ownRow ? `translate(${PAD + accentPad} ${h - PAD - 16})` : `translate(${w - badgeW - 6 - (showDeal && !pillBottom ? 22 : 0)} 6)`}>
+        <g className={`sp-badge sp-badge--${other.kind}`} transform={ownRow ? `translate(${PAD + accentPad} ${h - PAD - 16})` : `translate(${w - badgeW - 6 - (showDeal && !pillDown ? 22 : 0)} 6)`}>
           <title>{other.title ?? other.text}</title>
           <rect width={badgeW} height={16} rx={8} />
           <text x={badgeW / 2} y={11.5} textAnchor="middle">
@@ -392,7 +455,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
         </g>
       )}
       {showDeal && deal && (
-        <g className="sp-badge sp-badge--deal" transform={`translate(${w - 22} ${pillBottom ? h - 22 : 6})`}>
+        <g className="sp-badge sp-badge--deal" transform={`translate(${w - 22} ${pillDown ? h - 22 : 6})`}>
           <title>{deal.title}</title>
           <rect width={16} height={16} rx={8} />
           <text x={8} y={11.5} textAnchor="middle">

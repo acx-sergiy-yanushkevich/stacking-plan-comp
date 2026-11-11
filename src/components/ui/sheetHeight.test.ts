@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { SHEET_HALF, SHEET_MOST, canExpandSheet, expandedSheetHeight } from './sheetHeight';
+import { SHEET_HALF, SHEET_MOST, canExpandSheet, dragSheetHeight, expandedSheetHeight, isSheetDrag, snapSheet } from './sheetHeight';
 import { AIR_ABOVE, AIR_BELOW, roomToKeep, scrollToClear } from '../stack/aboveSheet';
 
 /** The windows the sheet is used at: a phone, a tablet upright, and a tablet on its side with and without browser chrome. */
@@ -56,5 +56,45 @@ describe('canExpandSheet', () => {
 
   it('does not when the selection leaves no room to grow into (a phone floor card as tall as the room above the sheet)', () => {
     expect(canExpandSheet({ viewport: 844, content: 5000, keepClear: roomToKeep(420) })).toBe(false);
+  });
+});
+
+describe('dragging the handle (round 17: a touch drag on the grab bar scrolled the page behind the sheet)', () => {
+  // 390×844, Bowline selected (51 px row), a panel that needs 700 px: the half snap is 405 px, the expanded sheet 769.
+  const m = { viewport: 844, content: 700, keepClear: roomToKeep(51) };
+  const half = SHEET_HALF * 844;
+  const full = expandedSheetHeight(m);
+
+  it('follows the finger: the sheet is as tall as where the drag has got to, between the half snap and the expanded height', () => {
+    expect(dragSheetHeight(half, -100, m)).toBe(half + 100);
+    // Up to y = 120 from a half sheet: more than there is room for, so the expanded height and no more.
+    expect(dragSheetHeight(half, 120 - (844 - half), m)).toBe(full);
+    // Down from the half snap: it stays at the half snap (there is nothing lower to snap to).
+    expect(dragSheetHeight(half, 80, m)).toBe(half);
+    expect(dragSheetHeight(full, 150, m)).toBe(full - 150);
+  });
+
+  it('never grows into the strip the selection needs, whatever the drag', () => {
+    expect(844 - dragSheetHeight(half, -2000, m)).toBeGreaterThanOrEqual(roomToKeep(51));
+  });
+
+  it('lets go to the nearer of the two heights when the finger stops', () => {
+    expect(snapSheet(half + 40, 0, m)).toBe('half');
+    expect(snapSheet(full - 40, 0, m)).toBe('full');
+    expect(snapSheet((half + full) / 2 + 1, 0, m)).toBe('full');
+  });
+
+  it('a flick decides by its direction, however short it was', () => {
+    // px per ms; negative is up.
+    expect(snapSheet(half + 30, -0.8, m)).toBe('full');
+    expect(snapSheet(full - 30, 0.8, m)).toBe('half');
+    // A slow drag is not a flick: the nearer height.
+    expect(snapSheet(half + 30, -0.1, m)).toBe('half');
+  });
+
+  it('a movement of a few pixels is a tap, not a drag', () => {
+    expect(isSheetDrag(3)).toBe(false);
+    expect(isSheetDrag(-5)).toBe(false);
+    expect(isSheetDrag(9)).toBe(true);
   });
 });

@@ -1,7 +1,7 @@
 import { Legend } from '../plan/Legend';
 import { fmtDate } from '../../domain/dates';
 import { num } from '../../domain/format';
-import { dateToX } from '../../domain/timeline';
+import { barSegment, dateToX } from '../../domain/timeline';
 import { useCallback, useId, useMemo, useRef, useState } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
@@ -81,7 +81,7 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
     const out = new Map<string, LabelLine[]>();
     for (const row of rows) {
       for (const bar of row.bars) {
-        const seg = model.segIndex.get(bar.segKey);
+        const seg = barSegment(bar, model.segIndex);
         if (!seg) continue;
         const { name, sub, risk } = barLabel(bar, seg, { safe: model.safe, asOf: model.asOf, today: model.today, lens: state.lens, floorName: row.floor.name });
         out.set(bar.key, wrapLabel(name, sub, plotWidth - 6, risk ? tagWidth(risk) + 5 : 0));
@@ -99,12 +99,12 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
   const laid = useMemo(() => {
     if (labels) return layoutStackedRows(rows, rowsTop, (bar) => labels.get(bar.key)?.length ?? 1);
     // A lease that has ended says "· vacated" like its neighbours. Where its bar and the dashed box after
-    // it are too short for that, the label is written right of the as-of line, and the bar keeps that part
-    // of its lane free for it (as a holdover does), so nothing else is drawn there.
+    // it are too short for that, the label starts at the bar's end and runs on across the as-of line, and
+    // the bar keeps the rest of its lane free for it (as a holdover does), so nothing else is drawn there.
     const px = (d: ISODate) => Math.min(plotWidth, Math.max(0, dateToX(d, start, end, plotWidth)));
     const keepsLane = (bar: (typeof rows)[number]['bars'][number]): boolean => {
       if (bar.kind !== 'projected' || !bar.end || bar.end >= model.asOf) return false;
-      const seg = model.segIndex.get(bar.segKey);
+      const seg = barSegment(bar, model.segIndex);
       if (!seg) return false;
       const { name } = barLabel(bar, seg, { safe: model.safe, asOf: model.asOf, today: model.today, lens: state.lens, floorName: '' });
       return !endedNameFits(name, px(bar.end) - px(bar.start), px(model.asOf) - px(bar.end));
@@ -140,7 +140,7 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
     const rect = hostRef.current.getBoundingClientRect();
     if (Number.isNaN(hover.clientX)) {
       // Keyboard focus: anchor to the bar itself.
-      const el = hostRef.current.querySelector<SVGGElement>(`[data-seg="${CSS.escape(hover.key.replace(/^tl-/, ''))}"]`);
+      const el = hostRef.current.querySelector<SVGGElement>(`[data-bar="${CSS.escape(hover.key)}"]`);
       const b = el?.getBoundingClientRect();
       tipStyle = b ? { left: b.left - rect.left + 8, top: b.bottom - rect.top + 6 } : null;
     } else {

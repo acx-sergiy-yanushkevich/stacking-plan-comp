@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../data/mock/property';
 import { deriveFloors } from './derive';
 import { safeFloors } from './safe';
-import { dateToX, timelineModel, xToDate, yearTicks } from './timeline';
+import { barSegment, dateToX, selectionKey, timelineModel, xToDate, yearTicks } from './timeline';
+import { segmentIndex } from './derive';
 
 describe('timelineModel', () => {
   const floors = deriveFloors(property, TODAY, TODAY);
@@ -56,6 +57,27 @@ describe('timelineModel', () => {
     const later = timelineModel(property, floors, '2030-01-15', '2030-01-15');
     expect(later.start <= '2016-09-01').toBe(true);
     expect(later.end).toBe('2040-01-15');
+  });
+  // Round 17: an ended lease's history bar borrowed the segment of whatever occupies the suite now, so
+  // from Jun 2027 Cirrus Energy's 2018–2027 term was coloured, described and selected as availability A04.
+  it('gives an ended lease\'s history bar the lease itself: its id, its own (vacated) segment and no selection', () => {
+    const at = '2027-06-01';
+    const raw = deriveFloors(property, at, TODAY);
+    const cirrus = timelineModel(property, raw, at, TODAY).rows.flatMap((r) => r.bars).find((b) => b.key === 'tl-hist-L13-U1')!;
+    expect(cirrus).toMatchObject({ segKey: 'L13-U1', leaseId: 'L13', label: 'Cirrus Energy', kind: 'projected', end: '2027-03-31' });
+    // The suite is availability A04 now; the bar is not drawn from it.
+    const index = segmentIndex(raw);
+    expect(index.get('A04')?.suite).toBe('600');
+    const seg = barSegment(cirrus, index)!;
+    expect(seg).toMatchObject({ key: 'L13-U1', kind: 'projected', suite: '600', size: 21_400, endDate: '2027-03-31' });
+    expect(seg.lease?.tenant).toBe('Cirrus Energy');
+    expect(seg.availability).toBeUndefined();
+    // A click selects nothing: the plan has no block for a lease that has ended.
+    expect(selectionKey(cirrus)).toBeNull();
+    // Every other bar selects its own segment, as before.
+    const live = timelineModel(property, raw, at, TODAY).rows.flatMap((r) => r.bars).filter((b) => !b.key.startsWith('tl-hist-'));
+    for (const b of live) expect(selectionKey(b)).toBe(b.segKey);
+    for (const b of live) expect(barSegment(b, index)).toBe(index.get(b.segKey));
   });
 });
 
