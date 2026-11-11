@@ -5,7 +5,7 @@ import type { PlanModel } from '../../model/usePlanModel';
 import type { InspectorMode, PlanState } from '../../state/planState';
 import { sf } from '../../domain/format';
 import { Button } from '../ui';
-import { clearSelection, type Patch } from '../plan/actions';
+import { clearSelection, TOOL_CLOSE, type Patch } from '../plan/actions';
 import { segmentText } from '../plan/segmentText';
 import { canShowIssues, canShowTenantRisk } from '../../domain/safe';
 import { BuildingHero } from '../hero/BuildingHero';
@@ -37,6 +37,12 @@ export interface InspectorProps {
   areaPanel?: ReactNode;
   /** "Around the building", first in the Building panel: the way the area is found (AreaPreview). */
   areaPreview?: ReactNode;
+  /**
+   * The page has drawn once. A tool panel that mounts already open on the page's first render (a link to
+   * `?mode=area`) leaves focus where the browser put it; one that mounts later, because a click opened it
+   * (the Building view has no inspector until then), takes focus like any panel that opens.
+   */
+  pageReady?: boolean;
 }
 
 interface Head {
@@ -61,14 +67,14 @@ function headFor(mode: InspectorMode, model: PlanModel, state: PlanState, patch:
       return { title: f?.floor.name ?? 'Floor', subtitle: f ? `${sf(f.leasable)} leasable` : undefined, close: () => closeAndRefocus(patch, null, state.floor) };
     }
     case 'find':
-      return { title: 'Find space', subtitle: model.filterLabel ?? 'Rank every space that fits a requirement', close: () => { patch({ mode: 'building', req: null, max: null, by: null, inquiry: null }); refocusTrigger(); } };
+      return { title: 'Find space', subtitle: model.filterLabel ?? 'Rank every space that fits a requirement', close: () => { patch(TOOL_CLOSE.find); refocusTrigger(); } };
     case 'worklist':
-      return { title: canShowTenantRisk(model.safe) ? 'Renewal worklist' : 'Lease expirations', subtitle: model.filterLabel ?? 'Leases ending in a window', close: () => { patch({ mode: 'building', window: null }); refocusTrigger(); } };
+      return { title: canShowTenantRisk(model.safe) ? 'Renewal worklist' : 'Lease expirations', subtitle: model.filterLabel ?? 'Leases ending in a window', close: () => { patch(TOOL_CLOSE.worklist); refocusTrigger(); } };
     case 'issues':
-      return { title: 'Data issues', subtitle: canShowIssues(model.safe) ? `${model.counts.error} errors · ${model.counts.warning} warnings · ${model.counts.info} info` : undefined, close: () => { patch({ mode: 'building' }); refocusTrigger(); } };
+      return { title: 'Data issues', subtitle: canShowIssues(model.safe) ? `${model.counts.error} errors · ${model.counts.warning} warnings · ${model.counts.info} info` : undefined, close: () => { patch(TOOL_CLOSE.issues); refocusTrigger(); } };
     case 'area':
     case 'brief':
-      return { title: 'Area', subtitle: `${model.property.city}, ${model.property.state}`, close: () => { patch({ mode: 'building' }); refocusTrigger(); } };
+      return { title: 'Area', subtitle: `${model.property.city}, ${model.property.state}`, close: () => { patch(TOOL_CLOSE.area); refocusTrigger(); } };
     case 'building':
     default:
       return { title: 'Building', subtitle: model.property.name };
@@ -79,7 +85,7 @@ function headFor(mode: InspectorMode, model: PlanModel, state: PlanState, patch:
  * Right-hand detail panel. The container is sticky and clips; only the body scrolls.
  * The body remounts (and fades in) when the mode or the thing it describes changes.
  */
-export default function Inspector({ model, state, patch, mode, areaPanel, areaPreview }: InspectorProps) {
+export default function Inspector({ model, state, patch, mode, areaPanel, areaPreview, pageReady = false }: InspectorProps) {
   const head = headFor(mode, model, state, patch);
   const bodyKey = `${mode}:${mode === 'block' ? state.select : mode === 'floor' ? state.floor : mode === 'worklist' ? state.window : ''}`;
   // The scroll container outlives a panel change (the building model stays mounted), so reset it by hand.
@@ -91,10 +97,10 @@ export default function Inspector({ model, state, patch, mode, areaPanel, areaPr
   // Tool panels (find, worklist, issues, area) take focus when they open so Escape works at once.
   // Widening or narrowing the Area panel is the same panel: focus stays on the toggle that did it.
   const titleRef = useRef<HTMLHeadingElement | null>(null);
-  const prevMode = useRef(mode);
+  const prevMode = useRef<InspectorMode | null>(pageReady ? null : mode);
   useEffect(() => {
     const toolModes: InspectorMode[] = ['find', 'worklist', 'issues', 'area', 'brief'];
-    const resized = isArea(mode) && isArea(prevMode.current);
+    const resized = isArea(mode) && prevMode.current !== null && isArea(prevMode.current);
     if (mode !== prevMode.current && toolModes.includes(mode) && !resized) requestFrame(() => titleRef.current?.focus());
     prevMode.current = mode;
   }, [mode]);
@@ -165,7 +171,9 @@ export default function Inspector({ model, state, patch, mode, areaPanel, areaPr
         {head.close && <Button variant="ghost" size="sm" icon="close" iconOnly aria-label="Close" title="Close (Esc)" onClick={head.close} />}
       </div>
       {/* The part that scrolls: the bottom sheet sizes itself to what this holds (ui/Sheet.tsx). */}
-      <div className="sp-ins__body" ref={bodyRef} data-sheet-scroll="">
+      {/* The brief holds no control: its scroller takes a tab stop of its own (with a name), so a keyboard can
+          scroll it where it scrolls (a phone or tablet sheet). */}
+      <div className="sp-ins__body" ref={bodyRef} data-sheet-scroll="" {...(wide ? { tabIndex: 0, role: 'region', 'aria-label': 'Location brief' } : {})}>
         {(mode === 'building' || mode === 'floor' || mode === 'block') && state.view !== 'map' && <BuildingHero model={model} state={state} patch={patch} compact={mode === 'block'} />}
         <div key={bodyKey} className="sp-ins__content">
           {body}

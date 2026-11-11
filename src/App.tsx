@@ -30,7 +30,7 @@ import { svgToPng } from './lib/exportPng';
 import { RECORD_REQUEST } from './components/map/recordSignal';
 import { useIsNarrow, useIsPhone, usePrefersReducedMotion } from './lib/useMedia';
 import { selectionSelector, useClearOfSheet } from './components/stack/aboveSheet';
-import { clearSelection, floorKept } from './components/plan/actions';
+import { clearSelection, floorKept, isToolPanel, TOOL_CLOSE } from './components/plan/actions';
 import { focusSegment, refocusTrigger, rememberTrigger } from './state/focusStore';
 import { Patterns } from './components/plan/Patterns';
 import { fmtDate } from './domain/dates';
@@ -272,6 +272,18 @@ function Shell() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return;
       const el = focused();
+      // An open tool panel answers Escape wherever focus is, outside a field or a popover: after a link to
+      // `?mode=brief` focus is on the page, and a click on the brief's text moves it to <main> (round 18).
+      // The brief narrows first; the panel closes next. Inside the panel its own handler does the same.
+      if (!el?.closest('.sp-ins, .sp-pop__panel, input, select, textarea') && (mode === 'brief' || isToolPanel(mode))) {
+        e.preventDefault();
+        if (mode === 'brief') patch({ mode: 'area' });
+        else {
+          patch(TOOL_CLOSE[mode as keyof typeof TOOL_CLOSE]);
+          refocusTrigger();
+        }
+        return;
+      }
       if (el && el.closest(`.sp-ins, .sp-pop__panel, .sp-sheet, ${stageOwnsEscape ? '.sp-stage, ' : ''}input, select, textarea`)) return;
       if (state.bucket !== null || state.q || state.window || state.req !== null || state.inquiry) {
         patch({ bucket: null, q: '', window: null, req: null, max: null, by: null, inquiry: null, mode: 'building' });
@@ -279,13 +291,18 @@ function Shell() {
       }
     };
     return on('keydown', onKey);
-  }, [state.bucket, state.q, state.window, state.req, state.inquiry, patch, stageOwnsEscape]);
+  }, [state.bucket, state.q, state.window, state.req, state.inquiry, patch, stageOwnsEscape, mode]);
 
+  // Set after the first render: a tool panel that mounts later was opened by a click and takes focus (Inspector).
+  const pageReady = useRef(false);
+  useEffect(() => {
+    pageReady.current = true;
+  }, []);
   // `brief` is the Area panel widened to the full page: laid out as the Area panel, with the plan put away.
   const panel = mode === 'brief' ? 'area' : mode;
   const wide = mode === 'brief';
   const inspector = useMemo(
-    () => <Inspector model={model} state={state} patch={patch} mode={mode} areaPanel={areaPanel} areaPreview={areaPreview} />,
+    () => <Inspector model={model} state={state} patch={patch} mode={mode} areaPanel={areaPanel} areaPreview={areaPreview} pageReady={pageReady.current} />,
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [model, state, patch, mode, area],
   );

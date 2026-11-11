@@ -38,6 +38,17 @@ export const backFromFloor = (patch: Patch, floorId: string | null) => {
   if (floorId) refocusFloorTrigger(floorId);
 };
 
+/** The state each tool panel's Close (and Escape) writes: the panel goes, and so do the filters it set. */
+export const TOOL_CLOSE = {
+  find: { mode: 'building', req: null, max: null, by: null, inquiry: null },
+  worklist: { mode: 'building', window: null },
+  issues: { mode: 'building' },
+  area: { mode: 'building' },
+} as const satisfies Record<string, Partial<PlanState>>;
+
+export type ToolPanel = keyof typeof TOOL_CLOSE;
+export const isToolPanel = (mode: string): mode is ToolPanel => mode in TOOL_CLOSE;
+
 /**
  * The floor a tool panel (Area, Find space, Worklist) leaves open. The Floor view is that floor, and the
  * Building view docks it beside the model: both keep it, so the panel opens beside it and closing the
