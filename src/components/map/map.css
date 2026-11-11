@@ -151,7 +151,8 @@
 .sp-map-fallback__band:hover rect { stroke: var(--sp-color-brand-strong); }
 
 /* Area panel (inspector). */
-.sp-area { display: flex; flex-direction: column; gap: var(--sp-space-3); padding: var(--sp-space-4); font-size: var(--sp-text-13); }
+/* The panel body already has its inset: the Area content starts flush with the panel header, as every other panel does. */
+.sp-area { display: flex; flex-direction: column; gap: var(--sp-space-3); padding: 0 0 var(--sp-space-4); font-size: var(--sp-text-13); }
 .sp-area__head { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 .sp-area__sub { margin-top: var(--sp-space-2); }
 .sp-area-transit { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }

@@ -30,7 +30,7 @@ import { svgToPng } from './lib/exportPng';
 import { RECORD_REQUEST } from './components/map/recordSignal';
 import { useIsNarrow, useIsPhone, usePrefersReducedMotion } from './lib/useMedia';
 import { selectionSelector, useClearOfSheet } from './components/stack/aboveSheet';
-import { clearSelection } from './components/plan/actions';
+import { clearSelection, floorKept } from './components/plan/actions';
 import { focusSegment, refocusTrigger, rememberTrigger } from './state/focusStore';
 import { Patterns } from './components/plan/Patterns';
 import { fmtDate } from './domain/dates';
@@ -236,13 +236,13 @@ function Shell() {
         patch({ lens: 'status', bucket: null });
         break;
       case 'find':
-        patch({ mode: 'find', select: null, floor: null, window: null, bucket: null });
+        patch({ mode: 'find', select: null, floor: floorKept(state.view, state.floor), window: null, bucket: null });
         break;
       case 'find-largest':
-        patch({ mode: 'find', req: model.kpis.maxContiguous.size, max: null, by: null, inquiry: null, select: null, floor: null, window: null, bucket: null });
+        patch({ mode: 'find', req: model.kpis.maxContiguous.size, max: null, by: null, inquiry: null, select: null, floor: floorKept(state.view, state.floor), window: null, bucket: null });
         break;
       case 'expiry-worklist':
-        patch({ lens: 'expiry', mode: 'worklist', window: '12', select: null, floor: null, req: null, inquiry: null, bucket: null });
+        patch({ lens: 'expiry', mode: 'worklist', window: '12', select: null, floor: floorKept(state.view, state.floor), req: null, inquiry: null, bucket: null });
         break;
       case 'timeline':
         patch({ view: 'timeline' });
@@ -291,7 +291,9 @@ function Shell() {
   );
   const view = shownView(state.view, phone);
   // The building view shows a floor itself; the inspector joins it for a suite, a search, the worklist or issues.
-  const showInspector = view === 'building' ? panel !== 'building' && panel !== 'floor' : view !== 'floor' || panel === 'block';
+  // The Floor view is a floor itself too: there the inspector joins it for a suite or a tool panel (round 18:
+  // only a suite opened it, so Area, Find space, the worklist and the KPI shortcuts opened nothing).
+  const showInspector = view === 'building' || view === 'floor' ? panel !== 'building' && panel !== 'floor' : true;
   const sheetOpen = narrow && panel !== 'building';
   // A sheet that opened for a selection (a suite, a floor) must not hide it: the page keeps the chosen block
   // or row whole above the sheet's top edge, follows the sheet when it grows, and tells the sheet how much
