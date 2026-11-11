@@ -98,44 +98,19 @@ describe('Header with Prospect-safe on and off: the same controls in the same pl
 });
 
 describe('Header palette control', () => {
-  /** The palette radiogroup and its options, as [name, checked] pairs. */
-  const palette = (query: string) => {
-    const { html } = render(query);
-    const group = /<div role="radiogroup" aria-label="Color palette"[^>]*>(.*?)<\/div>/.exec(html)?.[1];
-    if (group === undefined) return null;
-    return [...group.matchAll(/<button[^>]*role="radio"[^>]*aria-checked="(true|false)"[^>]*tabindex="(-?\d)"[^>]*>(.*?)<\/button>/g)].map((m) => ({
-      name: /<span class="sp-segmented__label">(.*?)<\/span>/.exec(m[3])?.[1],
-      checked: m[1] === 'true',
-      tabbable: m[2] === '0',
-    }));
-  };
+  const look = (query: string) => /<div class="sp-header__look">(.*?)<\/div><\/header>/.exec(render(query).html)?.[1] ?? null;
 
-  it('offers the two palettes by name, the company colours selected by default', () => {
-    expect(palette('')).toEqual([
-      { name: 'Ascendix', checked: true, tabbable: true },
-      { name: 'Vice City', checked: false, tabbable: false },
-    ]);
+  it('is an icon button that opens the Colors menu, before the theme switch', () => {
+    const l = look('')!;
+    expect(l).toMatch(/<button(?=[^>]*aria-label="Colors")(?=[^>]*aria-haspopup="menu")/);
+    expect(l).not.toContain('role="radiogroup"');
+    expect(l.indexOf('aria-label="Colors"')).toBeLessThan(l.indexOf('theme"'));
   });
 
-  it('shows Vice City selected when the URL names it, in either theme', () => {
-    for (const q of ['?palette=vice', '?palette=vice&theme=light'])
-      expect(palette(q)).toEqual([
-        { name: 'Ascendix', checked: false, tabbable: false },
-        { name: 'Vice City', checked: true, tabbable: true },
-      ]);
-  });
-
-  it('stands beside the theme switch, and is not offered by the skins that have no palette', () => {
-    const { html } = render('');
-    const look = /<div class="sp-header__look">(.*?)<\/div><\/header>/.exec(html)?.[1] ?? '';
-    expect(look).toContain('aria-label="Color palette"');
-    expect(look).toContain('aria-label="Switch to light theme"');
-    expect(look.indexOf('Color palette')).toBeLessThan(look.indexOf('Switch to light theme'));
-    // The original blue glass keeps the theme switch alone; the embedded skin has neither.
-    expect(palette('?skin=aurora')).toBeNull();
-    expect(render('?skin=aurora').html).toContain('sp-header__look');
-    expect(palette('?skin=classic&palette=vice')).toBeNull();
-    expect(render('?skin=classic').html).not.toContain('sp-header__look');
+  it('is not offered by the skins that have no palette; the embedded skin has no look controls at all', () => {
+    expect(look('?skin=aurora')).not.toContain('aria-label="Colors"');
+    expect(look('?skin=aurora')).toMatch(/theme"/);
+    expect(look('?skin=classic')).toBeNull();
   });
 });
 
@@ -155,7 +130,7 @@ describe('Header on a phone: the palette and the theme are a menu, not a row of 
     for (const width of [320, 390, 760]) {
       const html = at(width);
       expect(html, `${width}`).not.toContain('class="sp-header__look"');
-      expect(html, `${width}`).not.toContain('aria-label="Color palette"');
+      expect(html, `${width}`).not.toContain('aria-label="Colors"');
       const menu = /<button[^>]*aria-label="Colors and theme"[^>]*>/.exec(html)?.[0] ?? '';
       expect(menu, `${width}`).toContain('aria-haspopup="menu"');
       // It follows Export: the same row of controls.
@@ -167,7 +142,7 @@ describe('Header on a phone: the palette and the theme are a menu, not a row of 
     for (const width of [761, 1024, 1440]) {
       const html = at(width);
       expect(html, `${width}`).toContain('class="sp-header__look"');
-      expect(html, `${width}`).toContain('aria-label="Color palette"');
+      expect(html, `${width}`).toContain('aria-label="Colors"');
       expect(html, `${width}`).toMatch(/aria-label="Switch to (light|dark) theme"/);
       expect(html, `${width}`).not.toContain('aria-label="Colors and theme"');
     }

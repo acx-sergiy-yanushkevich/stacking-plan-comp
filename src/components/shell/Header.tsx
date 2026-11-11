@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
-import { PALETTES, isDark, palettePatch, paletteOf, type PlanState } from '../../state/planState';
+import { isDark, paletteOf, type PlanState } from '../../state/planState';
 import { daysBetween, fmtDate } from '../../domain/dates';
 import { num, pct, usd, usd0 } from '../../domain/format';
-import { Button, Chip, Icon, Menu, Segmented, Switch, useToastBoundary } from '../ui';
+import { Button, Chip, Icon, Menu, Switch, useToastBoundary } from '../ui';
+import { paletteMenuItems } from './paletteMenu';
 import { canTimeTravel, planDate } from '../../domain/safe';
 import { AsOfPopover } from './AsOfPopover';
 import { useIsPhone, usePrefersDark } from '../../lib/useMedia';
@@ -122,19 +123,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
             label="Colors and theme"
             trigger={(p) => <Button {...p} iconOnly icon="more" aria-label="Colors and theme" title="Colors and theme" />}
             items={[
-              ...(palette
-                ? [
-                    { kind: 'heading' as const, id: 'palette', label: 'Colors' },
-                    ...PALETTES.map((p) => ({
-                      id: `palette-${p.id}`,
-                      label: p.label,
-                      adornment: <span className={`sp-palette__dot sp-palette__dot--${p.id}`} aria-hidden="true" />,
-                      checked: p.id === palette,
-                      onSelect: () => patch(palettePatch(p.id)),
-                    })),
-                    { kind: 'separator' as const, id: 'look-sep' },
-                  ]
-                : []),
+              ...(palette ? [...paletteMenuItems(palette, patch), { kind: 'separator' as const, id: 'look-sep' }] : []),
               { id: 'theme', label: themeLabel, icon: dark ? ('sun' as const) : ('moon' as const), onSelect: toggleTheme },
             ]}
           />
@@ -145,13 +134,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
       {standalone && !phone && (
         <div className="sp-header__look">
           {palette && (
-            <Segmented
-              className="sp-palette"
-              aria-label="Color palette"
-              options={PALETTES.map((p) => ({ id: p.id, label: p.label, title: `${p.label} colors`, adornment: <span className={`sp-palette__dot sp-palette__dot--${p.id}`} aria-hidden="true" /> }))}
-              value={palette}
-              onChange={(id) => patch(palettePatch(id))}
-            />
+            <Menu label="Colors" trigger={(p) => <Button {...p} iconOnly icon="palette" aria-label="Colors" title="Colors" />} items={paletteMenuItems(palette, patch)} />
           )}
           <Button iconOnly icon={dark ? 'sun' : 'moon'} aria-label={themeLabel} title={dark ? 'Light theme' : 'Dark theme'} onClick={toggleTheme} />
         </div>
