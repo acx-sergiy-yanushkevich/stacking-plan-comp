@@ -285,8 +285,8 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
       : heroFloors.filter((f) => roomy || f.level === 0 || f.level === heroFloors.length - 1 || f.id === hot?.id || f.id === focusId);
   // In the Building view the list of floors stands beside the model; in a panel the stack is on screen.
   const label = stage
-    ? `Building model: ${floors.length} floors, each cut into its suites and coloured by the active lens. The list of floors beside it names every floor with the same figures.`
-    : `Building model: ${floors.length} floors coloured by the active lens. The stack lists the same suites.`;
+    ? `Building model: ${floors.length} floors, each cut into its suites and colored by the active lens. The list of floors beside it names every floor with the same figures.`
+    : `Building model: ${floors.length} floors colored by the active lens. The stack lists the same suites.`;
 
   return (
     <div

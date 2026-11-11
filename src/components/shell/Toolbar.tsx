@@ -76,14 +76,14 @@ export function Toolbar({ state, patch }: ToolbarProps) {
     <section className="sp-card sp-toolbar sp-no-print" aria-label="Views and filters">
       <Segmented aria-label="View" size="lg" options={views} value={view} onChange={(v) => patch({ view: v, floor: v === 'stack' ? null : state.floor })} />
       <div className="sp-toolbar__group sp-toolbar__lens">
-        <span className="sp-toolbar__label">Colour by</span>
-        <Segmented aria-label="Colour lens" options={lenses.map((l) => ({ id: l.id, label: l.label, title: l.hint }))} value={lens} onChange={(next) => patch({ lens: next })} />
+        <span className="sp-toolbar__label">Color by</span>
+        <Segmented aria-label="Color lens" options={lenses.map((l) => ({ id: l.id, label: l.label, title: l.hint }))} value={lens} onChange={(next) => patch({ lens: next })} />
       </div>
       <div className="sp-toolbar__lens-select">
-        <SelectField label="Colour by" hideLabel value={lens} onChange={(e) => patch({ lens: e.target.value as LensId })}>
+        <SelectField label="Color by" hideLabel value={lens} onChange={(e) => patch({ lens: e.target.value as LensId })}>
           {lenses.map((l) => (
             <option key={l.id} value={l.id}>
-              Colour by {l.label}
+              Color by {l.label}
             </option>
           ))}
         </SelectField>

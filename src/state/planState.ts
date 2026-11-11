@@ -40,7 +40,7 @@ export interface PlanState {
    * look: both opt out of the palettes.
    */
   skin?: 'aurora' | 'classic';
-  /** Colour palette of the default skin. Absent is `ascendix`, the company colours; `vice` is Vice City. */
+  /** Color palette of the default skin. Absent is `ascendix`, the company colours; `vice` is Vice City. */
   palette?: 'vice';
 }
 

@@ -161,7 +161,7 @@ const floorTip = (f: FloorView) => `${f.floor.name} · ${pct(f.leasable > 0 ? f.
 
 /**
  * Map view (DESIGN.md §2.6): the property extruded floor by floor over OpenFreeMap tiles,
- * coloured by the active lens; hover tooltips, click to select, double-click to drill in;
+ * colored by the active lens; hover tooltips, click to select, double-click to drill in;
  * Present and Record; an SVG fallback when the map cannot load.
  */
 export default function MapView({ model, state, patch, dataSource }: MapViewProps) {

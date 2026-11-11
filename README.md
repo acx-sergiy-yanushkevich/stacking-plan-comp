@@ -16,7 +16,7 @@ A stacking plan draws a building floor by floor, with each suite as wide as its 
 - **Can I trust it?** Is space double-counted, is a lease missing its floor, is a record stale?
 - **Can I show it?** A prospect or buyer should see the availability without seeing who the other tenants are or what they pay.
 
-The existing AscendixRE stacking plan is a picture of the building: one colour scheme, several lines of text in every block, no analytics, no way to look ahead in time, and no version that is safe to hand to someone outside the brokerage.
+The existing AscendixRE stacking plan is a picture of the building: one color scheme, several lines of text in every block, no analytics, no way to look ahead in time, and no version that is safe to hand to someone outside the brokerage.
 
 ## The solution
 
@@ -28,10 +28,10 @@ One model of the building, shown four ways, with the answers to the questions ab
 
 **For the broker**
 
-- **Building view.** The landing screen: a large model of the building cut into suites and coloured by the lens, with one label beside each floor (percent leased, space available, what is expiring) that is also the way to open it. Click a floor and the model turns, shrinks and docks to the left while that floor's plan comes in beside it, with the floor's numbers, suites, deals, inquiries and issues below. "Whole building" brings the model back.
+- **Building view.** The landing screen: a large model of the building cut into suites and colored by the lens, with one label beside each floor (percent leased, space available, what is expiring) that is also the way to open it. Click a floor and the model turns, shrinks and docks to the left while that floor's plan comes in beside it, with the floor's numbers, suites, deals, inquiries and issues below. "Whole building" brings the model back.
 - **Six KPIs, always on top.** One quiet bar above every view: leased %, available SF, largest block, expiring in 12 months, WALT and pipeline. Each is a shortcut, and pointing at "Largest block" lights that block on the plan.
 - **Stack view.** The classic plan with an inspector beside it. Clicking a floor or suite expands it with the detail from every lens.
-- **Four colour lenses.** Status, expiration, deal stage and rent. Every state also has a pattern or label, so colour is never the only cue.
+- **Four color lenses.** Status, expiration, deal stage and rent. Every state also has a pattern or label, so color is never the only cue.
 - **Time travel.** Move the as-of date and the plan, KPIs and rollover chart recompute. Future vacancies and signed-but-not-commenced leases are drawn as what they are.
 - **Space finder.** Enter a size, a date and direct or sublease; matching blocks light up, including pairs of adjacent floors and near misses. An open inquiry can be matched to space the same way.
 - **Renewal worklist.** Leases at risk or expiring within 90 days, 180 days, 12 or 24 months, with the last touch on each.
@@ -45,7 +45,7 @@ One model of the building, shown four ways, with the answers to the questions ab
 - **Space for sale.** For-sale units appear on the plan as their own state, and a building sale listing shows as a banner.
 - **Present mode.** The 3D building orbits while the as-of date advances, and can be recorded as a video.
 
-It works with a keyboard and a screen reader, and on a phone. It opens in the Ascendix colours (Primary Blue and Primary Orange on the company navies, dark by default, with a daytime version behind the theme switch). The challenge's Vice City theme, neon on deep purple, is the second palette: the header's palette control or `?palette=vice` selects it.
+It works with a keyboard and a screen reader, and on a phone. It opens in the Ascendix colors (Primary Blue and Primary Orange on the company navies, dark by default, with a daytime version behind the theme switch). The challenge's Vice City theme, neon on deep purple, is the second palette: the header's palette control or `?palette=vice` selects it.
 
 ![Vice City palette](docs/shots/readme/44-vice-building.png)
 
@@ -56,8 +56,8 @@ It works with a keyboard and a screen reader, and on a phone. It opens in the As
 **AI**
 
 - **Claude Code** with Claude Fable 5.1 and 5.2 and Claude Opus 5.5 wrote the design specification, the code and the tests, working from a written brief.
-- **An AI review council.** After each build, independent AI reviewers scored screenshots and the running app against a fixed UI and UX rubric, and the fixes at least two of them agreed on went into the next round. Rounds 0 to 10 used three reviewers (two Claude Opus 5.5 sessions and Grok 4.7); round 10 averaged 37 out of 40. From round 11 a fourth reviewer, GPT-6.1 Sol, joined. Round 11 was the first to score the Vice City colours and the Building view and averaged about 86 out of 100 (UI, UX and engineering). Round 12 averaged 90.5 and round 13 averaged 93.5, with every reviewer at 90 or above. Round 14, the first in the Ascendix colours, averaged 93.75, round 15 averaged 93.75 and round 16 averaged 93.25. Round 17 averaged 95.25 (Grok 97, GPT-6.1 Sol 96, Opus A 95, Opus B 93), the first round to reach the 95 target with every reviewer above 90. The reports are in `docs/judging/`.
-- **AI-assisted research** for the competitor analysis in `docs/COMPETITORS.md`, from public vendor pages, help centres and review sites.
+- **An AI review council.** After each build, independent AI reviewers scored screenshots and the running app against a fixed UI and UX rubric, and the fixes at least two of them agreed on went into the next round. Rounds 0 to 10 used three reviewers (two Claude Opus 5.5 sessions and Grok 4.7); round 10 averaged 37 out of 40. From round 11 a fourth reviewer, GPT-6.1 Sol, joined. Round 11 was the first to score the Vice City colors and the Building view and averaged about 86 out of 100 (UI, UX and engineering). Round 12 averaged 90.5 and round 13 averaged 93.5, with every reviewer at 90 or above. Round 14, the first in the Ascendix colors, averaged 93.75, round 15 averaged 93.75 and round 16 averaged 93.25. Round 17 averaged 95.25 (Grok 97, GPT-6.1 Sol 96, Opus A 95, Opus B 93), the first round to reach the 95 target with every reviewer above 90. The reports are in `docs/judging/`.
+- **AI-assisted research** for the competitor analysis in `docs/COMPETITORS.md`, from public vendor pages, help centers and review sites.
 
 **Application**
 
@@ -151,7 +151,7 @@ All state lives in the URL, so every view can be linked to.
 | Parameter | Values | Meaning |
 |---|---|---|
 | `view` | `building`, `stack`, `timeline`, `map`, `floor` | Which view is shown (default `building`; on a phone the stack stands in for it) |
-| `lens` | `status`, `expiry`, `deals`, `rent` | What the colours encode |
+| `lens` | `status`, `expiry`, `deals`, `rent` | What the colors encode |
 | `asOf` | `YYYY-MM-DD` | As-of date |
 | `select` | block id, e.g. `L13-U1`, `A02` | Selected suite or availability |
 | `floor` | floor id, e.g. `F6` | Pinned or focused floor |
@@ -165,7 +165,7 @@ All state lives in the URL, so every view can be linked to.
 | `q` | text | Search tenant, suite or prospect |
 | `mode` | `issues`, `area`, … | Inspector panel, when not implied by the above |
 | `theme` | `light`, `dark` | Theme (default `dark`) |
-| `palette` | `vice` | The Vice City palette instead of the default Ascendix colours |
+| `palette` | `vice` | The Vice City palette instead of the default Ascendix colors |
 | `skin` | `aurora`, `classic` | The original blue glass, or the flat Salesforce Lightning look, instead of either palette |
 | `print` | `1` | Print layout |
 | `live` | `1` | Fetch footprint and area data live |

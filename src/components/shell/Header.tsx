@@ -141,12 +141,12 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
         {/* A phone: the same two controls as a menu, on the row the other controls already take. */}
         {standalone && phone && (
           <Menu
-            label="Colours and theme"
-            trigger={(p) => <Button {...p} iconOnly icon="more" aria-label="Colours and theme" title="Colours and theme" />}
+            label="Colors and theme"
+            trigger={(p) => <Button {...p} iconOnly icon="more" aria-label="Colors and theme" title="Colors and theme" />}
             items={[
               ...(palette
                 ? [
-                    { kind: 'heading' as const, id: 'palette', label: 'Colours' },
+                    { kind: 'heading' as const, id: 'palette', label: 'Colors' },
                     ...PALETTES.map((p) => ({
                       id: `palette-${p.id}`,
                       label: p.label,
@@ -169,8 +169,8 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
           {palette && (
             <Segmented
               className="sp-palette"
-              aria-label="Colour palette"
-              options={PALETTES.map((p) => ({ id: p.id, label: p.label, title: `${p.label} colours`, adornment: <span className={`sp-palette__dot sp-palette__dot--${p.id}`} aria-hidden="true" /> }))}
+              aria-label="Color palette"
+              options={PALETTES.map((p) => ({ id: p.id, label: p.label, title: `${p.label} colors`, adornment: <span className={`sp-palette__dot sp-palette__dot--${p.id}`} aria-hidden="true" /> }))}
               value={palette}
               onChange={(id) => patch(palettePatch(id))}
             />
