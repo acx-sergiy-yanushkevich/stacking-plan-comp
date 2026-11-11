@@ -1,6 +1,6 @@
-# Judge brief: Storyline council
+# Judge brief: Stax council
 
-You are one of four independent judges scoring the Storyline prototype for AscendixRE. Be rigorous and skeptical: the target is 95/100 and it must be earned. **This is a read-only review: do not modify, create or delete any file in the repository, and do not run any build that writes inside it.**
+You are one of four independent judges scoring the Stax prototype for AscendixRE. Be rigorous and skeptical: the target is 95/100 and it must be earned. **This is a read-only review: do not modify, create or delete any file in the repository, and do not run any build that writes inside it.**
 
 Repo root: the root of this repository (if the path contains a space, quote it).
 
@@ -16,7 +16,7 @@ New in round 18 (judge these as part of the product; everything from earlier rou
 - **Location brief.** A small toggle beside the panel's Close button (the expand icon, named "Location brief") widens the Area panel to the full page; the plan is put away, not unmounted, and comes back as it was. It is what a broker shows a client or decision maker: four headline figures, "What stands out" (a sentence for each measure at least 10% above or below the US, said as a plain fact, then the top amenities and the transit), ranked amenity bars, every ring beside the US, and the stops. Escape narrows it, a second Escape closes the panel; on a phone or tablet the sheet opens to full height; `?mode=brief` links to it. It holds no tenant data, so prospect-safe mode shows it whole. The US figures are fixed national ACS 5-year 2020–2024 figures in the same measures as the rings (`src/domain/areaBrief.ts`); the demo area figures are sample data and say so.
 - **PDF.** The location brief is the last section of the owner report and of the prospect-safe report (4 and 3 sections).
 - **KPI bar in two groups.** "Color by" switches (Leased, Pipeline) with a dot and underline; "Open" figures (Available, Largest block, Expiring 12 mo, WALT) with an arrow and no pressed state.
-- **Also since round 17**: an ended lease's timeline bar shows the lease itself (vacated tone, its own dates) and selects nothing; the phone header is one title and one row of controls at 420 px and under (Data issues in the "…" menu); the sheet handle can be dragged; floor plates stay legible with the inspector open and Floor 7 shows its 7,000 SF sublease; rent legend shares add to 100%; the prospect-safe search is named for what it finds; everything users read is in American English ("Color by", "Colors and theme"); the product is named Storyline.
+- **Also since round 17**: an ended lease's timeline bar shows the lease itself (vacated tone, its own dates) and selects nothing; the phone header is one title and one row of controls at 420 px and under (Data issues in the "…" menu); the sheet handle can be dragged; floor plates stay legible with the inspector open and Floor 7 shows its 7,000 SF sublease; rent legend shares add to 100%; the prospect-safe search is named for what it finds; everything users read is in American English ("Color by", "Colors and theme"); the product is named Stax.
 
 ## Read first
 

@@ -6,10 +6,11 @@ export type IconName =
   | 'phone' | 'external' | 'close' | 'chevron-down' | 'chevron-left' | 'chevron-right' | 'play' | 'pause' | 'record'
   | 'map' | 'layers' | 'list' | 'info' | 'check' | 'arrow-left' | 'stack' | 'timeline' | 'floor' | 'plus' | 'file'
   | 'image' | 'table' | 'link' | 'video' | 'sparkle' | 'shield' | 'clock' | 'user' | 'compass' | 'tilt' | 'minus'
-  | 'dollar' | 'home' | 'people' | 'train' | 'coffee' | 'sun' | 'moon' | 'more' | 'expand' | 'collapse';
+  | 'dollar' | 'home' | 'people' | 'train' | 'coffee' | 'sun' | 'moon' | 'more' | 'expand' | 'collapse' | 'palette';
 
 const PATHS: Record<IconName, string> = {
   more: 'M5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM19 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z',
+  palette: 'M12 3a9 9 0 1 0 0 18c1.2 0 2-.8 2-1.8 0-.6-.3-1-.6-1.4-.3-.4-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8h1.8A4.5 4.5 0 0 0 21 10.2C21 6.2 17 3 12 3zM7.5 11.5h.01M10.5 7.5h.01M15 7.5h.01',
   sun: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
   moon: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z',
   building: 'M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M4 21h16M8 7h2M8 11h2M8 15h2M12 7h2M12 11h2M12 15h2M16 11h2a2 2 0 0 1 2 2v8',

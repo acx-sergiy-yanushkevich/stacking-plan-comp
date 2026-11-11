@@ -10,6 +10,7 @@ import { pct, usd, usd0 } from '../../domain/format';
 import { parseState } from '../../state/planState';
 import type { PlanModel } from '../../model/usePlanModel';
 import { Header } from './Header';
+import { switcherItems } from './switcher';
 
 function render(query: string) {
   const floors = deriveFloors(property, TODAY, TODAY);
@@ -73,12 +74,14 @@ describe('Header with Prospect-safe on and off: the same controls in the same pl
     expect(text(/<div class="sp-header__asof[^"]*">(.*?)<\/button>/.exec(actions('?safe=1&asOf=2028-01-01'))![1])).toBe('As of Nov 9, 2026');
   });
 
-  it('one slot holds Data issues or, in prospect-safe, the chip that says the mode is on', () => {
-    const slot = (query: string) => /<div class="sp-header__slot">(.*?)<\/div>/.exec(actions(query))?.[1] ?? '';
-    expect(text(slot(''))).toMatch(/^Data issues\d+$/);
-    expect(slot('')).toContain('<button');
+  it('the slot is empty, or holds the chip that says prospect-safe is on; Data issues is not in the header', () => {
+    const slot = (query: string) => /<div class="sp-header__slot">(.*?)<\/div>/.exec(actions(query))?.[1] ?? 'MISSING';
+    expect(slot('')).toBe('');
     expect(text(slot('?safe=1'))).toBe('Prospect-safe on');
-    expect(slot('?safe=1')).not.toContain('<button');
+    for (const q of ['', '?safe=1', '?skin=classic', '?skin=aurora']) {
+      expect(render(q).html, q).not.toContain('Data issues');
+      expect(render(q).html, q).not.toContain('sp-header__stale');
+    }
     // The chip is in the slot and nowhere else: the title row is the same with the mode on and off.
     const title = (query: string) => { const { html } = render(query); return text(html.slice(html.indexOf('class="sp-header__title"'), html.indexOf('class="sp-header__facts"'))); };
     expect(title('?safe=1')).toBe(title(''));
@@ -96,44 +99,19 @@ describe('Header with Prospect-safe on and off: the same controls in the same pl
 });
 
 describe('Header palette control', () => {
-  /** The palette radiogroup and its options, as [name, checked] pairs. */
-  const palette = (query: string) => {
-    const { html } = render(query);
-    const group = /<div role="radiogroup" aria-label="Color palette"[^>]*>(.*?)<\/div>/.exec(html)?.[1];
-    if (group === undefined) return null;
-    return [...group.matchAll(/<button[^>]*role="radio"[^>]*aria-checked="(true|false)"[^>]*tabindex="(-?\d)"[^>]*>(.*?)<\/button>/g)].map((m) => ({
-      name: /<span class="sp-segmented__label">(.*?)<\/span>/.exec(m[3])?.[1],
-      checked: m[1] === 'true',
-      tabbable: m[2] === '0',
-    }));
-  };
+  const look = (query: string) => /<div class="sp-header__look">(.*?)<\/div><\/header>/.exec(render(query).html)?.[1] ?? null;
 
-  it('offers the two palettes by name, the company colours selected by default', () => {
-    expect(palette('')).toEqual([
-      { name: 'Ascendix', checked: true, tabbable: true },
-      { name: 'Vice City', checked: false, tabbable: false },
-    ]);
+  it('is an icon button that opens the Colors menu, before the theme switch', () => {
+    const l = look('')!;
+    expect(l).toMatch(/<button(?=[^>]*aria-label="Colors")(?=[^>]*aria-haspopup="menu")/);
+    expect(l).not.toContain('role="radiogroup"');
+    expect(l.indexOf('aria-label="Colors"')).toBeLessThan(l.indexOf('theme"'));
   });
 
-  it('shows Vice City selected when the URL names it, in either theme', () => {
-    for (const q of ['?palette=vice', '?palette=vice&theme=light'])
-      expect(palette(q)).toEqual([
-        { name: 'Ascendix', checked: false, tabbable: false },
-        { name: 'Vice City', checked: true, tabbable: true },
-      ]);
-  });
-
-  it('stands beside the theme switch, and is not offered by the skins that have no palette', () => {
-    const { html } = render('');
-    const look = /<div class="sp-header__look">(.*?)<\/div><\/header>/.exec(html)?.[1] ?? '';
-    expect(look).toContain('aria-label="Color palette"');
-    expect(look).toContain('aria-label="Switch to light theme"');
-    expect(look.indexOf('Color palette')).toBeLessThan(look.indexOf('Switch to light theme'));
-    // The original blue glass keeps the theme switch alone; the embedded skin has neither.
-    expect(palette('?skin=aurora')).toBeNull();
-    expect(render('?skin=aurora').html).toContain('sp-header__look');
-    expect(palette('?skin=classic&palette=vice')).toBeNull();
-    expect(render('?skin=classic').html).not.toContain('sp-header__look');
+  it('is not offered by the skins that have no palette; the embedded skin has no look controls at all', () => {
+    expect(look('?skin=aurora')).not.toContain('aria-label="Colors"');
+    expect(look('?skin=aurora')).toMatch(/theme"/);
+    expect(look('?skin=classic')).toBeNull();
   });
 });
 
@@ -153,8 +131,8 @@ describe('Header on a phone: the palette and the theme are a menu, not a row of 
     for (const width of [320, 390, 760]) {
       const html = at(width);
       expect(html, `${width}`).not.toContain('class="sp-header__look"');
-      expect(html, `${width}`).not.toContain('aria-label="Color palette"');
-      const menu = /<button[^>]*aria-label="[^"]*olors and theme"[^>]*>/.exec(html)?.[0] ?? '';
+      expect(html, `${width}`).not.toContain('aria-label="Colors"');
+      const menu = /<button[^>]*aria-label="Colors and theme"[^>]*>/.exec(html)?.[0] ?? '';
       expect(menu, `${width}`).toContain('aria-haspopup="menu"');
       // It follows Export: the same row of controls.
       expect(html.indexOf('olors and theme"')).toBeGreaterThan(html.indexOf('>Export<'));
@@ -165,7 +143,7 @@ describe('Header on a phone: the palette and the theme are a menu, not a row of 
     for (const width of [761, 1024, 1440]) {
       const html = at(width);
       expect(html, `${width}`).toContain('class="sp-header__look"');
-      expect(html, `${width}`).toContain('aria-label="Color palette"');
+      expect(html, `${width}`).toContain('aria-label="Colors"');
       expect(html, `${width}`).toMatch(/aria-label="Switch to (light|dark) theme"/);
       expect(html, `${width}`).not.toContain('aria-label="Colors and theme"');
     }
@@ -175,6 +153,52 @@ describe('Header on a phone: the palette and the theme are a menu, not a row of 
     expect(at(390, '?skin=classic')).not.toContain('olors and theme');
     expect(at(760, '?skin=classic')).not.toContain('aria-label="Colors and theme"');
     expect(at(1440, '?skin=classic')).not.toContain('class="sp-header__look"');
+  });
+});
+
+describe('Header product bar and building card', () => {
+  const bar = (query: string) => /<div class="sp-card sp-topbar sp-no-print">(.*?)<\/div><header/.exec(render(query).html)?.[1] ?? null;
+  const strip = (html: string) => html.replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
+  it('standalone: the bar carries the lockup, the switcher, the controls and the look, in that order', () => {
+    const b = bar('')!;
+    for (const [a, c] of [['sp-lockup', 'sp-switcher__name'], ['sp-switcher__name', 'sp-header__actions'], ['sp-header__actions', 'sp-header__look']])
+      expect(b.indexOf(a), `${a} before ${c}`).toBeLessThan(b.indexOf(c));
+    expect(strip(b)).toMatch(/^Stax by Ascendix Preston Park Financial Center/);
+    // The accessible name keeps the visible text (WCAG 2.5.3): a screen reader hears which building is open.
+    expect(b).toMatch(/<button(?=[^>]*aria-label="Switch building: Preston Park Financial Center")(?=[^>]*aria-haspopup="menu")/);
+    // The switcher is the building's name and a chevron: no photo, no icon before the name.
+    expect(b).not.toContain('<img');
+    const sw = /<button[^>]*aria-label="Switch building: [^"]*"[^>]*>(.*?)<\/button>/.exec(b)![1];
+    expect(sw.indexOf('<svg')).toBeGreaterThan(sw.indexOf('sp-switcher__name'));
+  });
+
+  it('standalone: the card is the icon, the name and the facts; the controls are not in it', () => {
+    const { html } = render('');
+    const card = html.slice(html.indexOf('<header'));
+    expect(card).toContain('class="sp-header__icon"');
+    expect(card).not.toContain('<img');
+    expect(card).not.toContain('sp-header__actions');
+    expect(strip(card.slice(card.indexOf('<div class="sp-header__title"'), card.indexOf('<div class="sp-header__facts"')))).toBe('Preston Park Financial Center');
+  });
+
+  it('aurora gets the bar too; the embedded skin gets none of it', () => {
+    expect(bar('?skin=aurora')).toContain('sp-lockup');
+    expect(bar('?skin=classic')).toBeNull();
+    const classic = render('?skin=classic').html;
+    for (const s of ['sp-lockup', 'Stax', '<img', 'Switch building']) expect(classic, s).not.toContain(s);
+    expect(classic).toContain('class="sp-header__icon"');
+    expect(classic).toContain('sp-header__actions');
+  });
+
+  it('the switcher menu lists the live building checked and five disabled sample entries', () => {
+    // Menu renders its items only when open: test the items through the helper the header builds them with.
+    const items = switcherItems(property);
+    const labels = items.filter((i) => !('kind' in i) || i.kind === 'item').map((i) => (i as { label: string }).label);
+    expect(labels[0]).toBe('Preston Park Financial Center');
+    expect(labels.slice(1, 6)).toEqual(['Legacy West Tower II', 'Galleria Commerce Plaza', 'Trinity Riverfront Offices', 'Cedar Springs Exchange', 'Las Colinas Gateway']);
+    expect(items[1]).toMatchObject({ checked: true });
+    for (const i of items.slice(2, 7)) expect(i).toMatchObject({ disabled: true });
   });
 });
 
@@ -214,25 +238,22 @@ describe('Header at 420 px and under: the title and one row of controls (round 1
     }
   });
 
-  it('Data issues moves into the menu beside Export, its count on the menu button; prospect-safe drops it and keeps every button', () => {
+  it('no slot and no Data issues; Export keeps its word without a chevron; the same controls with prospect-safe on and off', () => {
     const own = at(390);
     const safe = at(390, '?safe=1');
-    expect(own).not.toContain('class="sp-header__slot"');
-    expect(safe).not.toContain('class="sp-header__slot"');
-    expect(own).toMatch(/aria-label="Data issues \(\d+\), colors and theme"/);
-    expect(own).toMatch(/class="sp-btn__count sp-header__more-count" aria-hidden="true">\d+</);
-    expect(safe).toContain('aria-label="Colors and theme"');
-    expect(safe).not.toContain('Data issues');
-    expect(safe).not.toContain('sp-header__more-count');
+    for (const html of [own, safe]) {
+      expect(html).not.toContain('class="sp-header__slot"');
+      expect(html).not.toContain('Data issues');
+      expect(html).toContain('aria-label="Colors and theme"');
+      expect(html).toContain('<span class="sp-header__export-label">Export</span>');
+    }
     // The same controls in the same order with the mode on and off: the date, the switch, Export, the menu.
     const order = (html: string) => [...actions(html).matchAll(/<button[^>]*>/g)].map(([tag]) => (tag.includes('role="switch"') ? 'switch' : tag.includes('aria-haspopup="menu"') && tag.includes('aria-label=') ? 'menu' : 'button'));
     expect(order(own)).toEqual(order(safe));
     expect(order(own)).toEqual(['button', 'switch', 'button', 'menu']);
-    // Export has no chevron there, and keeps its word for a screen reader.
-    expect(own).toContain('<span class="sp-header__export-label">Export</span>');
   });
 
-  it('from 421 px the header is as before: the slot with Data issues, and the menu holds only the colors and the theme', () => {
+  it('from 421 px the slot is back, and the menu holds only the colors and the theme', () => {
     const html = at(421);
     expect(html).toContain('class="sp-header__slot"');
     expect(html).toContain('aria-label="Colors and theme"');

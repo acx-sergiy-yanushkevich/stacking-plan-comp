@@ -1,6 +1,6 @@
-# Storyline: infrastructure for the iframe deployment
+# Stax: infrastructure for the iframe deployment
 
-Companion to `PLAN.md`. `PLAN.md` §4 describes a full port to Lightning Web Components (LWC). This document describes the alternative: run Storyline as a hosted web app and show it inside the AscendixRE Property page in an iframe. It covers the architecture, sign-in, what runs where, and what it costs to run. Team, phases and build effort are out of scope and belong to the implementation plan.
+Companion to `PLAN.md`. `PLAN.md` §4 describes a full port to Lightning Web Components (LWC). This document describes the alternative: run Stax as a hosted web app and show it inside the AscendixRE Property page in an iframe. It covers the architecture, sign-in, what runs where, and what it costs to run. Team, phases and build effort are out of scope and belong to the implementation plan.
 
 ## 1. Summary
 
@@ -36,7 +36,7 @@ flowchart LR
   end
 
   wrap -- "1. POST signed request" --> edge
-  edge -- "2. app page + token (in memory)" --> app["Storyline in the iframe<br/>(user's browser)"]
+  edge -- "2. app page + token (in memory)" --> app["Stax in the iframe<br/>(user's browser)"]
   cdn -- "3. JS, CSS" --> app
   app -- "4. read plan data with the user's token" --> api
   app -- "5. tiles" --> tiles

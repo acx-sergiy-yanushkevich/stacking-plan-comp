@@ -10,6 +10,7 @@ import { FixedWidth } from '../../lib/useWidth';
 import { Legend } from '../plan/Legend';
 import StackView from '../stack/StackView';
 import { ExportStage } from './ExportStage';
+import { StaxLockup } from '../shell/Brand';
 import { LocationBrief } from '../area/LocationBrief';
 import type { Area } from '../../domain/types';
 import { PLAN_WIDTH, planRowHeight } from './pageFit';
@@ -86,7 +87,10 @@ export function PrintLayout({ model, state, area = null, visible }: PrintLayoutP
   const cover = (
     <>
       <header className="sp-print__head">
-        <div>
+        <div className="sp-print__brand">
+          <StaxLockup size={28} />
+        </div>
+        <div className="sp-print__title">
           <div className="sp-print__eyebrow">Stacking plan{safe ? ' · Prospect-safe' : ''}</div>
           <h1>{p.name}</h1>
           <div className="sp-print__sub">

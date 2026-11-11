@@ -1,4 +1,4 @@
-# Storyline: product plan and implementation roadmap
+# Stax: product plan and implementation roadmap
 
 Companion documents: `BRIEF.md` (personas, jobs, rubric), `COMPETITORS.md` (market analysis), `DESIGN.md` (screen-by-screen specification).
 

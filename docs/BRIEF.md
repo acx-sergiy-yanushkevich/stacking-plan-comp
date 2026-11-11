@@ -1,4 +1,4 @@
-# Storyline: brief and scoring rubric
+# Stax: brief and scoring rubric
 
 ## What it is
 

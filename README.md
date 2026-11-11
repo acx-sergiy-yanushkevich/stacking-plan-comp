@@ -1,6 +1,6 @@
-# Storyline
+# Stax by Ascendix
 
-Storyline is an interactive stacking plan that lets a broker see a building's availability, expirations and leasing options in one screen, and share a safe version of it with a prospect.
+Stax is an interactive stacking plan that lets a broker see a building's availability, expirations and leasing options in one screen, and share a safe version of it with a prospect.
 
 Built for the Ascendix Tech Challenge, November 2026. It is a prototype on mock data, not a production application.
 
@@ -87,6 +87,7 @@ It works with a keyboard and a screen reader, and on a phone. It opens in the As
 - The mock data is shaped like the AscendixRE objects (Property, Floor, Lease, Unit, Availability, Deal, Inquiry), so the same screens can later read real records.
 - The mock building contains each awkward case at least once: holdover, month-to-month, a committed future lease, occupied-but-marketed space, a sublease, an over-allocated floor, a multi-floor tenant, a confidential lease, records with no floor, and a for-sale unit.
 - "Today" is fixed at November 9, 2026, so screenshots are reproducible.
+- The other buildings in the header's switcher are fictional sample entries; only the first opens.
 - Demographics are sample figures unless live mode is on. Floor plates are schematic, derived from the footprint, and are not real floor plans.
 
 **Domain**
