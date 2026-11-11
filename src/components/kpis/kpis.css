@@ -1,5 +1,5 @@
 /* The KPI bar: the building's six key figures above the toolbar, in every view, in two cards side by side:
-   "Color by" (Leased, Pipeline: switches for the plan's lens) and "Open" (Available, Largest block,
+   "Color by" (Leased, Pipeline: switches for the plan's lens) and "Details" (Available, Largest block,
    Expiring 12 mo, WALT: each opens a tool or a view). Hairlines between the figures in a card, no tile
    of its own for any of them. Its height does not depend on the view, on an open floor, on the inspector
    or on what the figures say, so nothing under it moves. Tokens only. */

@@ -70,7 +70,7 @@ function lightOn(keys: string[]) {
  * shows before a click:
  * - "Color by" (Leased, Pipeline): switches. Each colors the plan by its lens (status, deals); the one in
  *   use has a filled dot and an underline (and `aria-pressed`), as the toolbar's lens marks its own.
- * - "Open" (Available, Largest block, Expiring 12 mo, WALT): each opens something (the space finder, the
+ * - "Details" (Available, Largest block, Expiring 12 mo, WALT): each opens something (the space finder, the
  *   worklist, the timeline) and carries an arrow. They are never pressed: what they open shows itself.
  *
  * Two figures are made of suites anyone can point to: "Available" and "Largest block". Pointing at one,
@@ -250,7 +250,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
   return (
     <section className="sp-kpis sp-no-print" aria-label="Key figures">
       {group('lens', 'Color the plan by', 'Color by', lenses)}
-      {group('open', 'Open a detail', 'Open', opens)}
+      {group('open', 'Open a detail', 'Details', opens)}
     </section>
   );
 }

@@ -71,7 +71,7 @@ describe('KpiStrip', () => {
     const lens = group('lens');
     const open = group('open');
     expect([lens?.[1], lens?.[3]]).toEqual(['Color the plan by', 'Color by']);
-    expect([open?.[1], open?.[3]]).toEqual(['Open a detail', 'Open']);
+    expect([open?.[1], open?.[3]]).toEqual(['Open a detail', 'Details']);
     const ids = (part = '') => [...part.matchAll(/data-kpi="([^"]+)"/g)].map((m) => m[1]);
     expect(ids(lens?.[2])).toEqual(['status', 'deals']);
     expect(ids(open?.[2])).toEqual(['find', 'find-largest', 'expiry-worklist', 'timeline']);
