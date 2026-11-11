@@ -38,3 +38,20 @@ export function StaxLockup({ size }: { size?: number }) {
     </span>
   );
 }
+
+/**
+ * A small picture of a building for the switcher: sky over a stack of floors, in the light blue and navy
+ * of the mock. It is drawn the same in both themes (a thumbnail, like a photo would be) and is decorative:
+ * the switcher's name says which building is open.
+ */
+export function BuildingThumb({ size = 22 }: { size?: number }) {
+  return (
+    <svg className="sp-thumb" width={size} height={size} viewBox="0 0 22 22" aria-hidden="true" focusable="false">
+      <rect width="22" height="22" rx="5" className="sp-thumb__sky" />
+      <rect x="4" y="9" width="14" height="13" className="sp-thumb__tower" />
+      {[11, 14, 17, 20].map((y) => (
+        <rect key={y} x="5.5" y={y} width="11" height="1.4" className="sp-thumb__floor" />
+      ))}
+    </svg>
+  );
+}
