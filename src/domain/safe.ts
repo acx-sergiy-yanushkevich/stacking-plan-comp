@@ -163,8 +163,14 @@ export function safeRollover<T extends { buckets: RolloverBucket[]; atRisk: numb
  * zero, not a leak.
  */
 export function safeKpis(k: Kpis, safe: boolean): Kpis {
-  if (canShowRollover(safe) && canShowWalt(safe)) return k;
-  return { ...k, ...(canShowRollover(safe) ? {} : { expiring12: 0, expiring12Leases: 0 }), ...(canShowWalt(safe) ? {} : { walt: 0 }) };
+  if (canShowRollover(safe) && canShowWalt(safe) && canShowInPlaceRent(safe)) return k;
+  return {
+    ...k,
+    ...(canShowRollover(safe) ? {} : { expiring12: 0, expiring12Leases: 0 }),
+    ...(canShowWalt(safe) ? {} : { walt: 0 }),
+    // In-place rents are withheld as a whole; the asking rents stay: they are the listings' own.
+    ...(canShowInPlaceRent(safe) ? {} : { rentByType: [] }),
+  };
 }
 
 /** Deal activity: stage, prospect, size, updated date, the pipeline and every deal count. */
