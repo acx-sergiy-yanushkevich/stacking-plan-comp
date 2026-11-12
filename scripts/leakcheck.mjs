@@ -403,14 +403,14 @@ const report = (label, found) => {
 async function brokerFacts(prefixQs, strict) {
 await open(page, base + prefixQs + 'view=stack');
 const kinds = await page.evaluate(() => [...document.querySelectorAll('.sp-stack [data-key]')].map((el) => [el.getAttribute('data-key'), el.getAttribute('aria-label') ?? '']));
-// The figure the broker's Expiring 12 mo card shows: it must be nowhere on a prospect's page.
+// The figure the broker's Expiration card (SF expiring in 12 months) shows: it must be nowhere on a prospect's page.
 let expiringFigure = await page.evaluate(() => {
-  const card = [...document.querySelectorAll('.sp-kpi')].find((c) => c.querySelector('.sp-kpi__label')?.textContent === 'Expiring 12 mo');
+  const card = [...document.querySelectorAll('.sp-kpi')].find((c) => c.querySelector('.sp-kpi__label')?.textContent === 'Expiration');
   const n = card?.querySelector('.sp-kpi__value')?.textContent?.match(/[\d,]{4,}/)?.[0];
   return n ? `${n} SF` : null;
 });
 if (strict && !expiringFigure) {
-  console.error('Could not read the Expiring 12 mo figure from the broker view: the check for it would prove nothing.');
+  console.error('Could not read the Expiration figure from the broker view: the check for it would prove nothing.');
   process.exit(2);
 }
 // The broker's WALT figure ("2.98"): it must be nowhere on a prospect's page, print or file.

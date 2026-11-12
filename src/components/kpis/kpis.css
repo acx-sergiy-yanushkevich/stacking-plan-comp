@@ -7,11 +7,11 @@
   display: grid; gap: 8px;
   /* The seven share the bar by what they hold: a long label with an SF figure needs more room than a
      percentage or a term in years. Each card's share is the sum of its figures' shares. */
-  grid-template-columns: minmax(0, 3.75fr) minmax(0, 3.25fr);
+  grid-template-columns: minmax(0, 3.95fr) minmax(0, 3.05fr);
 }
 .sp-kpis__wrap { position: relative; min-width: 0; display: grid; }
 .sp-kpis__group { display: grid; overflow: hidden; min-width: 0; }
-.sp-kpis__group--lens { grid-template-columns: minmax(0, 0.81fr) minmax(0, 0.9fr) minmax(0, 1.12fr) minmax(0, 0.92fr); }
+.sp-kpis__group--lens { grid-template-columns: minmax(0, 0.84fr) minmax(0, 1fr) minmax(0, 1.12fr) minmax(0, 0.92fr); }
 .sp-kpis__group--open { grid-template-columns: minmax(0, 1.09fr) minmax(0, 1.16fr) minmax(0, 1fr); }
 /* A wide window, where each change chip stands beside its figure: the columns are sized to the label, figure and
    chip on one line (270, 303, 253, 224 px measured), so no chip wraps and pushes its note out of sight. With the
