@@ -47,7 +47,7 @@ export function PhoneStack({ model, state, patch, title, legendNote, textFor, hi
           <Legend items={model.legend} compact figures id="sp-legend" note={legendNote} />
         </details>
       </div>
-      {model.filterLabel && <FilterBar label={model.filterLabel} alternatives={!!model.partial && model.partial.size > 0} patch={patch} />}
+      {model.filterLabel && <FilterBar label={model.filterLabel} alternatives={!!model.partial && model.partial.size > 0} find={model.queryFind} patch={patch} />}
       <ol className="sp-pstack__floors" aria-label={`${floors.length} floors, top floor first`}>
         {floors.map((f) => {
           const leasedPct = f.leasable ? f.leased / f.leasable : 0;

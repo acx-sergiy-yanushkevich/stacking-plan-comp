@@ -127,12 +127,14 @@ describe('Toolbar Data issues label by width', () => {
   };
   const issues = (html: string) => /<button[^>]*title="Data issues: records to fix or verify"[^>]*>(.*?)<\/button>/.exec(html)!;
 
-  it('says "Data issues" wherever it fits, and "Issues" on a phone of 420 px or less, still read as Data issues', () => {
+  it('says "Data issues" wherever it fits, and "Issues" on a phone of 420 px or less, its name starting with the word shown', () => {
     for (const w of [1440, 761, 421]) expect(issues(at(w))[1].replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, ''), `${w}`).toMatch(/^Data issues\d*$/);
     for (const w of [420, 320]) {
       const [tag, inner] = issues(at(w));
       expect(inner.replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, ''), `${w}`).toMatch(/^Issues\d*$/);
-      expect(tag, `${w}`).toContain('aria-label="Data issues');
+      // WCAG 2.5.3: the name is the words on the button, and the title says what they are (round 22, axe).
+      expect(tag, `${w}`).not.toContain('aria-label=');
+      expect(tag, `${w}`).toContain('title="Data issues: records to fix or verify"');
     }
   });
 });

@@ -252,7 +252,7 @@ function Bar({ bar, seg, floorName, y, X, clippedStart, cursorX, plotRight, asOf
     : bar.datesWithheld
       ? // Prospect-safe: the bar's ends are the chart's, not the lease's. No date is printed for it.
         bar.committed
-        ? 'Signed, not in'
+        ? 'Signed, not yet in'
         : 'Leased'
       : `${fmtDate(bar.start)} – ${bar.end ? fmtDate(bar.end) : 'open-ended (no end date)'}${bar.end && !isHoldover && !isProjected && bar.kind !== 'committed' ? ` · ${fmtMonths(Math.max(0, monthsBetween(asOf, bar.end)))} left` : ''}`;
   const tooltip = `${text.tooltip}\n${dates}`;

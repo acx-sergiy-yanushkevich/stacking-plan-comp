@@ -1,11 +1,12 @@
 import { useEffect, useMemo } from 'react';
 import type { Deal, ISODate, Property, Touch } from '../domain/types';
-import { canShowInquiries, canShowLeaseTerm, planDate, publishedFloors, safeFloors, safeKpis, safeRollover } from '../domain/safe';
+import { canShowInquiries, canShowLeaseTerm, canShowTenantRisk, planDate, publishedFloors, safeFloors, safeKpis, safeRollover } from '../domain/safe';
 import { deriveFloors, isLeaseKind, segmentIndex, activeDeals, type FloorView, type Segment } from '../domain/derive';
 import { computeKpis, kpiDeltas, type Kpis } from '../domain/kpis';
 import { rollover, bucketOf, type RolloverBucket } from '../domain/rollover';
 import { legendFor, type LegendItem } from '../domain/lenses';
-import { checkNeededBy, searchSpace, type ChosenOption, type FinderResult, type FitType, type Requirement } from '../domain/finder';
+import { checkNeededBy, rangeProblem, searchSpace, type ChosenOption, type FinderResult, type FitType, type Requirement } from '../domain/finder';
+import { readQuery, type QueryIntent } from '../domain/query';
 import { setPinnedOption, usePinnedOption } from '../state/hoverStore';
 import { findIssues, issueCounts, recentChanges, type Issue } from '../domain/issues';
 import { timelineModel } from '../domain/timeline';
@@ -64,6 +65,11 @@ export interface PlanModel {
   worklist: (window: WindowKey) => WorklistRow[];
   activeWorklist: WorklistRow[] | null;
   searchMatches: Set<string> | null;
+  /**
+   * A search query that is a space requirement ("12k direct by Jun 2027"): the requirement Find space should
+   * run. The search box offers it (FilterBar) and Enter runs it (Toolbar); the text search finds nothing.
+   */
+  queryFind: Extract<QueryIntent, { kind: 'size' }> | null;
   /** Why each search hit matched, by segment key. */
   searchReasons: Map<string, string> | null;
   bucketKeys: Set<string> | null;
@@ -142,10 +148,16 @@ export function buildWorklist(floors: FloorView[], window: WindowKey, asOf: ISOD
 }
 
 /** Search hits with the reason each block matched ("Prospect: Vantage Robotics (LOI)"). */
-function search(floors: FloorView[], q: string, safe: boolean): Map<string, string> {
+function search(floors: FloorView[], q: string, safe: boolean, intent: QueryIntent | null): Map<string, string> {
   const needle = q.trim().toLowerCase();
   const out = new Map<string, string>();
-  if (!needle) return out;
+  if (!needle || intent?.kind === 'size') return out;
+  // A state word lights that state ("sublease", "signed"); tenant risk ("holdover") says nothing to a prospect.
+  if (intent?.kind === 'state') {
+    if (intent.tenantRisk && !canShowTenantRisk(safe)) return out;
+    for (const f of floors) for (const s of f.segments) if (intent.kinds.has(s.kind)) out.set(s.key, intent.label);
+    return out;
+  }
   const hit = (v: string | undefined) => !!v && v.toLowerCase().includes(needle);
   for (const f of floors) {
     for (const s of f.segments) {
@@ -206,7 +218,8 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
     return null;
   }, [inquiry, state.req, state.max, state.by, state.fit, asOf]);
 
-  const fits = useMemo(() => (req ? searchSpace(floors, req, property.inquiries, asOf) : null), [floors, req, property.inquiries, asOf]);
+  // A range whose maximum is below its minimum runs nothing: no option, no lit suite (the Find panel says why).
+  const fits = useMemo(() => (req && !rangeProblem(req.size, req.max) ? searchSpace(floors, req, property.inquiries, asOf) : null), [floors, req, property.inquiries, asOf]);
 
   const worklist = useMemo(() => {
     const cache = new Map<WindowKey, WorklistRow[]>();
@@ -223,7 +236,9 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
   const effectiveWindow: WindowKey | null = canShowLeaseTerm(safe) ? state.window : null;
   const activeWorklist = effectiveWindow ? worklist(effectiveWindow) : null;
 
-  const searchReasons = useMemo(() => (state.q ? search(floors, state.q, safe) : null), [floors, state.q, safe]);
+  const intent = useMemo(() => readQuery(state.q, asOf), [state.q, asOf]);
+  const queryFind = intent?.kind === 'size' ? intent : null;
+  const searchReasons = useMemo(() => (state.q ? search(floors, state.q, safe, intent) : null), [floors, state.q, safe, intent]);
   const searchMatches = useMemo(() => (searchReasons ? new Set(searchReasons.keys()) : null), [searchReasons]);
 
   const bucketKeys = useMemo(() => {
@@ -249,12 +264,16 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
     // Every suite of the chosen option is lit, whether it is an exact match or an alternative.
     highlight = option ? new Set([...fits.keys, ...option.keys]) : fits.keys;
     filterLabel = `${inquiry ? `Space for ${inquiry.prospect}: ` : 'Space that fits '}${num(req.size)}${req.max ? `–${num(req.max)}` : '+'} SF${req.by ? ` by ${fmtDate(req.by)}` : ''} · ${fits.options.length} option${fits.options.length === 1 ? '' : 's'}`;
+  } else if (queryFind) {
+    // A size is a requirement, not a name: the bar offers Find space with it (FilterBar).
+    highlight = null;
+    filterLabel = `Find ${num(queryFind.size)}${queryFind.max ? `–${num(queryFind.max)}` : ''} SF${queryFind.fit === 'any' ? '' : ` ${queryFind.fit}`}${queryFind.by ? ` by ${fmtDate(queryFind.by)}` : ''}`;
   } else if (searchMatches && searchMatches.size === 0) {
     highlight = null;
     // Prospect-safe search skips tenants and prospects, and never repeats the query: it may be a tenant name.
     filterLabel = safe
-      ? 'No suite or floor matches. Try a suite number (“350”) or a floor (“Floor 8”).'
-      : `No tenant, suite or prospect matches “${state.q}”. Try a suite number (“350”) or a floor (“Floor 8”).`;
+      ? 'No suite or floor matches. Try a suite number (“350”), a floor (“Floor 8”) or a size (“12,000 SF”).'
+      : `No tenant, suite or prospect matches “${state.q}”. Try a suite number (“350”), a floor (“Floor 8”) or a size (“12,000 SF”).`;
   } else if (searchMatches) {
     highlight = searchMatches;
     const reasons = searchReasons ? [...searchReasons.entries()] : [];
@@ -296,6 +315,7 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
     worklist,
     activeWorklist,
     searchMatches,
+    queryFind,
     searchReasons,
     bucketKeys,
     highlight,

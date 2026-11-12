@@ -46,6 +46,7 @@ function buildModel(state: PlanState): PlanModel {
     activeWorklist: null,
     searchReasons: null,
     searchMatches: null,
+    queryFind: null,
     bucketKeys: null,
     highlight: null,
     filterLabel: null,

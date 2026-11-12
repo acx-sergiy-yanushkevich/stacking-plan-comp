@@ -228,7 +228,7 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
         ) : (
         <>
         <p className="sp-ins__explain">
-          {plural(kpis.pipeline.deals, 'live deal')} · {num(kpis.pipeline.sf)} SF requested on {num(spaceSf)} SF of space · {kpis.pipeline.onVacancy} on vacancies. Requested SF counts each space once, at its most advanced stage, capped at the space.
+          {plural(kpis.pipeline.deals, 'live deal')} · {num(kpis.pipeline.sf)} SF in play on {num(spaceSf)} SF of space · {kpis.pipeline.onVacancy} on vacancies. Space in play counts each space once, at its largest live deal, capped at the space; the deals request {num(kpis.pipeline.requested)} SF in all.
         </p>
         <ul className="sp-ins__list">
           {byStage.map((row) => (

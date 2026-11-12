@@ -56,6 +56,7 @@ export function buildModel(state: PlanState): PlanModel {
     activeWorklist: state.window && canShowLeaseTerm(state.safe) ? worklist(state.window) : null,
     searchReasons: null,
     searchMatches: null,
+    queryFind: null,
     bucketKeys: null,
     highlight: fits?.keys ?? null,
     filterLabel: null,

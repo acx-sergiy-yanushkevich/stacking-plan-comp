@@ -1,7 +1,7 @@
 import { isLeaseKind, type FloorView, type Segment } from '../../domain/derive';
 import { fmtMonthYearShort } from '../../domain/dates';
 import { num, pct, plural, rateRange } from '../../domain/format';
-import { stageRank, type LensId } from '../../domain/lenses';
+import { stageLabel, stageRank, topDeal, type LensId } from '../../domain/lenses';
 import { canShowDeals, canShowTenantRisk, rentVisible } from '../../domain/safe';
 import type { DealStage, ISODate, LeaseType, RateUnit } from '../../domain/types';
 import { availabilityFact, floorDeals, nextExpiry } from '../floor/floorData';
@@ -139,6 +139,9 @@ function expiryWords(f: FloorView): string {
 }
 
 /** The furthest stage any live deal on the floor has reached; null when it has none, or none a prospect may be told of. */
+/** A signed lease on the floor whose deal reached "Lease drafted" (the Pipeline lens draws it in that stage). */
+export const leaseDrafted = (f: FloorView, safe: boolean): boolean => canShowDeals(safe) && f.segments.some((s) => s.kind === 'committed' && topDeal(s)?.stage === 'Lease Out');
+
 export function furthestStage(f: FloorView, safe: boolean): DealStage | null {
   if (!canShowDeals(safe)) return null;
   const deals = floorDeals(f, safe);
@@ -166,7 +169,10 @@ export function lensFact(f: FloorView, lens: LensId, safe: boolean): string {
       return canShowTenantRisk(safe) ? expiryWords(f) : '';
     case 'deals': {
       const furthest = furthestStage(f, safe);
-      return furthest ? `${plural(floorDeals(f, safe).length, 'live deal')} · ${furthest}` : '';
+      // A signed lease whose deal reached "Lease drafted" is drawn in that stage's color: the label says so
+      // too, so the floor's color is never the only sign of it (round 22: Floor 4 read "100.0% leased" alone).
+      const parts = [furthest ? `${plural(floorDeals(f, safe).length, 'live deal')} · ${stageLabel(furthest)}` : '', leaseDrafted(f, safe) ? 'lease drafted' : ''];
+      return parts.filter(Boolean).join(' · ');
     }
     case 'rent':
       return rentWords(f, safe, false);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../data/mock/property';
 import { deriveFloors } from './derive';
-import { alternativesListed, alternativesNote, checkNeededBy, chosenOption, filterFits, findFits, matchingInquiries, nearMisses, neededByDate, noFit, optionSuites, searchSpace, suitesLabel, type FitOption, type Requirement } from './finder';
+import { alternativesListed, alternativesNote, checkNeededBy, chosenOption, filterFits, findFits, matchingInquiries, nearMisses, neededByDate, noFit, optionSuites, rangeProblem, searchSpace, suitesLabel, type FitOption, type Requirement } from './finder';
 import type { Availability, Floor, Lease, Property } from './types';
 
 const at = (asOf: string) => deriveFloors(property, asOf, TODAY);
@@ -664,5 +664,13 @@ describe('needed by: a date before the as-of date is refused, never moved', () =
     const { options } = searchSpace(floors, { size: 5000, max: null, by, type: 'any' }, [], TODAY);
     expect(options.length).toBe(stale.length);
     expect(options.some((o) => o.late)).toBe(false);
+  });
+});
+
+describe('rangeProblem: a maximum below the minimum is refused, not searched (round 22)', () => {
+  it('names the fix and lets a sound range through', () => {
+    expect(rangeProblem(5000, 3000)).toBe('Maximum must be at least 5,000 SF.');
+    expect(rangeProblem(5000, 5000)).toBeNull();
+    expect(rangeProblem(5000, null)).toBeNull();
   });
 });

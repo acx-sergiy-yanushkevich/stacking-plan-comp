@@ -166,7 +166,7 @@ export function toneFor(seg: Segment, lens: LensId, prospectSafe: boolean): Tone
       if (seg.kind === 'leased' || seg.kind === 'sublease') return expiryTone(seg.monthsToExpiry);
       if (seg.kind === 'committed') return 'committed';
       if (seg.kind === 'projected') return 'projected';
-      // Space on the market has its own item, so "Vacant, not listed" counts only the space with no record
+      // Space on the market has its own item, so "No lease or listing" counts only the space with no record
       // (round 21: one swatch read 31,600 SF while the blocks said Available now).
       if (seg.kind === 'available') return 'available';
       return 'empty';
@@ -179,9 +179,13 @@ export function toneFor(seg: Segment, lens: LensId, prospectSafe: boolean): Tone
     }
     case 'rent':
       if (seg.kind === 'forsale') return 'forsale';
-      // Prospect-safe: every lease's rent (in place or committed) is withheld the same way, so a
-      // confidential lease does not stand out.
-      if (prospectSafe && (!isVacantKind(seg) || seg.kind === 'committed')) return 'muted';
+      // Space with no lease or listing has no rent of any kind: its own dashed item, never counted as leased
+      // or as "no rent on record" (round 22: a prospect's "Leased" counted it).
+      if (seg.kind === 'unmarketed') return 'empty';
+      // Prospect-safe: a signed lease keeps its hatch and says what it is; every lease in place has its rent
+      // withheld the same way, so a confidential lease does not stand out.
+      if (prospectSafe && seg.kind === 'committed') return 'committed';
+      if (prospectSafe && !isVacantKind(seg)) return 'muted';
       // Confidential wins over everything that carries the lease (in place or committed).
       if (seg.lease?.confidential && (!isVacantKind(seg) || seg.kind === 'committed')) return 'confidential';
       return rentTone(rentValue(seg), rentType(seg));
@@ -189,6 +193,12 @@ export function toneFor(seg: Segment, lens: LensId, prospectSafe: boolean): Tone
 }
 
 type LegendSpec = Omit<LegendItem, 'sf' | 'share'>;
+
+/**
+ * The owner's word for floor area with no lease and no listing on record (a prospect is told it is not on the
+ * market). It says what is known: the space may be a lease missing its units (Data issues), so not "vacant".
+ */
+export const NO_RECORD = 'No lease or listing';
 
 function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
   if (lens === 'status' && prospectSafe)
@@ -216,7 +226,7 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
         { tone: 'expiring', label: 'Expires < 12 mo' },
         { tone: 'risk', label: 'Holdover / month-to-month' },
         { tone: 'projected', label: 'Projected vacancy', pattern: 'dashed' },
-        { tone: 'empty', label: 'Vacant, not listed', pattern: 'dashed' },
+        { tone: 'empty', label: NO_RECORD, pattern: 'dashed' },
       ];
     case 'expiry':
       // Prospect-safe: lease terms are withheld, so the legend has no ramp to explain.
@@ -241,8 +251,8 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
         { tone: 'committed', label: 'Signed, not yet in', pattern: 'hatch' },
         { tone: 'available', label: 'Available' },
         { tone: 'projected', label: 'Projected vacancy', pattern: 'dashed' },
-        { tone: 'empty', label: 'Vacant, not listed', pattern: 'dashed' },
-        { tone: 'muted', label: 'For sale (no lease term)' },
+        { tone: 'empty', label: NO_RECORD, pattern: 'dashed' },
+        { tone: 'muted', label: 'For sale' },
       ];
     case 'deals':
       return prospectSafe
@@ -252,7 +262,8 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
             { tone: 'forsale', label: 'For sale' },
           ]
         : [
-            { tone: 'deal-3', label: 'Lease drafted' },
+            // Only a signed lease is ever this far (topDeal), so its swatch is hatched as the suite is drawn.
+            { tone: 'deal-3', label: 'Lease drafted', pattern: 'hatch' },
             { tone: 'deal-2', label: 'LOI' },
             { tone: 'deal-1', label: 'Proposal' },
             { tone: 'deal-0', label: 'Tour' },
@@ -270,7 +281,11 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
         { tone: 'rent-net', label: 'Net or modified gross', pattern: 'topbar' },
         { tone: 'empty', label: 'Asking rent (vacancy)', pattern: 'asking' },
         { tone: 'confidential', label: 'Confidential' },
-        { tone: 'muted', label: prospectSafe ? 'Leased' : 'No rent on record' },
+        // A prospect: the suites tenants are in, their rent not shown (the Leasing lens's "Occupied"), and the
+        // signed lease apart, so the figure is the KPI's occupied, not a second "Leased" that disagrees with it.
+        ...(prospectSafe ? [{ tone: 'committed' as Tone, label: 'Signed, not yet in', pattern: 'hatch' as const }] : []),
+        { tone: 'muted', label: prospectSafe ? 'Occupied' : 'No rent on record' },
+        { tone: 'empty', label: prospectSafe ? 'Not on the market' : NO_RECORD, pattern: 'dashed' },
         { tone: 'forsale', label: 'For sale' },
       ];
   }
@@ -311,13 +326,14 @@ export function legendFor(lens: LensId, prospectSafe: boolean, floors: FloorView
 
 /** Legend wording for a tone in a lens ("Expires < 12 mo"), for tooltips and accessible names. */
 export function toneLabel(tone: Tone, lens: LensId, prospectSafe: boolean): string {
-  return legendSpecs(lens, prospectSafe).find((i) => i.tone === tone)?.label ?? '';
+  // The rent lens's asking-rent overlay shares the gap's tone; a suite is named for what it is drawn as.
+  return legendSpecs(lens, prospectSafe).find((i) => i.tone === tone && i.pattern !== 'asking')?.label ?? '';
 }
 
 /** One or two words for a tone, for tight places (the map's floor rail). */
 export function toneShort(tone: Tone, lens: LensId, prospectSafe: boolean): string {
   if (lens !== 'status') return toneLabel(tone, lens, prospectSafe);
-  const words: Partial<Record<Tone, string>> = { available: 'Available', 'available-later': 'Coming', sublease: 'Sublease', committed: 'Signed', forsale: 'For sale', leased: 'Leased', expiring: 'Expiring', risk: 'At risk', empty: 'Vacant', projected: 'Vacating', neutral: 'Leased' };
+  const words: Partial<Record<Tone, string>> = { available: 'Available', 'available-later': 'Coming', sublease: 'Sublease', committed: 'Signed', forsale: 'For sale', leased: 'Leased', expiring: 'Expiring', risk: 'At risk', empty: 'No record', projected: 'Vacating', neutral: 'Leased' };
   return words[tone] ?? toneLabel(tone, lens, prospectSafe);
 }
 

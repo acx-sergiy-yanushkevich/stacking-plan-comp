@@ -1,4 +1,6 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import type { QueryIntent } from '../../domain/query';
+import { findFromQuery } from '../stack/FilterBar';
 import { computedStyle, sizeObserver } from '../../lib/host';
 import { LENSES, type LensId } from '../../domain/lenses';
 import { canShowIssues, canShowLeaseTerm, canUseLens } from '../../domain/safe';
@@ -15,6 +17,8 @@ export interface ToolbarProps {
   patch: (p: Partial<PlanState>) => void;
   /** Open data issues, for the Data issues button's count; 0 or absent draws no count. */
   issueCount?: number;
+  /** The search query read as a space requirement: Enter runs it in Find space. */
+  queryFind?: Extract<QueryIntent, { kind: 'size' }> | null;
 }
 
 const VIEWS: Array<{ id: View; label: string; icon: 'building' | 'stack' | 'timeline' | 'map' }> = [
@@ -75,7 +79,7 @@ function Slot({ icon, label, count }: { icon: 'clock' | 'warning'; label: string
   );
 }
 
-export function Toolbar({ state, patch, issueCount }: ToolbarProps) {
+export function Toolbar({ state, patch, issueCount, queryFind }: ToolbarProps) {
   const phone = useIsPhone();
   // A phone of 420 px or less shares one row between the four tool buttons: there "Data issues" is drawn
   // as "Issues" (its accessible name stays "Data issues"), so the word and its count fit the button.
@@ -120,7 +124,7 @@ export function Toolbar({ state, patch, issueCount }: ToolbarProps) {
       <div className="sp-toolbar__find">
         <div className="sp-toolbar__search" ref={searchRef}>
           {/* The field is named for the search it does: a prospect-safe search finds no tenant or prospect. */}
-          <TextField label={state.safe ? SEARCH_HINTS.safe[0] : SEARCH_HINTS.owner[0]} hideLabel kind="search" placeholder={hint} value={state.q} onChange={(e) => toPlan({ q: e.target.value })} onClear={() => toPlan({ q: '' })} />
+          <TextField label={state.safe ? SEARCH_HINTS.safe[0] : SEARCH_HINTS.owner[0]} hideLabel kind="search" placeholder={hint} value={state.q} onChange={(e) => toPlan({ q: e.target.value })} onClear={() => toPlan({ q: '' })} onKeyDown={(e) => e.key === 'Enter' && queryFind && toPlan(findFromQuery(queryFind))} />
         </div>
         {/* Every view has Find space and Area (the area around the building was too hidden as a Map-only
             button); the one prospect-safe withholds (Worklist) comes last, so its empty place moves nothing. */}
@@ -161,7 +165,8 @@ export function Toolbar({ state, patch, issueCount }: ToolbarProps) {
               count={issueCount}
               onClick={() => toggleMode('issues')}
               title="Data issues: records to fix or verify"
-              aria-label={narrow ? `${ISSUES_LABEL}${issueCount ? ` (${issueCount})` : ''}` : undefined}
+              // No aria-label: the name is the words on the button ("Issues 8", WCAG 2.5.3), and the title says
+              // what they are ("Data issues: records to fix or verify").
             >
               {narrow ? 'Issues' : ISSUES_LABEL}
             </Button>

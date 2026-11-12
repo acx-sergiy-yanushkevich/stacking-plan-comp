@@ -154,7 +154,7 @@ describe('PrintLayout', () => {
     // prospect that the records over-allocate). It states the leased figure, the share and the space, as on screen.
     expect(html).not.toMatch(/rows sum to|exceed|over-allocat|data issue/i);
     const total = /<tr class="sp-print__total">(.*?)<\/tr>/.exec(pages)?.[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() ?? '';
-    expect(total).toMatch(/^Total · [\d,]+ RSF leasable [\d,]+ leased [\d.]+% leased · [\d,]+ SF available · [\d,]+ SF signed, not in$/);
+    expect(total).toMatch(/^Total · [\d,]+ RSF leasable [\d,]+ leased [\d.]+% leased · [\d,]+ SF available · [\d,]+ SF signed, not yet in$/);
     expect(html).not.toMatch(/\b(Tour|Proposal|LOI|Lease Out)\b/);
     for (const l of property.leases) {
       expect(html, `names ${l.tenant}`).not.toContain(l.tenant);
@@ -185,7 +185,7 @@ describe('PrintLayout', () => {
     expect(sum).toBe(model.kpis.leased + over);
     const note = /<p class="sp-print__note sp-print__note--recorded">(.*?)<\/p>/.exec(roll)?.[1] ?? '';
     const n = (v: number) => v.toLocaleString('en-US');
-    expect(note).toBe(`Suite areas are as recorded: the leased, sublease and committed rows add up to ${n(sum)} SF. Floor totals, and the ${n(model.kpis.leased)} SF leased, are capped at each floor’s leasable area.`);
+    expect(note).toBe(`Suite areas are as recorded: the leased, sublease and signed-not-yet-in rows add up to ${n(sum)} SF. Floor totals, and the ${n(model.kpis.leased)} SF leased, are capped at each floor’s leasable area.`);
     // The cover, where Floor 7 reads 100.0% over suites that add up to more, says the same in brief.
     const cover = sectionsOf(html).parts[0];
     expect(cover).toContain('Suite areas are as recorded; floor totals are capped at the floor’s leasable area.');

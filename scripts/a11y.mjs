@@ -40,6 +40,20 @@ for (const qs of states) {
   }
   failed += serious.length;
 }
+// A phone (390 px): the states that only a phone draws (row badges dimmed by a filter, the "Issues" button,
+// the folded legend opened). Round 22 found two serious violations here that the desktop pass could not see.
+const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' });
+const phonePage = await phone.newPage();
+for (const qs of ['?view=stack', '?view=stack&window=12', '?view=stack&req=12000', '?view=timeline', '?view=map', '?view=stack&lens=expiry&legend=open']) {
+  await phonePage.goto(base + qs.replace('&legend=open', '') + extra, { waitUntil: 'networkidle' });
+  await phonePage.waitForTimeout(qs.includes('map') ? 2000 : 300);
+  if (qs.includes('legend=open')) await phonePage.locator('details summary').first().click();
+  const results = await new AxeBuilder({ page: phonePage }).disableRules(['region']).exclude('.maplibregl-map').analyze();
+  const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+  console.log(`phone ${qs}: ${serious.length} serious/critical, ${results.violations.length - serious.length} minor`);
+  for (const v of results.violations) console.log(`  [${v.impact}] ${v.id}: ${v.help} (${v.nodes.length} nodes) e.g. ${v.nodes[0]?.target?.join(' ')}`);
+  failed += serious.length;
+}
 await browser.close();
 if (failed) {
   console.error(`\n${failed} serious/critical accessibility violations`);

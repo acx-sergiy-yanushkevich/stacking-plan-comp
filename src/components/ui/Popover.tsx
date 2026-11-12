@@ -89,7 +89,12 @@ export function Popover({ open, onOpenChange, trigger, children, align = 'start'
     }
     if (e.key === 'Tab' && panelRef.current) {
       const items = Array.from(panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE));
-      if (items.length === 0) return;
+      // A panel of text alone (the legend's note) keeps focus until Escape or a click outside closes it:
+      // Tab out of it would leave it open with its key handler out of reach (round 22).
+      if (items.length === 0) {
+        e.preventDefault();
+        return;
+      }
       const first = items[0];
       const last = items[items.length - 1];
       if (e.shiftKey && focused() === first) {

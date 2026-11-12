@@ -477,6 +477,14 @@ export interface FinderResult {
 }
 
 /** Run the finder for a requirement: options of the right type, alternatives when they are few, advice when there are none. */
+/**
+ * Why a requirement's range cannot be searched: a maximum below the minimum. Null when it can. The finder
+ * runs nothing for such a range (round 21 and 22: 5,000–3,000 SF offered a suite "split to 3,000").
+ */
+export function rangeProblem(size: number, max: number | null): string | null {
+  return max !== null && max < size ? `Maximum must be at least ${size.toLocaleString('en-US')} SF.` : null;
+}
+
 export function searchSpace(floors: FloorView[], req: Requirement, inquiries: Inquiry[], asOf: ISODate): FinderResult {
   const r = findFits(floors, req.size, req.by, req.max, inquiries, asOf);
   const options = filterFits(r.options, req.type);

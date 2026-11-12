@@ -132,8 +132,8 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
               canShowTenant(safe) && ['Tenant', <strong key="t">{lease.tenant}</strong>],
               ['Contact', contactLabel(lease.tenantContact, safe)],
               canShowTenant(safe) && ['Industry', lease.industry],
-              // Prospect-safe: no lease shows a date. One in place says "Leased", one signed says "Signed, not in", and nothing more.
-              leaseDatesHidden(seg.kind, safe) ? ['Status', termHidden(seg.kind, safe) ? 'Leased' : 'Signed, not in'] : ['Term', `${fmtDate(lease.commencement)} – ${seg.endDate ? fmtDate(seg.endDate) : 'open (MTM)'}`],
+              // Prospect-safe: no lease shows a date. One in place says "Leased", one signed says "Signed, not yet in", and nothing more.
+              leaseDatesHidden(seg.kind, safe) ? ['Status', termHidden(seg.kind, safe) ? 'Leased' : 'Signed, not yet in'] : ['Term', `${fmtDate(lease.commencement)} – ${seg.endDate ? fmtDate(seg.endDate) : 'open (MTM)'}`],
               ['Remaining', remaining],
               ['Rent', rentText],
               ['Broker', brokerLabel(lease.owner, safe)],
@@ -231,7 +231,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
       )}
 
       {seg.kind === 'unmarketed' && canShowIssues(safe) && (
-        <Section title="Unaccounted area">
+        <Section title="No lease or listing">
           <p className="sp-ins__p">
             <strong>{sf(seg.size)}</strong> of {floorName}’s leasable area has no lease or availability record.
           </p>

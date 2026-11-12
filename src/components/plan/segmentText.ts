@@ -2,7 +2,7 @@ import type { Segment } from '../../domain/derive';
 import type { ISODate } from '../../domain/types';
 import { fmtDate, fmtMonthYear, fmtMonthYearShort, fmtMonths } from '../../domain/dates';
 import { compactRate, num, rate, sf, usd, usd0 } from '../../domain/format';
-import { dealCount, rentType, rentValue, topDeal, toneFor, type LensId, type Tone, stageLabel } from '../../domain/lenses';
+import { dealCount, NO_RECORD, rentType, rentValue, topDeal, toneFor, type LensId, type Tone, stageLabel } from '../../domain/lenses';
 import { canShowActivity, canShowDeals, canShowInPlaceRent, canShowIssues, canShowLeaseTerm, canShowListingStatus, canShowTenant, canShowTenantRisk, leaseDatesHidden, marketedFor, rentVisible, tenantLabel, termHidden } from '../../domain/safe';
 import type { PatternKind } from './Patterns';
 
@@ -68,7 +68,7 @@ const KIND_LABEL: Record<Segment['kind'], string> = {
   sublease: 'Sublease',
   committed: 'Signed, not yet in',
   projected: 'Projected vacancy',
-  unmarketed: 'Vacant, not listed',
+  unmarketed: NO_RECORD,
   forsale: 'For sale',
 };
 
@@ -134,7 +134,8 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
       name = lease && canShowTenant(safe) ? lease.tenant : name;
       // Prospect-safe: a signed lease shows no date either; the badge says what it is.
       meta = lease && !leaseDatesHidden(kind, safe) ? `Moves in ${fmtMonthYear(lease.commencement)}` : '';
-      badges.push({ kind: 'info', text: 'Signed, not in', title: 'Lease signed; tenant has not taken occupancy' });
+      // The badge says it where the title is the tenant's name; a prospect's title already says it.
+      if (canShowTenant(safe)) badges.push({ kind: 'info', text: 'Signed, not yet in', title: 'Lease signed; tenant has not taken occupancy' });
       break;
     }
     case 'available': {
@@ -185,7 +186,7 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
   }
   if (lens === 'deals' && canShowDeals(safe)) {
     const d = topDeal(seg);
-    if (d) meta = `${d.stage} · ${d.prospect}${d.kind === 'Renewal' ? ' (renewal)' : ''}`;
+    if (d) meta = `${stageLabel(d.stage)} · ${d.prospect}${d.kind === 'Renewal' ? ' (renewal)' : ''}`;
     else if (kind === 'available' || kind === 'projected' || kind === 'unmarketed') meta = 'No live deal';
   }
 

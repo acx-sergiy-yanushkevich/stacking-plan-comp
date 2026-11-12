@@ -91,7 +91,8 @@ describe('rent lens', () => {
   });
   it('for sale and unaccounted area have no rent', () => {
     expect(tone('A10', 'rent')).toBe('forsale');
-    expect(tone('F2-gap', 'rent')).toBe('muted');
+    // Round 23: space with no lease or listing is its own dashed item, never "No rent on record" or "Leased".
+    expect(tone('F2-gap', 'rent')).toBe('empty');
     expect(rentValue(seg(today, 'F2-gap'))).toBeNull();
   });
 });
@@ -250,7 +251,7 @@ describe('plain words in the legend and on the plan', () => {
         for (const jargon of ['MTM', 'FSG', 'NNN', 'unaccounted', 'Lease out', 'off the gross scale', 'Committed']) expect(labels, `${lens}${safe ? ' safe' : ''}`).not.toContain(jargon);
       }
     const status = legendForJargon('status', false, floors).map((i) => i.label);
-    expect(status).toEqual(expect.arrayContaining(['Signed, not yet in', 'Holdover / month-to-month', 'Vacant, not listed']));
+    expect(status).toEqual(expect.arrayContaining(['Signed, not yet in', 'Holdover / month-to-month', 'No lease or listing']));
     const rent = legendForJargon('rent', false, floors).map((i) => i.label);
     expect(rent).toEqual(expect.arrayContaining(['Gross < $28', 'Net or modified gross']));
   });
@@ -262,3 +263,20 @@ describe('plain words in the legend and on the plan', () => {
   });
 });
 
+
+describe('rent lens: space with no lease or listing has its own item (round 22)', () => {
+  it('a prospect reads Occupied, Signed and Not on the market apart, so no "Leased" disagrees with the KPI', () => {
+    const legend = legendFor('rent', true, safeFloors(today, true));
+    const by = (label: string) => legend.find((i) => i.label === label)?.sf;
+    expect(by('Occupied')).toBe(196700);
+    expect(by('Signed, not yet in')).toBe(8000);
+    expect(by('Not on the market')).toBe(5400);
+    expect(legend.map((i) => i.label)).not.toContain('Leased');
+    expect(toneLabel('empty', 'rent', true)).toBe('Not on the market');
+  });
+
+  it('the owner reads the gap by its one name in every lens', () => {
+    for (const lens of ['status', 'expiry', 'rent'] as const) expect(legendFor(lens, false, today).find((i) => i.tone === 'empty' && i.pattern === 'dashed')?.label, lens).toBe('No lease or listing');
+    expect(legendFor('rent', false, today).find((i) => i.label === 'No lease or listing')?.sf).toBe(5400);
+  });
+});

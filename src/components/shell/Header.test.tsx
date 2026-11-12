@@ -311,7 +311,8 @@ describe('Header building card: the facts, then when the plan last changed at th
       const facts = /<div class="sp-header__facts">(.*?)<\/div>/.exec(html.slice(html.indexOf('<header')))![1];
       // The facts are spans side by side; the last one is when the plan last changed.
       const spans = [...facts.matchAll(/<span class="(sp-header__[a-z-]+[^"]*)?"?[^>]*>/g)];
-      expect(facts, q).toMatch(/<span class="sp-header__verified"[^>]*>.*Latest change Nov 6, 2026<\/span>$/);
+      // Round 23: the listing and the latest change sit in one tail that wraps whole.
+      expect(facts, q).toMatch(/<span class="sp-header__verified"[^>]*>.*Latest change Nov 6, 2026<\/span><\/span>$/);
       expect(html, q).not.toContain('sp-header__aside');
       expect(spans.length, q).toBeGreaterThan(3);
     }

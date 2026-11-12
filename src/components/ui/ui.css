@@ -172,3 +172,4 @@ button.sp-sheet__handle:active { cursor: grabbing; }
 .sp-empty .sp-icon { color: var(--sp-color-text-faint); }
 .sp-empty__title { font-weight: 600; color: var(--sp-color-text); }
 .sp-divider { height: 1px; background: var(--sp-color-border); margin: var(--sp-space-3) 0; }
+.sp-field__error { color: var(--sp-color-error); font-weight: 500; }
