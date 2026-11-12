@@ -50,16 +50,16 @@
     --tone-projected-fill: #173a2a; --tone-projected-text: #aef0d0; --tone-projected-edge: #3fcf8f;
     --tone-confidential-fill: #3b4756; --tone-confidential-text: #d7dfe8; --tone-confidential-edge: #94a1b0;
 
-    /* Expiration lens: from the orange toward the blues. Read it as "the stronger the colour, the sooner":
-       the soonest step is the brightest against the navy card and the latest is a deep blue close to it
-       (the legend says so). Every step is 9 L* or more below the one before, so the order survives a
-       colour-blind eye and the 3D model and the map, which have only the colour; and every step changes
-       hue as well: a warm yellow, Primary Orange, red-orange, mauve, then two company-side blues (a steel
-       blue and a deeper indigo slate) instead of violets. (The soonest step was a light orange of the
-       Primary Orange's own hue: the two differed in lightness alone.) Holdover / MTM is a dark maroon, far below every step. */
-    --tone-exp-0-fill: #ffe07c; --tone-exp-0-text: #2a1500; --tone-exp-0-edge: #fff0bd;
+    /* Expiration lens: the same way as by day, from the hottest step to the quietest. The soonest step is
+       a deep, saturated red-orange (the day ramp's rust, hue 12° against 14°), then the Primary Orange and a
+       warm yellow, then mauve and two company-side blues, a steel blue and a deep indigo slate that sits
+       closest to the navy card: "< 6 mo" is the most urgent colour and "5+ yr" the quietest in both themes
+       (round 23: the soonest step was a pale yellow at night and a dark rust by day). Every neighbour is
+       8 L* or more apart, 8° or more in hue, and 15 ΔE or more apart to a deuteranope, so the 3D model and
+       the map, which have only the colour, keep every step apart. Holdover / MTM is a dark maroon, far from every step. */
+    --tone-exp-0-fill: #f2603a; --tone-exp-0-text: #1f0a04; --tone-exp-0-edge: #ffb39c;
     --tone-exp-1-fill: #ff9c00; --tone-exp-1-text: #2a1500; --tone-exp-1-edge: #ffc774;
-    --tone-exp-2-fill: #ec7450; --tone-exp-2-text: #1f0a04; --tone-exp-2-edge: #f8b29b;
+    --tone-exp-2-fill: #ffe07c; --tone-exp-2-text: #2a1500; --tone-exp-2-edge: #fff0bd;
     --tone-exp-3-fill: #bb6191; --tone-exp-3-text: #1c0a14; --tone-exp-3-edge: #e6abc8;
     --tone-exp-4-fill: #3a6a8e; --tone-exp-4-text: #ffffff; --tone-exp-4-edge: #9cc3e0;
     --tone-exp-5-fill: #2e4883; --tone-exp-5-text: #ffffff; --tone-exp-5-edge: #8fa8e0;

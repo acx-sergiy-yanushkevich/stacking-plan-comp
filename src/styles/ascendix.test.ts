@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { contrast, deltaE, describePalette, deuteranopia, expiryStepFaults, expirySteps, hue, hueApart, lightness, loadPalette, lum, rampCardFaults, tokens, tonesOf, type Tokens } from './paletteChecks';
+import { contrast, deltaE, describePalette, deuteranopia, expiryStepFaults, expirySteps, hottestFirstFaults, hue, hueApart, lightness, loadPalette, lum, rampCardFaults, tokens, tonesOf, type Tokens } from './paletteChecks';
 
 /**
  * The Ascendix palette (the company colours, the default look), checked against the card colours painted
@@ -14,6 +14,7 @@ const ascendix = loadPalette({
   id: 'ascendix',
   nightCards: ['#21364b', '#1d3043', '#203b54', '#223a51'],
   dayCards: ['#fdfdfd', '#f5f9fb', '#f8f9f9'],
+  nightExpiry: 'hottest',
 });
 
 describePalette(ascendix);
@@ -119,6 +120,26 @@ describe('Ascendix palette: the shared rule for the expiration ramp has teeth', 
   });
 });
 
+describe('Ascendix palette: the expiration ramp runs one way in both themes (round 23)', () => {
+  const steps = (t: Tokens) => expirySteps(t);
+
+  it('"< 6 mo" is the same red-orange family by night and by day, the reddest step of each ramp', () => {
+    expect(hueApart(steps(night)[0], steps(day)[0])).toBeLessThanOrEqual(10);
+    for (const t of [night, day]) for (const s of steps(t).slice(1, 3)) expect(hue(s), s).toBeGreaterThan(hue(steps(t)[0]));
+  });
+
+  it('"5+ yr" is the quietest step of each ramp: the closest to its card', () => {
+    expect(hottestFirstFaults(steps(night), ascendix.nightCards)).toEqual([]);
+    expect(hottestFirstFaults(steps(day), ascendix.dayCards)).toEqual([]);
+  });
+
+  it('has teeth: the night ramp of round 23, which began with a pale yellow, fails it', () => {
+    const was = ['#ffe07c', '#ff9c00', '#ec7450', '#bb6191', '#3a6a8e', '#2e4883'];
+    expect(hottestFirstFaults(was, ascendix.nightCards).join('\n')).toMatch(/is not yellower than #ffe07c/);
+    expect(hueApart(was[0], steps(day)[0])).toBeGreaterThan(10);
+  });
+});
+
 describe('Ascendix palette, day: every ramp step is a fill a reader can see on the white card', () => {
   const cards = ascendix.dayCards;
   const fill = (tone: string) => fillOf(day, tone);
@@ -220,8 +241,10 @@ describe.each([
     it('expiration lens at night: every neighbour is 8 L* or more apart and stays apart under deuteranopia; the late steps are blues, not violets', () => {
       const steps = [0, 1, 2, 3, 4, 5].map((i) => fill(`exp-${i}`));
       for (let i = 1; i < steps.length; i += 1) {
-        expect(lightness(steps[i - 1]) - lightness(steps[i]), `exp-${i - 1} ${steps[i - 1]} to exp-${i} ${steps[i]}`).toBeGreaterThanOrEqual(8);
-        expect(hueApart(steps[i], steps[i - 1]), `exp-${i - 1} to exp-${i} hue`).toBeGreaterThanOrEqual(i === 1 ? 0 : 12);
+        expect(Math.abs(lightness(steps[i - 1]) - lightness(steps[i])), `exp-${i - 1} ${steps[i - 1]} to exp-${i} ${steps[i]}`).toBeGreaterThanOrEqual(8);
+        // The Primary Orange and the warm yellow after it differ by 16 L* and by the shared rule's 8° of hue (the
+        // yellow cannot go further and stay warm); every other neighbour also differs by 12° or more.
+        expect(hueApart(steps[i], steps[i - 1]), `exp-${i - 1} to exp-${i} hue`).toBeGreaterThanOrEqual(i === 2 ? 8 : 12);
         expect(deltaE(deuteranopia(steps[i - 1]), deuteranopia(steps[i])), `exp-${i - 1} to exp-${i} under deuteranopia`).toBeGreaterThanOrEqual(15);
       }
       // 3–5 yr and 5+ yr: steel and slate blues (hue 195–225), no purple.
