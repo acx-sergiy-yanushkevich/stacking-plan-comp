@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../data/mock/property';
 import { deriveFloors } from './derive';
-import { alternativesListed, alternativesNote, checkNeededBy, chosenOption, filterFits, findFits, matchingInquiries, nearMisses, neededByDate, noFit, optionSuites, rangeProblem, searchSpace, suitesLabel, type FitOption, type Requirement } from './finder';
+import { alternativesListed, alternativesNote, checkNeededBy, chosenOption, filterFits, findFits, floorWindows, matchingInquiries, nearMisses, neededByDate, noFit, optionSuites, rangeProblem, searchSpace, stackName, suitesLabel, type FitOption, type Requirement } from './finder';
+import { legacyWest } from '../data/mock/buildings/legacyWest';
 import type { Availability, Floor, Lease, Property } from './types';
 
 const at = (asOf: string) => deriveFloors(property, asOf, TODAY);
@@ -672,5 +673,54 @@ describe('rangeProblem: a maximum below the minimum is refused, not searched (ro
     expect(rangeProblem(5000, 3000)).toBe('Maximum must be at least 5,000 SF.');
     expect(rangeProblem(5000, 5000)).toBeNull();
     expect(rangeProblem(5000, null)).toBeNull();
+  });
+});
+
+describe('stacked floors beyond two (round 23: Legacy West, 60,000 SF, found "No space fits")', () => {
+  const lw = deriveFloors(legacyWest, TODAY, TODAY);
+
+  it('60,000 SF: Floors 18–20, 78,000 SF of direct space available now, three floors named as such', () => {
+    const r = searchSpace(lw, { size: 60000, max: null, by: null, type: 'any' }, legacyWest.inquiries, TODAY);
+    expect(r.noFit).toBeNull();
+    const stack = r.options.find((o) => o.multiFloor)!;
+    expect(stack).toMatchObject({ floorName: 'Floors 18–20 · three floors', size: 78000, type: 'Direct', from: null });
+    expect(stack.suites).toBe('Ste 2000 on Floor 20, Ste 1900 on Floor 19, Ste 1800 on Floor 18');
+    expect(optionSuites(lw, stack.keys, TODAY).reduce((t, s) => t + s.size, 0)).toBe(78000);
+    // Only the smallest stack that meets it: no stack with a floor added, and no other.
+    expect(r.options.filter((o) => o.multiFloor)).toHaveLength(1);
+    // Direct too.
+    expect(searchSpace(lw, { size: 60000, max: null, by: null, type: 'direct' }, legacyWest.inquiries, TODAY).options.map((o) => o.floorName)).toContain('Floors 18–20 · three floors');
+  });
+
+  it('the Granite Peak inquiry (50,000–78,000 SF) is offered the 78,000 SF block, and the block counts it', () => {
+    const granite = legacyWest.inquiries.find((i) => i.id === 'LW-I01')!;
+    const r = searchSpace(lw, { size: granite.minSize, max: granite.maxSize, by: granite.neededBy, type: 'any' }, legacyWest.inquiries, TODAY);
+    const sizes = r.options.filter((o) => o.multiFloor).map((o) => [o.floorName, o.size]);
+    expect(sizes).toContainEqual(['Floors 18–20 · three floors', 78000]);
+    // The two-floor pairs inside the range are still offered beside it.
+    expect(sizes).toEqual(expect.arrayContaining([['Floors 19–20', 52000], ['Floors 18–19', 52000]]));
+    const block = r.options.find((o) => o.size === 78000)!;
+    expect(block.inquiries).toBeGreaterThanOrEqual(1);
+    expect(matchingInquiries([granite], { size: 78000, divisible: false, minDivisible: null, from: null, sizes: [78000] }, TODAY)).toHaveLength(1);
+  });
+
+  it('a stack is never above four floors, and every floor in it is adjacent and has space', () => {
+    for (const size of [30000, 60000, 78000, 90000, 120000]) {
+      for (const o of findFits(lw, size, null, null, [], TODAY).options.filter((x) => x.multiFloor)) {
+        const floorsIn = lw.filter((f) => f.segments.some((s) => o.keys.includes(s.key))).map((f) => f.floor.sequence);
+        expect(floorsIn.length, `${size}: ${o.floorName}`).toBeLessThanOrEqual(4);
+        expect(Math.max(...floorsIn) - Math.min(...floorsIn) + 1, `${size}: ${o.floorName}`).toBe(floorsIn.length);
+      }
+    }
+  });
+
+  it('floorWindows: the smallest stack from each top floor, none that is another with a floor added', () => {
+    expect(floorWindows([10, 30, 30], 50, null, 'grow')).toEqual([{ top: 1, bottom: 2, size: 60 }]);
+    expect(floorWindows([26, 26, 26], 60, null, 'grow')).toEqual([{ top: 0, bottom: 2, size: 78 }]);
+    expect(floorWindows([26, 26, 26], 50, 78, 'grow')).toEqual([{ top: 0, bottom: 1, size: 52 }, { top: 0, bottom: 2, size: 78 }, { top: 1, bottom: 2, size: 52 }]);
+    expect(floorWindows([26, 26, 26], 50, 78, 'first')).toEqual([{ top: 0, bottom: 1, size: 52 }, { top: 1, bottom: 2, size: 52 }]);
+    expect(floorWindows([10, 0, 30, 30], 50, null, 'grow')).toEqual([{ top: 2, bottom: 3, size: 60 }]);
+    expect(floorWindows([10, 10, 10, 10, 10], 50, null, 'grow')).toEqual([]);
+    expect(stackName(lw, lw.findIndex((f) => f.floor.id === 'F20'), lw.findIndex((f) => f.floor.id === 'F18'))).toBe('Floors 18–20 · three floors');
   });
 });

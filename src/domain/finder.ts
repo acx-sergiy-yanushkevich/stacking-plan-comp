@@ -20,7 +20,7 @@ export interface FitOption {
   late?: boolean;
   /** Space is larger than the maximum: the SF to split off (divisible space only). */
   splitTo?: number;
-  /** Two vertically adjacent floors combined. */
+  /** Vertically adjacent floors combined: two to four (`floorWindows`). */
   multiFloor?: boolean;
   /** Several adjacent suites combined into one block. */
   contiguous?: boolean;
@@ -186,29 +186,24 @@ export function findFits(
     }
     flush();
   }
-  // Multi-floor: pair vertically adjacent floors' largest runs (HQ-size requirements); ranked after single floors.
+  // Multi-floor: stacked floors' largest runs (HQ-size requirements), ranked after single floors. Only each
+  // floor's largest contiguous run counts (scattered suites are not one block).
   {
-    const byFloor = floors.map((f) => ({
-      f,
-      // only each floor's largest contiguous run — scattered suites are not one block
-      segs: f.segments.filter((s) => f.bestRun.includes(s.key)),
-    }));
-    for (let i = 0; i < byFloor.length - 1; i++) {
-      const a = byFloor[i];
-      const b = byFloor[i + 1];
-      const size = [...a.segs, ...b.segs].reduce((t, s) => t + s.size, 0);
-      if (!a.segs.length || !b.segs.length || size < req) continue;
+    const runs = floors.map((f) => f.segments.filter((s) => f.bestRun.includes(s.key)));
+    for (const w of floorWindows(runs.map((r) => r.reduce((t, s) => t + s.size, 0)), req, maxSize ?? null, 'grow')) {
+      const stack = runs.slice(w.top, w.bottom + 1);
+      const segs = stack.flat();
+      // Sizes a tenant can take: any floor's run as suites, or whole floors stacked together.
+      const sizes = [...new Set([...stack.flatMap(runSizes), ...stackSizes(stack.map((r) => r.reduce((t, s) => t + s.size, 0)))])];
       options.push({
-        floorId: a.f.floor.id,
-        floorName: `Floors ${b.f.floor.sequence}–${a.f.floor.sequence}`,
-        size,
-        keys: [...a.segs, ...b.segs].map((s) => s.key),
+        floorId: floors[w.top].floor.id,
+        floorName: stackName(floors, w.top, w.bottom),
+        size: w.size,
+        keys: segs.map((s) => s.key),
         from: null,
         type: 'Direct',
-        inquiries: anyDivisible([...a.segs, ...b.segs])
-          ? inqCount(size, true, Math.min(...[...a.segs, ...b.segs].map((s) => s.size)), null)
-          : inqCount(size, false, null, null, [...runSizes(a.segs), ...runSizes(b.segs), size]),
-        deals: [...a.segs, ...b.segs].reduce((t, s) => t + activeDeals(s.availability?.deals).length, 0),
+        inquiries: anyDivisible(segs) ? inqCount(w.size, true, Math.min(...segs.map((s) => s.size)), null) : inqCount(w.size, false, null, null, sizes),
+        deals: segs.reduce((t, s) => t + activeDeals(s.availability?.deals).length, 0),
         multiFloor: true,
       });
     }
@@ -216,6 +211,67 @@ export function findFits(
   const segs = segmentIndex(floors);
   const named: FitOption[] = options.map((o) => ({ ...o, suites: suitesLabel(floors, o.keys) }));
   return rankFits(named, segs, req, neededBy, maxSize, largestNow);
+}
+
+/** The most floors a stack of space is made of: beyond four, a requirement is a building, not a block. */
+export const MAX_STACK = 4;
+
+const COUNT_WORDS = ['', 'one', 'two', 'three', 'four', 'five', 'six'];
+
+/**
+ * A stack of floors by name: "Floors 7–8" for two, "Floors 18–20 · three floors" for more, so the count
+ * is said, not left to subtraction. `floors` is top first; `top` and `bottom` are indexes into it.
+ */
+export function stackName(floors: ReadonlyArray<Pick<FloorView, 'floor'>>, top: number, bottom: number): string {
+  const n = bottom - top + 1;
+  const range = `Floors ${floors[bottom].floor.sequence}–${floors[top].floor.sequence}`;
+  return n > 2 ? `${range} · ${COUNT_WORDS[n] ?? n} floors` : range;
+}
+
+/** The totals of every run of two or more whole floors in a stack: what a tenant can take of it floor by floor. */
+function stackSizes(perFloor: number[]): number[] {
+  const out: number[] = [];
+  for (let a = 0; a < perFloor.length; a++) {
+    let t = perFloor[a];
+    for (let b = a + 1; b < perFloor.length; b++) out.push((t += perFloor[b]));
+  }
+  return out;
+}
+
+/**
+ * Stacks of adjacent floors that meet a requirement, from each floor down, two to `MAX_STACK` floors, every
+ * floor in between having space (`perFloor[i]` > 0; `perFloor` is top floor first).
+ *  - Each stack is the smallest from its top floor that meets `req`, and is left out when the floors under its
+ *    top one already meet it: that stack is listed from its own top, and this one is it with a floor added.
+ *  - 'grow' (finder options): with a maximum, taller stacks from the same top are listed too while they stay
+ *    within it (Granite Peak, 50,000–78,000 SF, is offered three floors of 78,000 SF as well as two of 52,000).
+ *    The first stack is listed even above the maximum; the finder decides whether it can be split to it.
+ *  - 'first' (alternatives): only the smallest, and none above the maximum.
+ */
+export function floorWindows(perFloor: number[], req: number, maxSize: number | null, mode: 'grow' | 'first'): Array<{ top: number; bottom: number; size: number }> {
+  const out: Array<{ top: number; bottom: number; size: number }> = [];
+  for (let top = 0; top < perFloor.length - 1; top++) {
+    if (perFloor[top] <= 0) continue;
+    let size = perFloor[top];
+    let met = false;
+    for (let bottom = top + 1; bottom < Math.min(perFloor.length, top + MAX_STACK); bottom++) {
+      if (perFloor[bottom] <= 0) break;
+      size += perFloor[bottom];
+      if (size < req) continue;
+      if (!met) {
+        met = true;
+        // Three floors or more: the floors under the top one meet it already, so this is that stack with more added.
+        if (bottom - top >= 2 && size - perFloor[top] >= req) break;
+        if (mode === 'first' && maxSize !== null && size > maxSize) break;
+        out.push({ top, bottom, size });
+        if (mode === 'first' || maxSize === null) break;
+      } else {
+        if (maxSize === null || size > maxSize) break;
+        out.push({ top, bottom, size });
+      }
+    }
+  }
+  return out;
 }
 
 /** The second half of `findFits`: deals, lateness, the maximum, and the order the options are listed in. */
@@ -354,17 +410,14 @@ export function nearMisses(
     for (const x of sp) if (x.size < req) shorts.push({ kind: 'short', floorName: f.floor.name, size: x.size, shortfall: req - x.size, keys: [x.key], from: x.from, type: x.type });
   }
 
+  // Stacked floors, two to four (`floorWindows`): the smallest stack from each floor down that meets the requirement.
   const stacks: Array<Omit<NearMiss, 'suites'>> = [];
-  for (let i = 0; i < floors.length - 1; i++) {
-    const a = spaces(floors[i]);
-    const b = spaces(floors[i + 1]);
-    if (!a.length || !b.length) continue;
-    const all = [...a, ...b];
-    const size = all.reduce((s, x) => s + x.size, 0);
-    if (size < req || (maxSize !== null && size > maxSize)) continue;
+  const perFloor = floors.map(spaces);
+  for (const w of floorWindows(perFloor.map((sp) => sp.reduce((s, x) => s + x.size, 0)), req, maxSize, 'first')) {
+    const all = perFloor.slice(w.top, w.bottom + 1).flat();
     const keys = all.map((x) => x.key);
     if (covered.some((option) => inside(option, keys))) continue;
-    stacks.push({ kind: 'stack', floorName: `Floors ${floors[i + 1].floor.sequence}–${floors[i].floor.sequence}`, size, shortfall: 0, keys, from: latest(all), type: mixOf(all) });
+    stacks.push({ kind: 'stack', floorName: stackName(floors, w.top, w.bottom), size: w.size, shortfall: 0, keys, from: latest(all), type: mixOf(all) });
   }
 
   const distinct = shorts.filter((m, i) => {
