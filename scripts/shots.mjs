@@ -42,6 +42,13 @@ export const STATES = [
   ['46-area-panel', '?view=stack&mode=area'],
   ['47-location-brief', '?view=stack&mode=brief'],
   ['49-floor-area', '?view=floor&floor=F6&mode=area'],
+  // Round 23: a size typed in search, the prospect-safe Rent legend, a refused finder range, the other buildings.
+  ['57-search-size', '?view=stack&q=12k%20direct%20by%20jun%202027'],
+  ['58-safe-rent', '?view=stack&lens=rent&safe=1'],
+  ['60-find-range', '?view=stack&mode=find&req=5000&max=3000'],
+  ['61-legacy-west', '?view=building&building=P002'],
+  ['62-cedar-springs', '?view=stack&building=P005'],
+  ['63-bluebonnet-map', '?view=map&building=P007'],
 ];
 
 const browser = await chromium.launch({ channel: 'chrome' });
@@ -110,6 +117,12 @@ await dark.screenshot({ path: `${out}/54-legend-focus.png` });
 await dark.locator('.sp-legend__info').first().click();
 await dark.waitForTimeout(250);
 await dark.screenshot({ path: `${out}/55-legend-note.png` });
+// Round 23: the Map legend's note, opened over the map.
+await dark.goto(base + '?view=map&lens=expiry', { waitUntil: 'networkidle' });
+await dark.waitForTimeout(2500);
+await dark.locator('.sp-legend__info').first().click();
+await dark.waitForTimeout(250);
+await dark.screenshot({ path: `${out}/59-map-legend-note.png` });
 await mobile.goto(base + '?view=stack&lens=expiry', { waitUntil: 'networkidle' });
 await mobile.waitForTimeout(350);
 await mobile.locator('.sp-pstack__legend summary').click();
