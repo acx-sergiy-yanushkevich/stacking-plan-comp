@@ -212,8 +212,9 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
           label: lensLabel('rent'),
           value: top ? `${dollars(top.low)}–${dollars(top.high)}` : 'No asking rents',
           unit: top ? '/SF/yr' : undefined,
-          note: top ? 'asking · vacancies' : 'Nothing on offer',
-          detail: top ? k.askingByType.map((a) => `${a.type} ${dollars(a.low)}–${dollars(a.high)}/SF/yr on ${num(a.sf)} SF`).join(' · ') : 'No space on offer carries an asking rent',
+          // A rate always carries its lease type (format.ts): the type is the note, as on the owner's card.
+          note: top ? `${top.type} · asking` : 'Nothing on offer',
+          detail: top ? `Space on offer, direct and sublease: ${k.askingByType.map((a) => `${a.type} ${dollars(a.low)}–${dollars(a.high)}/SF/yr on ${num(a.sf)} SF`).join(' · ')}` : 'No space on offer carries an asking rent',
           delta: null,
           active: inUse('rent'),
           title: 'Asking rent on the space on offer. Click to color the plan by rent.',

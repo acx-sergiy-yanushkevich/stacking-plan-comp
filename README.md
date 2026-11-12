@@ -29,7 +29,7 @@ One model of the building, shown four ways, with the answers to the questions ab
 **For the broker**
 
 - **Building view.** The landing screen: a large model of the building cut into suites and colored by the lens, with one label beside each floor (percent leased, space available, what is expiring) that is also the way to open it. Click a floor and the model turns, shrinks and docks to the left while that floor's plan comes in beside it, with the floor's numbers, suites, deals, inquiries and issues below. "Whole building" brings the model back.
-- **Six KPIs, always on top.** One quiet bar above every view: leased %, available SF, largest block, expiring in 12 months, WALT and pipeline. Each is a shortcut, and pointing at "Largest block" lights that block on the plan.
+- **Seven KPIs, always on top.** One quiet bar above every view, in two groups. "Color by" is the lens picker: a switch per lens with its figure (leased %, in-place rent, SF expiring in 12 months, pipeline). "Details" are read-only: available SF, largest block and WALT. Pointing at "Available" or "Largest block" lights those suites on the plan.
 - **Stack view.** The classic plan with an inspector beside it. Clicking a floor or suite expands it with the detail from every lens.
 - **Four color lenses.** Status, expiration, deal stage and rent. Every state also has a pattern or label, so color is never the only cue.
 - **Time travel.** Move the as-of date and the plan, KPIs and rollover chart recompute. Future vacancies and signed-but-not-commenced leases are drawn as what they are.

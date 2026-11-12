@@ -227,7 +227,8 @@ describe('Rent card', () => {
     const el = kpiOf(html, 'rent');
     expect(el).toMatch(/^<button type="button" class="sp-kpi sp-kpi--lens" data-kpi="rent"[^>]*aria-pressed="false"/);
     expect(el).toContain(`<span class="sp-kpi__figure">${dollars(top.low)}–${dollars(top.high)}<span class="sp-kpi__unit"> <!-- -->/SF/yr</span></span>`);
-    expect(noteOf(el)).toBe('asking · vacancies');
+    // A rate always carries its lease type (format.ts), the asking one too.
+    expect(noteOf(el)).toBe(`${top.type} · asking`);
     expect(attr(el, 'title')).toContain(`${top.type} ${dollars(top.low)}–${dollars(top.high)}/SF/yr on ${num(top.sf)} SF`);
     expect(attr(el, 'title')).toContain('Asking rent on the space on offer. Click to color the plan by rent.');
   });

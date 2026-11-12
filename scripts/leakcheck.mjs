@@ -314,6 +314,10 @@ function findLeaks(text, { q } = {}) {
   const period = /< ?12 mo\b|\b\d–\d yr\b|\b\d\+ yr\b|\bLease rollover\b|\bRollover from\b|\bShare of (leased|listed)|\b\d+ leases?\b|\bleases? ending\b/.exec(text);
   if (period) found.push(`rollover by period "${period[0]}"`);
   if (ctx.expiringFigure && text.includes(ctx.expiringFigure)) found.push(`the expiring figure "${ctx.expiringFigure}"`);
+  // No in-place rent figure: not the broker's Rent card average ("$31.50"), in any output. An asking range
+  // ("$31–$33") has a dash before its high end, and is the prospect's to see.
+  const rentFigure = ctx.rentFigure ? new RegExp(`(?<![–\\-\\d])${ctx.rentFigure.replace(/[$.]/g, '\\$&')}(?!\\d)`).exec(text) : null;
+  if (rentFigure) found.push(`the in-place rent figure "${rentFigure[0]}"`);
   // No WALT figure: not the card's two decimals, not the tooltip's four, not in months, in any output.
   const walt = ctx.waltFigure ? new RegExp(`\\b${ctx.waltFigure.replace('.', '\\.')}\\s*(yr|years)\\b`).exec(text) : null;
   if (walt) found.push(`the WALT figure "${walt[0].replace(/\s+/g, ' ')}"`);
@@ -362,11 +366,11 @@ async function findDomLeaks() {
   if (movable.bands) found.push(`a rollover band or chart is drawn (${movable.bands})`);
   if (movable.asOf) found.push('the as-of control is not locked');
   if (movable.ended) found.push(`an ended lease is drawn (${movable.ended})`);
-  // The Expiration and Deals lenses are not offered: not as a button, not in the phone's select.
-  const lensOptions = await page.evaluate(() => [...document.querySelectorAll('.sp-toolbar__lens [role="radio"], .sp-toolbar__lens button, .sp-toolbar__lens-select option')].map((el) => (el.textContent ?? '').trim()));
-  const withheldLens = lensOptions.filter((t) => /Expiration|Deals/.test(t));
+  // The Expiration and Pipeline lenses are not offered: the KPI strip's Color-by switches are the one lens picker.
+  const lensOptions = await page.evaluate(() => [...document.querySelectorAll('.sp-kpis__group--lens .sp-kpi__label')].map((el) => (el.textContent ?? '').trim()));
+  const withheldLens = lensOptions.filter((t) => /Expiration|Pipeline|Deals/.test(t));
   if (withheldLens.length) found.push(`a withheld lens is offered (${[...new Set(withheldLens)].join(', ')})`);
-  if (lensOptions.length && !lensOptions.some((t) => /Leasing/.test(t))) found.push('the lens control was not read');
+  if (!lensOptions.some((t) => /Leasing/.test(t))) found.push('the lens switches were not read');
   // Every sublease bar and block is drawn with no end: nothing stops on the sublandlord's lease end.
   const subEnds = await page.evaluate(() => document.querySelectorAll('[data-bar$="-sub"]').length);
   if (subEnds) found.push(`a sublease bar with an end date is drawn (${subEnds})`);
@@ -397,7 +401,7 @@ const report = (label, found) => {
 
 /**
  * What the broker's own view of a building shows that a prospect's must not: which leases are at risk and
- * which are ordinary, the Expiring 12 mo figure and the WALT figure. `strict`: the default building, where
+ * which are ordinary, the Expiration figure (SF expiring in 12 months), the WALT figure and the Rent figure. `strict`: the default building, where
  * each must be found for the checks on it to prove anything.
  */
 async function brokerFacts(prefixQs, strict) {
@@ -422,6 +426,15 @@ if (strict && !waltFigure) {
   console.error('Could not read the WALT figure from the broker view: the check for it would prove nothing.');
   process.exit(2);
 }
+// The broker's Rent figure ("$31.50", the in-place average of the largest lease type): nowhere on a prospect's page.
+const rentFigure = await page.evaluate(() => {
+  const card = [...document.querySelectorAll('.sp-kpi')].find((c) => c.querySelector('.sp-kpi__label')?.textContent === 'Rent');
+  return card?.querySelector('.sp-kpi__figure')?.textContent?.match(/\$\d[\d,]*\.\d{2}/)?.[0] ?? null;
+});
+if (strict && !rentFigure) {
+  console.error('Could not read the Rent figure from the broker view: the check for it would prove nothing.');
+  process.exit(2);
+}
 const riskKeys = kinds.filter(([, a]) => /Holdover|MTM|Month-to-month/.test(a)).map(([k]) => k);
 const ordinaryKeys = kinds.filter(([, a]) => /\bExp [A-Z]/.test(a) && !/Holdover|MTM|Month-to-month|sublease/i.test(a)).map(([k]) => k);
 if (strict && (riskKeys.length < 2 || ordinaryKeys.length < 5)) {
@@ -429,11 +442,11 @@ if (strict && (riskKeys.length < 2 || ordinaryKeys.length < 5)) {
   process.exit(2);
 }
 if (!strict && expiringFigure && ctx.offerSums.has(Number(expiringFigure.replace(/\D/g, '')))) {
-  console.log(`note ${prefixQs}: the Expiring 12 mo figure ${expiringFigure} is also a size of space on offer; it is not looked for`);
+  console.log(`note ${prefixQs}: the Expiration figure ${expiringFigure} is also a size of space on offer; it is not looked for`);
   expiringFigure = null;
 }
 // A building with no at-risk lease has nothing to compare; one with no ordinary lease neither.
-return riskKeys.length && ordinaryKeys.length ? { riskKeys, ordinaryKeys, expiringFigure, waltFigure } : { riskKeys: [], ordinaryKeys: [], expiringFigure, waltFigure };
+return riskKeys.length && ordinaryKeys.length ? { riskKeys, ordinaryKeys, expiringFigure, waltFigure, rentFigure } : { riskKeys: [], ordinaryKeys: [], expiringFigure, waltFigure, rentFigure };
 }
 ctx = { ...ctx, ...(await brokerFacts('?', true)) };
 
