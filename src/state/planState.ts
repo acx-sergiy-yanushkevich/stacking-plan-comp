@@ -17,6 +17,8 @@ export type Palette = 'ascendix' | 'vice';
 export type FitKind = 'any' | 'direct' | 'sublease';
 
 export interface PlanState {
+  /** The open building's Property id; null is the default building (data/mock/buildings). */
+  building: string | null;
   view: View;
   lens: Lens;
   asOf: ISODate;
@@ -65,6 +67,7 @@ export function defaultState(today: ISODate): PlanState {
 
 /** Static defaults. `asOf: ''` means "today"; use `defaultState(today)` for a concrete date. */
 export const DEFAULT_STATE: PlanState = {
+  building: null,
   view: 'building',
   lens: 'status',
   asOf: '',
@@ -239,6 +242,7 @@ export function parseState(search: string, today: ISODate): PlanState {
   const p = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
   const d = defaultState(today);
   const parsed: PlanState = {
+    building: text(p.get('building')),
     view: oneOf(VIEWS, p.get('view'), d.view),
     lens: oneOf(LENSES, p.get('lens'), d.lens),
     asOf: isoOrNull(p.get('asOf')) ?? today,
@@ -267,6 +271,7 @@ export function parseState(search: string, today: ISODate): PlanState {
 /** Query string with defaults omitted; '' when everything is default, otherwise leading `?`. */
 export function serializeState(s: PlanState, today: ISODate): string {
   const p = new URLSearchParams();
+  if (s.building) p.set('building', s.building);
   if (s.view !== DEFAULT_STATE.view) p.set('view', s.view);
   if (s.lens !== DEFAULT_STATE.lens) p.set('lens', s.lens);
   if (s.asOf && s.asOf !== today) p.set('asOf', s.asOf);
@@ -329,3 +334,26 @@ export function deriveMode(s: PlanState): InspectorMode {
 
 /** The building model needs width: on a phone the stack stands in for the Building view. */
 export const shownView = (view: PlanState['view'], phone: boolean): PlanState['view'] => (phone && view === 'building' ? 'stack' : view);
+
+/**
+ * The change that opens another building. Everything that names a record of the building being left (a
+ * suite, a floor, a search, a requirement, a highlight, a tool panel) is dropped; how the plan is looked at
+ * (view, lens, as-of date, prospect-safe, theme) is kept. The Floor view needs a floor, so it falls back
+ * to the Building view.
+ */
+export function switchBuilding(s: PlanState, building: string): Partial<PlanState> {
+  return {
+    building,
+    view: s.view === 'floor' ? 'building' : s.view,
+    select: null,
+    floor: null,
+    req: null,
+    max: null,
+    by: null,
+    window: null,
+    bucket: null,
+    inquiry: null,
+    q: '',
+    mode: 'building',
+  };
+}

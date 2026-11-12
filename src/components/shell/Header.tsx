@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
-import { isDark, paletteOf, type PlanState } from '../../state/planState';
+import { isDark, paletteOf, switchBuilding, type PlanState } from '../../state/planState';
 import { fmtDate } from '../../domain/dates';
 import { num, pct, usd, usd0 } from '../../domain/format';
 import { Button, Chip, Icon, Menu, Switch, useToastBoundary } from '../ui';
@@ -8,7 +8,7 @@ import type { MenuItem } from '../ui/Menu';
 import { paletteMenuItems } from './paletteMenu';
 import { switcherItems } from './switcher';
 import { MiniStack, StaxLockup } from './Brand';
-import { LIVE_STACK } from '../../data/mock/portfolio';
+import { buildingById } from '../../data/mock/buildings';
 import { canTimeTravel, planDate } from '../../domain/safe';
 import { AsOfPopover } from './AsOfPopover';
 import { useIsPhone, useMedia, usePrefersDark } from '../../lib/useMedia';
@@ -196,11 +196,11 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
           align="start"
           trigger={(p) => (
             <Button {...p} iconRight="caret-down" aria-label={`Switch building: ${property.name}`} title="Switch building" className="sp-switcher">
-              <MiniStack drawing={LIVE_STACK} />
+              <MiniStack drawing={buildingById(property.id).stack} />
               <span className="sp-switcher__name">{property.name}</span>
             </Button>
           )}
-          items={switcherItems(property)}
+          items={switcherItems(property, (id) => patch(switchBuilding(state, id)))}
         />
         {/* The controls and the look as one group at the right: they wrap together, never one button alone. */}
         <div className="sp-topbar__controls">

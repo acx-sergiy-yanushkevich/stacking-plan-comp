@@ -135,7 +135,10 @@ const fillOf = (tone: string) => (tone === 'empty' || tone === 'deal-none' ? 'va
  */
 export function BuildingHero({ model, state, patch, compact, size = 'panel', onPick, angle = 0, floorTitle, openId = null, beside, after }: BuildingHeroProps) {
   const stage = size === 'stage';
-  const { W, H, HZ, LIFT, GAP } = stage ? STAGE : PANEL;
+  const { W, H, HZ: BASE_HZ, LIFT, GAP } = stage ? STAGE : PANEL;
+  // A floor's height on screen: the size's own, unless the floors would take more than 60 % of the height,
+  // as in a tall tower. Then every floor gets thinner, so the building keeps its footprint drawn to scale.
+  const HZ = Math.min(BASE_HZ, ((H - 14 - LIFT) * 0.6) / Math.max(1, model.floors.length));
   const { property, floors, safe, segIndex } = model;
   const hoverId = useHoverFloor();
   // A KPI or a finder option pointed at lights its suites for as long as it is pointed at; otherwise the active filter does.

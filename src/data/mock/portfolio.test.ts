@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LIVE_STACK, PORTFOLIO } from './portfolio';
+import { BUILDINGS } from './buildings';
 
 describe('portfolio sample entries', () => {
   it('have unique ids and names, and none is the live building', () => {
@@ -9,7 +10,7 @@ describe('portfolio sample entries', () => {
   });
 
   it('draw four floors whose suites fill each floor, with the open suite on a real floor and suite', () => {
-    for (const d of [LIVE_STACK, ...PORTFOLIO]) {
+    for (const d of [...BUILDINGS.map((b) => b.stack), ...PORTFOLIO]) {
       expect(d.floors).toHaveLength(4);
       for (const f of d.floors) expect(f.reduce((a, b) => a + b, 0)).toBeCloseTo(1, 6);
       expect(d.floors[d.open[0]]?.[d.open[1]]).toBeDefined();
@@ -30,7 +31,7 @@ describe('building icons in the switcher', () => {
   });
 
   it('no building draws the mark, and no two buildings draw the same icon', () => {
-    const all = [LIVE_STACK, ...PORTFOLIO];
+    const all = [...BUILDINGS.map((b) => b.stack), ...PORTFOLIO];
     for (const b of all) expect(sameFloors(b.floors, MARK.floors)).toBe(false);
     for (let i = 0; i < all.length; i++)
       for (let j = i + 1; j < all.length; j++) expect(sameFloors(all[i].floors, all[j].floors) && all[i].open.join() === all[j].open.join(), `${i} vs ${j}`).toBe(false);
