@@ -86,3 +86,14 @@ describe('AreaPanel (charts in the side panel)', () => {
     expect(html).not.toContain('within half a mile.</p>');
   });
 });
+
+describe('AreaPanel beside the Map (round 25)', () => {
+  it('follows the ring chosen on the map instead of offering its own switch, and leads with the map key rows', () => {
+    const html = renderToString(<AreaPanel model={model} area={area} onMap />).replace(/<!-- -->/g, '').replace(/\u00a0/g, ' ');
+    expect(html).not.toContain('aria-label="Distance compared with the US"');
+    expect(html).toContain('within 1 mile, the ring on the map');
+    expect(html.indexOf('Nearby transit')).toBeLessThan(html.indexOf('Population by distance'));
+    // Beside the plan views, where there is no map, the panel keeps its switch.
+    expect(render(area)).toContain('aria-label="Distance compared with the US"');
+  });
+});

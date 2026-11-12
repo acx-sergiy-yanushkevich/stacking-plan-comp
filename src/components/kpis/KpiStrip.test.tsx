@@ -194,3 +194,14 @@ describe('KpiStrip', () => {
     expect([...render(TODAY, true).html.matchAll(/data-kpi="([^"]+)"/g)].length).toBe(3);
   });
 });
+
+describe('KpiStrip on the Map (round 25)', () => {
+  it('reads there: the Color-by switches are not buttons, and no detail promises to light the plan', () => {
+    const { html } = render(TODAY, false, '?view=map');
+    expect(html).not.toContain('<button');
+    expect(html).toMatch(/<div class="sp-kpi sp-kpi--lens sp-kpi--still" data-kpi="status"/);
+    expect(html).not.toMatch(/Point at it to see it on the plan/);
+    // Off the map the switches are buttons again.
+    expect(render(TODAY, false, '?view=stack').html).toMatch(/<button type="button" class="sp-kpi sp-kpi--lens/);
+  });
+});

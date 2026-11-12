@@ -230,12 +230,11 @@ function Shell() {
     switch (a) {
       // Leased and Pipeline are the "Color by" switches: they change how the plan is coloured and nothing
       // else. An open panel, a search or a selection stays as it was (round 18: Leased closed the brief).
-      // The Map has no floors to color: there a Color-by switch opens the Building tab in that color.
       case 'status':
-        patch({ lens: 'status', bucket: null, ...(state.view === 'map' ? { view: 'building' as const } : {}) });
+        patch({ lens: 'status', bucket: null });
         break;
       case 'deals':
-        patch({ lens: 'deals', bucket: null, ...(state.view === 'map' ? { view: 'building' as const } : {}) });
+        patch({ lens: 'deals', bucket: null });
         break;
     }
   };

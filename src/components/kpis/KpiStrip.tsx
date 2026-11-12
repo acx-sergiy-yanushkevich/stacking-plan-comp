@@ -84,6 +84,7 @@ function lightOn(keys: string[]) {
  */
 export function KpiStrip({ model, state, onAction }: KpiStripProps) {
   const { kpis: k, deltas: d, safe } = model;
+  const onMap = state.view === 'map';
   // Leased is capped per floor while the parts are recorded SF: name the gap so the context reconciles.
   const overAlloc = k.committed + k.availableSublease - (k.leased - Math.round(k.physical * k.leasable));
   const available = `${num(k.availableDirect)} direct · ${num(k.availableSublease)} sublease`;
@@ -230,12 +231,23 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
         <span className="sp-sr-only">{c.detail}</span>
       </span>
     );
-    // A detail is a figure to read: no button, nothing to click. Pointing at one still lights its suites.
-    return kind === 'open' ? (
-      <div key={c.id} className="sp-kpi sp-kpi--detail" data-kpi={c.id} title={`${c.detail}. ${c.title}`} {...(c.lights?.length ? lightOn(c.lights) : null)}>
-        {body}
-      </div>
-    ) : (
+    // A detail is a figure to read: no button, nothing to click. Pointing at one still lights its suites on the
+    // plan; the Map has no suites to light, so there it only reads (round 25: it promised what the map cannot show).
+    if (kind === 'open')
+      return (
+        <div key={c.id} className="sp-kpi sp-kpi--detail" data-kpi={c.id} title={`${c.detail}. ${onMap ? c.title.replace(' Point at it to see it on the plan.', '') : c.title}`} {...(!onMap && c.lights?.length ? lightOn(c.lights) : null)}>
+          {body}
+        </div>
+      );
+    // The Map colors nothing by a lens (its toolbar has no "Color by"): there the switches read, and do not switch
+    // the page to another tab under the user (round 25).
+    if (onMap)
+      return (
+        <div key={c.id} className="sp-kpi sp-kpi--lens sp-kpi--still" data-kpi={c.id} title={`${c.detail}. Color by applies to the plan views (Building, Stack and Timeline), not to the map.`}>
+          {body}
+        </div>
+      );
+    return (
       <button
         key={c.id}
         type="button"

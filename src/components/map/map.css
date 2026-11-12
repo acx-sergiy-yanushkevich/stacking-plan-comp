@@ -223,3 +223,24 @@
 /* A phone or tablet: the Area panel under the map, in the page (App, `mapAreaInline`). */
 .sp-map-panel { margin-top: var(--sp-space-3); overflow: hidden; }
 .sp-area__place .sp-brief__bar-name { display: flex; align-items: center; white-space: nowrap; overflow-wrap: normal; }
+
+/* ── The map's key (MapView) ──────────────────────────────────────────────────────────
+   Card chrome above the map, never over it: what each mark means, and the switch for the ring the map draws.
+   An item for a kind of place is a tab stop that lights its pins, as the Area panel's rows do. */
+.sp-map-key {
+  position: relative; z-index: 6; flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px;
+  padding: 6px 12px; background: var(--sp-color-card); border-bottom: 1px solid var(--sp-color-border);
+  font-size: var(--sp-text-12); color: var(--sp-color-text-weak);
+}
+.sp-map-key__item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; border-radius: 4px; }
+.sp-map-key__item .sp-place-dot { margin-right: 0; }
+.sp-map-key__item--place { cursor: default; }
+.sp-map-key__item--place:hover, .sp-map-key__item--place.is-lit { color: var(--sp-color-text); }
+.sp-map-key__item--place:focus-visible { outline: 2px solid var(--sp-color-focus, var(--sp-color-brand)); outline-offset: 2px; }
+.sp-map-key__building { width: 12px; height: 12px; border-radius: 3px; background: var(--sp-color-brand); }
+.sp-map-key__walk, .sp-map-key__ring { width: 14px; height: 14px; border-radius: 50%; border: 1.5px dashed var(--sp-color-brand); }
+.sp-map-key__walk { background: color-mix(in srgb, var(--sp-color-brand) 18%, transparent); }
+.sp-map-key__stop { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--sp-pin-transit); color: var(--sp-pin-ink); }
+.sp-map-key__switch .sp-segmented__opt { padding-block: 1px; font-size: var(--sp-text-12); }
+/* The KPI bar on the Map: a Color-by switch reads there, and its dot says nothing is pressed. */
+.sp-kpi--still { cursor: default; }
