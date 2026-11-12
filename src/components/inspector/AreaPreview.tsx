@@ -1,4 +1,4 @@
-import { num, usd0 } from '../../domain/format';
+import { keepUnits, mi, num, usd0 } from '../../domain/format';
 import type { Area } from '../../domain/types';
 import { rememberTrigger } from '../../state/focusStore';
 import { openArea, type Patch } from '../plan/actions';
@@ -52,11 +52,11 @@ export function AreaGlance({ area, onOpen }: AreaGlanceProps) {
               <span className="sp-ins__kpi-value">{usd0(ring.medianIncome)}</span>
               <span className="sp-ins__kpi-sub">median, {ring.miles}&nbsp;mi</span>
             </div>
-            <div className="sp-ins__kpi" title={stop ? `${stop.name}, ${stop.distanceMi.toFixed(1)} mi` : undefined}>
+            <div className="sp-ins__kpi" title={stop ? `${stop.name}, ${mi(stop.distanceMi)}` : undefined}>
               <span className="sp-label">Transit</span>
               {stop ? (
                 <>
-                  <span className="sp-ins__kpi-value">{stop.distanceMi.toFixed(1)}&nbsp;mi</span>
+                  <span className="sp-ins__kpi-value">{keepUnits(mi(stop.distanceMi))}</span>
                   <span className="sp-ins__kpi-sub">Nearest {stop.type === 'Rail' ? 'rail station' : 'bus stop'}</span>
                 </>
               ) : (

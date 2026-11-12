@@ -60,3 +60,19 @@ export function sfDelta(n: number): string {
 export function plural(n: number, one: string, many = `${one}s`) {
   return `${int.format(n)} ${n === 1 ? one : many}`;
 }
+
+/**
+ * A distance to a tenth of a mile: "0.4 mi". A place nearer than that is "< 0.1 mi", never "0.0 mi" (round 25: live
+ * OpenStreetMap data puts a parking lot or a bus stop at the building's door).
+ */
+export const mi = (d: number) => (d < 0.05 ? '< 0.1 mi' : `${d.toFixed(1)} mi`);
+
+/** The same in words, for sentences and accessible names: "0.2 miles", "1.0 mile", "under 0.1 miles". */
+export function inMiles(d: number): string {
+  if (d < 0.05) return 'under 0.1 miles';
+  const t = d.toFixed(1);
+  return `${t} ${t === '1.0' ? 'mile' : 'miles'}`;
+}
+
+/** A figure kept on one line with its unit, and a "<" with its figure: those spaces become no-break spaces. */
+export const keepUnits = (text: string) => text.replace(/< (\d)/g, '<\u00a0$1').replace(/(\d) (miles?|mi|minutes|min|years)\b/g, '$1\u00a0$2');

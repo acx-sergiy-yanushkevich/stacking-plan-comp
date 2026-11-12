@@ -1,6 +1,6 @@
 import { useEffect, useRef, type FocusEvent, type MouseEvent } from 'react';
 import { compareRing, US_BENCHMARK } from '../../domain/areaBrief';
-import { num } from '../../domain/format';
+import { inMiles, mi, num } from '../../domain/format';
 import { categoryKey, stopKey } from '../../domain/places';
 import type { Area } from '../../domain/types';
 import type { PlanModel } from '../../model/usePlanModel';
@@ -175,13 +175,13 @@ export function AreaPanel({ model, area, expanded, onMap }: AreaPanelProps) {
                 <li
                   key={`${t.name}-${t.distanceMi}`}
                   className={`${onMap ? 'sp-area__place' : ''} ${lit === stopKey(t.name) ? 'is-lit' : ''}`.trim() || undefined}
-                  {...linkProps(stopKey(t.name), onMap, `${t.name}, ${t.type === 'Rail' ? 'rail' : 'bus'}, ${t.distanceMi.toFixed(1)} miles, pinned on the map`)}
+                  {...linkProps(stopKey(t.name), onMap, `${t.name}, ${t.type === 'Rail' ? 'rail' : 'bus'}, ${inMiles(t.distanceMi)}, pinned on the map`)}
                 >
                   {/* The kind of stop is a word as well as an icon: bus and rail are not told apart by the drawing alone. */}
               <Icon name={t.type === 'Rail' ? 'train' : 'bus'} size={14} />
                   <span className="sp-area-transit__name">{t.name}</span>
               <span className="sp-transit-kind">{t.type === 'Rail' ? 'Rail' : 'Bus'}</span>
-                  <span className="sp-num sp-weak">{t.distanceMi.toFixed(1)} mi</span>
+                  <span className="sp-num sp-weak">{mi(t.distanceMi)}</span>
                 </li>
               ))}
           </ul>

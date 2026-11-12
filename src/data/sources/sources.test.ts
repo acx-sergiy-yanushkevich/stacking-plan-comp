@@ -105,6 +105,22 @@ describe('toNearby', () => {
   it('returns null when nothing matched', () => {
     expect(toNearby([], { lat: 0, lng: 0 })).toBeNull();
   });
+
+  it('keeps each stop and place where it is, with its own name, so the Map pins them there (round 25)', () => {
+    const c = { lat: 33.0235, lng: -96.7936 };
+    const els: OverpassElement[] = [
+      { type: 'node', id: 1, lat: 33.0245, lon: -96.7936, tags: { highway: 'bus_stop', name: 'Park Blvd' } },
+      { type: 'node', id: 3, lat: 33.0236, lon: -96.793, tags: { amenity: 'cafe', name: 'Corner Café' } },
+      { type: 'node', id: 4, lat: 33.0265, lon: -96.793, tags: { amenity: 'cafe' } },
+    ];
+    const n = toNearby(els, c)!;
+    expect(n.transit[0]).toMatchObject({ name: 'Park Blvd', lat: 33.0245, lng: -96.7936 });
+    // Nearest first; a place with no name on record is named for its kind, never given an invented name.
+    expect(n.places!.map((p) => [p.name, p.category, p.lat, p.lng])).toEqual([
+      ['Corner Café', 'Cafés', 33.0236, -96.793],
+      ['Café', 'Cafés', 33.0265, -96.793],
+    ]);
+  });
 });
 
 describe('createDataSource', () => {

@@ -75,7 +75,7 @@ It works with a keyboard and a screen reader, and on a phone. It opens in the As
 
 **Public data**
 
-- OpenStreetMap, through the Overpass API, for the building footprint and nearby amenities
+- OpenStreetMap, through the Overpass API, for the building footprint and the nearby transit stops and amenities, each pinned where it is recorded
 - US Census Bureau ACS 5-year data for demographics (live mode only), and the national ACS 5-year 2020–2024 figures the area is compared with (fixed in `src/domain/areaBrief.ts`)
 
 ## Assumptions

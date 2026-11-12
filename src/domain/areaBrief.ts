@@ -1,4 +1,4 @@
-import { num, usd0 } from './format';
+import { inMiles, mi, num, usd0 } from './format';
 import type { Area, AreaRing } from './types';
 
 type TransitStop = Area['transit'][number];
@@ -88,8 +88,6 @@ const noun = (category: string, count: number) => {
   return `${num(count)} ${count === 1 ? one : many}`;
 };
 const listed = (items: string[]) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`);
-const miles = (d: number) => `${d.toFixed(1)} ${d === 1 ? 'mile' : 'miles'}`;
-
 const nearest = (stops: TransitStop[]) => stops.reduce<TransitStop | null>((a, b) => (!a || b.distanceMi < a.distanceMi ? b : a), null);
 
 export interface Headline {
@@ -124,13 +122,13 @@ export function locationBrief(area: Area, us: Benchmark = US_BENCHMARK): Locatio
   const stop = nearest(area.transit);
   const rail = nearest(area.transit.filter((t) => t.type === 'Rail'));
   const kind = (t: TransitStop) => (t.type === 'Rail' ? 'rail station' : 'bus stop');
-  const transitNote = !stop ? 'no stops on record' : stop.type === 'Rail' || !rail ? kind(stop) : `bus stop · rail ${rail.distanceMi.toFixed(1)} mi`;
+  const transitNote = !stop ? 'no stops on record' : stop.type === 'Rail' || !rail ? kind(stop) : `bus stop · rail ${mi(rail.distanceMi)}`;
 
   const headline: Headline[] = [
     { label: 'Population', value: num(wide.population), note: `within ${wide.miles} miles` },
     { label: 'Median household income', value: by.income.value, note: `${by.income.delta} · ${near.miles} mile${near.miles === 1 ? '' : 's'}` },
     { label: BACHELORS_LABEL, value: by.bachelors.value, note: `${by.bachelors.delta} · ${near.miles} mile${near.miles === 1 ? '' : 's'}` },
-    { label: 'Nearest transit', value: stop ? `${stop.distanceMi.toFixed(1)} mi` : '—', note: transitNote },
+    { label: 'Nearest transit', value: stop ? mi(stop.distanceMi) : '—', note: transitNote },
   ];
 
   const points: string[] = [];
@@ -141,8 +139,8 @@ export function locationBrief(area: Area, us: Benchmark = US_BENCHMARK): Locatio
   const top = [...area.amenities].filter((a) => a.count > 0).sort((a, b) => b.count - a.count).slice(0, 3);
   if (top.length) points.push(`${listed(top.map((a) => noun(a.category, a.count)))} within half a mile.`);
   if (stop) {
-    const first = `A ${kind(stop)} ${miles(stop.distanceMi)} away`;
-    points.push(stop.type !== 'Rail' && rail ? `${first}; the nearest rail station is ${miles(rail.distanceMi)} away.` : `${first}.`);
+    const first = `A ${kind(stop)} ${inMiles(stop.distanceMi)} away`;
+    points.push(stop.type !== 'Rail' && rail ? `${first}; the nearest rail station is ${inMiles(rail.distanceMi)} away.` : `${first}.`);
   }
 
   return { near, wide, headline, points, comparisons, rings };

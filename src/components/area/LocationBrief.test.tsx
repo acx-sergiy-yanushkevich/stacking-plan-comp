@@ -33,6 +33,14 @@ describe('LocationBrief', () => {
     expect(raw).toContain('sp-dotjoin__sep');
   });
 
+  it('says "< 0.1 mi" for a stop at the door, kept on one line (round 25: live map data)', () => {
+    const atDoor = { ...area, transit: [{ name: 'Front Entrance', type: 'Bus' as const, distanceMi: 0 }] };
+    const raw = renderToString(<LocationBrief property={property} area={atDoor} />);
+    expect(raw).not.toContain('0.0');
+    expect(raw).toContain('&lt;\u00a00.1\u00a0mi');
+    expect(raw).toContain('A bus stop under 0.1\u00a0miles away.');
+  });
+
   it('says what stands out, as sentences', () => {
     const html = render();
     expect(html).toContain('What stands out');

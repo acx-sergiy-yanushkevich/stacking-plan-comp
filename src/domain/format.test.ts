@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compactRate, pct, rate, rateRange, sf, sfDelta, usdCompact } from './format';
+import { compactRate, inMiles, keepUnits, mi, pct, rate, rateRange, sf, sfDelta, usdCompact } from './format';
 
 describe('format', () => {
   it('never rounds SF', () => {
@@ -23,5 +23,20 @@ describe('format', () => {
     expect(pct(0.87)).toBe('87.0%');
     expect(sfDelta(-6500)).toBe('−6,500 SF');
     expect(sfDelta(1200)).toBe('+1,200 SF');
+  });
+  it('distances to a tenth of a mile, and never "0.0" for a place at the door (round 25: live map data)', () => {
+    expect(mi(0.4)).toBe('0.4 mi');
+    expect(mi(3.1)).toBe('3.1 mi');
+    expect(mi(0)).toBe('< 0.1 mi');
+    expect(mi(0.04)).toBe('< 0.1 mi');
+    expect(mi(0.05)).toBe('0.1 mi');
+    expect(inMiles(0.2)).toBe('0.2 miles');
+    expect(inMiles(1)).toBe('1.0 mile');
+    expect(inMiles(0)).toBe('under 0.1 miles');
+  });
+  it('keeps a figure on one line with its unit, and a "<" with its figure', () => {
+    expect(keepUnits('A bus stop 0.2 miles away')).toBe('A bus stop 0.2\u00a0miles away');
+    expect(keepUnits('< 0.1 mi')).toBe('<\u00a00.1\u00a0mi');
+    expect(keepUnits('24.1 min, 2.1 years')).toBe('24.1\u00a0min, 2.1\u00a0years');
   });
 });
