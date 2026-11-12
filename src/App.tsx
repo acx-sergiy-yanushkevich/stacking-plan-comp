@@ -7,7 +7,7 @@ import { usePlanModel } from './model/usePlanModel';
 import { usePlanState, useDocumentTitle } from './state/usePlanState';
 import { useAnnouncement } from './state/useAnnouncement';
 import { canShowRollover } from './domain/safe';
-import { copyText, find, focused, hasPage, on, print, readUrl, requestFrame, setRootData, shareUrl } from './lib/host';
+import { copyText, find, focused, on, print, readUrl, setRootData, shareUrl } from './lib/host';
 import { deriveMode, paletteOf, shownView } from './state/planState';
 import { rentRollRows, toCsv } from './domain/exportCsv';
 import { Header, type ExportKind } from './components/shell/Header';
@@ -31,34 +31,14 @@ import { svgToPng } from './lib/exportPng';
 import { RECORD_REQUEST } from './components/map/recordSignal';
 import { useIsNarrow, useIsPhone, usePrefersReducedMotion } from './lib/useMedia';
 import { selectionSelector, useClearOfSheet } from './components/stack/aboveSheet';
-import { clearSelection, floorKept, isToolPanel, TOOL_CLOSE } from './components/plan/actions';
-import { focusSegment, refocusTrigger, rememberTrigger } from './state/focusStore';
+import { clearSelection, isToolPanel, TOOL_CLOSE } from './components/plan/actions';
+import { focusSegment, refocusTrigger } from './state/focusStore';
 import { Patterns } from './components/plan/Patterns';
 import { fmtDate } from './domain/dates';
 import { num, pct } from './domain/format';
 import './components/ui/ui.css';
 import './components/shell/shell.css';
 import './components/kpis/kpis.css';
-
-/** The KPIs that open a panel in the inspector (the others change the lens or the view). */
-const opensPanel = (action: KpiAction): boolean => action === 'find' || action === 'find-largest' || action === 'expiry-worklist';
-
-/**
- * Where the keyboard goes after a KPI was activated. A KPI that opens a tool (the finder, the worklist)
- * hands focus to that panel's heading, as the panel does itself when it opens beside the Stack. Closing
- * the panel returns focus to the KPI (`rememberTrigger`): the KPI bar is the same element in every view
- * and every state, so the KPI that was pressed is always still there. A KPI that changes the lens or the
- * view keeps the focus it has.
- */
-function focusAfterKpi(action: KpiAction): void {
-  if (!hasPage() || !opensPanel(action)) return;
-  // Two frames: the new state renders in the first; a panel that mounts with it is in the page by the second.
-  requestFrame(() =>
-    requestFrame(() => {
-      find('.sp-inspector .sp-ins__title, .sp-sheet .sp-ins__title')?.focus({ preventScroll: true });
-    }),
-  );
-}
 
 /** What had the keyboard inside the stage, noted so that the same control can be found again after the stage is re-created. */
 interface FocusMark {
@@ -228,9 +208,8 @@ function Shell() {
     [property, model.floors, model.asOf, state.asOf, state.safe, toast],
   );
 
+  // Only the Color-by switches act (the Details figures are read-only): a switch keeps the focus it has.
   const onKpi = (a: KpiAction) => {
-    // Closing the panel a KPI opened returns focus to that KPI.
-    rememberTrigger();
     switch (a) {
       // Leased and Pipeline are the "Color by" switches: they change how the plan is coloured and nothing
       // else. An open panel, a search or a selection stays as it was (round 18: Leased closed the brief).
@@ -238,23 +217,10 @@ function Shell() {
       case 'status':
         patch({ lens: 'status', bucket: null, ...(state.view === 'map' ? { view: 'building' as const } : {}) });
         break;
-      case 'find':
-        patch({ mode: 'find', select: null, floor: floorKept(state.view, state.floor), window: null, bucket: null });
-        break;
-      case 'find-largest':
-        patch({ mode: 'find', req: model.kpis.maxContiguous.size, max: null, by: null, inquiry: null, select: null, floor: floorKept(state.view, state.floor), window: null, bucket: null });
-        break;
-      case 'expiry-worklist':
-        patch({ lens: 'expiry', mode: 'worklist', window: '12', select: null, floor: floorKept(state.view, state.floor), req: null, inquiry: null, bucket: null });
-        break;
-      case 'timeline':
-        patch({ view: 'timeline' });
-        break;
       case 'deals':
         patch({ lens: 'deals', bucket: null, ...(state.view === 'map' ? { view: 'building' as const } : {}) });
         break;
     }
-    focusAfterKpi(a);
   };
 
   const dataSource = useMemo(() => createDataSource(state.live, state.census), [state.live, state.census]);
