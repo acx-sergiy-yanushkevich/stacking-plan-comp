@@ -5,10 +5,12 @@ import { property, TODAY } from '../../data/mock/property';
 import { deriveMode, parseState } from '../../state/planState';
 import Inspector from './Inspector';
 import { buildModel } from './testModel';
+import type { Property } from '../../domain/types';
+import { legacyWest } from '../../data/mock/buildings/legacyWest';
 
-function render(search: string) {
+function render(search: string, building?: Property) {
   const state = parseState(search, TODAY);
-  const model = buildModel(state);
+  const model = buildModel(state, building);
   // React separates adjacent text nodes with an empty comment; the text is what is asserted.
   const html = renderToString(<Inspector model={model} state={state} patch={() => {}} mode={deriveMode(state)} />).replace(/<!-- -->/g, '');
   return { html, model, state };
@@ -322,5 +324,17 @@ describe('prospect-safe availability records (round 19)', () => {
       expect(render(`?safe=1&select=${sel}`).html, sel).not.toMatch(/Verified/);
       expect(render(`?select=${sel}`).html, sel).toMatch(/Verified/);
     }
+  });
+});
+
+describe('Find space: stacked floors beyond two (round 23)', () => {
+  it('Legacy West, 60,000 SF: the row is "Floors 18–20 · three floors", tagged as stacked floors, 78,000 SF', () => {
+    const { html } = render('?building=P002&view=stack&req=60000&mode=find', legacyWest);
+    const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    expect(text).toContain('Floors 18–20 · three floors stacked floors');
+    expect(text).toContain('Ste 2000 on Floor 20, Ste 1900 on Floor 19, Ste 1800 on Floor 18');
+    expect(text).toContain('78,000 SF');
+    expect(text).not.toContain('two floors');
+    expect(text).not.toMatch(/No space fits/);
   });
 });

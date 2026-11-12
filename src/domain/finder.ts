@@ -218,6 +218,10 @@ export const MAX_STACK = 4;
 
 const COUNT_WORDS = ['', 'one', 'two', 'three', 'four', 'five', 'six'];
 
+/** A small count in words ("three"), as a row says how many floors it stacks. */
+export const countWord = (n: number): string => COUNT_WORDS[n] ?? String(n);
+
+
 /**
  * A stack of floors by name: "Floors 7–8" for two, "Floors 18–20 · three floors" for more, so the count
  * is said, not left to subtraction. `floors` is top first; `top` and `bottom` are indexes into it.
@@ -225,7 +229,7 @@ const COUNT_WORDS = ['', 'one', 'two', 'three', 'four', 'five', 'six'];
 export function stackName(floors: ReadonlyArray<Pick<FloorView, 'floor'>>, top: number, bottom: number): string {
   const n = bottom - top + 1;
   const range = `Floors ${floors[bottom].floor.sequence}–${floors[top].floor.sequence}`;
-  return n > 2 ? `${range} · ${COUNT_WORDS[n] ?? n} floors` : range;
+  return n > 2 ? `${range} · ${countWord(n)} floors` : range;
 }
 
 /** The totals of every run of two or more whole floors in a stack: what a tenant can take of it floor by floor. */
@@ -329,6 +333,8 @@ export interface NearMiss {
   keys: string[];
   /** The suites in the alternative, by name: "Ste 850 + Ste 860" (`suitesLabel`). */
   suites: string;
+  /** How many floors it is on: one for a single space, two to four for a stack (`floorWindows`). */
+  floors: number;
   from: ISODate | null;
   type: 'Direct' | 'Sublease' | 'Direct + sublease';
 }
@@ -406,8 +412,8 @@ export function nearMisses(
     const sp = spaces(f);
     // whole-floor available total as one candidate when several suites exist
     const total = sp.reduce((s, x) => s + x.size, 0);
-    if (sp.length > 1 && total < req) shorts.push({ kind: 'short', floorName: f.floor.name, size: total, shortfall: req - total, keys: sp.map((x) => x.key), from: latest(sp), type: mixOf(sp) });
-    for (const x of sp) if (x.size < req) shorts.push({ kind: 'short', floorName: f.floor.name, size: x.size, shortfall: req - x.size, keys: [x.key], from: x.from, type: x.type });
+    if (sp.length > 1 && total < req) shorts.push({ kind: 'short', floorName: f.floor.name, size: total, shortfall: req - total, keys: sp.map((x) => x.key), from: latest(sp), type: mixOf(sp), floors: 1 });
+    for (const x of sp) if (x.size < req) shorts.push({ kind: 'short', floorName: f.floor.name, size: x.size, shortfall: req - x.size, keys: [x.key], from: x.from, type: x.type, floors: 1 });
   }
 
   // Stacked floors, two to four (`floorWindows`): the smallest stack from each floor down that meets the requirement.
@@ -417,7 +423,7 @@ export function nearMisses(
     const all = perFloor.slice(w.top, w.bottom + 1).flat();
     const keys = all.map((x) => x.key);
     if (covered.some((option) => inside(option, keys))) continue;
-    stacks.push({ kind: 'stack', floorName: stackName(floors, w.top, w.bottom), size: w.size, shortfall: 0, keys, from: latest(all), type: mixOf(all) });
+    stacks.push({ kind: 'stack', floorName: stackName(floors, w.top, w.bottom), size: w.size, shortfall: 0, keys, from: latest(all), type: mixOf(all), floors: w.bottom - w.top + 1 });
   }
 
   const distinct = shorts.filter((m, i) => {
