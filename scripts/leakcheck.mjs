@@ -124,13 +124,28 @@ const field = (b, name) => new RegExp(`\\b${name}: '?([^,'\\s]+)'?`).exec(b)?.[1
 const askOf = (b) => `$${field(b, 'rentLow')}–$${field(b, 'rentHigh')}/SF/`;
 const quiet = availBlocks.filter((b) => /published: false/.test(b));
 const quietIds = quiet.map((b) => recordId(field(b, 'id')));
+// "Marketed for later" names a quiet listing only where every listing for later is quiet (Preston Park); a
+// building with a published one (Legacy West, Ste 1100) shows those words to a prospect, as it should.
+const laterAllQuiet = !availBlocks.some((b) => /isVacant: false/.test(b) && !/published: false/.test(b));
+// Space on offer as the plan and the finder add it up: one space, a floor's space, or two to four adjacent
+// floors stacked. A figure that is one of these is not the expiring figure to a reader (Legacy West: Floors
+// 19–20 are 52,000 SF, which is also what expires in 12 months).
+const offered = availBlocks.filter((b) => !/status: 'Closed'/.test(b) && !/kind: 'Sale'/.test(b) && field(b, 'floorId'));
+const perFloor = new Map();
+for (const b of offered) perFloor.set(Number(field(b, 'floorId').slice(1)), (perFloor.get(Number(field(b, 'floorId').slice(1))) ?? 0) + Number(field(b, 'size')));
+const offerSums = new Set(offered.map((b) => Number(field(b, 'size'))));
+for (const [n, sf] of perFloor) {
+  let total = sf;
+  offerSums.add(total);
+  for (let k = 1; k < 4 && perFloor.has(n + k); k++) offerSums.add((total += perFloor.get(n + k)));
+}
 const publishedAsks = new Set(availBlocks.filter((b) => !/published: false/.test(b)).map(askOf));
 const quietAsks = quiet.map(askOf).filter((a) => !publishedAsks.has(a));
 if (strict && !quietIds.length) {
   console.error('The mock data has no unpublished availability: the quiet-listing checks would prove nothing.');
   process.exit(2);
 }
-return { sources, quietBadges, leaseDateWords, inquiryList, quietIds, quietAsks, prefix };
+return { sources, quietBadges, leaseDateWords, inquiryList, quietIds, quietAsks, prefix, laterAllQuiet, offerSums, seenOrdinary: new Set() };
 }
 
 /** The building being checked: its records' context, then its broker view's figures (`brokerFacts`). */
@@ -262,7 +277,8 @@ const signatures = (keys) =>
     for (const key of keys) {
       const els = [...document.querySelectorAll(`[data-key="${key}"], [data-bar="tl-${key}"]`)];
       out[key] = els.map((el) => {
-        const fill = el.querySelector('.sp-seg__rect, rect, path');
+        // The suite's fill: a floor slice draws its selection ring first, so the fill path is asked for by name.
+        const fill = el.querySelector('.sp-seg__rect') ?? el.querySelector('rect, path');
         // A timeline bar's fill is a fade gradient with an id of its own: every one is the same fade.
         const paint = fill ? getComputedStyle(fill).fill.replace(/url\("#sp-tl-fade-[^"]*"\)/, 'url(fade)') : '';
         return [el.tagName, norm(el.getAttribute('aria-label')), norm(el.querySelector(':scope > title')?.textContent), paint].join(' ¦ ');
@@ -283,7 +299,7 @@ function findLeaks(text, { q } = {}) {
   for (const w of ['in holdover', 'month-to-month', 'Data gap', 'unaccounted', 'Over-allocated by', 'Inquiries that fit', 'Match an open inquiry']) if (text.toLowerCase().includes(w.toLowerCase())) found.push(`issue/inquiry wording "${w}"`);
   for (const w of ['Open record', 'New deal', 'Log call', 'Log a call', 'Create availability', 'Start renewal', 'Open lease', 'Would open', 'Would create']) if (text.includes(w)) found.push(`record action "${w}"`);
   // A quiet listing: its badge, its inspector section, its worklist chip and the listing status itself.
-  for (const w of [...ctx.quietBadges, 'Marketed for later', 'Marketed from', 'marketed from', 'Quiet', 'not published']) if (new RegExp(`\\b${w}`).test(text)) found.push(`quiet listing "${w}"`);
+  for (const w of [...ctx.quietBadges, ...(ctx.laterAllQuiet ? ['Marketed for later', 'Marketed from', 'marketed from'] : []), 'Quiet', 'not published']) if (new RegExp(`\\b${w}`).test(text)) found.push(`quiet listing "${w}"`);
   if (ctx.quietBadges.size && /Occupied, marketed for later/.test(text) && !/Occupied, marketed for later\s*(Nothing marketed ahead|—)/.test(text)) found.push('quiet listing counted in Coming supply');
   // Lease terms: no lease in place says when it ends, and none is singled out as the one that does not.
   const term = /\bExp(ires|ired)? (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)|\bTerm not disclosed|\bNext expiry|\bLease expirations|\bRenewal worklist|\bEnds (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/.exec(text);
@@ -353,7 +369,10 @@ async function findDomLeaks() {
   if (subEnds) found.push(`a sublease bar with an end date is drawn (${subEnds})`);
   // An at-risk lease must be indistinguishable from an ordinary one: same words, same tooltip, same colour.
   const sig = await signatures([...ctx.riskKeys, ...ctx.ordinaryKeys]);
-  const ordinary = new Set(ctx.ordinaryKeys.flatMap((k) => sig[k] ?? []));
+  // Ordinary leases as drawn on this page and on every page of the building read before it: a floor whose
+  // only lease is the holdover has no ordinary lease of its own to be compared with.
+  for (const s of ctx.ordinaryKeys.flatMap((k) => sig[k] ?? [])) ctx.seenOrdinary.add(s);
+  const ordinary = ctx.seenOrdinary;
   if (ordinary.size) {
     for (const k of ctx.riskKeys) for (const s of sig[k] ?? []) if (!ordinary.has(s)) found.push(`at-risk lease ${k} reads unlike any ordinary lease: ${s}`);
     // "term not disclosed" (the timeline's wording) is only acceptable on every lease or on none.
@@ -382,7 +401,7 @@ async function brokerFacts(prefixQs, strict) {
 await open(page, base + prefixQs + 'view=stack');
 const kinds = await page.evaluate(() => [...document.querySelectorAll('.sp-stack [data-key]')].map((el) => [el.getAttribute('data-key'), el.getAttribute('aria-label') ?? '']));
 // The figure the broker's Expiring 12 mo card shows: it must be nowhere on a prospect's page.
-const expiringFigure = await page.evaluate(() => {
+let expiringFigure = await page.evaluate(() => {
   const card = [...document.querySelectorAll('.sp-kpi')].find((c) => c.querySelector('.sp-kpi__label')?.textContent === 'Expiring 12 mo');
   const n = card?.querySelector('.sp-kpi__value')?.textContent?.match(/[\d,]{4,}/)?.[0];
   return n ? `${n} SF` : null;
@@ -405,6 +424,10 @@ const ordinaryKeys = kinds.filter(([, a]) => /\bExp [A-Z]/.test(a) && !/Holdover
 if (strict && (riskKeys.length < 2 || ordinaryKeys.length < 5)) {
   console.error(`Could not tell at-risk from ordinary leases in the broker view (${riskKeys.length} at risk, ${ordinaryKeys.length} ordinary): the check would prove nothing.`);
   process.exit(2);
+}
+if (!strict && expiringFigure && ctx.offerSums.has(Number(expiringFigure.replace(/\D/g, '')))) {
+  console.log(`note ${prefixQs}: the Expiring 12 mo figure ${expiringFigure} is also a size of space on offer; it is not looked for`);
+  expiringFigure = null;
 }
 // A building with no at-risk lease has nothing to compare; one with no ordinary lease neither.
 return riskKeys.length && ordinaryKeys.length ? { riskKeys, ordinaryKeys, expiringFigure, waltFigure } : { riskKeys: [], ordinaryKeys: [], expiringFigure, waltFigure };
@@ -633,10 +656,12 @@ if (wanted('prospect-safe print layout')) {
 // tenant's suite selected.
 for (const b of others) {
   const at = `?building=${b.id}&`;
-  ctx = { ...contextOf(b.text, false), ...(await brokerFacts(at, false)) };
+  ctx = contextOf(b.text, false);
+  ctx = { ...ctx, ...(await brokerFacts(at, false)) };
   const floorIds = [...b.text.matchAll(/\bfloor\((\d+),/g)].map((m) => `F${m[1]}`);
   const first = /lease\(\{ id: '(L\d+)'[^]*?tenant: '([^']+)'/.exec(b.text);
-  const tenantWord = first[2].split(/\s+/)[0].toLowerCase();
+  // The whole name: a first word may be the building's own ("Legacy", "Uptown"), which a prospect does see.
+  const tenantWord = encodeURIComponent(first[2].toLowerCase());
   const inquiryId = ctx.inquiryList[0]?.id;
   const bStates = [
     'view=building&safe=1',
