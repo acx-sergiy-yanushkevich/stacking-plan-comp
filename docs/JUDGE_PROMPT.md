@@ -104,7 +104,7 @@ X4 Accessibility of interaction: x/3: <evidence>
 X5 CRM workflows & differentiation: x/4: <evidence>
 UX TOTAL: xx/20
 
-ENGINEERING (informational): xx/10: <one paragraph>
+ENGINEERING: xx/10: <one paragraph>
 
 TOP UI FIXES (ranked by points gained per effort, max 5):
 1. <what, where, why, expected UI points gained>
