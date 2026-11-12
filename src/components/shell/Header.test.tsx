@@ -219,17 +219,23 @@ describe('Header product bar and building card', () => {
     expect(classic).toContain('sp-header__actions');
   });
 
-  it('the switcher menu lists the live building checked, then every sample entry disabled, each with its own mini stack', () => {
+  it('the switcher menu lists the buildings with data, the open one checked, then every sample entry disabled, each with its own mini stack', () => {
     // Menu renders its items only when open: test the items through the helper the header builds them with.
-    const items = switcherItems(property);
-    const rows = items.filter((i) => !('kind' in i) || i.kind === 'item') as Array<{ label: string; adornment?: unknown; disabled?: boolean; checked?: boolean }>;
+    const opened: string[] = [];
+    const items = switcherItems(property, (id) => opened.push(id));
+    const rows = items.filter((i) => !('kind' in i) || i.kind === 'item') as Array<{ id: string; label: string; adornment?: unknown; disabled?: boolean; checked?: boolean; onSelect: () => void }>;
     expect(items[0]).toMatchObject({ kind: 'heading', label: 'Portfolio · 10 buildings' });
     expect(rows).toHaveLength(10);
     expect(rows[0]).toMatchObject({ label: 'Preston Park Financial Center', checked: true });
-    expect(rows.slice(1, 4).map((r) => r.label)).toEqual(['Legacy West Tower II', 'Galleria Commerce Plaza', 'Trinity Riverfront Offices']);
-    for (const r of rows.slice(1)) expect(r).toMatchObject({ disabled: true });
+    expect(rows.slice(1, 4).map((r) => r.label)).toEqual(['Legacy West Tower II', 'Cedar Springs Exchange', 'Bluebonnet Office Park']);
+    for (const r of rows.slice(1, 4)) expect(r).toMatchObject({ checked: false });
+    for (const r of rows.slice(4)) expect(r).toMatchObject({ disabled: true });
     for (const r of rows) expect(r.adornment, r.label).toBeTruthy();
-    expect(items.at(-1)).toMatchObject({ kind: 'heading', label: 'Sample entries · only Preston Park Financial Center opens' });
+    expect(items.at(-1)).toMatchObject({ kind: 'heading', label: 'Sample entries · only the first 4 open' });
+    // Selecting another building with data opens it; the open one opens nothing.
+    rows[0].onSelect();
+    rows[2].onSelect();
+    expect(opened).toEqual(['P005']);
     // Each mini stack is drawn: four floors, one suite open in orange, in the building's own tone.
     const html = renderToString(<>{rows.map((r, i) => <span key={i}>{r.adornment as never}</span>)}</>);
     expect(html.match(/class="sp-ministack"/g)).toHaveLength(10);

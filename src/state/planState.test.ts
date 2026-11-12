@@ -57,6 +57,7 @@ describe('serializeState', () => {
   });
   it('round-trips a fully populated state', () => {
     const s: PlanState = {
+      building: 'P002',
       view: 'map',
       lens: 'rent',
       asOf: '2027-06-01',

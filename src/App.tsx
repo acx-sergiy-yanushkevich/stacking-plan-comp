@@ -1,7 +1,8 @@
 import { Component, createRef, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
 import { getFontEpoch, subscribeFonts } from './lib/textFit';
 import { segmentText } from './components/plan/segmentText';
-import { property, TODAY } from './data/mock/property';
+import { TODAY } from './data/mock/property';
+import { buildingById } from './data/mock/buildings';
 import { usePlanModel } from './model/usePlanModel';
 import { usePlanState, useDocumentTitle } from './state/usePlanState';
 import { useAnnouncement } from './state/useAnnouncement';
@@ -128,6 +129,7 @@ function Shell() {
   const [rawState, patch] = usePlanState(TODAY);
   // The deals lens is withheld in prospect-safe mode: fall back to status rather than draw an empty lens.
   const state = rawState.safe && rawState.lens === 'deals' ? { ...rawState, lens: 'status' as const } : rawState;
+  const { property } = buildingById(state.building);
   const model = usePlanModel(property, state, TODAY);
   const toast = useToast();
   const narrow = useIsNarrow();
@@ -148,7 +150,7 @@ function Shell() {
     }, 400);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.asOf]);
+  }, [state.asOf, property.id]);
 
   // Selecting a block is announced: focus stays on the plan, so a screen-reader user would otherwise hear nothing.
   const announcedSelect = useRef(state.select);
@@ -223,7 +225,7 @@ function Shell() {
           return;
       }
     },
-    [model.floors, model.asOf, state.asOf, state.safe, toast],
+    [property, model.floors, model.asOf, state.asOf, state.safe, toast],
   );
 
   const onKpi = (a: KpiAction) => {
@@ -342,7 +344,7 @@ function Shell() {
       <KpiStrip model={model} state={state} onAction={onKpi} />
       <Toolbar state={state} patch={patch} issueCount={model.issues.length} />
       <main className={`sp-main sp-no-print ${showInspector ? '' : 'sp-main--wide'} ${showInspector && wide ? 'sp-main--panel-wide' : ''}`} id="sp-plan" tabIndex={-1}>
-        <Stage epoch={view === 'map' ? 'map' : `fonts-${fontTick}`}>
+        <Stage epoch={view === 'map' ? `map-${property.id}` : `${property.id}-fonts-${fontTick}`}>
           {view === 'building' && <BuildingView model={model} state={state} patch={patch} />}
           {view === 'stack' && <StackView model={model} state={state} patch={patch} />}
           {view === 'floor' && <FloorView model={model} state={state} patch={patch} />}
