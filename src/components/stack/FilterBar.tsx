@@ -22,7 +22,7 @@ export interface FilterBarProps {
 export function FilterBar({ label, alternatives, find, patch }: FilterBarProps) {
   if (find)
     return (
-      <div className="sp-filterbar" role="status">
+      <div className="sp-filterbar sp-filterbar--offer" role="status">
         <Icon name="filter" size={14} />
         <span>
           That reads as a space requirement: <strong>{label.replace(/^Find /, '')}</strong>.

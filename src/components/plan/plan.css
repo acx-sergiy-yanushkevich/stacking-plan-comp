@@ -44,6 +44,9 @@
 
 /* Legend */
 .sp-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }
+/* On a wide window the entries sit closer, so the Expiration legend's last entry ("For sale") is not left alone
+   on a second row at 1440 px (round 23). The Map's legend sets its own gap (map.css). */
+@media (min-width: 1280px) { .sp-legend { column-gap: 8px; } }
 .sp-legend__item { position: relative; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; border-radius: 3px; }
 .sp-legend__item[tabindex]:focus-visible { outline: 2px solid var(--sp-color-focus, var(--sp-color-brand)); outline-offset: 2px; }
 /* An entry's figures, on hover or focus: under it, from its left edge, so a first entry's tip stays in the card. */

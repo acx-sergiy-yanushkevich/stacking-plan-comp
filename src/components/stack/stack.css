@@ -16,6 +16,14 @@
 .sp-filterbar .sp-btn { margin-left: auto; }
 /* A search that reads as a requirement: the offer follows its sentence; Clear keeps the far end. */
 .sp-filterbar .sp-btn.sp-filterbar__find { margin-left: 0; flex: none; }
+/* The bar wraps rather than run past the window (round 23: on a 390 px phone the sentence was a 7-line column
+   and Clear was pushed off the screen, widening the page to 402 px). On a phone the offer's sentence takes the
+   first row beside its icon, and "Find … of space" and Clear go to the row under it. */
+.sp-filterbar--offer { flex-wrap: wrap; row-gap: 8px; }
+.sp-filterbar--offer > span { min-width: 0; }
+@media (max-width: 600px) {
+  .sp-filterbar--offer > span { flex: 1 1 calc(100% - 24px); }
+}
 
 /* Gutter */
 .sp-gutter__name { font-size: 15px; font-weight: 600; fill: var(--sp-color-text); }
