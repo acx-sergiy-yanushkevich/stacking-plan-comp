@@ -58,7 +58,7 @@ describe('Inspector', () => {
 
   it('Block (gap): suspect lease and Add unit', () => {
     const { html } = render('?select=F2-gap');
-    expect(html).toContain('not listed');
+    expect(html).toContain('No lease or listing');
     expect(html).toContain('Delta Dental Plan');
     expect(html).toContain('Add unit');
   });

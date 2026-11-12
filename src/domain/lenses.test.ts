@@ -142,16 +142,18 @@ describe('prospect-safe', () => {
     expect(tone('L18-U1', 'rent', true)).toBe('muted');
     expect(tone('A02', 'rent', true)).toBe('rent-2');
   });
-  it('deals lens shows only vacant vs not', () => {
-    expect(tone('L13-U1', 'deals', true)).toBe('muted');
-    expect(tone('A02', 'deals', true)).toBe('empty');
+  it('deals lens, which has no deal to show a prospect, draws what the Leasing lens draws, with its legend', () => {
+    for (const key of ['L13-U1', 'A02', 'F2-gap', 'L09-U1']) expect(tone(key, 'deals', true), key).toBe(tone(key, 'status', true));
+    expect(legendFor('deals', true, today).map((i) => i.label)).toEqual(legendFor('status', true, today).map((i) => i.label));
   });
   it('the safe status legend carries no risk or expiring item', () => {
     const tones = legendFor('status', true, today).map((i) => i.tone);
     expect(tones).not.toContain('risk');
     expect(tones).not.toContain('expiring');
     expect(tones).toContain('available-later');
-    expect(tones).toContain('muted');
+    // Space with no lease or listing is dashed and "Not on the market", as on the block (round 23: "Not available", solid).
+    expect(legendFor('status', true, today).find((i) => i.tone === 'empty')).toMatchObject({ label: 'Not on the market', pattern: 'dashed', sf: 5400 });
+    expect(tones).not.toContain('muted');
   });
   it('the safe status legend calls space in use "Occupied", the word of the KPI it matches, never a second "Leased" (round 17)', () => {
     const items = legendFor('status', true, today);
@@ -256,10 +258,12 @@ describe('plain words in the legend and on the plan', () => {
     expect(rent).toEqual(expect.arrayContaining(['Gross < $28', 'Net or modified gross']));
   });
 
-  it('a deal at its last stage is "Lease drafted" wherever a stage is shown', () => {
+  it('a deal at its last stage is "Lease drafted" in a deal list; the signed lease it produced is "Lease signed" in the legend (round 23)', () => {
     expect(stageLabel('Lease Out')).toBe('Lease drafted');
     expect(stageLabel('LOI')).toBe('LOI');
-    expect(legendForJargon('deals', false, floors).map((i) => i.label)).toContain('Lease drafted');
+    const labels = legendForJargon('deals', false, floors).map((i) => i.label);
+    expect(labels).toContain('Lease signed');
+    expect(labels).not.toContain('Lease drafted');
   });
 });
 

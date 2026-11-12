@@ -6,6 +6,7 @@ import { daysBetween, fmtDate, fmtMonths } from '../../domain/dates';
 import { matchingInquiries } from '../../domain/finder';
 import { num, rate, rateRange, sf, usd, usd0 } from '../../domain/format';
 import { STALE_DAYS } from '../../domain/issues';
+import { NO_RECORD, NOT_ON_MARKET } from '../../domain/lenses';
 import {
   brokerLabel,
   canShowActivity,
@@ -223,7 +224,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
       )}
 
       {seg.kind === 'unmarketed' && !canShowIssues(safe) && (
-        <Section title="Not available">
+        <Section title={NOT_ON_MARKET}>
           <p className="sp-ins__p">
             <strong>{sf(seg.size)}</strong> on {floorName} is not on the market.
           </p>
@@ -231,9 +232,9 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
       )}
 
       {seg.kind === 'unmarketed' && canShowIssues(safe) && (
-        <Section title="No lease or listing">
+        <Section title={NO_RECORD}>
           <p className="sp-ins__p">
-            <strong>{sf(seg.size)}</strong> of {floorName}’s leasable area has no lease or availability record.
+            <strong>{sf(seg.size)}</strong> of {floorName}’s leasable area has no lease or listing on record.
           </p>
           {seg.suspect ? (
             <div className="sp-ins__card">

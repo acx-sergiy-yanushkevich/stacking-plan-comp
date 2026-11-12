@@ -91,8 +91,9 @@ export function findIssues(p: Property, floors: FloorView[], today: ISODate): Is
         issues.push({
           id: `gap-${f.floor.id}`,
           severity: 'warning',
-          title: `${n(s.size)} SF on ${f.floor.name} is unaccounted for`,
-          detail: 'No lease or availability covers this area.',
+          // The legend's name for the space (`NO_RECORD`): the issue, the block and the inspector say the same thing.
+          title: `${n(s.size)} SF on ${f.floor.name} has no lease or listing`,
+          detail: 'No lease or availability record covers this area.',
           fix: 'Create availability',
           floorId: f.floor.id,
           segKey: s.key,
