@@ -47,8 +47,8 @@ export function LocationBrief({ property, area, print }: LocationBriefProps) {
           <p className="sp-brief__sub">{facts(`${property.street}, ${property.city}, ${property.state} · rings at ${ringMiles.slice(0, -1).join(', ')} and ${ringMiles.at(-1)} miles`)}</p>
         </div>
         {area.sample && !print && (
-          <Chip tone="warn" icon="warning" title={area.source}>
-            Sample data
+          <Chip tone="neutral" title={area.source}>
+            Sample figures
           </Chip>
         )}
       </header>

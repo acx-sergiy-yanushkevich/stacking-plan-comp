@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
+import { NO_HOST, setHost } from '../../lib/host';
 import { renderToString } from 'react-dom/server';
 import { TODAY } from '../../data/mock/property';
 import { LENSES } from '../../domain/lenses';
@@ -37,8 +38,8 @@ describe('Toolbar with prospect-safe on and off: what stays keeps its place', ()
     it(`${view}: the lens tabs of prospect-safe are the first tabs of the full control`, () => {
       const normal = lensTabs(render(`?view=${view}`));
       const safe = lensTabs(render(`?view=${view}&safe=1`));
-      expect(normal).toEqual(['Status', 'Rent', 'Expiration', 'Deals']);
-      expect(safe).toEqual(['Status', 'Rent']);
+      expect(normal).toEqual(['Leasing', 'Rent', 'Expiration', 'Pipeline']);
+      expect(safe).toEqual(['Leasing', 'Rent']);
     });
 
     it(`${view}: the tool buttons keep their order, and Worklist and Data issues leave empty places behind, last`, () => {
@@ -112,3 +113,27 @@ describe('hintThatFits', () => {
     for (const hint of SEARCH_HINTS.safe) expect(hint).not.toMatch(/tenant|prospect/i);
   });
 });
+
+describe('Toolbar Data issues label by width', () => {
+  /** Render with the media queries of a window `width` px wide. */
+  const at = (width: number, query = '') => {
+    const matches = (q: string) => (/max-width: (\d+)px/.test(q) ? width <= Number(/max-width: (\d+)px/.exec(q)![1]) : false);
+    const before = setHost({ ...NO_HOST, media: (q) => ({ matches: () => matches(q), onChange: () => () => {} }) });
+    try {
+      return render(query);
+    } finally {
+      setHost(before);
+    }
+  };
+  const issues = (html: string) => /<button[^>]*title="Data issues: records to fix or verify"[^>]*>(.*?)<\/button>/.exec(html)!;
+
+  it('says "Data issues" wherever it fits, and "Issues" on a phone of 420 px or less, still read as Data issues', () => {
+    for (const w of [1440, 761, 421]) expect(issues(at(w))[1].replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, ''), `${w}`).toMatch(/^Data issues\d*$/);
+    for (const w of [420, 320]) {
+      const [tag, inner] = issues(at(w));
+      expect(inner.replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, ''), `${w}`).toMatch(/^Issues\d*$/);
+      expect(tag, `${w}`).toContain('aria-label="Data issues');
+    }
+  });
+});
+

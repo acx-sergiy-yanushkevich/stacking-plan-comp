@@ -1,5 +1,5 @@
 /* The KPI bar: the building's six key figures above the toolbar, in every view, in two cards side by side:
-   "Color by" (Leased, Pipeline: switches for the plan's lens) and "Open" (Available, Largest block,
+   "Color by" (Leased, Pipeline: switches for the plan's lens) and "Details" (Available, Largest block,
    Expiring 12 mo, WALT: each opens a tool or a view). Hairlines between the figures in a card, no tile
    of its own for any of them. Its height does not depend on the view, on an open floor, on the inspector
    or on what the figures say, so nothing under it moves. Tokens only. */
@@ -13,6 +13,12 @@
 .sp-kpis__group { display: grid; overflow: hidden; min-width: 0; }
 .sp-kpis__group--lens { grid-template-columns: minmax(0, 0.81fr) minmax(0, 0.92fr); }
 .sp-kpis__group--open { grid-template-columns: minmax(0, 1.09fr) minmax(0, 1.16fr) minmax(0, 1.2fr) minmax(0, 0.82fr); }
+/* Prospect-safe: three figures (Leased; Available, Largest block), the strip sized to them so no group is half empty. */
+@media (min-width: 761px) {
+  .sp-kpis--safe { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+  .sp-kpis--safe .sp-kpis__group--lens { grid-template-columns: minmax(0, 1fr); }
+  .sp-kpis--safe .sp-kpis__group--open { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 /* The card's name, set on its top edge like a fieldset legend, in the page's color so it cuts the border. */
 .sp-kpis__caption {
   position: absolute; top: -6px; left: 10px; padding: 0 5px; pointer-events: none;

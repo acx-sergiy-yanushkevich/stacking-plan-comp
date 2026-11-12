@@ -299,24 +299,27 @@ describe('Header at 420 px and under: the title and one row of controls (round 1
 });
 
 describe('Header building card: the facts, then when the plan last changed at the right (round 19)', () => {
-  it('standalone: "Latest change" is beside the facts, not in them; embedded: it stays the last fact', () => {
-    const { html } = render('');
-    const card = html.slice(html.indexOf('<header'));
-    const facts = /<div class="sp-header__facts">(.*?)<\/div>/.exec(card)![1];
-    expect(facts).not.toContain('Latest change');
-    expect(card).toMatch(/<div class="sp-header__aside"><span class="sp-header__verified[^"]*"[^>]*>.*Latest change/);
-    const classic = render('?skin=classic').html;
-    expect(/<div class="sp-header__facts">(.*?)<\/div>/.exec(classic)![1]).toContain('Latest change');
+  it('"Latest change" is the last fact on the facts line, after the same separator as the others, in every skin', () => {
+    for (const q of ['', '?skin=classic', '?safe=1']) {
+      const html = render(q).html.replace(/<!-- -->/g, '');
+      const facts = /<div class="sp-header__facts">(.*?)<\/div>/.exec(html.slice(html.indexOf('<header')))![1];
+      // The facts are spans side by side; the last one is when the plan last changed.
+      const spans = [...facts.matchAll(/<span class="(sp-header__[a-z-]+[^"]*)?"?[^>]*>/g)];
+      expect(facts, q).toMatch(/<span class="sp-header__verified"[^>]*>.*Latest change Nov 6, 2026<\/span>$/);
+      expect(html, q).not.toContain('sp-header__aside');
+      expect(spans.length, q).toBeGreaterThan(3);
+    }
   });
+
 });
 
-describe('Header freshness chip (round 19)', () => {
-  it('counts the records unverified for 120+ days, for the owner only', () => {
-    const own = render('').html.replace(/<!-- -->/g, '');
-    expect(own).toMatch(/sp-header__verified--stale/);
-    expect(own).toMatch(/<span class="sp-header__unverified"> · \d+ unverified since [A-Z][a-z]{2} \d{1,2}<\/span>/);
-    const safe = render('?safe=1').html;
-    expect(safe).not.toContain('sp-header__unverified');
-    expect(safe).not.toContain('unverified');
+describe('Header freshness: one quiet line, no warning on the card', () => {
+  it('says when the plan last changed, in the same quiet tone for owner and prospect; unverified records are listed under Data issues', () => {
+    for (const q of ['', '?safe=1']) {
+      const html = render(q).html.replace(/<!-- -->/g, '');
+      expect(html, q).toContain('Latest change Nov 6, 2026');
+      expect(html, q).not.toContain('sp-header__verified--stale');
+      expect(html, q).not.toContain('unverified');
+    }
   });
 });

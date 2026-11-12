@@ -70,7 +70,7 @@ function lightOn(keys: string[]) {
  * shows before a click:
  * - "Color by" (Leased, Pipeline): switches. Each colors the plan by its lens (status, deals); the one in
  *   use has a filled dot and an underline (and `aria-pressed`), as the toolbar's lens marks its own.
- * - "Open" (Available, Largest block, Expiring 12 mo, WALT): each opens something (the space finder, the
+ * - "Details" (Available, Largest block, Expiring 12 mo, WALT): each opens something (the space finder, the
  *   worklist, the timeline) and carries an arrow. They are never pressed: what they open shows itself.
  *
  * Two figures are made of suites anyone can point to: "Available" and "Largest block". Pointing at one,
@@ -91,7 +91,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
     delta: d ? { text: `${d.occupancy >= 0 ? '+' : '−'}${Math.abs(d.occupancy * 100).toFixed(1)} pts`, good: d.occupancy >= 0 } : null,
     // Pressed whenever the plan is coloured by status, as Pipeline is whenever it is coloured by deals.
     active: state.lens === 'status',
-    title: `Leased share of leasable RSF, including signed leases that have not commenced.${safe ? '' : ` ${num(Math.round(k.physical * k.leasable))} SF occupied + ${num(k.committed)} signed, not in + ${num(k.availableSublease)} sublet vacant${overAlloc > 0 ? ` − ${num(overAlloc)} over-allocated (capped)` : ''} = ${num(k.leased)} SF leased.`} Click to color the plan by status.`,
+    title: `Leased share of leasable RSF, including signed leases that have not commenced.${safe ? '' : ` ${num(Math.round(k.physical * k.leasable))} SF occupied + ${num(k.committed)} signed, not in + ${num(k.availableSublease)} sublet vacant${overAlloc > 0 ? ` − ${num(overAlloc)} over-allocated (capped)` : ''} = ${num(k.leased)} SF leased.`} Click to color the plan by leasing status.`,
   };
   const opens: Kpi[] = [
     {
@@ -146,7 +146,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
     canShowWalt(safe)
       ? {
           id: 'timeline',
-          label: 'WALT',
+          label: 'Avg term',
           value: waltCard(k.walt),
           unit: 'yr',
           note: 'SF-weighted',
@@ -160,7 +160,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
           // The weighted average of the lease terms is a lease-term figure: it is withheld with the terms it averages,
           // in the same words as "Expiring 12 mo" beside it.
           id: 'timeline',
-          label: 'WALT',
+          label: 'Avg term',
           value: 'Withheld',
           note: 'Lease terms not shown',
           detail: 'Lease terms are not shown in prospect-safe mode',
@@ -189,9 +189,13 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
         detail: `${k.pipeline.onVacancy} on vacancies · ${plural(k.pipeline.deals - k.pipeline.onVacancy, 'renewal')} · ${num(k.pipeline.sf)} SF requested`,
         delta: d ? { text: `${d.pipelineDeals >= 0 ? '+' : '−'}${Math.abs(d.pipelineDeals)} ${Math.abs(d.pipelineDeals) === 1 ? 'deal' : 'deals'}`, good: d.pipelineDeals >= 0 } : null,
         active: state.lens === 'deals',
-        title: 'Live deals on this building. Click to color the plan by deals.',
+        title: 'Live deals on this building. Click to color the plan by pipeline.',
       };
-  const lenses = [leased, pipeline];
+  // A prospect is shown what they can use: a figure withheld from them (Pipeline, Expiring 12 mo, Avg lease
+  // term) is left out of the strip, not printed as "Withheld", so the bar reads as a clean summary.
+  const shown = (c: Kpi) => !c.static;
+  const lenses = [leased, pipeline].filter(shown);
+  const openFigures = opens.filter(shown);
   const kpi = (c: Kpi, kind: 'lens' | 'open') => {
     // The accessible name is the content itself: the label, the figure, the change, then the whole note
     // (read in place of the short one on screen, which may have been dropped for want of room).
@@ -248,9 +252,9 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
     </div>
   );
   return (
-    <section className="sp-kpis sp-no-print" aria-label="Key figures">
+    <section className={safe ? 'sp-kpis sp-no-print sp-kpis--safe' : 'sp-kpis sp-no-print'} aria-label="Key figures">
       {group('lens', 'Color the plan by', 'Color by', lenses)}
-      {group('open', 'Open a detail', 'Open', opens)}
+      {group('open', 'Open a detail', 'Details', openFigures)}
     </section>
   );
 }

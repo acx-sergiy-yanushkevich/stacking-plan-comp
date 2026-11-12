@@ -3,7 +3,7 @@ import type { FloorView } from '../../domain/derive';
 import { fmtDate } from '../../domain/dates';
 import { num, sf } from '../../domain/format';
 import type { Issue } from '../../domain/issues';
-import { stageRank } from '../../domain/lenses';
+import { stageRank, stageLabel } from '../../domain/lenses';
 import { canShowDeals, canShowInquiries, canShowIssues } from '../../domain/safe';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
@@ -90,7 +90,7 @@ export function DealRows({ deals, floorName, patch }: { deals: FloorDeal[]; floo
           <li key={deal.id} className="sp-flist__item">
             <button type="button" className="sp-flist__row" title="Show the suite this deal is on" onClick={() => selectSegment(patch, seg.key)}>
               <span className="sp-flist__stage" style={{ background: `var(--tone-deal-${rank}-fill)`, color: `var(--tone-deal-${rank}-text)`, borderColor: `var(--tone-deal-${rank}-edge)` }}>
-                {deal.stage}
+                {stageLabel(deal.stage)}
               </span>
               <span className="sp-flist__body">
                 <span className="sp-flist__primary">
@@ -110,7 +110,7 @@ export function DealRows({ deals, floorName, patch }: { deals: FloorDeal[]; floo
               variant="ghost"
               iconRight="external"
               className="sp-flist__open"
-              aria-label={`Open record: ${deal.prospect} deal, ${deal.stage}`}
+              aria-label={`Open record: ${deal.prospect} deal, ${stageLabel(deal.stage)}`}
               onClick={() => run('open-deal', `Deal ${deal.id} (${deal.prospect})`)}
             >
               Open record

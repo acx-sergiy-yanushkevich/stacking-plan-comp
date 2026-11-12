@@ -2,7 +2,7 @@ import type { Segment } from '../../domain/derive';
 import type { ISODate } from '../../domain/types';
 import { fmtDate, fmtMonthYear, fmtMonthYearShort, fmtMonths } from '../../domain/dates';
 import { compactRate, num, rate, sf, usd, usd0 } from '../../domain/format';
-import { dealCount, rentType, rentValue, topDeal, toneFor, type LensId, type Tone } from '../../domain/lenses';
+import { dealCount, rentType, rentValue, topDeal, toneFor, type LensId, type Tone, stageLabel } from '../../domain/lenses';
 import { canShowActivity, canShowDeals, canShowInPlaceRent, canShowIssues, canShowLeaseTerm, canShowListingStatus, canShowTenant, canShowTenantRisk, leaseDatesHidden, marketedFor, rentVisible, tenantLabel, termHidden } from '../../domain/safe';
 import type { PatternKind } from './Patterns';
 
@@ -66,9 +66,9 @@ const KIND_LABEL: Record<Segment['kind'], string> = {
   mtm: 'Month-to-month',
   available: 'Available',
   sublease: 'Sublease',
-  committed: 'Committed',
+  committed: 'Signed, not yet in',
   projected: 'Projected vacancy',
-  unmarketed: 'Unaccounted',
+  unmarketed: 'Vacant, not listed',
   forsale: 'For sale',
 };
 
@@ -107,7 +107,7 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
       name = lease ? tenantLabel(lease, safe) : name;
       if (kind === 'sublease' && a) name = lease && canShowTenant(safe) ? `${lease.tenant} · sublease` : 'Sublease';
       if (kind === 'holdover' && canShowTenantRisk(safe)) badges.push({ kind: 'risk', text: 'Holdover', title: `Expired ${seg.endDate ? fmtDate(seg.endDate) : ''}, no termination recorded` });
-      if (kind === 'mtm' && canShowTenantRisk(safe)) badges.push({ kind: 'risk', text: 'MTM', title: 'Month-to-month: no expiration date' });
+      // A month-to-month lease says so once, in its line ("Month-to-month"); its tone marks the risk.
       // Prospect-safe: no lease in place shows its term. Every one reads "Leased", so a holdover or a
       // month-to-month lease cannot be told from an ordinary one by a missing date.
       if (termHidden(kind, safe)) meta = kind === 'sublease' ? '' : 'Leased';
@@ -152,9 +152,9 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
     case 'unmarketed': {
       // A gap in the records is a data issue; a prospect sees space that is simply not on offer.
       if (canShowIssues(safe)) {
-        name = `${sf(seg.size)} unaccounted`;
+        // Plain words on the plan; that the records have a gap is for the Data issues panel, not a chip here.
+        name = `${sf(seg.size)} not listed`;
         meta = seg.suspect ? `Likely ${seg.suspect.tenant}` : 'No lease or availability';
-        badges.push({ kind: 'warn', text: 'Data gap' });
       } else {
         name = `${sf(seg.size)} not available`;
         meta = 'Not on the market';
@@ -221,7 +221,7 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
   }
   if (lens === 'deals' && canShowDeals(safe)) {
     const d = topDeal(seg);
-    if (d) lensShort = d.stage === 'Lease Out' ? 'Lease out' : d.stage;
+    if (d) lensShort = stageLabel(d.stage);
   }
   if (kind === 'committed' && lens === 'status' && lease && !leaseDatesHidden(kind, safe)) lensShort = `In ${fmtMonthYearShort(lease.commencement)}`;
   let term = '';

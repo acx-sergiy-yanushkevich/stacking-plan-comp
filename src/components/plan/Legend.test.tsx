@@ -20,7 +20,7 @@ describe('Legend', () => {
   const items = [{ tone: 'leased', label: 'Leased', sf: 1000, share: 0.5, pattern: null }] as unknown as Parameters<typeof Legend>[0]['items'];
 
   it('prints an extra entry after the lens\'s states, with its SF and no share', () => {
-    const html = renderToString(<Legend items={items} extras={[buildingUse([{ floor: { nonLeasable: 2600 } }])!]} note="A note." />);
+    const html = renderToString(<Legend items={items} extras={[buildingUse([{ floor: { nonLeasable: 2600 } }])!]} note="A note." full />);
     expect(html.indexOf('Leased')).toBeLessThan(html.indexOf('Lobby · building use'));
     expect(html.indexOf('Lobby · building use')).toBeLessThan(html.indexOf('A note.'));
     expect(html).toContain('<span class="sp-legend__num">2,600</span>');
@@ -37,11 +37,20 @@ describe('Legend', () => {
       { tone: 'rent-4', label: '$38+', sf: 400, share: 0.4, pattern: null },
       { tone: 'empty', label: 'Asking rent (vacancy)', sf: 300, share: 0.3, pattern: 'asking', overlay: true },
     ] as unknown as Parameters<typeof Legend>[0]['items'];
-    const html = renderToString(<Legend items={rent} />).replace(/<!-- -->/g, '');
+    const html = renderToString(<Legend items={rent} full />).replace(/<!-- -->/g, '');
     const shares = [...html.matchAll(/sp-legend__num">[^<]*· ([\d.]+)%/g)].map((m) => Number(m[1]));
     expect(shares).toEqual([60, 40]);
     expect(html).toContain('<span class="sp-legend__num">300 SF · also in its band</span>');
     expect(html).toContain('title="Asking rent (vacancy): 300 SF, also counted in its rent band"');
   });
-});
 
+  it('on screen: names only, the figures in each entry\'s tooltip; the note behind an info mark, not as a paragraph', () => {
+    const html = renderToString(<Legend items={items} extras={[buildingUse([{ floor: { nonLeasable: 2600 } }])!]} note="A note." />);
+    expect(html).not.toContain('sp-legend__num');
+    expect(html).toContain('title="Leased: 1,000 SF, 50.0% of leasable"');
+    expect(html).not.toContain('<span class="sp-legend__note">');
+    expect(html).toMatch(/<span class="sp-legend__info"(?=[^>]*title="A note\.")(?=[^>]*aria-label="A note\.")[^>]*>/);
+    // No note, no mark.
+    expect(renderToString(<Legend items={items} />)).not.toContain('sp-legend__info');
+  });
+});

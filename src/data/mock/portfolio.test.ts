@@ -17,3 +17,22 @@ describe('portfolio sample entries', () => {
     }
   });
 });
+
+/** The Stax mark's own drawing (Brand.tsx), in the switcher's terms: the product's logo, not a building's icon. */
+const MARK = { floors: [[1], [0.62, 0.38], [0.36, 0.64], [1]], open: [1, 1], tone: '#00aff0' };
+const sameFloors = (a: ReadonlyArray<ReadonlyArray<number>>, b: ReadonlyArray<ReadonlyArray<number>>) =>
+  a.length === b.length && a.every((f, i) => f.length === b[i].length && f.every((s, j) => Math.abs(s - b[i][j]) < 0.05));
+
+describe('building icons in the switcher', () => {
+  it('the live building does not wear the Stax mark: another layout and another colour', () => {
+    expect(sameFloors(LIVE_STACK.floors, MARK.floors)).toBe(false);
+    expect(LIVE_STACK.tone).not.toBe(MARK.tone);
+  });
+
+  it('no building draws the mark, and no two buildings draw the same icon', () => {
+    const all = [LIVE_STACK, ...PORTFOLIO];
+    for (const b of all) expect(sameFloors(b.floors, MARK.floors)).toBe(false);
+    for (let i = 0; i < all.length; i++)
+      for (let j = i + 1; j < all.length; j++) expect(sameFloors(all[i].floors, all[j].floors) && all[i].open.join() === all[j].open.join(), `${i} vs ${j}`).toBe(false);
+  });
+});

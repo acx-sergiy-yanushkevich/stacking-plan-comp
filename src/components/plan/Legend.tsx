@@ -1,5 +1,6 @@
 import type { LegendItem } from '../../domain/lenses';
 import { num, pct } from '../../domain/format';
+import { Icon } from '../ui/Icon';
 
 /** An entry for something drawn on the plan that is not a state of the lens: building use (the lobby). */
 export interface LegendExtra {
@@ -21,6 +22,12 @@ export interface LegendProps {
   note?: string | null;
   id?: string;
   compact?: boolean;
+  /**
+   * Print every entry's SF and share and the note as a line of text (the PDF, which has no hover). On screen
+   * the legend is the names alone: each entry's figures are its tooltip, and the note sits behind an info mark,
+   * so the plan's key reads at a glance and caveats do not crowd it.
+   */
+  full?: boolean;
 }
 
 /**
@@ -57,7 +64,7 @@ export function sharesNote(items: ReadonlyArray<LegendItem>, leasable: number, o
 }
 
 /** Legend whose items carry the SF and share they currently cover; an overlay carries its SF only. */
-export function Legend({ items, extras, note, id, compact }: LegendProps) {
+export function Legend({ items, extras, note, id, compact, full }: LegendProps) {
   return (
     <div className="sp-legend" id={id} aria-label="Legend">
       {items
@@ -72,7 +79,7 @@ export function Legend({ items, extras, note, id, compact }: LegendProps) {
             <span className="sp-legend__label">{i.label}</span>
             {/* An overlay (the rent lens's asking rent) is drawn over space already counted in a band: it
                 carries its SF and says so, and no share, so the shares printed add up to 100%. */}
-            {i.sf > 0 && (
+            {full && i.sf > 0 && (
               <span className="sp-legend__num">
                 {i.overlay ? `${num(i.sf)} SF · also in its band` : `${num(i.sf)}${i.share > 0 ? ` · ${pct(i.share)}` : ''}`}
               </span>
@@ -87,10 +94,15 @@ export function Legend({ items, extras, note, id, compact }: LegendProps) {
             aria-hidden="true"
           />
           <span className="sp-legend__label">{x.label}</span>
-          <span className="sp-legend__num">{num(x.sf)}</span>
+          {full && <span className="sp-legend__num">{num(x.sf)}</span>}
         </span>
       ))}
-      {note && <span className="sp-legend__note">{note}</span>}
+      {note && full && <span className="sp-legend__note">{note}</span>}
+      {note && !full && (
+        <span className="sp-legend__info" title={note} aria-label={note} role="img" tabIndex={0}>
+          <Icon name="info" size={14} />
+        </span>
+      )}
     </div>
   );
 }

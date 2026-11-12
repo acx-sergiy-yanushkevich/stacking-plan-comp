@@ -78,7 +78,7 @@ describe('what the map floor list adds to a floor\'s label', () => {
     // The label itself says when the space on offer is a sublease (building/floorFact.ts), so that is not repeated here.
     expect(floorAlso(floor('F7'), false)).toBe('');
     expect(floorAlso(floor('F1'), false)).toBe('2,600 SF for sale');
-    expect(floorAlso(floor('F2'), false)).toBe('5,400 SF unaccounted');
+    expect(floorAlso(floor('F2'), false)).toBe('5,400 SF not listed');
     expect(floorAlso(floor('F10'), false)).toBe('');
     // A prospect is told the space is not on the market, never that the records have a gap.
     expect(floorAlso(floor('F2'), true)).toBe('5,400 SF not on the market');

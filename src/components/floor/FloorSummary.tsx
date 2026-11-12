@@ -95,15 +95,21 @@ export function FloorSummary({ floor, model, state, patch }: FloorSummaryProps) 
       )}
       {canShowRecordActions(safe) && (
         <div className="sp-factions" role="group" aria-label={`${name} record actions`}>
-          <Button size="sm" icon="plus" onClick={() => run('new-deal', name)}>
-            New deal on {name}
+          <Button size="sm" icon="plus" aria-label={`New deal on ${name}`} title={`New deal on ${name}`} onClick={() => run('new-deal', name)}>
+            New deal
           </Button>
           <Button size="sm" icon="plus" onClick={() => run('new-availability', name)}>
             Create availability
           </Button>
           {call && (
-            <Button size="sm" icon="phone" title={`${call.lease.tenant}: ${call.why} on ${name}`} onClick={() => run('log-call', `Lease ${call.lease.id} (${call.lease.tenant})`)}>
-              Log call with {call.lease.tenant} ({call.reason})
+            <Button
+              size="sm"
+              icon="phone"
+              aria-label={`Log call with ${call.lease.tenant} (${call.reason})`}
+              title={`${call.lease.tenant}: ${call.why} on ${name}`}
+              onClick={() => run('log-call', `Lease ${call.lease.id} (${call.lease.tenant})`)}
+            >
+              Log call · {call.lease.tenant}
             </Button>
           )}
         </div>

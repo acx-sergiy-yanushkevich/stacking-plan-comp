@@ -113,7 +113,7 @@ describe('PrintLayout sections', () => {
     const owner = sectionsOf(render('?print=1').html).parts;
     expect(owner[1]).toMatch(/<\/table><p class="sp-print__note">2 leases are not placed/);
     const safe = sectionsOf(render('?print=1&safe=1').html).parts;
-    expect(safe[0]).toMatch(/<footer class="sp-print__foot">Floor width is proportional.*WALT and rollover are withheld\.<\/footer>/);
+    expect(safe[0]).toMatch(/<footer class="sp-print__foot">Floor width is proportional.*average lease term and rollover are not shown\.<\/footer>/);
     expect(safe[1]).toMatch(/<\/table><p class="sp-print__note">Asking rents carry their unit and lease type/);
   });
 });
@@ -163,7 +163,7 @@ describe('PrintLayout', () => {
     // No lease shows its term, so the report has no expirations table at all (and so no rent or renewal column).
     expect(html).not.toMatch(/Lease expirations|Renewal worklist|No leases end in the next 12 months/);
     expect(html).not.toMatch(/<th>Rent<\/th>|<th>Renewal<\/th>|<th>Ends<\/th>/);
-    expect(html).toContain('lease and sublease dates, WALT and rollover are withheld');
+    expect(html).toContain('lease and sublease dates, average lease term and rollover are not shown');
     // The rent roll: every lease in place is "Leased", and the table has no lease-date column at all.
     const roll = pages.slice(0, pages.indexOf('<h2>Space on offer</h2>'));
     expect(roll).not.toMatch(/<th>(Commencement|Expiration|Remaining)<\/th>/);
@@ -218,15 +218,20 @@ describe('PrintLayout', () => {
     // Every period's SF is gone, whether or not another figure happens to equal it.
     expect(model.roll.buckets).toEqual([]);
     for (const b of open.model.roll.buckets.filter((x) => x.sf > 0)) expect(html, b.label).not.toContain(`<td>${b.label}</td>`);
-    expect(html).toMatch(/Expiring 12 mo<\/div><div class="sp-print__kpi-value">Withheld/);
+    // As on screen: the figure is left off a prospect's cover, not printed as "Withheld".
+    expect(html).not.toContain('Expiring 12 mo');
   });
 
-  it('prospect-safe report prints no WALT figure: the card reads "Withheld", as on screen', () => {
+  it('the cover\'s figures match the screen: Avg term for the owner; Leased, Available, Largest block for a prospect', () => {
     const open = render('?print=1');
     expect(open.model.kpis.walt).toBeGreaterThan(0);
-    expect(open.html).toContain(`WALT</div><div class="sp-print__kpi-value">${open.model.kpis.walt.toFixed(2)} yr`);
+    expect(open.html).toContain(`Avg term</div><div class="sp-print__kpi-value">${open.model.kpis.walt.toFixed(2)} yr`);
+    expect(open.html).not.toMatch(/>WALT</);
+    const labels = (html: string) => [...html.matchAll(/<div class="sp-print__kpi-label">([^<]+)<\/div>/g)].map((m) => m[1]);
+    expect(labels(open.html)).toEqual(['Leased', 'Available', 'Largest block', 'Expiring 12 mo', 'Avg term', 'Pipeline']);
     const { html, model } = render('?print=1&safe=1');
-    expect(html).toMatch(/WALT<\/div><div class="sp-print__kpi-value">Withheld<\/div><div class="sp-print__kpi-note">(<[^>]+>)*Prospect-safe/);
+    expect(labels(html)).toEqual(['Leased', 'Available', 'Largest block']);
+    expect(html).not.toContain('sp-print__kpi-value">Withheld');
     expect(html).not.toMatch(/\d(\.\d+)? yr\b|SF-weighted/);
     expect(html).not.toContain(open.model.kpis.walt.toFixed(2));
     // The model itself hands the report no figure to print.
@@ -306,4 +311,11 @@ describe('legend shares (round 19)', () => {
     const occupied = model.legend.find((i) => /^Occupied/.test(i.label));
     if (occupied) expect(pct(occupied.share)).toBe(pct(model.kpis.physical));
   });
+
+  it('prints the screen\'s plain words: no MTM in a table, and a deal at its last stage is "Lease drafted"', () => {
+    const { html } = render('?print=1');
+    expect(html).not.toMatch(/<td>MTM<\/td>/);
+    expect(html).not.toMatch(/<td>Lease Out<\/td>/);
+  });
 });
+

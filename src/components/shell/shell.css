@@ -31,7 +31,6 @@
 .sp-header__sale { display: inline-flex; align-items: center; gap: 4px; }
 .sp-header__sale .sp-icon, .sp-header__sale svg { color: var(--tone-forsale-edge); flex: none; }
 .sp-header__sale-label { font-weight: 500; }
-.sp-header__verified--stale { color: var(--sp-color-warn); }
 .sp-header__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .sp-header__asof .sp-btn { font-variant-numeric: tabular-nums; }
 .sp-header__asof--projected .sp-btn { background: var(--sp-color-warn-soft); border-color: var(--sp-color-warn); color: var(--sp-color-warn); }
@@ -52,11 +51,9 @@
    the mode. From 1180 px both are one line. */
 @media (min-width: 761px) and (max-width: 1179px) { .sp-header__facts { min-height: calc(2 * 1.3em + 4px); align-content: flex-start; } }
 /* The building card's right: when the plan last changed. */
-.sp-header__aside { flex: none; margin-left: auto; align-self: center; font-size: var(--sp-text-12); white-space: nowrap; }
+
 .sp-header:not(.sp-header--classic) .sp-header__title { flex-wrap: nowrap; }
 /* A narrow tablet: the chip is the date alone (the count is in its tooltip), so the title's line does not wrap. */
-@media (max-width: 1023px) { .sp-header__unverified { display: none; } }
-@media (max-width: 760px) { .sp-header__aside { display: none; } }
 /* Palette control: two options, each a swatch of the palette's accent and highlight beside its name. */
 .sp-palette__dot { width: 12px; height: 12px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1px var(--sp-color-border-strong); }
 .sp-palette__dot--ascendix { background: linear-gradient(135deg, #00aff0 0 50%, #ff9c00 50% 100%); }

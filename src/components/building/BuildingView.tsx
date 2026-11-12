@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { lensName } from '../../domain/lenses';
 import { fmtDate } from '../../domain/dates';
 import { num } from '../../domain/format';
 import type { PlanModel } from '../../model/usePlanModel';
@@ -17,7 +18,7 @@ import { rampNote } from '../stack/rampNote';
 import { Button } from '../ui';
 import { useMedia, usePrefersReducedMotion } from '../../lib/useMedia';
 import { find, focused, on, sizeObserver } from '../../lib/host';
-import { floorHeading, floorLabel, floorLabelParts, floorSentence, labelNote, lensDetail } from './floorFact';
+import { floorHeading, floorLabel, floorLabelParts, floorSentence, lensDetail } from './floorFact';
 import { FloorLabels, type FloorLabelRow } from './FloorLabels';
 import { clearFrom, cubicBezier, type Box, type Glide } from './glide';
 import { openFloorOf } from './openFloor';
@@ -271,7 +272,7 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
   const squat = Math.max(shortWindow ? 180 : 210, Math.round(size.width / (shortWindow ? 3.7 : 3)));
   const plateHeight = size.width < 720 ? Math.min(size.height, squat) : size.height;
 
-  const title = state.lens === 'status' ? 'Occupancy' : state.lens === 'expiry' ? 'Expirations' : state.lens === 'deals' ? 'Deal pipeline' : 'Rents';
+  const title = lensName(state.lens);
   const over = floors.filter((f) => f.overAllocatedBy > 0);
   const lobby = buildingUse(floors);
   const head = (
@@ -283,13 +284,22 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
         </span>
       </div>
       {/* The model draws the lobby as a grey hatch; the Stack view labels it in the block, here the legend names it. */}
-      <Legend items={model.legend} extras={lobby ? [lobby] : undefined} compact id="sp-legend" note={rampNote(state.lens, safe)} />
-      {over.length > 0 && canShowIssues(model.safe) && (
-        <p className="sp-legend__note">
-          {/* A no-break space after the comma: where the note wraps, the line does not end on it. */}
-          {over.map((f) => `${f.floor.name} records exceed its leasable area by ${num(f.overAllocatedBy)} SF`).join('; ')}; legend shares use recorded SF,{'\u00a0'}leased occupancy is capped.
-        </p>
-      )}
+      {/* The caveats (which end of a colour ramp is which, a floor whose records exceed its area) are the
+          legend's info mark: there for whoever asks, never a line of warnings over the plan. */}
+      <Legend
+        items={model.legend}
+        extras={lobby ? [lobby] : undefined}
+        compact
+        id="sp-legend"
+        note={
+          [
+            rampNote(state.lens, safe),
+            over.length > 0 && canShowIssues(model.safe) ? `${over.map((f) => `${f.floor.name} records exceed its leasable area by ${num(f.overAllocatedBy)} SF`).join('; ')}; legend shares use recorded SF, leased occupancy is capped.` : null,
+          ]
+            .filter(Boolean)
+            .join(' ') || null
+        }
+      />
     </div>
   );
 
@@ -318,7 +328,6 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
     (property.footprintSource === 'demo' ? 'Demo footprint.' : 'Footprint © OpenStreetMap contributors.');
   // The caption line as facts with a "·" between them: it breaks between facts, never with a separator at either end (DotJoin).
   const hoveredParts = hovered ? [...floorSentence(hovered, model.asOf, safe).split(' · '), ...lensDetail(hovered, state.lens, safe).split(' · ')] : [];
-  const noteParts = labelNote(state.lens, safe).split(' · ');
 
   return (
     <section className="sp-card sp-bview" aria-label="Building">
@@ -342,9 +351,8 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
                   </>
                 ) : (
                   <>
-                    <span className="sp-nb">Click a floor or its label to open its plan.</span>{' '}
-                    {/* Each thing the labels show stays in one piece: a narrow card breaks the line between them, never inside one. */}
-                    <DotJoin parts={noteParts.map((part, i) => `${i === 0 ? 'Labels: ' : ''}${part}${i === noteParts.length - 1 ? '.' : ''}`)} />
+                    {/* One short instruction: the labels beside the model speak for themselves, and each carries its facts in its name. */}
+                    <span className="sp-nb">Click a floor to open its plan.</span>
                   </>
                 )}
               </span>

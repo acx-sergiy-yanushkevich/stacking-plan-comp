@@ -63,7 +63,7 @@ export function floorAlso(f: FloorView, safe: boolean): string {
   const gap = sum('unmarketed');
   const also: string[] = [];
   if (forSale > 0) also.push(`${num(forSale)} SF for sale`);
-  if (gap > 0) also.push(`${num(gap)} SF ${canShowIssues(safe) ? 'unaccounted' : 'not on the market'}`);
+  if (gap > 0) also.push(`${num(gap)} SF ${canShowIssues(safe) ? 'not listed' : 'not on the market'}`);
   return also.join(', ');
 }
 

@@ -177,3 +177,26 @@ describe('term: the lease term in a few words, for a narrow block on paper', () 
     expect([t.name, t.sub, t.meta]).toEqual(['Preston Park Café', 'Ste 100 · 2,400 SF', 'Exp Feb 2027 · 3 mo']);
   });
 });
+
+describe('plain words on the plan, and no warning chips', () => {
+  const all = [...index.values()];
+  const texts = (safe: boolean) => all.map((s) => segmentText(s, { ...opts, safe }));
+
+  it('no block names its state in shorthand, and none carries a "Data gap" chip', () => {
+    for (const safe of [false, true])
+      for (const t of texts(safe)) {
+        const words = [t.name, t.meta, ...t.badges.map((b) => b.text)].join(' | ');
+        for (const jargon of ['MTM', 'Committed', 'unaccounted', 'Unaccounted', 'Data gap']) expect(words, `${safe ? 'safe ' : ''}${t.name}`).not.toContain(jargon);
+      }
+  });
+
+  it('a gap in the records reads "not listed", with its likely tenant; a month-to-month lease says so once', () => {
+    const gap = all.find((s) => s.kind === 'unmarketed')!;
+    const t = segmentText(gap, opts);
+    expect(t.name).toMatch(/^[\d,]+ SF not listed$/);
+    expect(t.badges.map((b) => b.text)).not.toContain('Data gap');
+    const mtm = all.find((s) => s.kind === 'mtm')!;
+    const m = segmentText(mtm, opts);
+    expect([m.meta, ...m.badges.map((b) => b.text)].filter((w) => /month-to-month/i.test(w))).toHaveLength(1);
+  });
+});
