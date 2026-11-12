@@ -235,7 +235,26 @@ export function stepSession(prev: PlanSession, patch: Partial<PlanState>, today?
     return { state, withheld: withheldBy(asked, state) };
   }
   if (!asked.safe && prev.state.safe) return { state: restored(asked, prev.withheld), withheld: null };
-  return { state: applyPatch(prev.state, patch, today), withheld: prev.withheld };
+  // Another building: what the memory holds of the one left (its search, inquiry, worklist, highlight) names
+  // records that are not here, so it is forgotten; how the plan was looked at (lens, as-of date) is kept, as
+  // `switchBuilding` keeps it (round 23: "vantage" came back on Legacy West).
+  const memory = asked.building !== prev.state.building ? lookOnly(prev.withheld) : prev.withheld;
+  return { state: applyPatch(prev.state, patch, today), withheld: memory };
+}
+
+/** The fields of a memory that say how the plan was looked at, not which records: kept across a building switch. */
+const LOOK = ['asOf', 'lens'] as const;
+
+function lookOnly(withheld: Withheld | null): Withheld | null {
+  if (!withheld) return null;
+  const was: Partial<WithheldState> = {};
+  const left: Partial<WithheldState> = {};
+  for (const key of LOOK) {
+    if (!(key in withheld.was)) continue;
+    Object.assign(was, { [key]: withheld.was[key] });
+    Object.assign(left, { [key]: withheld.left[key] });
+  }
+  return Object.keys(was).length > 0 ? { was, left } : null;
 }
 
 export function parseState(search: string, today: ISODate): PlanState {

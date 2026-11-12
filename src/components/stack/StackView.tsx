@@ -101,10 +101,11 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
   const lastRow = rows[rows.length - 1];
   const height = lastRow ? lastRow.y + lastRow.h + 2 : 0;
 
-  // Inquiry-fit badges while the finder is active
+  // Inquiry-fit badges while the finder is searching: not for a range it refuses (`rangeProblem`), where
+  // `fits` is null and the panel says nothing was searched (round 23: ten "1 inquiry fits" badges beside it).
   const matchCount = useCallback(
     (key: string) => {
-      if (!model.req || state.safe) return undefined;
+      if (!model.fits || state.safe) return undefined;
       const s = segIndex.get(key);
       const a = s?.availability ?? s?.marketed;
       if (!s || !a || (s.kind !== 'available' && s.kind !== 'sublease' && !s.marketed)) return undefined;
@@ -113,7 +114,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
       const n = matchingInquiries(pool, { size: a.size, divisible: a.divisible, minDivisible: a.minDivisible, from: a.availableFrom }, model.asOf).length;
       return n || undefined;
     },
-    [model.req, model.property.inquiries, model.asOf, segIndex, state.safe, state.inquiry],
+    [model.fits, model.property.inquiries, model.asOf, segIndex, state.safe, state.inquiry],
   );
 
   // The suites of the block the "Largest block" KPI reports carry its name as a badge.

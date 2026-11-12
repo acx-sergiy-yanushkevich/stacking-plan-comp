@@ -330,7 +330,8 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
     const out = segs.map((seg, i): Slice => {
       const poly = polys[i] ?? [];
       const pool = state.inquiry ? property.inquiries.filter((i) => i.id === state.inquiry) : property.inquiries;
-      const matches = model.req && !safe ? inquiriesFor(seg, pool, asOf).length : 0;
+      // Only while the finder is searching: a refused range (`rangeProblem`) has no `fits`, and no badge.
+      const matches = model.fits && !safe ? inquiriesFor(seg, pool, asOf).length : 0;
       const text: SegmentText =
         seg.key === lobbyKey
           ? { tone: 'muted', pattern: 'hatch', name: 'Lobby · building use', sub: sf(seg.size), meta: 'Not leasable', badges: [], tooltip: `${floor.floor.name}: ${sf(seg.size)} non-leasable (lobby, loading, building use). Not counted in occupancy.`, aria: `${floor.floor.name}, lobby and building use, ${sf(seg.size)}, not leasable`, sfShort: num(seg.size), lensShort: '' }
@@ -390,7 +391,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
       s.lines = s.lines.map((l) => (l.cls === KEY_CLS ? { ...l, t: String(n) } : l));
     }
     return out;
-  }, [floor, points, model.req, property.inquiries, safe, asOf, lens, largest]);
+  }, [floor, points, model.fits, property.inquiries, safe, asOf, lens, largest]);
   const keyed = slices.filter((s) => s.keyNo !== undefined);
 
   // The keys move between the suites one can select: the lobby is drawn and named, but it is not a stop
