@@ -312,7 +312,7 @@ export function toneLabel(tone: Tone, lens: LensId, prospectSafe: boolean): stri
 /** One or two words for a tone, for tight places (the map's floor rail). */
 export function toneShort(tone: Tone, lens: LensId, prospectSafe: boolean): string {
   if (lens !== 'status') return toneLabel(tone, lens, prospectSafe);
-  const words: Partial<Record<Tone, string>> = { available: 'Available', 'available-later': 'Coming', sublease: 'Sublease', committed: 'Committed', forsale: 'For sale', leased: 'Leased', expiring: 'Expiring', risk: 'At risk', empty: 'Vacant', projected: 'Vacating', neutral: 'Leased' };
+  const words: Partial<Record<Tone, string>> = { available: 'Available', 'available-later': 'Coming', sublease: 'Sublease', committed: 'Signed', forsale: 'For sale', leased: 'Leased', expiring: 'Expiring', risk: 'At risk', empty: 'Vacant', projected: 'Vacating', neutral: 'Leased' };
   return words[tone] ?? toneLabel(tone, lens, prospectSafe);
 }
 

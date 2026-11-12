@@ -64,7 +64,6 @@ export function PhoneStack({ model, state, patch, title, legendNote, textFor, hi
                   <span className="sp-pfloor__pct">{pct(leasedPct)} leased</span>
                   <span>{num(f.leasable)} RSF</span>
                   {f.available > 0 && <span className="sp-pfloor__avail">{spaceOf(f)}</span>}
-                  {f.overAllocatedBy > 0 && !state.safe && <span className="sp-pfloor__warn">+{num(f.overAllocatedBy)} SF over</span>}
                 </span>
                 <span className="sp-sr-only">. Open floor summary</span>
                 <Icon name="chevron-right" size={14} />

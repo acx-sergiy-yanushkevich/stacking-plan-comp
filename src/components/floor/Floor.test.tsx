@@ -80,7 +80,8 @@ describe('FloorView', () => {
     expect(open).toMatch(/Holdover/);
     expect(open).toMatch(/Month-to-month/);
     expect(open).toContain('Over-allocated by');
-    expect(open).toContain('Data gap');
+    // The gap in the records is named in plain words on the plate; the Data issues panel carries the fix.
+    expect(open).toContain('SF not listed');
   });
 
   it('a floor with nothing vacant but space marketed for later says so, instead of "0 SF available"', () => {

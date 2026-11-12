@@ -337,11 +337,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
                             </text>
                           );
                         })()}
-                      {f.overAllocatedBy > 0 && !state.safe && (
-                        <text className="sp-gutter__warn" x={8} y={r.h >= 60 ? 62 : 48} fontSize={10} fontWeight={600}>
-                          +{num(f.overAllocatedBy)} SF over
-                        </text>
-                      )}
+                      {/* An over-allocated floor is a data issue: the Data issues panel and the floor's name say so, not a red mark here. */}
                     </>
                   )}
                 </g>

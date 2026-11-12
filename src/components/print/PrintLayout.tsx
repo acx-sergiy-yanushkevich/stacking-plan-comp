@@ -125,7 +125,7 @@ export function PrintLayout({ model, state, area = null, visible }: PrintLayoutP
         </FixedWidth>
       </div>
       <footer className="sp-print__foot">
-        Floor width is proportional to gross floor area; suite width to RSF. Figures are exact RSF from AscendixRE records.{recorded > 0 ? ' Suite areas are as recorded; floor totals are capped at the floor’s leasable area.' : ''} {safe ? 'Tenant names, contacts, in-place rents, lease and sublease dates, average lease term and rollover are not shown.' : ''}
+        Floor width is proportional to gross floor area; suite width to RSF. Figures are RSF from the lease and availability records; this prototype uses sample data.{recorded > 0 ? ' Suite areas are as recorded; floor totals are capped at the floor’s leasable area.' : ''} {safe ? 'Tenant names, contacts, in-place rents, lease and sublease dates, average lease term and rollover are not shown.' : ''}
       </footer>
     </>
   );
