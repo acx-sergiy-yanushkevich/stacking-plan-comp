@@ -27,6 +27,20 @@ const TO_PLAN: Partial<PlanState> = { view: 'building' };
 
 /** Names the active filter above the plan and offers one Clear. */
 export function FilterBar({ label, alternatives, find, planElsewhere, patch }: FilterBarProps) {
+  // A requirement with a date the calendar has not: say so and offer nothing to run until it is corrected.
+  if (find?.badBy)
+    return (
+      <div className="sp-filterbar sp-filterbar--offer" role="status">
+        <Icon name="warning" size={14} />
+        <span>
+          {find.badBy} is not a date on the calendar. Correct it to find {num(find.size)}
+          {find.max ? `–${num(find.max)}` : ''} SF of space by then.
+        </span>
+        <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '' })}>
+          Clear
+        </Button>
+      </div>
+    );
   if (find)
     return (
       <div className="sp-filterbar sp-filterbar--offer" role="status">

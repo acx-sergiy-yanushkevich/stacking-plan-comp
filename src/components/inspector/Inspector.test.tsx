@@ -86,6 +86,10 @@ describe('Inspector', () => {
     }
   });
 
+  it('Find: a needed-by date the calendar has not, from a link, is named at once, not only after a blur (round 26)', () => {
+    expect(render('?mode=find&req=12000&by=2027-02-30').html).toContain('That is not a complete date, so it is not applied.');
+  });
+
   it('Find: results and empty state', () => {
     const r = render('?req=12000');
     expect(r.html).toContain('Find space');
