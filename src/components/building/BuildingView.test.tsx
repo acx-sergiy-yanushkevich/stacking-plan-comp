@@ -96,7 +96,9 @@ describe('BuildingView', () => {
     expect(html).toContain('is-alone');
     expect(html).toContain('sp-hero--stage');
     expect(html).toContain('9,300 SF available');
-    expect(html).toContain('Click a floor or its label to open its plan.');
+    // One short instruction; the labels speak for themselves (each also carries its facts in its name).
+    expect(html).toMatch(/<p class="sp-bview__caption"><span><span class="sp-nb">Click a floor to open its plan\.<\/span><\/span><\/p>/);
+    expect(html).not.toContain('Labels: ');
     expect(html).not.toContain('plate, schematic');
     // One line above the model: the caption; the model's stage follows it.
     expect(html).toMatch(/<div class="sp-bview__model"><p class="sp-bview__caption">.*?<\/p><div class="sp-bview__stage/);
@@ -263,19 +265,17 @@ describe('BuildingView', () => {
     expect(pickerNames(render('?floor=F8'))).toContain('Floor 12, 50.0% leased, 9,300 SF available, largest block');
   });
 
-  it('prints the space on offer and the lens fact on each label, and says in the caption what the labels show', () => {
+  it('prints the space on offer and the lens fact on each label; the caption is one short instruction in every lens', () => {
     // The rent beside space on offer is its asking rent, by name (round 16: an in-place rent stood there unmarked).
     expect(labelTexts('?lens=rent')).toContain('1 · 54.8% leased · 4,000 SF available · asking $34–$36/SF/yr NNN');
     expect(labelTexts('?lens=rent')).toContain('11 · 100.0% leased · in place $31/SF/yr FSG');
-    expect(render('?lens=rent')).toContain('else the in-place rent (confidential leases left out)');
     // The tooltip of the label (and of the floor on the model) gives both rents, each by name.
     expect(render('?lens=rent')).toContain('title="Floor 1 · 14,600 RSF leasable · 54.8% leased · 4,000 SF available · asking $34–$36/SF/yr NNN · in place $42/SF/yr NNN · in place $3.25/SF/mo NNN"');
     expect(labelTexts('?lens=deals')).toContain('3 · 74.3% leased · 5,500 SF available · 3 live deals · LOI');
-    expect(render('?lens=deals')).toContain('live deals and the furthest stage reached');
-    expect(render('?lens=expiry')).toContain('lease expiry, first to last');
     expect(labelTexts('?lens=expiry').map((t) => t.replace(/\u00a0/g, ' '))).toContain("9 · 100.0% leased · expires May '30");
     expect(labelTexts('')).toContain('3 · 74.3% leased · 5,500 SF available · holdover');
-    expect(render('')).toContain('holdover, month-to-month or an expiry within 12 months');
+    for (const q of ['', '?lens=rent', '?lens=deals', '?lens=expiry', '?safe=1&lens=rent'])
+      expect(/<p class="sp-bview__caption">(.*?)<\/p>/.exec(render(q))?.[1].replace(/<[^>]+>/g, ''), q).toBe('Click a floor to open its plan.');
     // No figure is rounded and none is cut: every label holds the floor's exact leased share and available SF.
     const floors = buildModel(parseState('', TODAY)).floors;
     const texts = labelTexts('');
@@ -302,8 +302,7 @@ describe('BuildingView', () => {
     const rent = render('?safe=1&lens=rent');
     expect(rent).toContain('asking $38–$40/SF/yr FSG');
     expect(rent).not.toContain('$36/SF/yr FSG');
-    // The caption describes asking rents; the in-place wording is gone with the in-place rents.
-    expect(rent).toContain('the asking rent of the space on offer');
+    // No in-place rent anywhere: the labels, the tooltips and the legend carry asking rents only.
     expect(rent).not.toContain('in-place rent');
     const status = render('?safe=1');
     for (const word of ['holdover', 'Holdover', 'month-to-month', 'Month-to-month', 'expires &lt; 12 mo', 'Expires &lt; 12 mo', 'expiry', 'live deal']) expect(status).not.toContain(word);

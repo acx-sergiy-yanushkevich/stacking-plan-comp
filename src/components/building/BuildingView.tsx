@@ -18,7 +18,7 @@ import { rampNote } from '../stack/rampNote';
 import { Button } from '../ui';
 import { useMedia, usePrefersReducedMotion } from '../../lib/useMedia';
 import { find, focused, on, sizeObserver } from '../../lib/host';
-import { floorHeading, floorLabel, floorLabelParts, floorSentence, labelNote, lensDetail } from './floorFact';
+import { floorHeading, floorLabel, floorLabelParts, floorSentence, lensDetail } from './floorFact';
 import { FloorLabels, type FloorLabelRow } from './FloorLabels';
 import { clearFrom, cubicBezier, type Box, type Glide } from './glide';
 import { openFloorOf } from './openFloor';
@@ -328,7 +328,6 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
     (property.footprintSource === 'demo' ? 'Demo footprint.' : 'Footprint © OpenStreetMap contributors.');
   // The caption line as facts with a "·" between them: it breaks between facts, never with a separator at either end (DotJoin).
   const hoveredParts = hovered ? [...floorSentence(hovered, model.asOf, safe).split(' · '), ...lensDetail(hovered, state.lens, safe).split(' · ')] : [];
-  const noteParts = labelNote(state.lens, safe).split(' · ');
 
   return (
     <section className="sp-card sp-bview" aria-label="Building">
@@ -352,9 +351,8 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
                   </>
                 ) : (
                   <>
-                    <span className="sp-nb">Click a floor or its label to open its plan.</span>{' '}
-                    {/* Each thing the labels show stays in one piece: a narrow card breaks the line between them, never inside one. */}
-                    <DotJoin parts={noteParts.map((part, i) => `${i === 0 ? 'Labels: ' : ''}${part}${i === noteParts.length - 1 ? '.' : ''}`)} />
+                    {/* One short instruction: the labels beside the model speak for themselves, and each carries its facts in its name. */}
+                    <span className="sp-nb">Click a floor to open its plan.</span>
                   </>
                 )}
               </span>

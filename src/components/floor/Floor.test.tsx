@@ -99,14 +99,15 @@ describe('FloorView', () => {
     expect(html).not.toMatch(/marketed|Avail\sApr|until Apr|quiet/i);
   });
 
-  it('offers record actions for the floor under its KPIs: a deal, an availability, a call to the tenant who most needs it', () => {
+  it('offers record actions for the floor under its KPIs, in short labels; the full action is the name and the tooltip', () => {
     const html = text(render('?view=floor&floor=F6'));
     expect(html).toContain('aria-label="Floor 6 record actions"');
-    expect(html).toContain('New deal on Floor 6');
+    // Short on the button; the floor and the reason in the accessible name and the tooltip.
+    expect(html).toMatch(/<button[^>]*aria-label="New deal on Floor 6"[^>]*>.*?New deal<\/button>/);
     expect(html).toContain('Create availability');
-    // The tenant is named on the button itself, with the reason.
-    expect(html).toMatch(/Log call with Cirrus Energy \(expires Mar\s'27\)/);
-    expect(text(render('?view=floor&floor=F12'))).toContain('New deal on Floor 12');
+    expect(html).toMatch(/<button(?=[^>]*aria-label="Log call with Cirrus Energy \(expires Mar\s'27\)")[^>]*>.*?Log call · Cirrus Energy<\/button>/);
+    expect(html).not.toMatch(/>New deal on Floor/);
+    expect(text(render('?view=floor&floor=F12'))).toContain('aria-label="New deal on Floor 12"');
   });
 
   it('the floor-level call goes to the holdover tenant on Floor 3, not to the lease expiring in 2029', () => {
