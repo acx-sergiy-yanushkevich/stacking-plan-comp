@@ -78,6 +78,12 @@ function seeded(seed: string): () => number {
   };
 }
 
+/**
+ * Whether the Map's places are at sample positions: the area is sample and its source recorded no positions. Live
+ * stops and places keep their own positions even when the ring figures are sample (no Census key).
+ */
+export const samplePositions = (area: Area): boolean => area.sample && !area.places && !area.transit.some((t) => t.lat !== undefined);
+
 /** One of a category, for a sample place's name ("Restaurant"). */
 const ONE: Record<string, string> = { Restaurants: 'Restaurant', Cafés: 'Café', Hotels: 'Hotel', Fitness: 'Fitness studio', Banks: 'Bank', Parking: 'Parking' };
 export const oneOf = (category: string) => ONE[category] ?? category;
@@ -93,13 +99,13 @@ export function placesAround(id: string, center: LatLng, area: Area): Place[] {
   const out: Place[] = [];
   const rnd = seeded(id);
   for (const t of area.transit) {
-    const at = t.lat !== undefined && t.lng !== undefined ? { lat: t.lat, lng: t.lng } : area.sample ? offset(center, t.distanceMi, rnd() * 360) : null;
+    const at = t.lat !== undefined && t.lng !== undefined ? { lat: t.lat, lng: t.lng } : samplePositions(area) ? offset(center, t.distanceMi, rnd() * 360) : null;
     if (at) out.push({ id: `t-${t.name}`, kind: 'transit', group: t.type, key: stopKey(t.name), name: t.name, distanceMi: t.distanceMi, ...at });
   }
   for (const p of area.places ?? []) {
     out.push({ id: `p-${p.category}-${p.name}-${p.lat}`, kind: 'amenity', group: p.category, key: categoryKey(p.category), name: p.name, distanceMi: p.distanceMi, lat: p.lat, lng: p.lng });
   }
-  if (area.sample && !area.places) {
+  if (samplePositions(area)) {
     for (const a of area.amenities) {
       for (let i = 0; i < a.count; i += 1) {
         // Even over the half-mile disc (the square root), never on the building itself.

@@ -1,4 +1,5 @@
 import type { Area, GeoPolygon, Property } from '../../domain/types';
+import { oneOf } from '../../domain/places';
 import type { AreaOptions, DataSource, FootprintResult } from './DataSource';
 import { CensusSource } from './CensusSource';
 import { MockSource } from './MockSource';
@@ -120,10 +121,16 @@ const AMENITY_LABEL: Record<string, string> = {
   hotel: 'Hotels',
 };
 
-/** Transit stops and amenity counts from the nodes within half a mile. Null when nothing came back. */
-export function toNearby(elements: OverpassElement[], center: { lat: number; lng: number }): Pick<Area, 'transit' | 'amenities'> | null {
+/**
+ * Transit stops and amenities from the nodes within half a mile: the counts the Area panel ranks, and each stop's
+ * and place's own position and name, which the Map pins where they are (round 25: live mode kept the counts and
+ * dropped the positions, so its map had no pins). Null when nothing came back.
+ */
+export function toNearby(elements: OverpassElement[], center: { lat: number; lng: number }): Pick<Area, 'transit' | 'amenities' | 'places'> | null {
   const transit: Area['transit'] = [];
   const counts = new Map<string, number>();
+  const places: NonNullable<Area['places']> = [];
+  const miles = (lat: number, lng: number) => Math.round((metres({ lat, lng }, center) / METRES_PER_MILE) * 10) / 10;
   for (const el of elements) {
     const tags = el.tags ?? {};
     const lat = el.lat;
@@ -131,11 +138,13 @@ export function toNearby(elements: OverpassElement[], center: { lat: number; lng
     const isRail = tags.railway === 'station' || tags.public_transport === 'station';
     const isBus = tags.highway === 'bus_stop';
     if ((isRail || isBus) && lat !== undefined && lng !== undefined) {
-      transit.push({ name: tags.name ?? (isRail ? 'Station' : 'Bus stop'), type: isRail ? 'Rail' : 'Bus', distanceMi: Math.round((metres({ lat, lng }, center) / METRES_PER_MILE) * 10) / 10 });
+      transit.push({ name: tags.name ?? (isRail ? 'Station' : 'Bus stop'), type: isRail ? 'Rail' : 'Bus', distanceMi: miles(lat, lng), lat, lng });
       continue;
     }
     const cat = AMENITY_LABEL[tags.amenity ?? ''] ?? (tags.tourism === 'hotel' ? AMENITY_LABEL.hotel : null);
-    if (cat) counts.set(cat, (counts.get(cat) ?? 0) + 1);
+    if (!cat) continue;
+    counts.set(cat, (counts.get(cat) ?? 0) + 1);
+    if (lat !== undefined && lng !== undefined) places.push({ name: tags.name ?? oneOf(cat), category: cat, distanceMi: miles(lat, lng), lat, lng });
   }
   if (transit.length === 0 && counts.size === 0) return null;
   const seen = new Set<string>();
@@ -143,7 +152,7 @@ export function toNearby(elements: OverpassElement[], center: { lat: number; lng
     .sort((a, b) => a.distanceMi - b.distanceMi || (a.type === 'Rail' ? -1 : 1))
     .filter((t) => (seen.has(t.name) ? false : (seen.add(t.name), true)))
     .slice(0, 6);
-  return { transit: dedup, amenities: [...counts].map(([category, count]) => ({ category, count })).sort((a, b) => b.count - a.count) };
+  return { transit: dedup, amenities: [...counts].map(([category, count]) => ({ category, count })).sort((a, b) => b.count - a.count), places: places.sort((a, b) => a.distanceMi - b.distanceMi) };
 }
 
 /**
@@ -180,6 +189,6 @@ export class OverpassSource implements DataSource {
         .then((els) => toNearby(els, p.location))
         .catch(() => null),
     ]);
-    return nearby ? { ...area, transit: nearby.transit, amenities: nearby.amenities } : area;
+    return nearby ? { ...area, transit: nearby.transit, amenities: nearby.amenities, places: nearby.places } : area;
   }
 }

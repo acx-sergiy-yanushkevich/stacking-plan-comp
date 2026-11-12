@@ -1,5 +1,5 @@
 import { BACHELORS_LABEL, locationBrief, pct1, US_BENCHMARK } from '../../domain/areaBrief';
-import { num, usd0 } from '../../domain/format';
+import { keepUnits, mi, num, usd0 } from '../../domain/format';
 import type { Area, AreaRing, Property } from '../../domain/types';
 import { DotJoin } from '../hero/DotJoin';
 import { Chip, Icon } from '../ui';
@@ -14,7 +14,6 @@ export interface LocationBriefProps {
 
 
 /** A figure and its unit stay on one line: "1 mile", "0.2 mi", "24.1 minutes" break before the figure, not inside. */
-const keepUnits = (text: string) => text.replace(/(\d) (miles?|mi|minutes|min|years)\b/g, '$1\u00a0$2');
 /** Facts joined by "·", for a line that may wrap: they break between facts, and no dot ends or starts a line. */
 const facts = (text: string) => <DotJoin parts={keepUnits(text).split(' · ')} />;
 
@@ -136,7 +135,7 @@ export function LocationBrief({ property, area, print }: LocationBriefProps) {
                   <Icon name={t.type === 'Rail' ? 'train' : 'bus'} size={14} />
                   <span className="sp-brief__stop-name">{t.name}</span>
                   <span className="sp-transit-kind">{t.type === 'Rail' ? 'Rail' : 'Bus'}</span>
-                  <span className="sp-num">{t.distanceMi.toFixed(1)}&nbsp;mi</span>
+                  <span className="sp-num">{keepUnits(mi(t.distanceMi))}</span>
                 </li>
               ))}
             </ul>

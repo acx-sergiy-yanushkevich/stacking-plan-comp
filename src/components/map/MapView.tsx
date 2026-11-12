@@ -6,14 +6,14 @@ import type { FeatureCollection, Polygon } from 'geojson';
 import type { DataSource, FootprintResult } from '../../data/sources/DataSource';
 import type { FloorView } from '../../domain/derive';
 import { suiteExtrusionFeatures } from '../../domain/geometry';
-import { placesAround, ringBounds, ringCoordinates, offset, WALK_MI, type Place } from '../../domain/places';
+import { placesAround, ringBounds, ringCoordinates, offset, samplePositions, WALK_MI, type Place } from '../../domain/places';
 import type { Area } from '../../domain/types';
 import type { PlanModel } from '../../model/usePlanModel';
 import { isDark, paletteOf, type PlanState } from '../../state/planState';
 import { usePrefersDark, usePrefersReducedMotion } from '../../lib/useMedia';
 import { openFloor } from '../plan/actions';
 import { Chip, Icon, Segmented, useToast } from '../ui';
-import { num } from '../../domain/format';
+import { mi, num } from '../../domain/format';
 import { categoryKey } from '../../domain/places';
 import { areaRing, useAreaRing, type RingMiles } from './areaRing';
 import { FilterBar } from '../stack/FilterBar';
@@ -148,8 +148,6 @@ const googleMaps = (lat: number, lng: number) => `https://www.google.com/maps/se
 const streetView = (lat: number, lng: number) => `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`;
 
 /** "0.2 mi" for a stop or a place: a tenth of a mile is as close as the source is. */
-const miText = (d: number) => `${d.toFixed(1)} mi`;
-
 interface Pinned {
   place: Place;
   el: HTMLElement;
@@ -358,7 +356,7 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
   const toneOf = useCallback((f: FloorView) => dominantTone(f, state.lens, state.safe), [state.lens, state.safe]);
   const selectFloor = useCallback((id: string) => openFloor(patch, id), [patch]);
   const footprintLabel = mapProperty.footprintSource === 'osm' ? 'OpenStreetMap' : 'demo';
-  const samplePlaces = !!area?.sample && places.length > 0;
+  const samplePlaces = !!area && samplePositions(area) && places.length > 0;
 
   return (
     <div className={`sp-map ${status === 'failed' ? 'is-fallback' : ''} ${lit ? 'has-lit' : ''}`.replace(/ +/g, ' ').trim()} data-status={status}>
@@ -471,7 +469,7 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
         return createPortal(
           <span
             className={`sp-pin sp-pin--${look.cls} ${place.kind === 'transit' ? 'sp-pin--stop' : ''} ${on ? 'is-lit' : ''}`.replace(/ +/g, ' ').trim()}
-            data-label={`${place.name} · ${miText(place.distanceMi)}`}
+            data-label={`${place.name} · ${mi(place.distanceMi)}`}
             aria-hidden="true"
             onClick={() => placeHighlight.set(on ? null : place.key)}
           >

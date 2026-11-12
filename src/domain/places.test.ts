@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { categoryKey, offset, placesAround, ringBounds, ringCoordinates, stopKey, WALK_MI } from './places';
+import { categoryKey, offset, placesAround, ringBounds, ringCoordinates, samplePositions, stopKey, WALK_MI } from './places';
 import type { Area } from './types';
 
 const center = { lat: 33.0396, lng: -96.8059 };
@@ -64,5 +64,14 @@ describe('places on the Map', () => {
     expect(placesAround('P001', center, area(false))).toEqual([]);
     const live: Area = { ...area(false), transit: [{ name: 'Stop', type: 'Bus', distanceMi: 0.1, lat: 33.04, lng: -96.8 }], places: [{ name: 'Café Uno', category: 'Cafés', distanceMi: 0.2, lat: 33.041, lng: -96.807 }] };
     expect(placesAround('P001', center, live).map((p) => p.name)).toEqual(['Stop', 'Café Uno']);
+  });
+});
+
+describe('live places with sample figures (no Census key): the positions are real, so not "Sample places" (round 25)', () => {
+  it('pins the recorded positions and draws no sample ones', () => {
+    const live: Area = { ...area(true), transit: [{ name: 'Stop', type: 'Bus', distanceMi: 0.1, lat: 33.04, lng: -96.8 }], places: [{ name: 'Café Uno', category: 'Cafés', distanceMi: 0.2, lat: 33.041, lng: -96.807 }] };
+    expect(samplePositions(live)).toBe(false);
+    expect(placesAround('P001', center, live).map((p) => p.name)).toEqual(['Stop', 'Café Uno']);
+    expect(samplePositions(area(true))).toBe(true);
   });
 });
