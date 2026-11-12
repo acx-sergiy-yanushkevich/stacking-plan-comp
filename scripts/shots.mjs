@@ -53,6 +53,8 @@ export const STATES = [
   ['67-map-search-size', '?view=map&q=12k%20direct%20by%20jun%202027'],
   // Round 26: a Map link that carries a suite opens the Area panel (the suite waits for the plan).
   ['70-map-link-suite', '?view=map&select=L13-U1'],
+  // Round 27: a search date the calendar has not is named, and nothing is offered to run.
+  ['74-search-bad-date', '?view=stack&q=12k%20by%202027-02-30'],
 ];
 
 const browser = await chromium.launch({ channel: 'chrome' });
@@ -76,6 +78,8 @@ for (const [name, qs] of [
   ['25-mobile-timeline', '?view=timeline'],
   ['25b-mobile-map', '?view=map'],
   ['48-mobile-brief', '?view=stack&mode=brief'],
+  // Round 27: five miles on a phone, the half-mile label clear of the building's name.
+  ['75-mobile-map-5mi', '?view=map&ring=5'],
 ]) {
   await mobile.goto(base + qs, { waitUntil: 'networkidle' });
   await mobile.waitForTimeout(qs.includes('view=map') ? 2500 : 350);
