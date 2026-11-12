@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { planLegendNote } from '../plan/legendNote';
 import type { FilterSpecification, GeoJSONSource, Map as MapLibreMap, MapLayerMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { DataSource, FootprintResult } from '../../data/sources/DataSource';
@@ -11,7 +12,6 @@ import { isDark, paletteOf, type PlanState } from '../../state/planState';
 import { useIsPhone, usePrefersDark, usePrefersReducedMotion } from '../../lib/useMedia';
 import { openFloor, openFloorPlate } from '../plan/actions';
 import { Legend } from '../plan/Legend';
-import { rampNote } from '../stack/rampNote';
 import { Chip, Icon, useToast } from '../ui';
 import { FootprintFallback } from './FootprintFallback';
 import { MapControls } from './MapControls';
@@ -331,11 +331,11 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
             Legend · {legendStates} states
             <Icon name="chevron-down" size={14} />
           </summary>
-          <Legend items={model.legend} compact note={rampNote(state.lens, state.safe)} />
+          <Legend items={model.legend} compact note={planLegendNote(model, state.lens)} />
         </details>
       ) : (
         <div className="sp-map-legend">
-          <Legend items={model.legend} compact note={rampNote(state.lens, state.safe)} />
+          <Legend items={model.legend} compact note={planLegendNote(model, state.lens)} />
         </div>
       )}
       <div className="sp-map__stage">

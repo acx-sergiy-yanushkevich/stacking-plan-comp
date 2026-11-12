@@ -247,6 +247,9 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
     <div className={`sp-kpis__wrap sp-kpis__wrap--${kind}`}>
       <div role="group" className={`sp-card sp-kpis__group sp-kpis__group--${kind}`} aria-label={name}>
         {items.map((c) => kpi(c, kind))}
+        {/* Prospect-safe on a phone: the figures it leaves out would have taken a second row. One quiet line
+            says what is not shown, in its place, so the bar is the same height with the mode on and off. */}
+        {safe && kind === 'open' && <p className="sp-kpis__withheld">Lease terms and deal activity are not shown to prospects.</p>}
       </div>
       <span className="sp-kpis__caption" aria-hidden="true">{caption}</span>
     </div>

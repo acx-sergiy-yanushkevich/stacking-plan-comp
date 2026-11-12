@@ -1,4 +1,5 @@
 import { Legend } from '../plan/Legend';
+import { planLegendNote } from '../plan/legendNote';
 import { fmtDate } from '../../domain/dates';
 import { num } from '../../domain/format';
 import { barSegment, dateToX } from '../../domain/timeline';
@@ -17,7 +18,6 @@ import { barLabel, endedNameFits, SUB_FONT, tagWidth, wrapLabel, type LabelLine 
 import { useWidth } from '../../lib/useWidth';
 import { measure } from '../../lib/textFit';
 import { Icon } from '../ui';
-import { rampNote } from '../stack/rampNote';
 import { useHoverKeys } from '../../state/hoverStore';
 import './timeline.css';
 
@@ -166,10 +166,10 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
               Legend · {legendStates} states
               <Icon name="chevron-down" size={14} />
             </summary>
-            <Legend items={model.legend} compact note={rampNote(state.lens, model.safe)} />
+            <Legend items={model.legend} compact note={planLegendNote(model, state.lens)} />
           </details>
         ) : (
-          <Legend items={model.legend} compact note={rampNote(state.lens, model.safe)} />
+          <Legend items={model.legend} compact note={planLegendNote(model, state.lens)} />
         )}
       </div>
     <div className={`sp-timeline ${stackedMode ? 'sp-timeline--stacked' : ''}`} ref={hostRef}>

@@ -160,7 +160,7 @@ export function PrintLayout({ model, state, area = null, visible }: PrintLayoutP
                   the owner report explains it; a prospect is shown no data issue, on screen or on paper. */}
               {overBy > 0 &&
                 canShowIssues(safe) &&
-                ` · rows sum to ${num(k.leased + overBy)} SF; ${model.roll.overAllocated.map((o) => `${o.floor} records exceed its leasable area by ${num(o.sf)} SF`).join(', ')}, so leased is capped at ${num(k.leased)} SF`}
+                ` · rows sum to ${num(k.leased + overBy)} SF; ${model.roll.overAllocated.map((o) => `${o.floor}'s records exceed its leasable area by ${num(o.sf)} SF`).join(', ')}, so leased is capped at ${num(k.leased)} SF`}
             </td>
           </tr>
         </tbody>

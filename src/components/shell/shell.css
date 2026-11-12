@@ -168,7 +168,11 @@
 /* Search and tools are one unit. It takes what the row has left; when that is under 440 px it wraps to a
    row of its own and fills it, so the search starts at the card's left padding and the buttons end at its
    right: no orphaned buttons, no empty band beside the search (768–1100 px). */
-.sp-toolbar__find { flex: 1 1 440px; min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: var(--sp-space-3); }
+/* Its basis is what it needs at the least: the search at its 128 px minimum, the gap, and the four tool
+   buttons (458 px). Under that the unit wraps to a row of its own instead of running back over the lens
+   tabs (round 20: at 1240–1320 px the search covered Pipeline and took its clicks). */
+.sp-toolbar__find { flex: 1 1 600px; min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: var(--sp-space-3); }
+.sp-toolbar__find > .sp-toolbar__group { flex: none; }
 /* The search gives way before anything overlaps: on the Map view, whose toolbar has one more button, the
    unit is still on the first row at 1172–1250 px with under 200 px left for the field. It narrows there (to
    132 px at the least, with a shorter placeholder: Toolbar.tsx) instead of running under the buttons. */
