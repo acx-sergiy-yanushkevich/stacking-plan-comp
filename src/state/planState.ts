@@ -155,8 +155,22 @@ export function enterSafe(s: PlanState, today?: ISODate): PlanState {
  * a handler that asks for another as-of date while the mode is on simply stays on today. The state
  * holds no trace of what the mode took off it: on its own, turning the mode off restores nothing.
  */
+/**
+ * The Map tab is about the building's surroundings, and its panel is the Area panel: a link to the map with no
+ * panel named opens it there (`modeDefault`), arriving at the map with nothing else open opens it, and leaving
+ * the map puts it away again, so the plan views keep their own panel. A panel opened on purpose stays.
+ */
+export const modeDefault = (view: PlanState['view']): InspectorMode => (view === 'map' ? 'area' : 'building');
+
+function withMapPanel(prev: PlanState, next: PlanState): PlanState {
+  if (next.view === prev.view) return next;
+  if (next.view === 'map' && next.mode === 'building' && !next.select && !next.floor) return { ...next, mode: 'area' };
+  if (prev.view === 'map' && (next.mode === 'area' || next.mode === 'brief')) return { ...next, mode: 'building' };
+  return next;
+}
+
 export function applyPatch(prev: PlanState, patch: Partial<PlanState>, today?: ISODate): PlanState {
-  const next = { ...prev, ...patch };
+  const next = withMapPanel(prev, { ...prev, ...patch });
   return next.safe && !prev.safe ? enterSafe(next, today) : safeState(next, today);
 }
 
@@ -276,7 +290,7 @@ export function parseState(search: string, today: ISODate): PlanState {
     bucket: nonNegativeInt(p.get('bucket')),
     inquiry: text(p.get('inquiry')),
     q: p.get('q') ?? '',
-    mode: oneOf(MODES, p.get('mode'), d.mode),
+    mode: oneOf(MODES, p.get('mode'), p.get('select') || p.get('floor') ? d.mode : modeDefault(oneOf(VIEWS, p.get('view'), d.view))),
     live: p.get('live') === '1',
     census: text(p.get('census')),
     theme: oneOfOrNull(THEMES, p.get('theme')),
@@ -305,7 +319,7 @@ export function serializeState(s: PlanState, today: ISODate): string {
   if (s.bucket !== null) p.set('bucket', String(s.bucket));
   if (s.inquiry) p.set('inquiry', s.inquiry);
   if (s.q) p.set('q', s.q);
-  if (s.mode !== DEFAULT_STATE.mode) p.set('mode', s.mode);
+  if (s.mode !== (s.select || s.floor ? DEFAULT_STATE.mode : modeDefault(s.view))) p.set('mode', s.mode);
   if (s.live) p.set('live', '1');
   if (s.census) p.set('census', s.census);
   if (s.theme) p.set('theme', s.theme);

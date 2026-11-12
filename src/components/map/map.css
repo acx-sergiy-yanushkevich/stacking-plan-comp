@@ -10,11 +10,6 @@
   overflow: hidden;
   background: var(--sp-color-card-2);
 }
-/* The key is card chrome above the canvas, never an overlay on the building. */
-.sp-map-legend { position: relative; z-index: 6; flex: none; padding: 8px 12px; background: var(--sp-color-card); border-bottom: 1px solid var(--sp-color-border); }
-/* The stage: the list of floors, then the map with its overlays. The list stands beside the map, so it
-   never covers the building; the map is centred in the room that is left. */
-.sp-map__stage { position: relative; flex: 1; min-height: 0; display: flex; }
 .sp-map__view { position: relative; flex: 1; min-width: 0; min-height: 0; container: sp-mapview / inline-size; }
 .sp-map__canvas, .sp-map .maplibregl-map { position: absolute; inset: 0; }
 .sp-map .maplibregl-canvas { outline: none; }
@@ -45,73 +40,7 @@
   .sp-map-info__meta { margin-top: 0; }
   .sp-map-info__meta > span { white-space: nowrap; }
 }
-.sp-map-legend .sp-legend { gap: 4px 10px; }
-.sp-map-legend .sp-legend__num { font-size: 11px; }
 .sp-map-present { bottom: var(--sp-space-3); left: 50%; transform: translateX(-50%); padding: 6px 12px; font-variant-numeric: tabular-nums; }
-
-/* The list of floors: the keyboard equivalent of the 3D floors and the words for their colours. Its rows
-   are the shared floor label (building/floorLabel.css), the same text at the same size as the list beside
-   the Building view's model; only the swatch before the label is the map's own.
-
-   The column is as wide as its longest label, the lens fact included, and no wider than `--sp-map-list-max`:
-   372 px, up to 420 px where the map still keeps 540 px beside it (at 1366 px the status labels, 410 px,
-   are one line each). The rest of the stage is the map's. A label longer than the column breaks between
-   its parts (base.css, `.sp-dotrun`), never inside a figure, and never with the "Largest block" tag alone
-   on a line (`.sp-flabel__last`). The list starts at the top of the stage, level with the top of the map,
-   so its first row is where the eye and the Tab key arrive. */
-.sp-map-floors {
-  /* The leased-share column: "100.0% leased" at the label's size. Fixed, so a wrapped line can start under it. */
-  --sp-map-pct: 7.3em;
-  --sp-map-list-max: clamp(372px, calc(100cqw - 540px), 420px);
-  flex: none; display: flex; flex-direction: column; justify-content: flex-start; max-width: min(100%, var(--sp-map-list-max));
-  padding: 8px; overflow-y: auto;
-  background: var(--sp-color-card); border-right: 1px solid var(--sp-color-border);
-}
-.sp-map-floors__list { width: auto; grid-template-columns: repeat(3, auto) var(--sp-map-pct) minmax(0, 1fr); grid-auto-rows: minmax(26px, auto); }
-/* A row is one line of 18 px in a row of 26 px, as before. A label that wraps hangs its next line under the
-   leased share, not under the facts: the swatch and the number keep their columns, and the wrapped line
-   has the width of both the share and the facts, so a long rent or expiry label takes two lines, not three,
-   and the tag stays beside the last fact. The facts' cell spans the share's column and its first line
-   starts after a spacer as wide as the share and its separator; the separator before the first fact is the
-   run's own dot (base.css, `.sp-dotrun__dot`), so it goes where the fact goes and is hidden at the start of
-   a line like every other. */
-.sp-map-floor { padding-block: 3px; line-height: 18px; align-items: start; }
-.sp-map-floor > .sp-flabel__pct { grid-row: 1; grid-column: 4; }
-.sp-map-floor > .sp-flabel__fact { grid-row: 1; grid-column: 4 / -1; align-items: flex-start; }
-/* Drawn by the run's own dot instead. It stays rendered text, out of the flow and without ink, not removed or
-   clipped: a hidden separator leaves "leased" and "9,300 SF" run together in the row's visible text, which
-   then no longer matches its accessible name (axe: label-content-name-mismatch). */
-.sp-map-floor > .sp-flabel__fact > .sp-flabel__sep { position: absolute; color: transparent; pointer-events: none; }
-/* An empty spacer (a flex item keeps its width): a zero-width space here would be read by axe as text between
-   the share and the first fact, so the row's words would no longer match its name. */
-/* It is one line tall: when the first fact does not fit beside it, the fact wraps to a line of its own under
-   the share, instead of onto an empty line of no height, where it was drawn over the share (round 18:
-   Floor 12 at 1180–1320 px). */
-.sp-map-floor .sp-dotrun__in::before { content: ''; flex: none; width: calc(var(--sp-map-pct) + 0.8em); height: 1lh; }
-.sp-map-floor .sp-dotrun__in > .sp-dotrun__part:first-child::before,
-.sp-map-floor .sp-dotrun__in > .sp-flabel__last:first-child > .sp-dotrun__part:first-child::before {
-  content: '·' / ''; position: absolute; left: 0; top: 0; width: 0.8em; text-align: center;
-}
-/* The tag is its cell's only box, so its line is the tag's 18 px, not a pixel taller. */
-.sp-map-floor .sp-flabel__tagcell { display: flex; }
-/* A low window (a laptop of 720 to 820 px): the rows are 24 px, as beside the Building view's model, a
-   wrapped line is 16 px and the key above the map is one line shorter, so the twelve floors stay on the
-   first screen beside the map in every lens (at 1280 × 768 the last row ends at 728 px in the Rent lens, with
-   seven two-line labels). */
-@media (max-height: 820px) {
-  .sp-map-legend { padding-block: 6px; }
-  .sp-map-legend .sp-legend { gap: 2px 10px; }
-  .sp-map-legend .sp-legend__note { width: auto; }
-  .sp-map-floors { padding-block: 4px; }
-  .sp-map-floors__list { grid-auto-rows: minmax(24px, auto); }
-  .sp-map-floor { padding-block: 2px; line-height: 16px; }
-}
-.sp-map-floor:hover { background: var(--sp-color-card-2); border-color: var(--sp-color-border-strong); }
-.sp-map-floor:hover .sp-flabel__num { color: var(--sp-color-brand-strong); }
-.sp-map-floor:hover .sp-flabel__pct { color: var(--sp-color-text); }
-.sp-map-floor[aria-pressed='true'] { background: var(--sp-color-brand-soft); border-color: var(--sp-color-brand); }
-.sp-map-floor[aria-pressed='true'] .sp-flabel__num { color: var(--sp-color-brand-strong); }
-.sp-map-floor__swatch { width: 12px; height: 12px; margin: 3px 8px 0 0; border-radius: 3px; border: 1px solid; }
 
 /* Camera and presentation controls. */
 .sp-map-controls { position: absolute; right: var(--sp-space-3); bottom: var(--sp-space-5); display: flex; flex-direction: column; gap: var(--sp-space-2); }
@@ -194,20 +123,11 @@
 
 @media (max-width: 760px) {
   .sp-map { min-height: 0; border-radius: var(--sp-radius-card); }
-  .sp-map__stage { flex: none; height: auto; }
   .sp-map .maplibregl-canvas { height: 100% !important; }
-  .sp-map-info { display: none; }
-  .sp-map-legend { padding: 6px 10px; }
-  .sp-map-legend .sp-legend { display: grid; grid-template-columns: 1fr; gap: 1px 8px; }
-  .sp-map-legend .sp-legend__item { display: grid; grid-template-columns: 14px 1fr auto; gap: 6px; align-items: center; white-space: nowrap; min-width: 0; }
-  .sp-map-legend .sp-legend__num { font-size: 10px; }
-  /* Folded by default: one row that says how many states there are; opened, the same exact figures as before. */
-  .sp-map-legend--fold { padding: 3px 6px; }
-  .sp-map-legend--fold summary { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 32px; padding: 0 10px; border: 1px solid var(--sp-color-border); border-radius: 8px; font-size: var(--sp-text-12); font-weight: 600; color: var(--sp-color-text-weak); cursor: pointer; list-style: none; }
-  .sp-map-legend--fold summary::-webkit-details-marker { display: none; }
-  .sp-map-legend--fold[open] summary { margin-bottom: 8px; }
-  .sp-map-legend--fold[open] summary .sp-icon { transform: rotate(180deg); }
-  .sp-map-floor { min-height: 28px; }
+  /* A phone keeps the card's links (its floors, Google Maps, Street View) and nothing else: the name is in the header. */
+  .sp-map-info { padding: 5px 10px; }
+  .sp-map-info__name, .sp-map-info > .sp-weak, .sp-map-info__meta { display: none; }
+  .sp-map-info__links { margin-top: 0; }
   .sp-map-controls { top: 8px; bottom: auto; right: 8px; }
   .sp-map .maplibregl-ctrl-bottom-right { right: 8px; bottom: 4px; }
 }
@@ -215,25 +135,66 @@
 .sp-area li { white-space: normal; }
 .sp-area-transit__name { white-space: normal; overflow: visible; text-overflow: clip; }
 
-/* A stage too narrow for the list beside the map (a phone, a window under 728 px): the map comes first and
-   the list stands under it, the full width of the card, in two columns where both have room (top floors
-   left, lower floors right) and in one on a phone. It goes by the width of the stage, not of the window:
-   from 694 px the list (360 px) stands beside a map of 334 px or more, which is every tablet and every
-   laptop with the inspector open beside the map. The parts of a label keep their columns by fixed widths
-   here (a column of the page cannot share a grid), and a label wider than its column breaks between its
-   parts: never inside a figure, and never with a separator at the end of a line (base.css, `.sp-dotrun`). */
-.sp-app[data-view='map'] .sp-stage { container: sp-mapstage / inline-size; }
-@container sp-mapstage (max-width: 693px) {
-  .sp-map { min-height: 0; }
-  .sp-map__stage { flex: none; flex-direction: column; }
-  .sp-map__view { flex: none; order: 1; height: clamp(440px, 60vh, 620px); }
-  .sp-map-floors { order: 2; max-width: 100%; padding: 8px 12px; border-right: 0; border-top: 1px solid var(--sp-color-border); overflow: visible; }
-  .sp-map-floors__list { display: block; width: auto; columns: 2 380px; column-gap: 24px; }
-  .sp-map-floors__list > li { display: block; break-inside: avoid; }
-  .sp-map-floor {
-    width: 100%; min-height: 26px; white-space: normal;
-    grid-template-columns: auto 2.4ch 0.8em var(--sp-map-pct) minmax(0, 1fr);
-  }
-  .sp-map-floor .sp-flabel__num, .sp-map-floor .sp-flabel__sep, .sp-map-floor .sp-flabel__pct, .sp-map-floor .sp-dotrun__part { white-space: pre; }
+@media (max-width: 760px) { .sp-map__view { flex: none; height: 380px; } }
+
+/* ── Places around the building (MapView) ─────────────────────────────────────────────
+   A dot per amenity and a badge per transit stop, coloured by kind, as the Area panel's rows are: the panel is
+   their key and their keyboard way in. Fixed colours, as the map's own are: each takes white ink at 4.5:1 or
+   more by day; at night they are lifted to read on the dark map and take dark ink. */
+:root {
+  --sp-pin-transit: #1d4ed8; --sp-pin-food: #0f766e; --sp-pin-cafe: #a16207; --sp-pin-hotel: #be185d;
+  --sp-pin-fitness: #6d28d9; --sp-pin-bank: #15803d; --sp-pin-parking: #475569; --sp-pin-other: #64748b; --sp-pin-ink: #ffffff;
 }
-@media (max-width: 760px) { .sp-map__view { height: 380px; } }
+:root[data-theme='dark'] {
+  --sp-pin-transit: #60a5fa; --sp-pin-food: #2dd4bf; --sp-pin-cafe: #fbbf24; --sp-pin-hotel: #f472b6;
+  --sp-pin-fitness: #a78bfa; --sp-pin-bank: #4ade80; --sp-pin-parking: #94a3b8; --sp-pin-other: #cbd5e1; --sp-pin-ink: #0b1220;
+}
+.sp-pin, .sp-place-dot { --sp-pin-c: var(--sp-pin-other); }
+.sp-pin--transit, .sp-place-dot--transit { --sp-pin-c: var(--sp-pin-transit); }
+.sp-pin--food, .sp-place-dot--food { --sp-pin-c: var(--sp-pin-food); }
+.sp-pin--cafe, .sp-place-dot--cafe { --sp-pin-c: var(--sp-pin-cafe); }
+.sp-pin--hotel, .sp-place-dot--hotel { --sp-pin-c: var(--sp-pin-hotel); }
+.sp-pin--fitness, .sp-place-dot--fitness { --sp-pin-c: var(--sp-pin-fitness); }
+.sp-pin--bank, .sp-place-dot--bank { --sp-pin-c: var(--sp-pin-bank); }
+.sp-pin--parking, .sp-place-dot--parking { --sp-pin-c: var(--sp-pin-parking); }
+.sp-pin {
+  position: relative; display: block; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--sp-pin-c); border: 2px solid var(--sp-color-card); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  cursor: pointer; transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.sp-pin--stop { width: 22px; height: 22px; display: grid; place-items: center; color: var(--sp-pin-ink); }
+/* A row of the panel (or a pin) lit: its pins grow, the rest step back. */
+.sp-map.has-lit .sp-pin:not(.is-lit) { opacity: 0.22; }
+.sp-pin.is-lit { transform: scale(1.4); }
+.maplibregl-marker:has(.sp-pin.is-lit) { z-index: 2; }
+/* The place's name and distance, on hover. */
+.sp-pin::after {
+  content: attr(data-label); position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%);
+  white-space: nowrap; padding: 3px 7px; border-radius: 6px; background: var(--sp-color-text); color: var(--sp-color-page);
+  font-size: 11px; font-weight: 500; line-height: 1.3; opacity: 0; pointer-events: none; transition: opacity 0.12s ease;
+}
+.sp-pin:hover::after { opacity: 1; }
+.sp-pin.is-lit::after { transform: translateX(-50%) scale(0.715); transform-origin: bottom center; }
+/* The rings' names and the building's, on the map. */
+.sp-map-label {
+  display: inline-block; margin-bottom: 4px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; pointer-events: none;
+  font-size: 11px; font-weight: 600; color: var(--sp-color-brand-strong);
+  background: color-mix(in srgb, var(--sp-color-card) 90%, transparent); border: 1px solid color-mix(in srgb, var(--sp-color-brand) 45%, transparent);
+}
+.sp-map-label--building { margin-bottom: 12px; font-size: var(--sp-text-12); color: var(--sp-color-text); border-color: var(--sp-color-brand); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
+/* The info card's links: the building's floors, and Google's map and Street View. */
+.sp-map-info__links { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: var(--sp-space-2); }
+.sp-map-info__links a, .sp-linkbtn {
+  display: inline-flex; align-items: center; gap: 3px; padding: 0; border: 0; background: none; cursor: pointer;
+  color: var(--sp-color-brand-strong); font: inherit; font-size: var(--sp-text-12); font-weight: 500; text-decoration: none;
+}
+.sp-map-info__links a:hover, .sp-linkbtn:hover { text-decoration: underline; }
+/* The Area panel beside the map: each place row is its pins' key and a way to light them. */
+.sp-place-dot { display: inline-block; flex: none; width: 9px; height: 9px; margin-right: 6px; border-radius: 50%; background: var(--sp-pin-c); vertical-align: 0; }
+.sp-area__place { border-radius: 6px; margin-inline: -4px; padding-inline: 4px; }
+.sp-area__place:hover, .sp-area__place.is-lit { background: var(--sp-color-brand-soft); }
+.sp-area__place:focus-visible { outline: 2px solid var(--sp-color-focus, var(--sp-color-brand)); outline-offset: 1px; }
+.sp-area-transit .sp-area__place > .sp-icon { color: var(--sp-pin-transit); }
+/* A phone or tablet: the Area panel under the map, in the page (App, `mapAreaInline`). */
+.sp-map-panel { margin-top: var(--sp-space-3); overflow: hidden; }
+.sp-area__place .sp-brief__bar-name { display: flex; align-items: center; white-space: nowrap; overflow-wrap: normal; }

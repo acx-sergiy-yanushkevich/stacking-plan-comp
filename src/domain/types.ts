@@ -137,8 +137,11 @@ export interface Area {
   /** True when the figures are demo samples rather than a live Census query. */
   sample: boolean;
   rings: AreaRing[];
-  transit: Array<{ name: string; type: 'Rail' | 'Bus'; distanceMi: number }>;
+  /** A stop's position, when the source records one (the Map pins it there). */
+  transit: Array<{ name: string; type: 'Rail' | 'Bus'; distanceMi: number; lat?: number; lng?: number }>;
   amenities: Array<{ category: string; count: number }>;
+  /** Amenities with a position on record, when the source has them; the Map pins each one. */
+  places?: Array<{ name: string; category: string; distanceMi: number; lat: number; lng: number }>;
 }
 
 export interface GeoPolygon {

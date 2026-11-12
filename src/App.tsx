@@ -234,8 +234,9 @@ function Shell() {
     switch (a) {
       // Leased and Pipeline are the "Color by" switches: they change how the plan is coloured and nothing
       // else. An open panel, a search or a selection stays as it was (round 18: Leased closed the brief).
+      // The Map has no floors to color: there a Color-by switch opens the Building tab in that color.
       case 'status':
-        patch({ lens: 'status', bucket: null });
+        patch({ lens: 'status', bucket: null, ...(state.view === 'map' ? { view: 'building' as const } : {}) });
         break;
       case 'find':
         patch({ mode: 'find', select: null, floor: floorKept(state.view, state.floor), window: null, bucket: null });
@@ -250,7 +251,7 @@ function Shell() {
         patch({ view: 'timeline' });
         break;
       case 'deals':
-        patch({ lens: 'deals', bucket: null });
+        patch({ lens: 'deals', bucket: null, ...(state.view === 'map' ? { view: 'building' as const } : {}) });
         break;
     }
     focusAfterKpi(a);
@@ -262,7 +263,7 @@ function Shell() {
   const area = useArea(dataSource, property, state.census);
   const areaPanel = (
     <Suspense fallback={<p className="sp-weak" style={{ padding: 16 }}>Loading area data…</p>}>
-      <AreaPanel model={model} area={area} expanded={mode === 'brief'} />
+      <AreaPanel model={model} area={area} expanded={mode === 'brief'} onMap={state.view === 'map'} />
     </Suspense>
   );
   const areaPreview = <AreaPreview area={area} patch={patch} />;
@@ -317,7 +318,10 @@ function Shell() {
   // The Floor view is a floor itself too: there the inspector joins it for a suite or a tool panel (round 18:
   // only a suite opened it, so Area, Find space, the worklist and the KPI shortcuts opened nothing).
   const showInspector = view === 'building' || view === 'floor' ? panel !== 'building' && panel !== 'floor' : true;
-  const sheetOpen = narrow && panel !== 'building';
+  // On a phone or tablet the Map's Area panel stands under the map, in the page, not in a sheet over it: a
+  // sheet would cover the map it explains. The location brief still takes the full sheet.
+  const mapAreaInline = narrow && view === 'map' && mode === 'area';
+  const sheetOpen = narrow && panel !== 'building' && !mapAreaInline;
   // A sheet that opened for a selection (a suite, a floor) must not hide it: the page keeps the chosen block
   // or row whole above the sheet's top edge, follows the sheet when it grows, and tells the sheet how much
   // of the window the selection needs, so the expanded sheet stops short of it (stack/aboveSheet.ts).
@@ -351,7 +355,7 @@ function Shell() {
           {view === 'timeline' && <TimelineView model={model} state={state} patch={patch} />}
           {view === 'map' && (
             <Suspense fallback={<section className="sp-card sp-map-loading" aria-busy="true">Loading map…</section>}>
-              <MapView model={model} state={state} patch={patch} dataSource={dataSource} />
+              <MapView model={model} state={state} patch={patch} dataSource={dataSource} area={area} />
             </Suspense>
           )}
         </Stage>
@@ -361,7 +365,12 @@ function Shell() {
           </aside>
         )}
       </main>
-      {narrow && showInspector && (
+      {mapAreaInline && (
+        <section className="sp-card sp-map-panel sp-no-print" aria-label="Area around the building">
+          {inspector}
+        </section>
+      )}
+      {narrow && showInspector && !mapAreaInline && (
         <Sheet
           open={sheetOpen}
           onClose={() => {

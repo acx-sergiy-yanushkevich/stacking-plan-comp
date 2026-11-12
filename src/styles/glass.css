@@ -168,12 +168,7 @@
 
   /* ── Map: the natural home of glass ───────────────────── */
   :root[data-skin='glass'] .sp-map { border: 1px solid var(--sp-glass-edge); box-shadow: var(--sp-glass-shadow); }
-  :root[data-skin='glass'] .sp-map-legend { background: var(--sp-color-card); -webkit-backdrop-filter: var(--sp-glass-blur); backdrop-filter: var(--sp-glass-blur); }
-  /* Its blur makes it a stacking context: lift it above the floor list and the map, so the legend's tooltips and
-     its note open over them, not under (round 22: the note was invisible on the Map). */
-  :root[data-skin='glass'] .sp-map-legend { position: relative; z-index: 6; }
   :root[data-skin='glass'] .sp-map-overlay,
-  :root[data-skin='glass'] .sp-map-floors,
   :root[data-skin='glass'] .sp-map-ctl-group {
     background: var(--sp-color-card); border-color: var(--sp-glass-edge);
     -webkit-backdrop-filter: var(--sp-glass-blur); backdrop-filter: var(--sp-glass-blur);

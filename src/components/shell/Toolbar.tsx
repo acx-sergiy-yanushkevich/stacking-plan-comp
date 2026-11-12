@@ -106,19 +106,24 @@ export function Toolbar({ state, patch, issueCount, queryFind }: ToolbarProps) {
   return (
     <section className="sp-card sp-toolbar sp-no-print" aria-label="Views and filters">
       <Segmented aria-label="View" size="lg" options={views} value={view} onChange={(v) => toPlan({ view: v, floor: v === 'stack' ? null : state.floor })} />
-      <div className="sp-toolbar__group sp-toolbar__lens">
-        <span className="sp-toolbar__label">Color by</span>
-        <Segmented aria-label="Color lens" options={lenses.map((l) => ({ id: l.id, label: l.label, title: l.hint }))} value={lens} onChange={(next) => toPlan({ lens: next })} />
-      </div>
-      <div className="sp-toolbar__lens-select">
-        <SelectField label="Color by" hideLabel value={lens} onChange={(e) => toPlan({ lens: e.target.value as LensId })}>
-          {lenses.map((l) => (
-            <option key={l.id} value={l.id}>
-              Color by {l.label}
-            </option>
-          ))}
-        </SelectField>
-      </div>
+      {/* The Map shows the building's surroundings, not its floors: nothing there is colored by a lens. */}
+      {view !== 'map' && (
+        <>
+          <div className="sp-toolbar__group sp-toolbar__lens">
+            <span className="sp-toolbar__label">Color by</span>
+            <Segmented aria-label="Color lens" options={lenses.map((l) => ({ id: l.id, label: l.label, title: l.hint }))} value={lens} onChange={(next) => toPlan({ lens: next })} />
+          </div>
+          <div className="sp-toolbar__lens-select">
+            <SelectField label="Color by" hideLabel value={lens} onChange={(e) => toPlan({ lens: e.target.value as LensId })}>
+              {lenses.map((l) => (
+                <option key={l.id} value={l.id}>
+                  Color by {l.label}
+                </option>
+              ))}
+            </SelectField>
+          </div>
+        </>
+      )}
       {/* Search and its tool buttons travel together: on one row they sit at the right; when the toolbar
           wraps they take the second row whole, the search filling it from the left edge. */}
       <div className="sp-toolbar__find">

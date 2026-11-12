@@ -1,46 +1,34 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { Map as MapLibreMap } from 'maplibre-gl';
-import { addMonths } from '../../domain/dates';
-import type { ISODate } from '../../domain/types';
 import { cancelFrame, requestFrame } from '../../lib/host';
 
-export const PRESENT_MONTHS = 60;
-export const PRESENT_STEP_MS = 900;
 export const PRESENT_DEG_PER_FRAME = 0.15;
 
 export interface UsePresentOptions {
   map: MapLibreMap | null;
-  today: ISODate;
-  patch: (p: { asOf: ISODate }) => void;
   /** False under `prefers-reduced-motion`: Present cannot start. */
   enabled: boolean;
+  /** Runs as Present starts: the camera leans into 3D, so the orbit shows the building among its neighbours. */
+  onStart?: () => void;
 }
 
 /**
- * Present mode (DESIGN.md §2.6): a slow orbit plus a time-lapse of the as-of date one month
- * every 900 ms across five years, looping. Any drag or wheel on the map stops it; stopping
- * returns the plan to today so the KPIs never linger on a projected date by accident.
+ * Present mode (DESIGN.md §2.6): a slow orbit of the building in 3D. Any drag or wheel on the map stops it.
+ * (Until round 24 it also played the as-of date forward, a lease-by-lease time-lapse of the floors; the Map
+ * shows the surroundings now, and the floors are the Building tab's.)
  */
-export function usePresent({ map, today, patch, enabled }: UsePresentOptions) {
+export function usePresent({ map, enabled, onStart }: UsePresentOptions) {
   const [presenting, setPresenting] = useState(false);
-  const patchRef = useRef(patch);
-  patchRef.current = patch;
 
   useEffect(() => {
     if (!presenting || !map || !enabled) {
       if (presenting && !enabled) setPresenting(false);
       return;
     }
+    onStart?.();
     let raf: number | null = null;
-    let last = performance.now();
-    let month = 0;
-    const step = (ts: number) => {
+    const step = () => {
       map.setBearing(map.getBearing() + PRESENT_DEG_PER_FRAME);
-      if (ts - last >= PRESENT_STEP_MS) {
-        last = ts;
-        month = (month + 1) % (PRESENT_MONTHS + 1);
-        patchRef.current({ asOf: addMonths(today, month) });
-      }
       raf = requestFrame(step);
     };
     raf = requestFrame(step);
@@ -51,9 +39,9 @@ export function usePresent({ map, today, patch, enabled }: UsePresentOptions) {
       cancelFrame(raf);
       map.off('dragstart', stop);
       map.off('wheel', stop);
-      patchRef.current({ asOf: today });
     };
-  }, [presenting, map, enabled, today]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presenting, map, enabled]);
 
   const start = useCallback(() => {
     if (enabled && map) setPresenting(true);

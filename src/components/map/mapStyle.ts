@@ -18,7 +18,9 @@ export const FALLBACK_HEX = '#d8dde3';
 export const BUILDINGS_LIGHT = '#cfd4da';
 export const BUILDINGS_DARK = '#3a3f47';
 /** Camera defaults (DESIGN.md §2.6). */
-export const CAMERA = { zoom: 18, pitch: 56, bearing: -24, maxPitch: 70 } as const;
+export const CAMERA = { zoom: 15, pitch: 0, bearing: 0, maxPitch: 70 } as const;
+/** "Show in 3D": the building's height among its neighbours. */
+export const CAMERA_3D = { zoom: 17.2, pitch: 58, bearing: -24 } as const;
 
 export const SOURCE_FLOORS = 'floors';
 export const LAYER_FLOORS = 'floors-3d';
