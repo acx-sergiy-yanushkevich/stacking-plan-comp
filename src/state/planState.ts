@@ -150,25 +150,26 @@ export function enterSafe(s: PlanState, today?: ISODate): PlanState {
 }
 
 /**
- * The one way state changes: apply a patch, then hold the prospect-safe invariants. Every control
- * goes through this (by way of `stepSession`), so no handler has to remember to clear anything itself:
- * a handler that asks for another as-of date while the mode is on simply stays on today. The state
- * holds no trace of what the mode took off it: on its own, turning the mode off restores nothing.
- */
-/**
  * The Map tab is about the building's surroundings, and its panel is the Area panel: a link to the map with no
- * panel named opens it there (`modeDefault`), arriving at the map with nothing else open opens it, and leaving
- * the map puts it away again, so the plan views keep their own panel. A panel opened on purpose stays.
+ * panel named opens it there (`modeDefault`), arriving at the map opens it, even with a suite or a floor chosen
+ * (round 24: the suite's panel stayed and the map lost its key), and leaving the map puts it away again, so the
+ * chosen suite or floor is the plan's panel once more. A tool opened on purpose (Find space, a worklist) stays.
  */
 export const modeDefault = (view: PlanState['view']): InspectorMode => (view === 'map' ? 'area' : 'building');
 
 function withMapPanel(prev: PlanState, next: PlanState): PlanState {
   if (next.view === prev.view) return next;
-  if (next.view === 'map' && next.mode === 'building' && !next.select && !next.floor) return { ...next, mode: 'area' };
+  if (next.view === 'map' && next.mode === 'building') return { ...next, mode: 'area' };
   if (prev.view === 'map' && (next.mode === 'area' || next.mode === 'brief')) return { ...next, mode: 'building' };
   return next;
 }
 
+/**
+ * The one way state changes: apply a patch, then hold the prospect-safe invariants. Every control
+ * goes through this (by way of `stepSession`), so no handler has to remember to clear anything itself:
+ * a handler that asks for another as-of date while the mode is on simply stays on today. The state
+ * holds no trace of what the mode took off it: on its own, turning the mode off restores nothing.
+ */
 export function applyPatch(prev: PlanState, patch: Partial<PlanState>, today?: ISODate): PlanState {
   const next = withMapPanel(prev, { ...prev, ...patch });
   return next.safe && !prev.safe ? enterSafe(next, today) : safeState(next, today);
@@ -245,7 +246,7 @@ function restored(state: PlanState, withheld: Withheld | null): PlanState {
 export function stepSession(prev: PlanSession, patch: Partial<PlanState>, today?: ISODate): PlanSession {
   const asked = { ...prev.state, ...patch };
   if (asked.safe && !prev.state.safe) {
-    const state = enterSafe(asked, today);
+    const state = enterSafe(withMapPanel(prev.state, asked), today);
     return { state, withheld: withheldBy(asked, state) };
   }
   if (!asked.safe && prev.state.safe) return { state: restored(asked, prev.withheld), withheld: null };
@@ -387,6 +388,7 @@ export function switchBuilding(s: PlanState, building: string): Partial<PlanStat
     bucket: null,
     inquiry: null,
     q: '',
-    mode: 'building',
+    // On the map its own panel, the Area panel, stays open for the next building.
+    mode: modeDefault(s.view === 'floor' ? 'building' : s.view),
   };
 }

@@ -457,3 +457,16 @@ describe('the Map tab opens with the Area panel beside it (round 24)', () => {
     expect(applyPatch(finding, { view: 'map' }, TODAY).mode).toBe('find');
   });
 });
+
+describe('the Map opens its Area panel even with a suite chosen, and gives the suite back on leaving (round 24)', () => {
+  it('a chosen suite waits behind the map, and a building switch on the map keeps the map panel', () => {
+    const chosen = applyPatch(parseState('?view=stack', TODAY), { select: 'L13-U1' }, TODAY);
+    expect(deriveMode(chosen)).toBe('block');
+    const map = applyPatch(chosen, { view: 'map' }, TODAY);
+    expect(deriveMode(map)).toBe('area');
+    expect(map.select).toBe('L13-U1');
+    expect(deriveMode(applyPatch(map, { view: 'stack' }, TODAY))).toBe('block');
+    const elsewhere = applyPatch(map, switchBuilding(map, 'P002'), TODAY);
+    expect(elsewhere).toMatchObject({ view: 'map', mode: 'area', select: null, building: 'P002' });
+  });
+});

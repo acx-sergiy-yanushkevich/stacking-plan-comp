@@ -13,6 +13,7 @@ import { isDark, paletteOf, type PlanState } from '../../state/planState';
 import { usePrefersDark, usePrefersReducedMotion } from '../../lib/useMedia';
 import { openFloor } from '../plan/actions';
 import { Chip, Icon, useToast } from '../ui';
+import { FilterBar } from '../stack/FilterBar';
 import { FootprintFallback } from './FootprintFallback';
 import { MapControls } from './MapControls';
 import { BUILDINGS_DARK, BUILDINGS_LIGHT, CAMERA, CAMERA_3D, LAYER_BUILDINGS, LAYER_FLOORS, SOURCE_FLOORS, dominantTone, guardedFilter, resolveVarHex, toFloorFeatures, type FloorFeatureCollection } from './mapStyle';
@@ -220,10 +221,17 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
   }, [map, brandHex]);
 
   // The camera: top-down, framed on the mile; 3D leans in on the building.
-  const padding = useMemo(() => ({ top: 64, bottom: 28, left: 28, right: 56 }), []);
+  const viewRef = useRef<HTMLDivElement>(null);
+  const infoRef = useRef<HTMLDivElement>(null);
   const duration = reducedMotion ? 0 : 600;
+  // The frame keeps the rings clear of the card: beside it on a wide map, under it on a narrow one, where the
+  // card spans the top (round 24: on a phone its links covered the "1 mi" label).
+  const padding = useCallback(() => {
+    const narrow = (viewRef.current?.clientWidth ?? 1000) < 720;
+    return { top: narrow && infoRef.current ? infoRef.current.offsetHeight + 44 : 64, bottom: 28, left: 28, right: 56 };
+  }, []);
   const frame = useCallback(
-    (animate: boolean) => map?.fitBounds(ringBounds(center, FRAME_MI), { padding, pitch: 0, bearing: 0, duration: animate ? duration : 0 }),
+    (animate: boolean) => map?.fitBounds(ringBounds(center, FRAME_MI), { padding: padding(), pitch: 0, bearing: 0, duration: animate ? duration : 0 }),
     [map, center, padding, duration],
   );
   useEffect(() => {
@@ -277,7 +285,13 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
       const el = createElement('div') ?? undefined;
       const marker = new Marker({ element: el, anchor }).setLngLat([lng, lat]).addTo(map);
       made.push(marker);
-      return marker.getElement();
+      // MapLibre names every marker "Map marker" and makes it a button: dozens of identical buttons for a
+      // screen reader (round 24). The pins are pictures of what the Area panel's rows say; the rows are the way in.
+      const node = marker.getElement();
+      node.removeAttribute('role');
+      node.removeAttribute('aria-label');
+      node.setAttribute('aria-hidden', 'true');
+      return node;
     };
     setPinned(places.map((place) => ({ place, el: mk(place.lng, place.lat, 'center') })));
     const walk = offset(center, WALK_MI, 0);
@@ -295,6 +309,25 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
   }, [map, places, center, property.name]);
   const lit = usePlaceHighlight();
   useEffect(() => () => placeHighlight.set(null), []);
+  // A stop outside the frame (a rail station three miles out) is brought into view with the building when its
+  // row is lit, and the mile frame comes back when the row is let go (round 24: its pin lit off screen).
+  const widened = useRef(false);
+  useEffect(() => {
+    if (!map) return;
+    const stop = lit ? places.find((p) => p.kind === 'transit' && p.key === lit) : undefined;
+    if (stop && !map.getBounds().contains([stop.lng, stop.lat])) {
+      const box: [[number, number], [number, number]] = [
+        [Math.min(center.lng, stop.lng), Math.min(center.lat, stop.lat)],
+        [Math.max(center.lng, stop.lng), Math.max(center.lat, stop.lat)],
+      ];
+      // Room at the sides for the building's name, which hangs over its pin.
+      map.fitBounds(box, { padding: { ...padding(), bottom: 56, left: 140, right: 140 }, pitch: 0, bearing: 0, maxZoom: 15, duration });
+      widened.current = true;
+    } else if (!lit && widened.current) {
+      widened.current = false;
+      frame(true);
+    }
+  }, [map, lit, places, center, padding, duration, frame]);
 
   const present = usePresent({ map, enabled: !reducedMotion, onStart: threeD });
   const notify = useCallback((message: string, icon?: 'video' | 'warning' | 'download') => toast.push(message, { icon }), [toast]);
@@ -310,17 +343,19 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
 
   return (
     <div className={`sp-map ${status === 'failed' ? 'is-fallback' : ''} ${lit ? 'has-lit' : ''}`.replace(/ +/g, ' ').trim()} data-status={status}>
-      <div className="sp-map__view">
+      {/* A search, a requirement or a worklist is answered in suites: the bar says so and takes the user to the plan. */}
+      {model.filterLabel && <FilterBar label={model.filterLabel} find={model.queryFind} planElsewhere patch={patch} />}
+      <div className="sp-map__view" ref={viewRef}>
         <div ref={containerRef} className="sp-map__canvas" aria-label={`Map of the area around ${property.name}: the half-mile and one-mile rings, transit stops and places nearby. The Area panel lists them.`} role="application" />
         {status === 'failed' && <FootprintFallback footprint={mapProperty.footprint} floors={floors} toneOf={toneOf} selectedFloorId={state.floor} onSelect={selectFloor} />}
 
-        <div className="sp-map-overlay sp-map-info">
+        <div className="sp-map-overlay sp-map-info" ref={infoRef}>
           <h2 className="sp-map-info__name">{property.name}</h2>
           <p className="sp-weak">
             {property.street}, {property.city}, {property.state}
           </p>
           <p className="sp-map-info__meta">
-            <span>
+            <span className="sp-map-info__footprint">
               Footprint: {footprintLabel} <Chip tone={mapProperty.footprintSource === 'osm' ? 'success' : 'neutral'}>{mapProperty.footprintSource === 'osm' ? 'OSM' : 'demo'}</Chip>
             </span>
             {samplePlaces && (
@@ -378,7 +413,7 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
             aria-hidden="true"
             onClick={() => placeHighlight.set(on ? null : place.key)}
           >
-            {look.icon && <Icon name={look.icon} size={11} />}
+            {look.icon ? <Icon name={look.icon} size={11} /> : look.letter}
           </span>,
           el,
           place.id,

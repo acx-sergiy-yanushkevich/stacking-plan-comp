@@ -1,4 +1,5 @@
 import { Legend, LegendInfo } from '../plan/Legend';
+import { FilterBar } from '../stack/FilterBar';
 import { lensName } from '../../domain/lenses';
 import { planLegendNote } from '../plan/legendNote';
 import { fmtDate } from '../../domain/dates';
@@ -176,6 +177,8 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
           <Legend items={model.legend} compact title={lensLabel} note={legendNote} infoElsewhere />
         )}
       </div>
+    {/* A search, a requirement or a worklist dims bars here as it dims blocks on the plan: the same sentence says why (round 24). */}
+    {model.filterLabel && <FilterBar label={model.filterLabel} alternatives={!!model.partial && model.partial.size > 0} find={model.queryFind} patch={patch} />}
     <div className={`sp-timeline ${stackedMode ? 'sp-timeline--stacked' : ''}`} ref={hostRef}>
       {stackedMode && showRollover && <RolloverChips buckets={model.roll.buckets} atRisk={model.roll.atRisk} asOf={model.asOf} activeBucket={state.bucket} onBucket={onBucket} />}
       <svg ref={svgRef} className="sp-timeline__svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="group" aria-label={`Lease timeline, ${rows.length} floors`}>

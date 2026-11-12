@@ -16,6 +16,10 @@
 .sp-map .maplibregl-canvas:focus-visible { outline: 2px solid var(--sp-color-focus); outline-offset: -2px; }
 .sp-map .maplibregl-ctrl-attrib { font-size: var(--sp-text-11); background: color-mix(in srgb, var(--sp-color-card) 85%, transparent); color: var(--sp-color-text-weak); }
 .sp-map .maplibregl-ctrl-attrib a { color: var(--sp-color-text-weak); }
+/* MapLibre's own pill is white at half opacity (white when compact): on our card colours its links failed contrast
+   once the map was checked (round 24). The credit sits on the card colour, in the card's text colours. */
+.sp-map .maplibregl-ctrl.maplibregl-ctrl-attrib, .sp-map .maplibregl-ctrl-attrib.maplibregl-compact { background: var(--sp-color-card); color: var(--sp-color-text-weak); }
+.sp-map .maplibregl-ctrl.maplibregl-ctrl-attrib a { color: var(--sp-color-text); }
 .sp-map .maplibregl-ctrl-bottom-right { right: 48px; }
 
 .sp-map-overlay {
@@ -126,7 +130,9 @@
   .sp-map .maplibregl-canvas { height: 100% !important; }
   /* A phone keeps the card's links (its floors, Google Maps, Street View) and nothing else: the name is in the header. */
   .sp-map-info { padding: 5px 10px; }
-  .sp-map-info__name, .sp-map-info > .sp-weak, .sp-map-info__meta { display: none; }
+  .sp-map-info__name, .sp-map-info > .sp-weak, .sp-map-info__meta > .sp-map-info__footprint { display: none; }
+  .sp-map-info__meta { margin-top: 0; }
+  .sp-map-info__meta:not(:has(.sp-chip)) { display: none; }
   .sp-map-info__links { margin-top: 0; }
   .sp-map-controls { top: 8px; bottom: auto; right: 8px; }
   .sp-map .maplibregl-ctrl-bottom-right { right: 8px; bottom: 4px; }
@@ -150,6 +156,8 @@
   --sp-pin-fitness: #a78bfa; --sp-pin-bank: #4ade80; --sp-pin-parking: #94a3b8; --sp-pin-other: #cbd5e1; --sp-pin-ink: #0b1220;
 }
 .sp-pin, .sp-place-dot { --sp-pin-c: var(--sp-pin-other); }
+/* The Area panel's key: the same colour and shape as the pin, before the row's name. */
+.sp-place-dot { display: inline-block; flex: none; width: 9px; height: 9px; margin-right: 6px; border-radius: 50%; background: var(--sp-pin-c); vertical-align: 0; }
 .sp-pin--transit, .sp-place-dot--transit { --sp-pin-c: var(--sp-pin-transit); }
 .sp-pin--food, .sp-place-dot--food { --sp-pin-c: var(--sp-pin-food); }
 .sp-pin--cafe, .sp-place-dot--cafe { --sp-pin-c: var(--sp-pin-cafe); }
@@ -158,11 +166,29 @@
 .sp-pin--bank, .sp-place-dot--bank { --sp-pin-c: var(--sp-pin-bank); }
 .sp-pin--parking, .sp-place-dot--parking { --sp-pin-c: var(--sp-pin-parking); }
 .sp-pin {
-  position: relative; display: block; width: 12px; height: 12px; border-radius: 50%;
-  background: var(--sp-pin-c); border: 2px solid var(--sp-color-card); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  position: relative; isolation: isolate; display: grid; place-items: center; width: 12px; height: 12px;
+  color: var(--sp-pin-ink); font-size: 9px; font-weight: 700; line-height: 1;
   cursor: pointer; transition: transform 0.15s ease, opacity 0.15s ease;
 }
-.sp-pin--stop { width: 22px; height: 22px; display: grid; place-items: center; color: var(--sp-pin-ink); }
+.sp-pin::before {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background: var(--sp-pin-c); border: 2px solid var(--sp-color-card); border-radius: 50%; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+.sp-pin--stop { width: 22px; height: 22px; }
+/* Each amenity has a shape as well as a colour, and the Area panel's key shows the same one (round 24: dots told
+   apart by colour alone). Restaurants a circle, cafés a square, hotels a diamond, fitness a triangle, banks a
+   square with a $, parking a square with a P. */
+.sp-pin--cafe::before, .sp-place-dot--cafe { border-radius: 2px; }
+.sp-pin--hotel::before { border-radius: 2px; transform: rotate(45deg) scale(0.86); }
+.sp-place-dot--hotel { border-radius: 1px; transform: rotate(45deg) scale(0.86); }
+.sp-pin--fitness::before, .sp-place-dot--fitness { border: 0; border-radius: 0; box-shadow: none; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+/* A clipped shape loses its ring: the outline and the shadow are drawn around what is left. */
+.sp-pin--fitness { filter: drop-shadow(0 0 1px var(--sp-color-card)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35)); }
+.sp-pin--parking, .sp-pin--bank { width: 16px; height: 16px; }
+.sp-pin--parking::before, .sp-pin--bank::before { border-radius: 3px; }
+.sp-place-dot--parking, .sp-place-dot--bank { width: 11px; height: 11px; border-radius: 2px; color: var(--sp-pin-ink); font-size: 8px; font-weight: 700; font-style: normal; line-height: 11px; text-align: center; }
+.sp-place-dot--parking::after { content: 'P'; }
+.sp-place-dot--bank::after { content: '$'; }
 /* A row of the panel (or a pin) lit: its pins grow, the rest step back. */
 .sp-map.has-lit .sp-pin:not(.is-lit) { opacity: 0.22; }
 .sp-pin.is-lit { transform: scale(1.4); }
@@ -190,7 +216,6 @@
 }
 .sp-map-info__links a:hover, .sp-linkbtn:hover { text-decoration: underline; }
 /* The Area panel beside the map: each place row is its pins' key and a way to light them. */
-.sp-place-dot { display: inline-block; flex: none; width: 9px; height: 9px; margin-right: 6px; border-radius: 50%; background: var(--sp-pin-c); vertical-align: 0; }
 .sp-area__place { border-radius: 6px; margin-inline: -4px; padding-inline: 4px; }
 .sp-area__place:hover, .sp-area__place.is-lit { background: var(--sp-color-brand-soft); }
 .sp-area__place:focus-visible { outline: 2px solid var(--sp-color-focus, var(--sp-color-brand)); outline-offset: 1px; }

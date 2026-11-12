@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../data/mock/property';
+import { cedarSprings } from '../data/mock/buildings/cedarSprings';
 import { deriveFloors, floorTotals } from './derive';
 import { computeKpis } from './kpis';
 import { rollover } from './rollover';
@@ -39,8 +40,7 @@ import {
   TITLE,
   visibleDeals,
   visibleInquiries,
-  visibleIssues,
-} from './safe';
+  visibleIssues, shownToProspect } from './safe';
 
 describe('prospect-safe helpers', () => {
   it('replaces the tenant name in safe mode', () => {
@@ -365,5 +365,12 @@ describe('totals by period in prospect-safe mode', () => {
   it('a lens that colours by something withheld is not offered: Deals and Expiration', () => {
     for (const lens of ['status', 'expiry', 'deals', 'rent']) expect(canUseLens(lens, false), lens).toBe(true);
     expect(['status', 'expiry', 'deals', 'rent'].filter((lens) => canUseLens(lens, true))).toEqual(['status', 'rent']);
+  });
+});
+
+describe('shownToProspect: a selection survives the switch only if the prospect is shown that suite (round 24)', () => {
+  it('drops an unpublished listing and keeps an available suite', () => {
+    expect(shownToProspect(cedarSprings, 'CS-A06', TODAY)).toBe(false);
+    expect(shownToProspect(property, 'A02', TODAY)).toBe(true);
   });
 });

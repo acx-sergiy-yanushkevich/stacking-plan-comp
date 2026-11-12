@@ -1,7 +1,7 @@
-import { floorTotals, type FloorView, type Segment, type SegmentKind } from './derive';
+import { deriveFloors, floorTotals, type FloorView, type Segment, type SegmentKind } from './derive';
 import type { Kpis } from './kpis';
 import type { RolloverBucket } from './rollover';
-import type { Availability, Deal, ISODate, Lease } from './types';
+import type { Availability, Deal, ISODate, Lease, Property } from './types';
 
 /**
  * The prospect-safe policy, in one module. `safe=1` is what a broker shows a prospect: the building,
@@ -307,3 +307,14 @@ export function safeFloors(floors: FloorView[], safe: boolean): FloorView[] {
  * the mode is on works as before; this is about what crosses the boundary.)
  */
 export const canKeepSearch = (safe: boolean): boolean => !safe;
+
+/**
+ * Whether a prospect is shown the suite `key` names: it is a block of the prospect-safe plan, as of today (the
+ * mode is always today). A selection that is not, such as an unpublished listing, is dropped as the switch turns
+ * on; one that is (an available suite) stays chosen for the prospect (round 24: an unpublished Cedar Springs
+ * listing's record id stayed in the address after the switch).
+ */
+export function shownToProspect(property: Property, key: string, today: ISODate): boolean {
+  const floors = safeFloors(publishedFloors(deriveFloors(property, today, today), true), true);
+  return floors.some((f) => f.segments.some((s) => s.key === key));
+}
