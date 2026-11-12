@@ -209,7 +209,14 @@ describe('Inspector', () => {
       const stripped = html.replace(/(Asking )?\$[\d.,]+–\$[\d.,]+\/SF\/(yr|mo) (FSG|MG|NNN)/g, '');
       expect(stripped, `${q} leaks a rate`).not.toContain('/SF/yr');
       expect(html, `${q} leaks a contact`).not.toContain('Tom Conner');
+      // Nothing stands in for what is withheld: no "Hidden", no "Withheld" (round 25: "Rent / Hidden" on Suite 600).
+      expect(html, `${q} says Hidden`).not.toMatch(/>Hidden<|Withheld/);
     }
+    // A leased suite tells a prospect it is leased, and has no rent row at all.
+    const suite = render('?safe=1&select=L13-U1').html;
+    expect(suite).toContain('<dt>Status</dt><dd>Leased</dd>');
+    expect(suite).not.toContain('<dt>Rent</dt>');
+    expect(render('?select=L13-U1').html).toContain('<dt>Rent</dt>');
   });
 
   it('Prospect-safe says nothing about deals, brokers, activity, tenant risk, inquiries or data issues', () => {

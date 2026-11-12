@@ -192,7 +192,13 @@
 /* A row of the panel (or a pin) lit: its pins grow, the rest step back. */
 .sp-map.has-lit .sp-pin:not(.is-lit) { opacity: 0.22; }
 .sp-pin.is-lit { transform: scale(1.4); }
-.maplibregl-marker:has(.sp-pin.is-lit) { z-index: 2; }
+/* The labels over the pins, so the building's name reads (round 25: on a phone the stops crossed it); a pin lit on
+   purpose, from the key, a row or a click, comes over them. */
+.maplibregl-marker.sp-map-label-marker { z-index: 3; }
+.maplibregl-marker:has(.sp-pin.is-lit) { z-index: 4; }
+/* Folded (the half mile too small on screen to hold its places apart): the places step out, the half-mile label
+   counts them, and a kind lit from the key or the Area panel comes back (round 25: pins piled on the name). */
+.sp-map.is-folded .sp-pin--place:not(.is-lit) { display: none; }
 /* The place's name and distance, on hover. */
 .sp-pin::after {
   content: attr(data-label); position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%);
@@ -205,7 +211,8 @@
 .sp-map-label {
   display: inline-block; margin-bottom: 4px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; pointer-events: none;
   font-size: 11px; font-weight: 600; color: var(--sp-color-brand-strong);
-  background: color-mix(in srgb, var(--sp-color-card) 90%, transparent); border: 1px solid color-mix(in srgb, var(--sp-color-brand) 45%, transparent);
+  /* Solid, not glass: a label sits over pins and roads, and what is under it must not show through its words. */
+  background: var(--sp-color-page); border: 1px solid color-mix(in srgb, var(--sp-color-brand) 45%, transparent);
 }
 .sp-map-label--building { margin-bottom: 12px; font-size: var(--sp-text-12); color: var(--sp-color-text); border-color: var(--sp-color-brand); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
 /* The info card's links: the building's floors, and Google's map and Street View. */
@@ -218,6 +225,8 @@
 /* The Area panel beside the map: each place row is its pins' key and a way to light them. */
 .sp-area__place { border-radius: 6px; margin-inline: -4px; padding-inline: 4px; }
 .sp-area__place:hover, .sp-area__place.is-lit { background: var(--sp-color-brand-soft); }
+/* A live category's nearest places by name, under its bar (round 25: the names were on the pins' hover alone). */
+.sp-area__names { grid-column: 1 / -1; color: var(--sp-color-text-weak); font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
 .sp-area__place:focus-visible { outline: 2px solid var(--sp-color-focus, var(--sp-color-brand)); outline-offset: 1px; }
 .sp-area-transit .sp-area__place > .sp-icon { color: var(--sp-pin-transit); }
 /* A phone or tablet: the Area panel under the map, in the page (App, `mapAreaInline`). */

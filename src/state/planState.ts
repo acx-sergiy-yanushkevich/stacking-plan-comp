@@ -15,6 +15,9 @@ export type Theme = 'light' | 'dark';
 /** A colour palette for the glass skin. `ascendix` (the company colours) is the default. */
 export type Palette = 'ascendix' | 'vice';
 export type FitKind = 'any' | 'direct' | 'sublease';
+/** The rings the Area figures are counted in, in miles. */
+export type RingMiles = 1 | 3 | 5;
+export const RINGS: readonly RingMiles[] = [1, 3, 5];
 
 export interface PlanState {
   /** The open building's Property id; null is the default building (data/mock/buildings). */
@@ -34,6 +37,11 @@ export interface PlanState {
   inquiry: string | null;
   q: string;
   mode: InspectorMode;
+  /**
+   * The ring around the building, in miles: the one the Map draws and frames and the Area panel compares with the
+   * US. In the address, so a reload or a copied link keeps it (round 25: it lived in memory and was lost).
+   */
+  ring: RingMiles;
   live: boolean;
   census: string | null;
   theme: Theme | null;
@@ -83,6 +91,7 @@ export const DEFAULT_STATE: PlanState = {
   inquiry: null,
   q: '',
   mode: 'building',
+  ring: 1,
   live: false,
   census: null,
   theme: null,
@@ -94,6 +103,11 @@ function oneOf<T extends string>(allowed: readonly T[], v: string | null, fallba
 
 function oneOfOrNull<T extends string>(allowed: readonly T[], v: string | null): T | null {
   return v !== null && (allowed as readonly string[]).includes(v) ? (v as T) : null;
+}
+
+function ringOf(v: string | null): RingMiles {
+  const n = Number(v);
+  return (RINGS as readonly number[]).includes(n) ? (n as RingMiles) : DEFAULT_STATE.ring;
 }
 
 function isoOrNull(v: string | null): ISODate | null {
@@ -291,7 +305,10 @@ export function parseState(search: string, today: ISODate): PlanState {
     bucket: nonNegativeInt(p.get('bucket')),
     inquiry: text(p.get('inquiry')),
     q: p.get('q') ?? '',
-    mode: oneOf(MODES, p.get('mode'), p.get('select') || p.get('floor') ? d.mode : modeDefault(oneOf(VIEWS, p.get('view'), d.view))),
+    // The Map's panel is Area even when the link carries a suite or a floor, as it is when the Map is opened with
+    // one chosen; the selection waits for the plan (round 25: a Map link with a suite opened its inspector).
+    mode: oneOf(MODES, p.get('mode'), modeDefault(oneOf(VIEWS, p.get('view'), d.view))),
+    ring: ringOf(p.get('ring')),
     live: p.get('live') === '1',
     census: text(p.get('census')),
     theme: oneOfOrNull(THEMES, p.get('theme')),
@@ -320,7 +337,8 @@ export function serializeState(s: PlanState, today: ISODate): string {
   if (s.bucket !== null) p.set('bucket', String(s.bucket));
   if (s.inquiry) p.set('inquiry', s.inquiry);
   if (s.q) p.set('q', s.q);
-  if (s.mode !== (s.select || s.floor ? DEFAULT_STATE.mode : modeDefault(s.view))) p.set('mode', s.mode);
+  if (s.mode !== modeDefault(s.view)) p.set('mode', s.mode);
+  if (s.ring !== DEFAULT_STATE.ring) p.set('ring', String(s.ring));
   if (s.live) p.set('live', '1');
   if (s.census) p.set('census', s.census);
   if (s.theme) p.set('theme', s.theme);

@@ -97,3 +97,33 @@ describe('AreaPanel beside the Map (round 25)', () => {
     expect(render(area)).toContain('aria-label="Distance compared with the US"');
   });
 });
+
+describe('AreaPanel: the ring from the address, and live places by name (round 25)', () => {
+  const clean = (html: string) => html.replace(/<!-- -->/g, '').replace(/\u00a0/g, ' ');
+
+  it('compares the ring it is given, and its switch says which', () => {
+    const html = clean(renderToString(<AreaPanel model={model} area={area} ring={5} />));
+    expect(html).toContain('within 5 miles');
+    const radios = [...html.matchAll(/role="radio" aria-checked="(true|false)"[^>]*>([^<]+)</g)].map((m) => [m[2], m[1]]);
+    expect(radios).toEqual([
+      ['1 mi', 'false'],
+      ['3 mi', 'false'],
+      ['5 mi', 'true'],
+    ]);
+  });
+
+  it('names a live category\'s nearest places under its bar and in its name, never a sample one\'s', () => {
+    const places = [
+      { name: 'Corner Kitchen', category: 'Restaurants', distanceMi: 0.07, lat: 0, lng: 0 },
+      { name: 'Noodle House', category: 'Restaurants', distanceMi: 0.3, lat: 0, lng: 0 },
+      { name: 'Taqueria Sol', category: 'Restaurants', distanceMi: 0.32, lat: 0, lng: 0 },
+      { name: 'Late Grill', category: 'Restaurants', distanceMi: 0.45, lat: 0, lng: 0 },
+    ];
+    const live: Area = { ...area, sample: false, amenities: [{ category: 'Restaurants', count: 4 }], places };
+    const html = clean(renderToString(<AreaPanel model={model} area={live} onMap />));
+    expect(html).toContain('<span class="sp-area__names">Corner Kitchen &lt; 0.1 mi · Noodle House 0.3 mi · Taqueria Sol 0.3 mi · 1 more</span>');
+    expect(html).toContain('aria-label="Restaurants: 4 within half a mile; the nearest Corner Kitchen, under 0.1 miles; Noodle House, 0.3 miles; Taqueria Sol, 0.3 miles; and 1 more, pinned on the map"');
+    expect(clean(renderToString(<AreaPanel model={model} area={area} onMap />))).not.toContain('sp-area__names');
+  });
+});
+

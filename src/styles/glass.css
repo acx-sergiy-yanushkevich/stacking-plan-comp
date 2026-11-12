@@ -139,6 +139,12 @@
     :root[data-skin='glass'] .sp-header:not(.sp-header--classic) .sp-header__title h1 { font-size: 18px; letter-spacing: -0.015em; }
     :root[data-skin='glass'] .sp-header:not(.sp-header--classic) .sp-header__facts { margin: 0; flex: 1 1 0; min-width: min(100%, 420px); min-height: 0; }
   }
+  /* Below 1440 px the owner's listing and "Latest change" wrap to a second line that a prospect's shorter "Listed
+     for sale" does not need: both keep two lines' room, so turning Prospect-safe on moves nothing above the plan
+     (round 25: from 1240 to 1430 px the card lost 12 px when the mode came on; `npm run verify` checks it). */
+  @media (min-width: 761px) and (max-width: 1439px) {
+    :root[data-skin='glass'] .sp-header:not(.sp-header--classic) .sp-header__facts { min-height: calc(2 * 1.3em + 4px); align-content: flex-start; }
+  }
 
   /* Floating surfaces sit over busy content: nearly opaque, still frosted. */
   :root[data-skin='glass'] .sp-pop__panel,

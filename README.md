@@ -167,6 +167,7 @@ All state lives in the URL, so every view can be linked to.
 | `bucket` | `0`, `1`, … | Highlight one 12-month rollover period |
 | `q` | text | Search tenant, suite or prospect |
 | `mode` | `issues`, `area`, `brief`, … | Inspector panel, when not implied by the above (`brief`: the Area panel widened to the location brief) |
+| `ring` | `3`, `5` | The ring around the building in miles: drawn on the Map and compared with the US in the Area panel (1 when left out) |
 | `theme` | `light`, `dark` | Theme (default `dark`) |
 | `palette` | `vice` | The Vice City palette instead of the default Ascendix colors |
 | `skin` | `aurora`, `classic` | The original blue glass, or the flat Salesforce Lightning look, instead of either palette |

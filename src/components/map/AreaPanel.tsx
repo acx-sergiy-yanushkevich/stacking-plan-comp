@@ -1,13 +1,13 @@
 import { useEffect, useRef, type FocusEvent, type MouseEvent } from 'react';
 import { compareRing, US_BENCHMARK } from '../../domain/areaBrief';
-import { inMiles, mi, num } from '../../domain/format';
+import { inMiles, mi, num, ringName } from '../../domain/format';
 import { categoryKey, stopKey } from '../../domain/places';
 import type { Area } from '../../domain/types';
 import type { PlanModel } from '../../model/usePlanModel';
 import { LocationBrief } from '../area/LocationBrief';
 import { Chip, Icon, Segmented } from '../ui';
 import { placeHighlight, placeLook, usePlaceHighlight } from './placeHighlight';
-import { areaRing, ringName, useAreaRing, type RingMiles } from './areaRing';
+import type { RingMiles } from '../../state/planState';
 import '../area/area.css';
 import './map.css';
 
@@ -22,7 +22,13 @@ export interface AreaPanelProps {
    * and a pin clicked on the map lights its row. The rows are the keyboard way to the places the map pins.
    */
   onMap?: boolean;
+  /** The ring compared with the US (`ring` in the address): the Map draws it, and the panel's switch sets it. */
+  ring?: RingMiles;
+  onRing?: (ring: RingMiles) => void;
 }
+
+/** How many recorded places a category row names before "and N more". */
+const NAMED = 3;
 
 /** Hover or focus lights a row's pins; leaving it puts them out, unless another row took over meanwhile. */
 function linkProps(key: string, onMap: boolean | undefined, label: string) {
@@ -52,7 +58,7 @@ function Skeleton() {
  * location brief: the same area as a page to show a client or decision maker. Sample figures are
  * flagged until a Census key is given.
  */
-export function AreaPanel({ model, area, expanded, onMap }: AreaPanelProps) {
+export function AreaPanel({ model, area, expanded, onMap, ring: chosen = 1, onRing }: AreaPanelProps) {
   const { property } = model;
   const lit = usePlaceHighlight();
   // A pin clicked on the map brings its row into view.
@@ -62,8 +68,8 @@ export function AreaPanel({ model, area, expanded, onMap }: AreaPanelProps) {
     rootRef.current?.querySelector<HTMLElement>(`[data-place="${CSS.escape(lit)}"]`)?.scrollIntoView({ block: 'nearest' });
   }, [lit, onMap]);
   const rings = area ? [...area.rings].sort((a, b) => a.miles - b.miles) : [];
-  // One ring for the page (areaRing): the Map's switch sets it beside the map, this panel's own elsewhere.
-  const miles = useAreaRing();
+  // One ring for the page (`ring` in the address): the Map's key sets it beside the map, this panel's switch elsewhere.
+  const miles = chosen;
   const ring = rings.find((r) => r.miles === miles) ?? rings[0];
   const mostPeople = Math.max(1, ...rings.map((r) => r.population));
   const amenities = area ? [...area.amenities].filter((a) => a.count > 0).sort((a, b) => b.count - a.count) : [];
@@ -99,7 +105,7 @@ export function AreaPanel({ model, area, expanded, onMap }: AreaPanelProps) {
         <div className="sp-area__compare-head">
           <h3 className="sp-label">Compared with the US</h3>
           {/* Beside the map the ring is chosen on the map: the key under this heading names it. */}
-          {!onMap && <Segmented aria-label="Distance compared with the US" options={rings.map((r) => ({ id: String(r.miles), label: `${r.miles} mi` }))} value={String(ring.miles)} onChange={(id) => areaRing.set(Number(id) as RingMiles)} />}
+          {!onMap && <Segmented aria-label="Distance compared with the US" options={rings.map((r) => ({ id: String(r.miles), label: `${r.miles} mi` }))} value={String(ring.miles)} onChange={(id) => onRing?.(Number(id) as RingMiles)} />}
         </div>
         <p className="sp-area__key">
           <span>
@@ -141,12 +147,20 @@ export function AreaPanel({ model, area, expanded, onMap }: AreaPanelProps) {
           <p className="sp-weak">None recorded.</p>
         ) : (
           <ul className="sp-brief__bars">
-            {amenities.map((a) => (
+            {amenities.map((a) => {
+              // Live data names its places: the nearest few under the row and in its name, so what a pin says on hover
+              // is not the pointer's alone (round 25). Sample data has no names to give, and none are made up.
+              const recorded = (area.places ?? []).filter((p) => p.category === a.category).sort((x, y) => x.distanceMi - y.distanceMi);
+              const named = recorded.slice(0, NAMED);
+              const more = recorded.length - named.length;
+              const shown = named.map((p) => `${p.name} ${mi(p.distanceMi)}`).concat(more > 0 ? [`${num(more)} more`] : []).join(' · ');
+              const spoken = named.length ? `; the nearest ${named.map((p) => `${p.name}, ${inMiles(p.distanceMi)}`).join('; ')}${more > 0 ? `; and ${num(more)} more` : ''}` : '';
+              return (
               <li
                 key={a.category}
                 className={`sp-brief__bar ${onMap ? 'sp-area__place' : ''} ${lit === categoryKey(a.category) ? 'is-lit' : ''}`.replace(/ +/g, ' ').trim()}
                 title={`${a.category}: ${a.count} within half a mile`}
-                {...linkProps(categoryKey(a.category), onMap, `${a.category}: ${num(a.count)} within half a mile, pinned on the map`)}
+                {...linkProps(categoryKey(a.category), onMap, `${a.category}: ${num(a.count)} within half a mile${spoken}, pinned on the map`)}
               >
                 <span className="sp-brief__bar-name">
                   {onMap && <i className={`sp-place-dot sp-place-dot--${placeLook(a.category).cls}`} aria-hidden="true" />}
@@ -156,8 +170,10 @@ export function AreaPanel({ model, area, expanded, onMap }: AreaPanelProps) {
                   <span className="sp-brief__bar-fill" style={{ width: `${(a.count / mostAmenity) * 100}%` }} />
                 </span>
                 <span className="sp-brief__bar-value">{num(a.count)}</span>
+                {named.length > 0 && <span className="sp-area__names">{shown}</span>}
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </div>
