@@ -348,6 +348,9 @@ async function findDomLeaks() {
   // A quiet listing is never drawn, whatever the suite's state: no block, slice or bar carries its record.
   const quietDrawn = await page.evaluate((ids) => ids.filter((id) => document.querySelector(`[data-key="${id}"], [data-seg="${id}"], [data-bar^="tl-${id}"]`)), ctx.quietIds);
   if (quietDrawn.length) found.push(`quiet listing drawn (${quietDrawn.join(', ')})`);
+  // Nor is it named in the address: a selection of one made in broker mode does not survive the switch (round 24).
+  const quietInUrl = await page.evaluate((ids) => ids.filter((id) => new URLSearchParams(location.search).get('select') === id), ctx.quietIds);
+  if (quietInUrl.length) found.push(`quiet listing in the address (${quietInUrl.join(', ')})`);
   // The date cannot be moved: no slider, no rollover band, and the as-of control opens nothing.
   const movable = await page.evaluate(() => ({
     sliders: document.querySelectorAll('[role="slider"]').length,
@@ -510,6 +513,8 @@ const transitions = [
   ['select Cirrus Energy on the Building view', '?view=building&floor=F6', async () => { await block('L13-U1').click(); }, 'Cirrus Energy'],
   ['select Cirrus Energy on the Floor plate', '?view=floor&floor=F6', async () => { await block('L13-U1').click(); }, 'Cirrus Energy'],
   ['select a block by keyboard (Enter) in the Stack', '?view=stack', async () => { await block('L13-U1').focus(); await page.keyboard.press('Enter'); }, 'Cirrus Energy'],
+  // Round 24: an unpublished listing chosen in broker mode kept its record id in the address after the switch.
+  ['an unpublished Cedar Springs listing selected, then the switch', '?building=P005&view=stack&select=CS-A06', async () => {}, null],
   ['open the Vantage Robotics deal record (Building, Floor 6, Deals)', '?view=building&floor=F6', async () => { await tab('Deals').click(); await page.getByRole('button', { name: /^Open record: Vantage Robotics deal/ }).first().click(); }, 'Vantage Robotics'],
   ['open an inquiry record (Floor view, Floor 8, Inquiries)', '?view=floor&floor=F8', async () => { await tab('Inquiries').click(); await page.getByRole('button', { name: /^Open record: .* inquiry/ }).first().click(); }, 'Would open'],
   ['log a call from the floor actions (Floor 3)', '?view=floor&floor=F3', async () => { await page.getByRole('button', { name: /^Log call · / }).click(); }, 'Argosy Partners'],

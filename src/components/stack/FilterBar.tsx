@@ -15,11 +15,18 @@ export interface FilterBarProps {
   alternatives?: boolean;
   /** A search query that is a space requirement: the bar offers to run it in Find space. */
   find?: SizeQuery | null;
+  /**
+   * The view cannot show suites (the Map): the answer is on the plan, so the bar takes the user there, to the
+   * Building tab (round 24: a search typed on the Map was answered nowhere on screen).
+   */
+  planElsewhere?: boolean;
   patch: (p: Partial<PlanState>) => void;
 }
 
+const TO_PLAN: Partial<PlanState> = { view: 'building' };
+
 /** Names the active filter above the plan and offers one Clear. */
-export function FilterBar({ label, alternatives, find, patch }: FilterBarProps) {
+export function FilterBar({ label, alternatives, find, planElsewhere, patch }: FilterBarProps) {
   if (find)
     return (
       <div className="sp-filterbar sp-filterbar--offer" role="status">
@@ -27,11 +34,26 @@ export function FilterBar({ label, alternatives, find, patch }: FilterBarProps) 
         <span>
           That reads as a space requirement: <strong>{label.replace(/^Find /, '')}</strong>.
         </span>
-        <Button size="sm" variant="brand" iconRight="chevron-right" className="sp-filterbar__find" onClick={() => patch(findFromQuery(find))}>
+        <Button size="sm" variant="brand" iconRight="chevron-right" className="sp-filterbar__find" onClick={() => patch({ ...findFromQuery(find), ...(planElsewhere ? TO_PLAN : {}) })}>
           Find {num(find.size)}
           {find.max ? `–${num(find.max)}` : ''} SF of space
         </Button>
         <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '' })}>
+          Clear
+        </Button>
+      </div>
+    );
+  if (planElsewhere && !label.startsWith('No '))
+    return (
+      <div className="sp-filterbar" role="status">
+        <Icon name="filter" size={14} />
+        <span>
+          On the plan: <strong><DotJoin parts={label.split(' · ')} /></strong>.
+        </span>
+        <Button size="sm" variant="brand" iconRight="chevron-right" className="sp-filterbar__find" onClick={() => patch(TO_PLAN)}>
+          Show on the plan
+        </Button>
+        <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '', req: null, max: null, by: null, inquiry: null, window: null, bucket: null })}>
           Clear
         </Button>
       </div>

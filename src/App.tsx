@@ -6,9 +6,9 @@ import { buildingById } from './data/mock/buildings';
 import { usePlanModel } from './model/usePlanModel';
 import { usePlanState, useDocumentTitle } from './state/usePlanState';
 import { useAnnouncement } from './state/useAnnouncement';
-import { canShowRollover } from './domain/safe';
+import { canShowRollover, shownToProspect } from './domain/safe';
 import { copyText, find, focused, on, print, readUrl, setRootData, shareUrl } from './lib/host';
-import { deriveMode, paletteOf, shownView } from './state/planState';
+import { deriveMode, paletteOf, shownView, type PlanState } from './state/planState';
 import { rentRollRows, toCsv } from './domain/exportCsv';
 import { Header, type ExportKind } from './components/shell/Header';
 import { Toolbar } from './components/shell/Toolbar';
@@ -106,7 +106,24 @@ class Stage extends Component<{ epoch: string; children: ReactNode }> {
 const PRINT_PREVIEW = new URLSearchParams(readUrl()).get('print') === '1';
 
 function Shell() {
-  const [rawState, patch] = usePlanState(TODAY);
+  const [rawState, setState] = usePlanState(TODAY);
+  // Turning Prospect-safe on keeps a chosen suite only if the prospect is shown it: one they are not (an
+  // unpublished listing) is dropped in the same change, before its record id reaches the address (round 24).
+  const stateRef = useRef(rawState);
+  stateRef.current = rawState;
+  const patch = useCallback(
+    (p: Partial<PlanState>) => {
+      const s = stateRef.current;
+      const hidden = p.safe === true && !s.safe && !!s.select && !shownToProspect(buildingById(s.building).property, s.select, TODAY);
+      setState(hidden ? { ...p, select: null } : p);
+    },
+    [setState],
+  );
+  // A link opened with the mode on is held to the same rule: a selection the prospect is not shown (a quiet
+  // listing's record id typed into a link) is taken out of the address as the page opens.
+  useEffect(() => {
+    if (rawState.safe && rawState.select && !shownToProspect(buildingById(rawState.building).property, rawState.select, TODAY)) setState({ select: null });
+  }, [rawState.safe, rawState.select, rawState.building, setState]);
   // The deals lens is withheld in prospect-safe mode: fall back to status rather than draw an empty lens.
   const state = rawState.safe && rawState.lens === 'deals' ? { ...rawState, lens: 'status' as const } : rawState;
   const { property } = buildingById(state.building);

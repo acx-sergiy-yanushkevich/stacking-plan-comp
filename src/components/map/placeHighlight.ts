@@ -27,7 +27,7 @@ export const placeHighlight = {
 export const usePlaceHighlight = (): string | null => useSyncExternalStore(placeHighlight.subscribe, placeHighlight.get, () => null);
 
 /** How a place group is drawn: the pin's (and the panel row's) colour class, and the icon a transit stop wears. */
-export function placeLook(group: string): { cls: string; icon?: 'bus' | 'train' } {
+export function placeLook(group: string): { cls: string; icon?: 'bus' | 'train'; letter?: string } {
   switch (group) {
     case 'Bus':
       return { cls: 'transit', icon: 'bus' };
@@ -42,9 +42,9 @@ export function placeLook(group: string): { cls: string; icon?: 'bus' | 'train' 
     case 'Fitness':
       return { cls: 'fitness' };
     case 'Banks':
-      return { cls: 'bank' };
+      return { cls: 'bank', letter: '$' };
     case 'Parking':
-      return { cls: 'parking' };
+      return { cls: 'parking', letter: 'P' };
     default:
       return { cls: 'other' };
   }

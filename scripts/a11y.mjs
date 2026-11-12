@@ -43,7 +43,7 @@ const page = await context.newPage();
 let failed = 0;
 for (const qs of states) {
   await open(page, base + qs + extra, qs.includes('map') ? 2000 : 300);
-  const results = await new AxeBuilder({ page }).disableRules(['region']).exclude('.maplibregl-map').analyze();
+  const results = await new AxeBuilder({ page }).disableRules(['region']).exclude('.maplibregl-canvas').analyze();
   const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
   const minor = results.violations.filter((v) => v.impact !== 'serious' && v.impact !== 'critical');
   console.log(`${qs}: ${serious.length} serious/critical, ${minor.length} minor`);
@@ -60,7 +60,7 @@ const phonePage = await phone.newPage();
 for (const qs of ['?view=stack', '?view=stack&window=12', '?view=stack&req=12000', '?view=timeline', '?view=map', '?view=stack&lens=expiry&legend=open', '?view=stack&q=12k%20direct%20by%20jun%202027', '?building=P002&view=stack', '?building=P005&view=stack&safe=1']) {
   await open(phonePage, base + qs.replace('&legend=open', '') + extra, qs.includes('map') ? 2000 : 300);
   if (qs.includes('legend=open')) await phonePage.locator('details summary').first().click();
-  const results = await new AxeBuilder({ page: phonePage }).disableRules(['region']).exclude('.maplibregl-map').analyze();
+  const results = await new AxeBuilder({ page: phonePage }).disableRules(['region']).exclude('.maplibregl-canvas').analyze();
   const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
   console.log(`phone ${qs}: ${serious.length} serious/critical, ${results.violations.length - serious.length} minor`);
   for (const v of results.violations) console.log(`  [${v.impact}] ${v.id}: ${v.help} (${v.nodes.length} nodes) e.g. ${v.nodes[0]?.target?.join(' ')}`);
