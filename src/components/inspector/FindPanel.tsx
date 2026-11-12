@@ -7,7 +7,7 @@ import { canShowDeals, canShowInquiries } from '../../domain/safe';
 import { Button, Chip, Icon, Segmented, SelectField, TextField } from '../ui';
 import { selectSegment, type Patch } from '../plan/actions';
 import { Section } from './parts';
-import { alternativesNote, checkNeededBy, chosenOption, type FitOption, type NearMiss } from '../../domain/finder';
+import { alternativesNote, checkNeededBy, chosenOption, rangeProblem, type FitOption, type NearMiss } from '../../domain/finder';
 import { setHoverKeys, setPinnedOption } from '../../state/hoverStore';
 
 export interface FindPanelProps {
@@ -41,6 +41,8 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
   // An inquiry is another prospect's requirement: in prospect-safe mode the panel does not read it at all.
   const inquiry = state.inquiry && canShowInquiries(safe) ? property.inquiries.find((i) => i.id === state.inquiry) ?? null : null;
   const req = model.req;
+  // A maximum below the minimum: both stay as typed, the field says why, and nothing is searched.
+  const maxProblem = req ? rangeProblem(req.size, req.max) : null;
   const largest = model.fits?.largestNow ?? { size: model.kpis.maxContiguous.size, floorName: model.kpis.maxContiguous.floorName ?? '' };
   const options = model.fits?.options ?? [];
   // Alternatives come from the model, already held to the chosen space type and maximum: the list and the plan agree.
@@ -100,6 +102,8 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
               min={0}
               step={500}
               placeholder="Optional"
+              aria-invalid={maxProblem ? true : undefined}
+              hint={maxProblem ? <span className="sp-field__error">{maxProblem}</span> : undefined}
               value={state.max ?? (inquiry ? inquiry.maxSize : '')}
               onChange={(e) => patch({ max: numberOrNull(e.target.value), inquiry: null, req: state.req ?? inquiry?.minSize ?? null, by: state.by ?? inquiry?.neededBy ?? null })}
             />
@@ -173,7 +177,11 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
         </div>
       </Section>
 
-      {!req ? (
+      {req && maxProblem ? (
+        <Section title="Options">
+          <p className="sp-ins__explain">Fix the range to see the space that fits: the maximum is below the minimum.</p>
+        </Section>
+      ) : !req ? (
         <Section title="Options">
           <p className="sp-ins__explain">Enter a requirement to rank every space that fits: single suites, contiguous runs, space marketed for later and two-floor combinations. Matching blocks light up in the plan.</p>
           <div className="sp-ins__chips" style={{ marginTop: 12 }}>

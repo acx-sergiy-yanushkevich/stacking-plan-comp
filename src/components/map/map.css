@@ -11,7 +11,7 @@
   background: var(--sp-color-card-2);
 }
 /* The key is card chrome above the canvas, never an overlay on the building. */
-.sp-map-legend { flex: none; padding: 8px 12px; background: var(--sp-color-card); border-bottom: 1px solid var(--sp-color-border); }
+.sp-map-legend { position: relative; z-index: 6; flex: none; padding: 8px 12px; background: var(--sp-color-card); border-bottom: 1px solid var(--sp-color-border); }
 /* The stage: the list of floors, then the map with its overlays. The list stands beside the map, so it
    never covers the building; the map is centred in the room that is left. */
 .sp-map__stage { position: relative; flex: 1; min-height: 0; display: flex; }

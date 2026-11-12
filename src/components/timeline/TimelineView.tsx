@@ -161,7 +161,7 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
           <span className="sp-weak">
             as of {fmtDate(model.asOf)}
             {!stackedMode && ` · ${num(model.kpis.leasable)} RSF leasable`}
-            {legendNote && <> <LegendInfo note={legendNote} /></>}
+            {legendNote && !stackedMode && <> <LegendInfo note={legendNote} /></>}
           </span>
         </div>
         {stackedMode ? (
@@ -170,7 +170,7 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
               {lensLabel} legend · {legendStates} states
               <Icon name="chevron-down" size={14} />
             </summary>
-            <Legend items={model.legend} compact figures title={lensLabel} note={legendNote} infoElsewhere />
+            <Legend items={model.legend} compact figures title={lensLabel} note={legendNote} />
           </details>
         ) : (
           <Legend items={model.legend} compact title={lensLabel} note={legendNote} infoElsewhere />

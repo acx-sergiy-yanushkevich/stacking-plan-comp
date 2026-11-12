@@ -87,7 +87,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
     label: 'Leased',
     value: pct(k.occupancy),
     note: `${pct(k.physical)} occupied`,
-    detail: `${pct(k.physical)} occupied${k.committed ? ` · ${num(k.committed)} SF signed, not in` : ''}`,
+    detail: `${pct(k.physical)} occupied${k.committed ? ` · ${num(k.committed)} SF signed, not yet in` : ''}`,
     delta: d ? { text: `${d.occupancy >= 0 ? '+' : '−'}${Math.abs(d.occupancy * 100).toFixed(1)} pts`, good: d.occupancy >= 0 } : null,
     // Pressed whenever the plan is coloured by status, as Pipeline is whenever it is coloured by deals.
     active: state.lens === 'status',
@@ -185,8 +185,10 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
         label: 'Pipeline',
         value: String(k.pipeline.deals),
         unit: k.pipeline.deals === 1 ? 'deal' : 'deals',
-        note: `${num(k.pipeline.sf)} SF requested`,
-        detail: `${k.pipeline.onVacancy} on vacancies · ${plural(k.pipeline.deals - k.pipeline.onVacancy, 'renewal')} · ${num(k.pipeline.sf)} SF requested`,
+        // Space in play, each space once: competing deals on one suite are alternatives (round 22: "requested"
+        // undercounted what the deals ask for, which the detail now gives).
+        note: `${num(k.pipeline.sf)} SF in play`,
+        detail: `${k.pipeline.onVacancy} on vacancies · ${plural(k.pipeline.deals - k.pipeline.onVacancy, 'renewal')} · ${num(k.pipeline.sf)} SF in play, each space once at its largest live deal (the deals request ${num(k.pipeline.requested)} SF in all)`,
         delta: d ? { text: `${d.pipelineDeals >= 0 ? '+' : '−'}${Math.abs(d.pipelineDeals)} ${Math.abs(d.pipelineDeals) === 1 ? 'deal' : 'deals'}`, good: d.pipelineDeals >= 0 } : null,
         active: state.lens === 'deals',
         title: 'Live deals on this building. Click to color the plan by pipeline.',

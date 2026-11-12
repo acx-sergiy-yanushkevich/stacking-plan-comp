@@ -14,6 +14,8 @@
 /* A fact of the label may be longer than a phone is wide: it wraps inside. */
 .sp-filterbar .sp-dotjoin__part { white-space: normal; }
 .sp-filterbar .sp-btn { margin-left: auto; }
+/* A search that reads as a requirement: the offer follows its sentence; Clear keeps the far end. */
+.sp-filterbar .sp-btn.sp-filterbar__find { margin-left: 0; flex: none; }
 
 /* Gutter */
 .sp-gutter__name { font-size: 15px; font-weight: 600; fill: var(--sp-color-text); }
@@ -89,7 +91,9 @@
 .sp-pfloor__suites > li + li { border-top: 1px solid var(--sp-color-border); }
 .sp-psuite { display: flex; align-items: flex-start; gap: 10px; width: 100%; min-height: 48px; padding: 8px 10px; text-align: left; color: var(--sp-color-text); background: var(--sp-color-card); }
 .sp-psuite.is-selected { background: var(--sp-color-brand-soft); box-shadow: inset 3px 0 0 var(--sp-color-brand); }
-.sp-psuite.is-dim { opacity: 0.45; }
+/* A dimmed row fades its words and swatch, not its badges: a badge at 45% failed contrast (2.76:1, round 22). */
+.sp-psuite.is-dim > *:not(.sp-psuite__badges),
+.sp-psuite.is-dim .sp-psuite__main > *:not(.sp-psuite__badges) { opacity: 0.45; }
 .sp-psuite.is-partial { box-shadow: inset 3px 0 0 var(--sp-color-border-strong); }
 .sp-psuite__swatch { flex: none; width: 14px; height: 14px; margin-top: 3px; border: 1px solid; border-radius: 4px; }
 .sp-psuite__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }

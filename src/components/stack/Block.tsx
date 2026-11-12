@@ -49,7 +49,7 @@ const CP = 12.5;
 /** One-letter state cue for blocks too narrow for any text. */
 const GLYPH: Partial<Record<Segment['kind'], string>> = { available: 'A', sublease: 'S', committed: 'C', forsale: '$', holdover: '!', mtm: '!', unmarketed: '?', projected: 'V' };
 /** The state in a word, for blocks too narrow for their name; same vocabulary as the legend. */
-const STATE_WORD: Partial<Record<Segment['kind'], string[]>> = { available: ['Available'], sublease: ['Sublease'], committed: ['Signed'], forsale: ['For sale'], unmarketed: ['Unaccounted'], projected: ['Vacant'] };
+const STATE_WORD: Partial<Record<Segment['kind'], string[]>> = { available: ['Available'], sublease: ['Sublease'], committed: ['Signed'], forsale: ['For sale'], unmarketed: ['No record'], projected: ['Vacant'] };
 
 /**
  * A wrapped line as it is drawn. Where the wrap falls at a "·" ("Infinity Info Systems · sublease" on two

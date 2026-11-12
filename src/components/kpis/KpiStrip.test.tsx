@@ -94,17 +94,17 @@ describe('KpiStrip', () => {
       'find-largest': 'Floor 12 · direct',
       'expiry-worklist': '16.7% of leased · 4 leases',
       timeline: 'SF-weighted',
-      deals: '57,800 SF requested',
+      deals: '57,800 SF in play',
     });
     // What the short note leaves out is one hover (or one screen-reader stop) away, never lost.
     const whole: Record<string, string> = {
-      status: '80.2% occupied · 8,000 SF signed, not in',
+      status: '80.2% occupied · 8,000 SF signed, not yet in',
       // The month and its year are kept together by a no-break space.
       find: "26,200 direct · 7,000 sublease · +21,400 Apr\u00a0'27",
       'find-largest': 'Floor 12 · direct · contiguous',
       'expiry-worklist': '16.7% of leased · 4 leases',
       timeline: 'In-place, SF-weighted',
-      deals: '6 on vacancies · 3 renewals · 57,800 SF requested',
+      deals: '6 on vacancies · 3 renewals · 57,800 SF in play, each space once at its largest live deal (the deals request 75,800 SF in all)',
     };
     for (const [id, detail] of Object.entries(whole)) {
       const el = kpiOf(html, id);
@@ -120,7 +120,7 @@ describe('KpiStrip', () => {
     expect(attr(kpiOf(html, 'timeline'), 'title')).toContain(`${kpis.walt.toFixed(4)} years`);
     // The name starts with the label and the exact figure with its unit.
     expect(spoken(kpiOf(html, 'find'))).toBe("Available 33,200 SF 26,200 direct · 7,000 sublease · +21,400 Apr '27");
-    expect(spoken(kpiOf(html, 'status'))).toBe('Leased 86.1% 80.2% occupied · 8,000 SF signed, not in');
+    expect(spoken(kpiOf(html, 'status'))).toBe('Leased 86.1% 80.2% occupied · 8,000 SF signed, not yet in');
   });
 
   it('never abbreviates a figure: each is printed whole, with its unit', () => {

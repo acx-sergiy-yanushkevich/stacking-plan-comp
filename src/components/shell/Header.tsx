@@ -145,6 +145,8 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
       <span>{num(kpis.leasable)} RSF leasable</span>
       <span className="sp-dot">·</span>
       <span>{property.floors.length} floors</span>
+      {/* The listing and the latest change wrap together: "Latest change" is never a line of its own (round 22). */}
+      <span className="sp-header__tail">
       {/* One more fact on the facts row, in the same quiet type: the title leads, the listing does not compete with it. */}
       {property.saleListing &&
         (state.safe ? (
@@ -160,6 +162,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
         ))}
       {/* The last fact, after the same separator: when the plan last changed. */}
       {verified}
+      </span>
     </div>
   );
 

@@ -97,6 +97,8 @@ export function PrintLayout({ model, state, area = null, visible }: PrintLayoutP
           <h1>{p.name}</h1>
           <div className="sp-print__sub">
             {p.propertyClass} · {p.street}, {p.city}, {p.state} · {num(k.leasable)} RSF leasable · {p.floors.length} floors
+            {/* The listing as the header says it: the price to the owner, the fact alone to a prospect. */}
+            {p.saleListing && (safe ? ' · Listed for sale' : ` · For sale ${usd0(p.saleListing.price)} · ${usd(p.saleListing.price / k.leasable)}/RSF${p.saleListing.capRate !== null ? ` · ${pct(p.saleListing.capRate)} cap` : ''}`)}
           </div>
         </div>
         <div className="sp-print__meta">
@@ -155,7 +157,7 @@ export function PrintLayout({ model, state, area = null, visible }: PrintLayoutP
             <td colSpan={3}>Total · {num(k.leasable)} RSF leasable</td>
             <td className="num">{num(k.leased)} leased</td>
             <td colSpan={rows[0].length - 4}>
-              {pct(k.occupancy)} leased · {num(k.availableDirect + k.availableSublease)} SF available · {num(k.committed)} SF signed, not in
+              {pct(k.occupancy)} leased · {num(k.availableDirect + k.availableSublease)} SF available · {num(k.committed)} SF signed, not yet in
               {/* Why the rows add up to more than the leased figure is a data issue, and an owner's matter:
                   the owner report explains it; a prospect is shown no data issue, on screen or on paper. */}
               {overBy > 0 &&
@@ -167,7 +169,7 @@ export function PrintLayout({ model, state, area = null, visible }: PrintLayoutP
       </table>
       {recorded > 0 && (
         <p className="sp-print__note sp-print__note--recorded">
-          Suite areas are as recorded: the leased, sublease and committed rows add up to {num(recorded)} SF. Floor totals, and the {num(k.leased)} SF leased, are capped at each floor’s leasable area.
+          Suite areas are as recorded: the leased, sublease and signed-not-yet-in rows add up to {num(recorded)} SF. Floor totals, and the {num(k.leased)} SF leased, are capped at each floor’s leasable area.
         </p>
       )}
       {unplaced > 0 && (

@@ -47,7 +47,9 @@
 .sp-legend__item { position: relative; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; border-radius: 3px; }
 .sp-legend__item[tabindex]:focus-visible { outline: 2px solid var(--sp-color-focus, var(--sp-color-brand)); outline-offset: 2px; }
 /* An entry's figures, on hover or focus: under it, from its left edge, so a first entry's tip stays in the card. */
-.sp-legend .sp-legend__tip { left: 0; transform: none; white-space: nowrap; }
+.sp-legend .sp-legend__tip { left: 0; transform: none; white-space: normal; width: max-content; max-width: min(320px, calc(100vw - 32px)); }
+/* An entry in the right half of its legend hangs its tip from its right edge, so the tip stays in the card. */
+.sp-legend .sp-legend__tip--end { left: auto; right: 0; }
 .sp-legend__title { font-weight: 600; color: var(--sp-color-text); }
 .sp-legend__swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid; flex: none; }
 .sp-legend__swatch--dashed { border-style: dashed; }
@@ -60,9 +62,11 @@
 .sp-legend__note { width: 100%; font-size: var(--sp-text-11); color: var(--sp-color-text-faint); }
 /* On screen the legend's caveats sit behind this mark: its tooltip and accessible name are the note. */
 .sp-legend__infowrap { vertical-align: middle; }
-.sp-legend__info { display: inline-flex; align-items: center; justify-content: center; padding: 2px; margin: -2px; border: 0; background: none; color: var(--sp-color-text-faint); cursor: pointer; border-radius: 50%; }
+.sp-legend__info { position: relative; display: inline-flex; align-items: center; justify-content: center; padding: 2px; margin: -2px; border: 0; background: none; color: var(--sp-color-text-faint); cursor: pointer; border-radius: 50%; }
 .sp-legend__pop { width: min(340px, calc(100vw - 32px)); }
 .sp-legend__poptext { margin: 0; font-size: var(--sp-text-12); line-height: 1.45; color: var(--sp-color-text); white-space: normal; }
+/* A finger needs 44 px: the mark stays small, its hit area does not. */
+@media (pointer: coarse) { .sp-legend__info::after { content: ''; position: absolute; inset: -13px; } }
 .sp-legend__info:hover, .sp-legend__info:focus-visible { color: var(--sp-color-text-weak); }
 .sp-legend__info:focus-visible { outline: 2px solid var(--sp-color-focus, var(--sp-color-brand)); outline-offset: 2px; }
 

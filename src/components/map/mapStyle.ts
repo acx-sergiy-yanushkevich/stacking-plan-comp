@@ -4,7 +4,7 @@ import type { ExtrusionCollection, ExtrusionProperties } from '../../domain/geom
 import { num } from '../../domain/format';
 import { stageRank, toneFor, type Tone } from '../../domain/lenses';
 import { canShowIssues, canShowTenantRisk } from '../../domain/safe';
-import { askingSegments, furthestStage, inPlaceSegments } from '../building/floorFact';
+import { askingSegments, furthestStage, inPlaceSegments, leaseDrafted } from '../building/floorFact';
 import { nextExpiry } from '../floor/floorData';
 import type { GeoPolygon } from '../../domain/types';
 import type { Lens } from '../../state/planState';
@@ -102,6 +102,8 @@ export function swatchTones(f: FloorView, lens: Lens, safe: boolean): { tone: To
   } else if (lens === 'deals') {
     const stage = furthestStage(f, safe);
     if (stage) tone = `deal-${stageRank(stage)}` as Tone;
+    // The label ends with "lease drafted" for a signed lease's deal, the furthest stage: the swatch is it.
+    if (leaseDrafted(f, safe)) tone = 'deal-3';
   } else if (lens === 'rent') {
     const asking = askingSegments(f, safe);
     const named = asking.length > 0 ? asking : inPlaceSegments(f, safe);

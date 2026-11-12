@@ -81,23 +81,30 @@ export function entryFigures(i: Pick<LegendItem, 'sf' | 'share' | 'overlay'>): s
  * tooltip, and a screen reader reads them with its name, so the figures are not a mouse-only title (round 21).
  */
 function Entry({ label, figures, swatch, extra, showNum, num: numText }: { label: string; figures: string; swatch: ReactNode; extra?: boolean; showNum: boolean; num: string }) {
-  const [tip, setTip] = useState(false);
+  const [tip, setTip] = useState<null | 'start' | 'end'>(null);
   const id = useId();
+  // The tip hangs from the entry's left edge, or from its right edge when the entry is in the right half of
+  // its legend, so a tip never runs out of the card (round 22: "Vacant, not listed: 5,400 S").
+  const open = (e: { currentTarget: HTMLElement }) => {
+    const item = e.currentTarget.getBoundingClientRect();
+    const box = e.currentTarget.closest('.sp-legend')?.getBoundingClientRect();
+    setTip(box && item.left - box.left > box.width / 2 ? 'end' : 'start');
+  };
   return (
     <span
       className={`sp-legend__item ${extra ? 'sp-legend__item--extra' : ''}`.trim()}
       tabIndex={showNum ? undefined : 0}
-      onMouseEnter={() => setTip(true)}
-      onMouseLeave={() => setTip(false)}
-      onFocus={() => setTip(true)}
-      onBlur={() => setTip(false)}
-      onKeyDown={(e) => e.key === 'Escape' && setTip(false)}
+      onMouseEnter={open}
+      onMouseLeave={() => setTip(null)}
+      onFocus={open}
+      onBlur={() => setTip(null)}
+      onKeyDown={(e) => e.key === 'Escape' && setTip(null)}
     >
       {swatch}
       <span className="sp-legend__label">{label}</span>
       {showNum ? <span className="sp-legend__num">{numText}</span> : <span className="sp-sr-only">: {figures}</span>}
       {tip && !showNum && (
-        <span role="tooltip" id={id} className="sp-tip sp-tip--bottom sp-legend__tip" aria-hidden="true">
+        <span role="tooltip" id={id} className={`sp-tip sp-tip--bottom sp-legend__tip ${tip === 'end' ? 'sp-legend__tip--end' : ''}`} aria-hidden="true">
           {label}: {figures}
         </span>
       )}
@@ -133,7 +140,7 @@ export function LegendInfo({ note }: { note: string }) {
 export function Legend({ items, extras, note, id, compact, full, figures, title, infoElsewhere }: LegendProps) {
   const showNum = !!(full || figures);
   return (
-    <div className="sp-legend" id={id} aria-label={title ? `${title} legend` : 'Legend'}>
+    <div className="sp-legend" id={id} role="group" aria-label={title ? `${title} legend` : 'Legend'}>
       {title && <span className="sp-legend__title">{title}</span>}
       {items
         .filter((i) => i.sf > 0 || !compact)

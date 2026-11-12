@@ -43,7 +43,7 @@ export function findIssues(p: Property, floors: FloorView[], today: ISODate): Is
             id: `nounits-${l.id}`,
             severity: 'error',
             title: `${l.tenant} is missing from the plan`,
-            detail: `Lease is on ${floorName(l.floorId)} but has no Unit records, so it cannot be drawn. Unaccounted area on that floor may be its space.`,
+            detail: `Lease is on ${floorName(l.floorId)} but has no Unit records, so it cannot be drawn. Space on that floor with no lease or listing may be its space.`,
             fix: 'Add unit',
             floorId: l.floorId,
             segKey: `${l.floorId}-gap`,

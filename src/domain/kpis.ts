@@ -68,7 +68,8 @@ export interface Kpis {
   expiring12Leases: number;
   /** Distinct leases drawn on the plan (leased, holdover, MTM, sublease or committed). */
   leaseCount: number;
-  pipeline: { deals: number; onVacancy: number; sf: number };
+  /** `sf`: the space in play, each space once at its largest live deal; `requested`: what every live deal asks for. */
+  pipeline: { deals: number; onVacancy: number; sf: number; requested: number };
 }
 
 /** The building's largest contiguous block of direct space: its size, its floor and the suites that make it up. */
@@ -143,6 +144,7 @@ export function computeKpis(p: Property, floors: FloorView[], asOf: ISODate): Kp
   const seen = new Set<string>();
   let onVacancy = 0;
   let pipelineSf = 0;
+  let requested = 0;
   for (const s of all) {
     const vacancyDeals = activeDeals([...(s.availability?.deals ?? []), ...(s.marketed?.deals ?? [])]).filter((d) => !seen.has(d.id));
     vacancyDeals.forEach((d) => seen.add(d.id));
@@ -154,6 +156,7 @@ export function computeKpis(p: Property, floors: FloorView[], asOf: ISODate): Kp
     renewals.forEach((d) => seen.add(d.id));
     const live = [...vacancyDeals, ...renewals];
     if (live.length) pipelineSf += Math.min(s.size, Math.max(...live.map((d) => d.size)));
+    requested += live.reduce((t, d) => t + d.size, 0);
   }
 
   return {
@@ -188,7 +191,7 @@ export function computeKpis(p: Property, floors: FloorView[], asOf: ISODate): Kp
     expiring12,
     expiring12Leases,
     leaseCount,
-    pipeline: { deals: seen.size, onVacancy, sf: pipelineSf },
+    pipeline: { deals: seen.size, onVacancy, sf: pipelineSf, requested },
   };
 }
 
