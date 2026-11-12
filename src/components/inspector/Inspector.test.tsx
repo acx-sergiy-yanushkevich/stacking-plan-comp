@@ -328,13 +328,17 @@ describe('prospect-safe availability records (round 19)', () => {
 });
 
 describe('Find space: stacked floors beyond two (round 23)', () => {
-  it('Legacy West, 60,000 SF: the row is "Floors 18–20 · three floors", tagged as stacked floors, 78,000 SF', () => {
+  it('Legacy West, 60,000 SF: the row is "Floors 18–20 · three floors", 78,000 SF, with the count said once', () => {
     const { html } = render('?building=P002&view=stack&req=60000&mode=find', legacyWest);
     const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-    expect(text).toContain('Floors 18–20 · three floors stacked floors');
+    expect(text).toContain('Floors 18–20 · three floors Ste 2000');
     expect(text).toContain('Ste 2000 on Floor 20, Ste 1900 on Floor 19, Ste 1800 on Floor 18');
     expect(text).toContain('78,000 SF');
     expect(text).not.toContain('two floors');
     expect(text).not.toMatch(/No space fits/);
+    // A pair keeps its tag: Granite Peak's range is offered both pairs and the three floors.
+    const pairs = render('?building=P002&view=stack&inquiry=LW-I01&mode=find', legacyWest).html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    expect(pairs).toContain('Floors 19–20 two floors');
+    expect(pairs).toContain('Floors 18–20 · three floors Ste 2000');
   });
 });

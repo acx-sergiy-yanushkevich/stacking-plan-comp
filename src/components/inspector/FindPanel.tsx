@@ -255,8 +255,8 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
                     <div className="sp-ins__row-main">
                       <div className="sp-ins__row-title">
                         <span>{o.floorName}</span>
-                        {/* The name says how many floors when there are more than two ("Floors 18–20 · three floors"). */}
-                        {o.multiFloor && <span className="sp-ins__tag">stacked floors</span>}
+                        {/* The count is said once: by this tag for a pair, by the name past two ("Floors 18–20 · three floors"). */}
+                        {o.multiFloor && !o.floorName.includes(' floors') && <span className="sp-ins__tag">two floors</span>}
                         {o.contiguous && <span className="sp-ins__tag">contiguous</span>}
                         {o.notMarketed && <span className="sp-ins__tag">not marketed</span>}
                       </div>
