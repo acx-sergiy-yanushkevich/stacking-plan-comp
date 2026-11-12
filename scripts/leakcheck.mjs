@@ -13,29 +13,65 @@
 // done (a block is selected, a deal record opened, a tenant searched, a tab opened, a block hovered, the
 // date moved), then the Prospect-safe switch is clicked and the same rules are applied at once, with no
 // wait, and again after the app has settled. Last, the CSV export, today and for a later date.
+//
+// Every building that opens is checked (round 23: only the default one was). Names come from all of them,
+// so a name of one building is a leak on any other; each building's lease dates, quiet listings, inquiries
+// and broker figures are read from its own records, and it gets its own set of prospect-safe states.
 import { chromium } from 'playwright';
 import { readFileSync } from 'node:fs';
+import { open, quietFonts } from './loadPage.mjs';
 
 const base = process.env.BASE ?? 'http://localhost:4180/';
 // ONLY=timeline node scripts/leakcheck.mjs runs the cases whose label contains the text (for a quick re-check).
 const only = process.env.ONLY ?? '';
 const wanted = (label) => !only || label.toLowerCase().includes(only.toLowerCase());
-const src = readFileSync(new URL('../src/data/mock/property.ts', import.meta.url), 'utf8');
-const names = new Set();
-for (const re of [/tenant: '([^']+)'/g, /tenantContact: '([^']+)'/g, /deal\('([^']+)'/g, /prospect: '([^']+)'/g, /owner: '([^']+)'/g, /by: '([^']+)'/g, /broker: '([^']+)'/g]) {
-  for (const m of src.matchAll(re)) names.add(m[1]);
+const mockFile = (rel) => readFileSync(new URL(`../src/data/mock/${rel}`, import.meta.url), 'utf8');
+const src = mockFile('property.ts');
+// Every other building that opens, as `buildings/index.ts` lists it: its id and its records.
+const others = [...mockFile('buildings/index.ts').matchAll(/from '\.\/(\w+)'/g)]
+  .map((m) => m[1])
+  .filter((f) => f !== 'kit')
+  .map((f) => {
+    const text = mockFile(`buildings/${f}.ts`);
+    return { file: f, text, id: /^ {2}id: '(P\d+)'/m.exec(text)?.[1], name: /^ {2}name: '([^']+)'/m.exec(text)?.[1], owner: /^ {2}owner: '([^']+)'/m.exec(text)?.[1] };
+  });
+if (others.length < 3 || others.some((b) => !b.id || !b.name)) {
+  console.error(`Could not read the other buildings from buildings/index.ts (${others.map((b) => b.file).join(', ')}): they would go unchecked.`);
+  process.exit(2);
 }
-// Property-level names that legitimately stay visible.
-for (const ok of ['Lakeside Realty Partners', 'Preston Park Financial Center']) names.delete(ok);
+const names = new Set();
+for (const text of [src, ...others.map((b) => b.text)])
+  for (const re of [/tenant: '([^']+)'/g, /tenantContact: '([^']+)'/g, /deal\('([^']+)'/g, /prospect: '([^']+)'/g, /owner: '([^']+)'/g, /by: '([^']+)'/g, /broker: '([^']+)'/g]) {
+    for (const m of text.matchAll(re)) names.add(m[1]);
+  }
+// Property-level names that legitimately stay visible: each building's name and owner (a sale listing's
+// broker is not one of them, unless it is the owner).
+for (const ok of ['Lakeside Realty Partners', 'Preston Park Financial Center', ...others.flatMap((b) => [b.name, b.owner])]) names.delete(ok);
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+// In-place lease rates render as a single value "$29/SF/yr FSG"; asking rents are ranges "$31–$33/SF/yr".
+const inPlaceRent = /(?<![–-])\$\d[\d.,]*\/SF\/(yr|mo)\s(FSG|MG|NNN)/;
+
+const TODAY = /export const TODAY[^=]*= '(\d{4}-\d{2}-\d{2})'/.exec(src)?.[1];
+if (!TODAY) {
+  console.error('Could not read TODAY from the mock data.');
+  process.exit(2);
+}
+
+/**
+ * What one building's records say must not reach a prospect: its inquiry sources, quiet listings, lease
+ * dates and inquiries. `strict` (the default building) also proves the records hold enough of each for the
+ * checks to mean something; the other buildings are checked for whatever they hold.
+ */
+function contextOf(src, strict) {
 // Where an inquiry came from (LoopNet, Crexi, a referral) is only ever shown with the inquiry itself.
 const sources = new Set([...src.matchAll(/source: '([^']+)'/g)].map((m) => m[1]));
 // Quiet listings: an availability that is not published must not be advertised to a prospect. The
 // plan badges an occupied suite marketed for later "Avail Apr '27"; build that badge for each one.
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const quietBadges = new Set();
 for (const m of src.matchAll(/avail\(\{[^}]*?availableFrom: '(\d{4})-(\d{2})-\d{2}'[^}]*?published: false/g)) quietBadges.add(`Avail ${MONTHS[Number(m[2]) - 1]} '${m[1].slice(2)}`);
-// In-place lease rates render as a single value "$29/SF/yr FSG"; asking rents are ranges "$31–$33/SF/yr".
-const inPlaceRent = /(?<![–-])\$\d[\d.,]*\/SF\/(yr|mo)\s(FSG|MG|NNN)/;
+// A building made with the kit prefixes its record ids ("CS-A05"): the plan's keys carry the prefix.
+const prefix = /\bkit\('(\w+)'/.exec(src)?.[1];
+const recordId = (id) => (prefix ? `${prefix}-${id}` : id);
 
 // ── Lease dates ────────────────────────────────────────────────────────────────────────────────
 // Every commencement, expiration and termination date in the mock, in each form the app writes a
@@ -43,15 +79,10 @@ const inPlaceRent = /(?<![–-])\$\d[\d.,]*\/SF\/(yr|mo)\s(FSG|MG|NNN)/;
 // of them: a sublease ends with the lease it is cut from. A date that is also a date of the offer
 // (available from) or of the page itself (today, a record's last change) is not a lease date to a
 // reader, so it is left out; for the month forms, so is its whole month.
-const TODAY = /export const TODAY[^=]*= '(\d{4}-\d{2}-\d{2})'/.exec(src)?.[1];
-if (!TODAY) {
-  console.error('Could not read TODAY from the mock data.');
-  process.exit(2);
-}
 const isoDates = (re) => [...src.matchAll(re)].map((m) => m[1]);
 const subleaseEnds = isoDates(/\bsubleaseExpiration: '(\d{4}-\d{2}-\d{2})'/g);
 const leaseDateList = [...isoDates(/\b(?:commencement|expiration|termination): '(\d{4}-\d{2}-\d{2})'/g), ...subleaseEnds];
-const publicDates = new Set([TODAY, ...isoDates(/\b(?:availableFrom|verifiedAt|dataUpdated|at|date|updated|neededBy|asOf): '(\d{4}-\d{2}-\d{2})'/g)]);
+const publicDates = new Set([TODAY, ...isoDates(/\b(?:availableFrom|verifiedAt|dataUpdated|at|date|updated|neededBy|asOf): '(\d{4}-\d{2}-\d{2})'/g), ...isoDates(/\bkit\('\w+', '(\d{4}-\d{2}-\d{2})'/g)]);
 const long = (d) => `${MONTHS[Number(d.slice(5, 7)) - 1]} ${Number(d.slice(8, 10))}, ${d.slice(0, 4)}`;
 const monthYear = (d) => `${MONTHS[Number(d.slice(5, 7)) - 1]} ${d.slice(0, 4)}`;
 const monthShort = (d) => `${MONTHS[Number(d.slice(5, 7)) - 1]} '${d.slice(2, 4)}`;
@@ -66,12 +97,12 @@ for (const d of leaseDates) {
     leaseDateWords.set(monthShort(d), d);
   }
 }
-if (leaseDates.size < 20) {
+if (strict && leaseDates.size < 20) {
   console.error(`Only ${leaseDates.size} lease dates were read from the mock data: the check would prove little.`);
   process.exit(2);
 }
 // The sublease end must really be among the dates looked for, in every form: it is the case this list was extended for.
-if (!subleaseEnds.length || !subleaseEnds.every((d) => leaseDates.has(d) && leaseDateWords.get(long(d)) === d && leaseDateWords.get(monthYear(d)) === d && leaseDateWords.get(monthShort(d)) === d)) {
+if (strict && (!subleaseEnds.length || !subleaseEnds.every((d) => leaseDates.has(d) && leaseDateWords.get(long(d)) === d && leaseDateWords.get(monthYear(d)) === d && leaseDateWords.get(monthShort(d)) === d))) {
   console.error('The sublease end date of the mock is not checked in every form (it collides with a public date): the check would prove nothing about it.');
   process.exit(2);
 }
@@ -79,8 +110,8 @@ if (!subleaseEnds.length || !subleaseEnds.every((d) => leaseDates.has(d) && leas
 // ── Inquiries ──────────────────────────────────────────────────────────────────────────────────
 // Each open inquiry: its id (it must not stay in the URL) and its size range as the app writes it
 // ("15,000–22,000"), which is another prospect's requirement whether or not the name is beside it.
-const inquiryList = [...src.matchAll(/\{ id: '(I\d+)', prospect: '[^']+', minSize: (\d+), maxSize: (\d+), neededBy: '(\d{4}-\d{2}-\d{2})'/g)].map((m) => ({ id: m[1], range: `${Number(m[2]).toLocaleString('en-US')}–${Number(m[3]).toLocaleString('en-US')}`, neededBy: m[4] }));
-if (inquiryList.length < 3) {
+const inquiryList = [...src.matchAll(/\{ id: '((?:[A-Z]+-)?I\d+)', prospect: '[^']+', minSize: (\d+), maxSize: (\d+), neededBy: '(\d{4}-\d{2}-\d{2})'/g)].map((m) => ({ id: m[1], range: `${Number(m[2]).toLocaleString('en-US')}–${Number(m[3]).toLocaleString('en-US')}`, neededBy: m[4] }));
+if (strict && inquiryList.length < 3) {
   console.error(`Only ${inquiryList.length} inquiries were read from the mock data: the inquiry checks would prove little.`);
   process.exit(2);
 }
@@ -92,13 +123,18 @@ const availBlocks = [...src.matchAll(/avail\(\{([^}]*)\}/g)].map((m) => m[1]);
 const field = (b, name) => new RegExp(`\\b${name}: '?([^,'\\s]+)'?`).exec(b)?.[1];
 const askOf = (b) => `$${field(b, 'rentLow')}–$${field(b, 'rentHigh')}/SF/`;
 const quiet = availBlocks.filter((b) => /published: false/.test(b));
-const quietIds = quiet.map((b) => field(b, 'id'));
+const quietIds = quiet.map((b) => recordId(field(b, 'id')));
 const publishedAsks = new Set(availBlocks.filter((b) => !/published: false/.test(b)).map(askOf));
 const quietAsks = quiet.map(askOf).filter((a) => !publishedAsks.has(a));
-if (!quietIds.length) {
+if (strict && !quietIds.length) {
   console.error('The mock data has no unpublished availability: the quiet-listing checks would prove nothing.');
   process.exit(2);
 }
+return { sources, quietBadges, leaseDateWords, inquiryList, quietIds, quietAsks, prefix };
+}
+
+/** The building being checked: its records' context, then its broker view's figures (`brokerFacts`). */
+let ctx = contextOf(src, true);
 
 // Later as-of dates each safe link is loaded with, in months from today.
 const AHEAD = [3, 6, 12, 24];
@@ -186,6 +222,7 @@ const states = [
 
 const browser = await chromium.launch({ channel: 'chrome' });
 const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, reducedMotion: 'reduce', acceptDownloads: true });
+await quietFonts(context);
 const page = await context.newPage();
 let leaks = 0;
 
@@ -242,27 +279,27 @@ function findLeaks(text, { q } = {}) {
   if (q && text.toLowerCase().includes(q.toLowerCase())) found.push(`search query "${q}" echoed`);
   for (const w of ['Holdover', 'MTM', 'Month-to-month', 'LOI', 'Proposal', 'Lease Out', 'term withheld', 'Term withheld']) if (new RegExp(`\\b${w}\\b`).test(text)) found.push(`risk/deal word "${w}"`);
   if (/\bTour\b/.test(text.replace(/Schedule tour|Tour scheduled/g, ''))) found.push('deal word "Tour"');
-  for (const w of sources) if (new RegExp(`\\b${w}\\b`).test(text)) found.push(`inquiry source "${w}"`);
+  for (const w of ctx.sources) if (new RegExp(`\\b${w}\\b`).test(text)) found.push(`inquiry source "${w}"`);
   for (const w of ['in holdover', 'month-to-month', 'Data gap', 'unaccounted', 'Over-allocated by', 'Inquiries that fit', 'Match an open inquiry']) if (text.toLowerCase().includes(w.toLowerCase())) found.push(`issue/inquiry wording "${w}"`);
   for (const w of ['Open record', 'New deal', 'Log call', 'Log a call', 'Create availability', 'Start renewal', 'Open lease', 'Would open', 'Would create']) if (text.includes(w)) found.push(`record action "${w}"`);
   // A quiet listing: its badge, its inspector section, its worklist chip and the listing status itself.
-  for (const w of [...quietBadges, 'Marketed for later', 'Marketed from', 'marketed from', 'Quiet', 'not published']) if (new RegExp(`\\b${w}`).test(text)) found.push(`quiet listing "${w}"`);
-  if (quietBadges.size && /Occupied, marketed for later/.test(text) && !/Occupied, marketed for later\s*(Nothing marketed ahead|—)/.test(text)) found.push('quiet listing counted in Coming supply');
+  for (const w of [...ctx.quietBadges, 'Marketed for later', 'Marketed from', 'marketed from', 'Quiet', 'not published']) if (new RegExp(`\\b${w}`).test(text)) found.push(`quiet listing "${w}"`);
+  if (ctx.quietBadges.size && /Occupied, marketed for later/.test(text) && !/Occupied, marketed for later\s*(Nothing marketed ahead|—)/.test(text)) found.push('quiet listing counted in Coming supply');
   // Lease terms: no lease in place says when it ends, and none is singled out as the one that does not.
   const term = /\bExp(ires|ired)? (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)|\bTerm not disclosed|\bNext expiry|\bLease expirations|\bRenewal worklist|\bEnds (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/.exec(text);
   if (term) found.push(`lease term "${term[0]}"`);
   const rent = inPlaceRent.exec(text);
   if (rent) found.push(`rent "${rent[0]}"`);
   // No date of any lease, in any form the app writes one.
-  for (const [word, d] of leaseDateWords) if (text.includes(word)) found.push(`lease date "${word}" (${d})`);
+  for (const [word, d] of ctx.leaseDateWords) if (text.includes(word)) found.push(`lease date "${word}" (${d})`);
   const dated = /\b(Leased since|Moves in|moves in|Commence[sd]?|Vacated|Vacates|Projected vacancy|vacated)\b/.exec(text);
   if (dated) found.push(`lease date wording "${dated[0]}"`);
   // No total by period, no expiring figure, no lease count: with every suite's RSF on the page they name suites.
   const period = /< ?12 mo\b|\b\d–\d yr\b|\b\d\+ yr\b|\bLease rollover\b|\bRollover from\b|\bShare of (leased|listed)|\b\d+ leases?\b|\bleases? ending\b/.exec(text);
   if (period) found.push(`rollover by period "${period[0]}"`);
-  if (expiringFigure && text.includes(expiringFigure)) found.push(`the expiring figure "${expiringFigure}"`);
+  if (ctx.expiringFigure && text.includes(ctx.expiringFigure)) found.push(`the expiring figure "${ctx.expiringFigure}"`);
   // No WALT figure: not the card's two decimals, not the tooltip's four, not in months, in any output.
-  const walt = waltFigure ? new RegExp(`\\b${waltFigure.replace('.', '\\.')}\\s*(yr|years)\\b`).exec(text) : null;
+  const walt = ctx.waltFigure ? new RegExp(`\\b${ctx.waltFigure.replace('.', '\\.')}\\s*(yr|years)\\b`).exec(text) : null;
   if (walt) found.push(`the WALT figure "${walt[0].replace(/\s+/g, ' ')}"`);
   const waltWords = /WALT[^\n]{0,40}\b\d+\.\d+\s*(yr|years)\b|\b\d+\.\d{4} years\b|lease term remaining: \d|SF-weighted/i.exec(text);
   if (waltWords) found.push(`a WALT figure is stated: "${waltWords[0]}"`);
@@ -272,7 +309,7 @@ function findLeaks(text, { q } = {}) {
   // No inquiry: not the word, not its id in the URL, not its size range as a requirement.
   const inq = /inquir/i.exec(text);
   if (inq) found.push(`inquiry wording "${text.slice(Math.max(0, inq.index - 20), inq.index + 30).replace(/\s+/g, ' ')}"`);
-  for (const i of inquiryList) if (text.includes(i.range)) found.push(`the size range of inquiry ${i.id} "${i.range}"`);
+  for (const i of ctx.inquiryList) if (text.includes(i.range)) found.push(`the size range of inquiry ${i.id} "${i.range}"`);
   // No lens that colours by something withheld: not in the URL either.
   const lens = /[?&]lens=(expiry|deals)\b/.exec(text);
   if (lens) found.push(`a withheld lens in the URL "${lens[0]}"`);
@@ -281,7 +318,7 @@ function findLeaks(text, { q } = {}) {
   // The plan is today's: no other as-of date in the URL, no change chip against today.
   if (/[?&]asOf=/.test(text)) found.push('an as-of date in the URL');
   if (/\bProjected · |\(projected\)/.test(text)) found.push('a projected as-of date');
-  for (const a of quietAsks) if (text.includes(a)) found.push(`a quiet listing's asking rent "${a}"`);
+  for (const a of ctx.quietAsks) if (text.includes(a)) found.push(`a quiet listing's asking rent "${a}"`);
   const broken = /\bNaN\b|\bundefined\b|Invalid Date/.exec(text);
   if (broken) found.push(`broken text "${broken[0]}"`);
   return found;
@@ -293,7 +330,7 @@ async function findDomLeaks() {
   const riskGeom = await page.evaluate(() => document.querySelectorAll('.sp-tl-bar__ext--risk, .sp-tl-tag--risk').length);
   if (riskGeom) found.push(`risk geometry (${riskGeom})`);
   // A quiet listing is never drawn, whatever the suite's state: no block, slice or bar carries its record.
-  const quietDrawn = await page.evaluate((ids) => ids.filter((id) => document.querySelector(`[data-key="${id}"], [data-seg="${id}"], [data-bar^="tl-${id}"]`)), quietIds);
+  const quietDrawn = await page.evaluate((ids) => ids.filter((id) => document.querySelector(`[data-key="${id}"], [data-seg="${id}"], [data-bar^="tl-${id}"]`)), ctx.quietIds);
   if (quietDrawn.length) found.push(`quiet listing drawn (${quietDrawn.join(', ')})`);
   // The date cannot be moved: no slider, no rollover band, and the as-of control opens nothing.
   const movable = await page.evaluate(() => ({
@@ -315,14 +352,14 @@ async function findDomLeaks() {
   const subEnds = await page.evaluate(() => document.querySelectorAll('[data-bar$="-sub"]').length);
   if (subEnds) found.push(`a sublease bar with an end date is drawn (${subEnds})`);
   // An at-risk lease must be indistinguishable from an ordinary one: same words, same tooltip, same colour.
-  const sig = await signatures([...riskKeys, ...ordinaryKeys]);
-  const ordinary = new Set(ordinaryKeys.flatMap((k) => sig[k] ?? []));
+  const sig = await signatures([...ctx.riskKeys, ...ctx.ordinaryKeys]);
+  const ordinary = new Set(ctx.ordinaryKeys.flatMap((k) => sig[k] ?? []));
   if (ordinary.size) {
-    for (const k of riskKeys) for (const s of sig[k] ?? []) if (!ordinary.has(s)) found.push(`at-risk lease ${k} reads unlike any ordinary lease: ${s}`);
+    for (const k of ctx.riskKeys) for (const s of sig[k] ?? []) if (!ordinary.has(s)) found.push(`at-risk lease ${k} reads unlike any ordinary lease: ${s}`);
     // "term not disclosed" (the timeline's wording) is only acceptable on every lease or on none.
     // (A lease that has ended by a projected as-of date is no longer a lease in place: it is vacated space, and is left out.)
     // A lease is drawn more than once (its bar, its block in the hidden print layout): it counts as said if any of them says it.
-    const inPlace = [...riskKeys, ...ordinaryKeys].map((k) => (sig[k] ?? []).filter((s) => !/vacat|Projected vacancy/i.test(s))).filter((ss) => ss.length);
+    const inPlace = [...ctx.riskKeys, ...ctx.ordinaryKeys].map((k) => (sig[k] ?? []).filter((s) => !/vacat|Projected vacancy/i.test(s))).filter((ss) => ss.length);
     const said = inPlace.map((ss) => ss.some((s) => /not disclosed/i.test(s)));
     if (said.some(Boolean) && !said.every(Boolean)) found.push('"not disclosed" on some leases and not others');
   }
@@ -336,9 +373,13 @@ const report = (label, found) => {
   } else console.log(`ok   ${label}`);
 };
 
-// Which leases are at risk and which are ordinary, read from the broker's own view once.
-await page.goto(base + '?view=stack', { waitUntil: 'networkidle' });
-await page.waitForTimeout(300);
+/**
+ * What the broker's own view of a building shows that a prospect's must not: which leases are at risk and
+ * which are ordinary, the Expiring 12 mo figure and the WALT figure. `strict`: the default building, where
+ * each must be found for the checks on it to prove anything.
+ */
+async function brokerFacts(prefixQs, strict) {
+await open(page, base + prefixQs + 'view=stack');
 const kinds = await page.evaluate(() => [...document.querySelectorAll('.sp-stack [data-key]')].map((el) => [el.getAttribute('data-key'), el.getAttribute('aria-label') ?? '']));
 // The figure the broker's Expiring 12 mo card shows: it must be nowhere on a prospect's page.
 const expiringFigure = await page.evaluate(() => {
@@ -346,7 +387,7 @@ const expiringFigure = await page.evaluate(() => {
   const n = card?.querySelector('.sp-kpi__value')?.textContent?.match(/[\d,]{4,}/)?.[0];
   return n ? `${n} SF` : null;
 });
-if (!expiringFigure) {
+if (strict && !expiringFigure) {
   console.error('Could not read the Expiring 12 mo figure from the broker view: the check for it would prove nothing.');
   process.exit(2);
 }
@@ -355,25 +396,28 @@ const waltFigure = await page.evaluate(() => {
   const card = [...document.querySelectorAll('.sp-kpi')].find((c) => c.querySelector('.sp-kpi__label')?.textContent === 'Avg term');
   return card?.querySelector('.sp-kpi__value')?.textContent?.match(/\d+\.\d{2}/)?.[0] ?? null;
 });
-if (!waltFigure) {
+if (strict && !waltFigure) {
   console.error('Could not read the WALT figure from the broker view: the check for it would prove nothing.');
   process.exit(2);
 }
 const riskKeys = kinds.filter(([, a]) => /Holdover|MTM|Month-to-month/.test(a)).map(([k]) => k);
 const ordinaryKeys = kinds.filter(([, a]) => /\bExp [A-Z]/.test(a) && !/Holdover|MTM|Month-to-month|sublease/i.test(a)).map(([k]) => k);
-if (riskKeys.length < 2 || ordinaryKeys.length < 5) {
+if (strict && (riskKeys.length < 2 || ordinaryKeys.length < 5)) {
   console.error(`Could not tell at-risk from ordinary leases in the broker view (${riskKeys.length} at risk, ${ordinaryKeys.length} ordinary): the check would prove nothing.`);
   process.exit(2);
 }
+// A building with no at-risk lease has nothing to compare; one with no ordinary lease neither.
+return riskKeys.length && ordinaryKeys.length ? { riskKeys, ordinaryKeys, expiringFigure, waltFigure } : { riskKeys: [], ordinaryKeys: [], expiringFigure, waltFigure };
+}
+ctx = { ...ctx, ...(await brokerFacts('?', true)) };
 
 /**
  * One link, read in full: the page as loaded, then every list behind a tab. Returns the text and
  * whatever the DOM rules found.
  */
 async function read(qs) {
-  await page.goto(base + qs, { waitUntil: 'networkidle' });
   // Long enough for the live region's summary of the as-of date (it is written 400 ms after the load).
-  await page.waitForTimeout(qs.includes('map') ? 1500 : 600);
+  await open(page, base + qs, qs.includes('map') ? 1500 : 600);
   let text = await grab();
   const dom = await findDomLeaks();
   // Lists behind tabs render only once their tab is chosen: open every tab and check what it shows.
@@ -404,16 +448,18 @@ const withAsOf = (qs, date) => {
 };
 
 // ── Fresh loads, and each of them again for later as-of dates ──────────────────────────────────
-for (const qs of states) {
-  if (!wanted(qs)) continue;
+/** One prospect-safe link, checked as loaded and (`travel`) again for each later as-of date. */
+async function checkState(qs, travel = true, label = qs) {
+  if (!wanted(label)) return;
   const { text, dom } = await read(qs);
   const found = [...dom, ...findLeaks(text, { q: new URLSearchParams(qs).get('q') })];
   // Search must not confirm a tenant by highlighting
-  if (qs.includes('q=anadarko')) {
+  if (new URLSearchParams(qs).get('q')) {
     const [dimmed, total] = await page.evaluate(() => [document.querySelectorAll('.sp-seg.is-dim').length, document.querySelectorAll('.sp-seg').length]);
     if (dimmed > 0 && dimmed < total) found.push(`search highlighted ${total - dimmed} block(s) for a tenant name in prospect-safe mode`);
   }
-  report(qs, found);
+  report(label, found);
+  if (!travel) return;
 
   // Time travel: the link with a later as-of date is the same page as the link without one. Nothing
   // may differ: not a block, a title, an aria-label, the print layout, a live region or the URL.
@@ -423,9 +469,10 @@ for (const qs of states) {
     const later = await read(withAsOf(qs, date));
     const drift = [...later.dom, ...findLeaks(later.text, { q: new URLSearchParams(qs).get('q') })];
     if (later.text !== today) drift.push(`the page differs from today's: ${firstDifference(today, later.text)}`);
-    report(`${qs} · as of +${months} mo (${date})`, drift);
+    report(`${label} · as of +${months} mo (${date})`, drift);
   }
 }
+for (const qs of states) await checkState(qs);
 
 // ── Transitions: the mode is turned on while something named is on screen ──────────────────────
 const safeSwitch = () => page.getByRole('switch', { name: 'Prospect-safe' });
@@ -478,17 +525,17 @@ const transitions = [
   ['a signed lease selected (its move-in date on screen)', '?view=stack&select=L09-U1', async () => {}, 'Moves in'],
 ];
 
-for (const [name, qs, act, mustShowFirst] of transitions) {
+/** Something named is put on screen with the mode off (`act`), then the mode is turned on and the page read. */
+async function checkTransition(name, qs, act, mustShowFirst) {
   const label = `→ safe: ${name}`;
-  if (!wanted(label)) continue;
-  await page.goto(base + qs, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(qs.includes('map') ? 1500 : 250);
+  if (!wanted(label)) return;
+  await open(page, base + qs, qs.includes('map') ? 1500 : 250);
   try {
     await act();
   } catch (e) {
     leaks++;
     console.log(`FAIL ${label}: could not perform the action (${String(e.message).split('\n')[0]})`);
-    continue;
+    return;
   }
   await page.waitForTimeout(150);
   // The case only proves something if the name really was on screen before the switch.
@@ -496,7 +543,7 @@ for (const [name, qs, act, mustShowFirst] of transitions) {
   if (mustShowFirst && !before.toLowerCase().includes(mustShowFirst.toLowerCase())) {
     leaks++;
     console.log(`FAIL ${label}: "${mustShowFirst}" was not on screen before the switch, so the case proves nothing`);
-    continue;
+    return;
   }
   // Keep the pointer where it is (a hover case must still be hovering): the switch is pressed by keyboard.
   await safeSwitch().focus();
@@ -516,11 +563,12 @@ for (const [name, qs, act, mustShowFirst] of transitions) {
   if (!(await page.evaluate(() => new URLSearchParams(location.search).get('safe') === '1'))) found.push('the mode did not turn on');
   report(label, found);
 }
+for (const t of transitions) await checkTransition(...t);
 
 // ── The prospect-safe CSV export, today and for a later date ───────────────────────────────────
 /** Download the rent roll from the Export menu of the page as loaded. */
 async function exportCsv(qs) {
-  await page.goto(base + qs, { waitUntil: 'networkidle' });
+  await open(page, base + qs, 0);
   await page.getByRole('button', { name: 'Export' }).click();
   const [download] = await Promise.all([page.waitForEvent('download', { timeout: 5000 }), page.getByRole('menuitem', { name: /Rent roll \(CSV\)/ }).click()]);
   return { csv: readFileSync(await download.path(), 'utf8'), name: download.suggestedFilename() };
@@ -564,7 +612,7 @@ if (wanted('prospect-safe CSV export')) try {
 // It is in the DOM of every state above, so every rule has already read it; this reads it alone and
 // proves the report is there to be read (an empty report would pass every rule).
 if (wanted('prospect-safe print layout')) {
-  await page.goto(base + '?view=stack&safe=1&print=1', { waitUntil: 'networkidle' });
+  await open(page, base + '?view=stack&safe=1&print=1', 0);
   const printed = (await page.evaluate(() => document.querySelector('.sp-print')?.innerText ?? '')).replace(/\u00a0/g, ' ');
   const found = findLeaks(printed);
   // Expiring 12 mo, Avg term and Pipeline are left off the cover (as on screen), and the cards that are there are read.
@@ -576,6 +624,57 @@ if (wanted('prospect-safe print layout')) {
   for (const must of ['Rent roll', 'Available from', 'Space on offer', 'Coming supply', 'Withheld']) if (!printed.toLowerCase().includes(must.toLowerCase())) found.push(`the report has no "${must}": it was not read`); // table headings are drawn in capitals
   for (const h of ['Commencement', 'Expiration', 'Remaining', 'Leases', 'Period']) if (new RegExp(`(^|\\n|\\t)${h}(\\t|\\n|$)`, 'i').test(printed)) found.push(`the report has a "${h}" column`);
   report('prospect-safe print layout', found);
+}
+
+// ── Every other building that opens ────────────────────────────────────────────────────────────
+// Each with its own records and broker figures: the main views and lenses, a requirement, a search for one
+// of its tenants, its first inquiry, the issues panel, the print layout and the map, each also projected;
+// every floor in the Floor view; every block of the Stack selected in turn; and the switch turned on with a
+// tenant's suite selected.
+for (const b of others) {
+  const at = `?building=${b.id}&`;
+  ctx = { ...contextOf(b.text, false), ...(await brokerFacts(at, false)) };
+  const floorIds = [...b.text.matchAll(/\bfloor\((\d+),/g)].map((m) => `F${m[1]}`);
+  const first = /lease\(\{ id: '(L\d+)'[^]*?tenant: '([^']+)'/.exec(b.text);
+  const tenantWord = first[2].split(/\s+/)[0].toLowerCase();
+  const inquiryId = ctx.inquiryList[0]?.id;
+  const bStates = [
+    'view=building&safe=1',
+    'view=stack&safe=1',
+    'view=stack&safe=1&lens=rent',
+    'view=stack&safe=1&lens=expiry',
+    'view=stack&safe=1&lens=deals',
+    'view=timeline&safe=1',
+    'view=stack&safe=1&req=12000',
+    'view=stack&safe=1&req=5000&fit=sublease&mode=find',
+    'view=stack&safe=1&mode=issues',
+    `view=stack&safe=1&q=${tenantWord}`,
+    ...(inquiryId ? [`view=stack&safe=1&inquiry=${inquiryId}&mode=find`] : []),
+    'view=stack&safe=1&print=1',
+    'view=map&safe=1',
+  ];
+  for (const qs of bStates) await checkState(at + qs, true, `${b.name}: ?${qs}`);
+  for (const f of floorIds) await checkState(`${at}view=floor&floor=${f}&safe=1`, false, `${b.name}: ?view=floor&floor=${f}&safe=1`);
+
+  // Every block of the Stack, selected in turn: the inspector of each says nothing withheld.
+  const sweepLabel = `${b.name}: every block selected (Stack, safe)`;
+  if (wanted(sweepLabel)) {
+    await open(page, `${base}${at}view=stack&safe=1`, 300);
+    const keys = await page.evaluate(() => [...new Set([...document.querySelectorAll('.sp-stage [data-key]')].map((el) => el.getAttribute('data-key')))]);
+    const found = [];
+    for (const key of keys) {
+      await page.locator(`.sp-stage [data-key="${key}"]`).first().click();
+      await page.waitForTimeout(120);
+      found.push(...findLeaks(await grab()).map((f) => `${f} (${key} selected)`));
+    }
+    found.push(...(await findDomLeaks()));
+    if (keys.length < 4) found.push(`only ${keys.length} blocks were found to select`);
+    report(`${sweepLabel} · ${keys.length} blocks`, found);
+  }
+
+  // The switch turned on with a tenant's suite selected.
+  const key = `${ctx.prefix}-${first[1]}-U1`;
+  await checkTransition(`${b.name}: select ${first[2]} in the Stack`, `${at}view=stack`, async () => { await block(key).click(); }, first[2]);
 }
 
 await browser.close();
