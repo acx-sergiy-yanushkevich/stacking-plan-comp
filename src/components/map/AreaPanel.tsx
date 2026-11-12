@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FocusEvent, type MouseEvent } from 'react';
+import { useEffect, useRef, type FocusEvent, type MouseEvent } from 'react';
 import { compareRing, US_BENCHMARK } from '../../domain/areaBrief';
 import { num } from '../../domain/format';
 import { categoryKey, stopKey } from '../../domain/places';
@@ -7,6 +7,7 @@ import type { PlanModel } from '../../model/usePlanModel';
 import { LocationBrief } from '../area/LocationBrief';
 import { Chip, Icon, Segmented } from '../ui';
 import { placeHighlight, placeLook, usePlaceHighlight } from './placeHighlight';
+import { areaRing, ringName, useAreaRing, type RingMiles } from './areaRing';
 import '../area/area.css';
 import './map.css';
 
@@ -43,7 +44,6 @@ function Skeleton() {
   );
 }
 
-const ringName = (miles: number) => `${miles}\u00a0${miles === 1 ? 'mile' : 'miles'}`;
 
 /**
  * Inspector "Area" mode (DESIGN.md §2.6): the area around the building as charts. Population by
@@ -62,7 +62,8 @@ export function AreaPanel({ model, area, expanded, onMap }: AreaPanelProps) {
     rootRef.current?.querySelector<HTMLElement>(`[data-place="${CSS.escape(lit)}"]`)?.scrollIntoView({ block: 'nearest' });
   }, [lit, onMap]);
   const rings = area ? [...area.rings].sort((a, b) => a.miles - b.miles) : [];
-  const [miles, setMiles] = useState<number | null>(null);
+  // One ring for the page (areaRing): the Map's switch sets it beside the map, this panel's own elsewhere.
+  const miles = useAreaRing();
   const ring = rings.find((r) => r.miles === miles) ?? rings[0];
   const mostPeople = Math.max(1, ...rings.map((r) => r.population));
   const amenities = area ? [...area.amenities].filter((a) => a.count > 0).sort((a, b) => b.count - a.count) : [];
@@ -97,12 +98,14 @@ export function AreaPanel({ model, area, expanded, onMap }: AreaPanelProps) {
       <div>
         <div className="sp-area__compare-head">
           <h3 className="sp-label">Compared with the US</h3>
-          <Segmented aria-label="Distance compared with the US" options={rings.map((r) => ({ id: String(r.miles), label: `${r.miles} mi` }))} value={String(ring.miles)} onChange={(id) => setMiles(Number(id))} />
+          {/* Beside the map the ring is chosen on the map: the key under this heading names it. */}
+          {!onMap && <Segmented aria-label="Distance compared with the US" options={rings.map((r) => ({ id: String(r.miles), label: `${r.miles} mi` }))} value={String(ring.miles)} onChange={(id) => areaRing.set(Number(id) as RingMiles)} />}
         </div>
         <p className="sp-area__key">
           <span>
             <i className="sp-area__key-bar" aria-hidden="true" />
             within {ringName(ring.miles)}
+            {onMap ? ', the ring on the map' : ''}
           </span>
           <span>
             <i className="sp-area__key-tick" aria-hidden="true" />

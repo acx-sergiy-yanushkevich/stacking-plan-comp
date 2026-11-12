@@ -12,7 +12,10 @@ import type { PlanModel } from '../../model/usePlanModel';
 import { isDark, paletteOf, type PlanState } from '../../state/planState';
 import { usePrefersDark, usePrefersReducedMotion } from '../../lib/useMedia';
 import { openFloor } from '../plan/actions';
-import { Chip, Icon, useToast } from '../ui';
+import { Chip, Icon, Segmented, useToast } from '../ui';
+import { num } from '../../domain/format';
+import { categoryKey } from '../../domain/places';
+import { areaRing, useAreaRing, type RingMiles } from './areaRing';
 import { FilterBar } from '../stack/FilterBar';
 import { FootprintFallback } from './FootprintFallback';
 import { MapControls } from './MapControls';
@@ -36,8 +39,10 @@ export interface MapViewProps {
 
 /** The building is drawn 1.5 % larger than the OSM footprint so it never z-fights the tiles' own extrusion. */
 const INFLATE = 1.015;
-/** The map frames the one-mile ring, the Area panel's first ring; the half mile is the walk the amenities are counted in. */
-const FRAME_MI = 1;
+/** The rings the Area figures are counted in: the map draws and frames the chosen one (`areaRing`). */
+const RINGS: RingMiles[] = [1, 3, 5];
+/** A transit kind's key: the key's Bus or Rail item lights every stop of that kind. */
+export const kindKey = (group: string) => `kind:${group}`;
 const SOURCE_RINGS = 'sp-rings';
 const LAYER_RING_FILL = 'sp-rings-fill';
 const LAYER_RING_LINE = 'sp-rings-line';
@@ -50,10 +55,10 @@ interface LayerInputs {
 }
 
 /** Rings at the half mile and the mile, as GeoJSON lines (and the half mile as a faint disc). */
-function ringFeatures(center: { lat: number; lng: number }): FeatureCollection<Polygon, { miles: number }> {
+function ringFeatures(center: { lat: number; lng: number }, outer: number): FeatureCollection<Polygon, { miles: number }> {
   return {
     type: 'FeatureCollection',
-    features: [WALK_MI, FRAME_MI].map((miles) => ({
+    features: [WALK_MI, outer].map((miles) => ({
       type: 'Feature',
       properties: { miles },
       geometry: { type: 'Polygon', coordinates: [ringCoordinates(center, miles)] },
@@ -181,7 +186,10 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
   const center = property.location;
 
   const features = useMemo(() => toFloorFeatures(suiteExtrusionFeatures(mapProperty, floors, () => 'neutral', property.floorHeightFt), INFLATE), [mapProperty, floors, property.floorHeightFt]);
-  const rings = useMemo(() => ringFeatures(center), [center]);
+  // The outer ring is the one chosen on the map's switch (and followed by the Area panel): 1, 3 or 5 miles.
+  const miles = useAreaRing();
+  const rings = useMemo(() => ringFeatures(center, miles), [center, miles]);
+  const people = area?.rings.find((r) => r.miles === miles)?.population ?? null;
   const places = useMemo(() => (area ? placesAround(property.id, center, area) : []), [area, property.id, center]);
 
   // The brand colour from the tokens, re-read after a change of theme, palette or skin has reached the DOM.
@@ -231,11 +239,15 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
     return { top: narrow && infoRef.current ? infoRef.current.offsetHeight + 44 : 64, bottom: 28, left: 28, right: 56 };
   }, []);
   const frame = useCallback(
-    (animate: boolean) => map?.fitBounds(ringBounds(center, FRAME_MI), { padding: padding(), pitch: 0, bearing: 0, duration: animate ? duration : 0 }),
-    [map, center, padding, duration],
+    (animate: boolean) => map?.fitBounds(ringBounds(center, miles), { padding: padding(), pitch: 0, bearing: 0, duration: animate ? duration : 0 }),
+    [map, center, miles, padding, duration],
   );
+  // The first frame is set at once; a ring chosen later is flown to.
+  const framed = useRef(false);
   useEffect(() => {
-    if (status === 'ready') frame(false);
+    if (status !== 'ready') return;
+    frame(framed.current);
+    framed.current = true;
   }, [status, frame]);
   const threeD = useCallback(() => map?.easeTo({ center: [center.lng, center.lat], zoom: CAMERA_3D.zoom, pitch: CAMERA_3D.pitch, bearing: CAMERA_3D.bearing, duration }), [map, center, duration]);
   const [pitch, setPitch] = useState<number>(CAMERA.pitch);
@@ -295,10 +307,11 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
     };
     setPinned(places.map((place) => ({ place, el: mk(place.lng, place.lat, 'center') })));
     const walk = offset(center, WALK_MI, 0);
-    const mile = offset(center, FRAME_MI, 0);
+    const outer = offset(center, miles, 0);
     setLabels([
       { el: mk(walk.lng, walk.lat, 'bottom'), text: '½ mi · 10-min walk' },
-      { el: mk(mile.lng, mile.lat, 'bottom'), text: '1 mi' },
+      // The ring says what is counted in it: the people of the Area panel's figures (round 25: an empty mile).
+      { el: mk(outer.lng, outer.lat, 'bottom'), text: people !== null ? `${miles} mi · ${num(people)} people` : `${miles} mi` },
       { el: mk(center.lng, center.lat, 'bottom'), text: property.name },
     ]);
     return () => {
@@ -306,9 +319,15 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
       setPinned([]);
       setLabels([]);
     };
-  }, [map, places, center, property.name]);
+  }, [map, places, center, property.name, miles, people]);
   const lit = usePlaceHighlight();
   useEffect(() => () => placeHighlight.set(null), []);
+  const keyGroups = useMemo(() => {
+    const out: { group: string; kind: Place['kind'] }[] = [];
+    for (const t of ['Bus', 'Rail']) if (places.some((p) => p.group === t)) out.push({ group: t, kind: 'transit' });
+    for (const a of [...(area?.amenities ?? [])].filter((x) => x.count > 0).sort((x, y) => y.count - x.count)) if (places.some((p) => p.group === a.category)) out.push({ group: a.category, kind: 'amenity' });
+    return out;
+  }, [places, area]);
   // A stop outside the frame (a rail station three miles out) is brought into view with the building when its
   // row is lit, and the mile frame comes back when the row is let go (round 24: its pin lit off screen).
   const widened = useRef(false);
@@ -345,6 +364,49 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
     <div className={`sp-map ${status === 'failed' ? 'is-fallback' : ''} ${lit ? 'has-lit' : ''}`.replace(/ +/g, ' ').trim()} data-status={status}>
       {/* A search, a requirement or a worklist is answered in suites: the bar says so and takes the user to the plan. */}
       {model.filterLabel && <FilterBar label={model.filterLabel} find={model.queryFind} planElsewhere patch={patch} />}
+      {/* The map's key, above it and never over it: what each mark means, and the ring to draw. Pointing at an item
+          lights its pins, as the Area panel's rows do (round 25: the marks had no key on the map itself). */}
+      <div className="sp-map-key" role="group" aria-label="Map key">
+        <span className="sp-map-key__item">
+          <i className="sp-map-key__building" aria-hidden="true" />
+          Building
+        </span>
+        <span className="sp-map-key__item">
+          <i className="sp-map-key__walk" aria-hidden="true" />½ mi walk
+        </span>
+        {/* The ring's switch is part of its key: which ring is drawn, and how many people live inside it. */}
+        <span className="sp-map-key__item sp-map-key__item--ring">
+          <i className="sp-map-key__ring" aria-hidden="true" />
+          Ring
+          <Segmented aria-label="Ring around the building" className="sp-map-key__switch" options={RINGS.map((r) => ({ id: String(r), label: `${r} mi` }))} value={String(miles)} onChange={(id) => areaRing.set(Number(id) as RingMiles)} />
+          {people !== null && <span className="sp-num">{num(people)} people</span>}
+        </span>
+        {keyGroups.map(({ group, kind }) => {
+          const look = placeLook(group);
+          const key = kind === 'transit' ? kindKey(group) : categoryKey(group);
+          return (
+            <span
+              key={group}
+              className={`sp-map-key__item sp-map-key__item--place ${lit === key ? 'is-lit' : ''}`.trim()}
+              tabIndex={0}
+              aria-label={`${group}: light ${kind === 'transit' ? 'these stops' : 'these places'} on the map`}
+              onMouseEnter={() => placeHighlight.set(key)}
+              onFocus={() => placeHighlight.set(key)}
+              onMouseLeave={() => placeHighlight.get() === key && placeHighlight.set(null)}
+              onBlur={() => placeHighlight.get() === key && placeHighlight.set(null)}
+            >
+              {look.icon ? (
+                <i className="sp-map-key__stop" aria-hidden="true">
+                  <Icon name={look.icon} size={10} />
+                </i>
+              ) : (
+                <i className={`sp-place-dot sp-place-dot--${look.cls}`} aria-hidden="true" />
+              )}
+              {group}
+            </span>
+          );
+        })}
+      </div>
       <div className="sp-map__view" ref={viewRef}>
         <div ref={containerRef} className="sp-map__canvas" aria-label={`Map of the area around ${property.name}: the half-mile and one-mile rings, transit stops and places nearby. The Area panel lists them.`} role="application" />
         {status === 'failed' && <FootprintFallback footprint={mapProperty.footprint} floors={floors} toneOf={toneOf} selectedFloorId={state.floor} onSelect={selectFloor} />}
@@ -405,7 +467,7 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
       </div>
       {pinned.map(({ place, el }) => {
         const look = placeLook(place.group);
-        const on = lit === place.key;
+        const on = lit === place.key || lit === kindKey(place.group);
         return createPortal(
           <span
             className={`sp-pin sp-pin--${look.cls} ${place.kind === 'transit' ? 'sp-pin--stop' : ''} ${on ? 'is-lit' : ''}`.replace(/ +/g, ' ').trim()}
