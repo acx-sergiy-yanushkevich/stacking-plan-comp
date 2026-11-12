@@ -1,6 +1,6 @@
 # Judge brief: Stax council
 
-You are one of four independent judges scoring the Stax prototype for AscendixRE. Be rigorous and skeptical: the target is 95/100 and it must be earned. **This is a read-only review: do not modify, create or delete any file in the repository, and do not run any build that writes inside it.**
+You are one of the independent judges (three or four a round) scoring the Stax prototype for AscendixRE. Be rigorous and skeptical: the target is 95/100 and it must be earned. **This is a read-only review: do not modify, create or delete any file in the repository, and do not run any build that writes inside it.**
 
 Repo root: the root of this repository (if the path contains a space, quote it).
 
@@ -10,7 +10,13 @@ From round 9 the app is judged as a **standalone web app** with its glass skin i
 
 Prospect-safe by design: asking rents and asking prices on availabilities (including the for-sale condo unit) are marketing information and stay visible; the building's own sale listing shows only "Listed for sale" (price, $/RSF, cap rate and broker withheld).
 
-New in round 20 (judge these as part of the product; everything from earlier rounds, listed after, is still in scope):
+Also read `docs/CHALLENGE_RULES.md` and the two Best UX judge personas, `docs/personas/wes.md` and `docs/personas/todd.md`. Score with the rubric in BRIEF.md, but test the product the way they would: Wes demos it live to a broker and hands a screen to a prospective tenant; Todd checks that the facts add up and that finding space is fast and deterministic.
+
+New in round 21 (judge these as part of the product; everything from earlier rounds, listed after, is still in scope):
+- **A clarity pass over the whole app (no features added or removed).** Lenses are Leasing · Rent · Expiration · Pipeline, and each legend is titled with its lens. On screen the legend shows the state names; SF and share show on hover and focus, and the notes (which end of a ramp is which, what the shares add up to, Floor 7's 500 SF) sit behind the legend's ⓘ in every view. The PDF keeps the full figures. The KPI groups are "Color by" and "Details", and WALT reads "Avg term". Plain words throughout: "Signed, not yet in", "Holdover / month-to-month", "Vacant, not listed", "Lease drafted" (the CRM's Lease Out stage), "Gross < $28", "Net or modified gross". The building card ends its facts with a green "Latest change"; unverified records are listed in Data issues, which the toolbar opens. Prospect-safe leaves out the figures it withholds instead of showing "Withheld" cards, on screen and in the PDF; on a phone one line says what is not shown, so the bar keeps its height. The Area panel's sample figures are marked "Sample figures", and the PDF footnote says the prototype uses sample data. Floor actions are short ("New deal", "Log call · Kinetic Ventures"), with the full action in the tooltip and the accessible name.
+- **Fixes from round 20.** The toolbar's search and tools wrap to a row of their own below the room they need, so nothing covers the lens tabs (1180–1365 px is two rows). Floor plate keys move between selectable suites only, never the lobby. A slice's accessible name starts with what it draws, in drawn order. Building, Timeline and Map legends carry the same shares note as the Stack.
+
+Round 20 (still in scope, except where round 21 changed it):
 - **Data issues is back in reach.** A toolbar button after Worklist, in every view and on phones ("Issues"), carries the issue count and opens the panel (in the bottom sheet below 1100 px). Prospect-safe withholds it and keeps its place, as it does Worklist. The header's freshness chip turns amber and says how many records have gone unverified for 120+ days ("1 unverified since Jun 2"); a prospect is told neither.
 - **Legend shares are rounded once each**, as the KPI bar rounds them, so one SF figure reads the same in every lens and mode (round 19 apportioned them, which changed single shares). Where the shares shown do not add up to 100.0%, the legend says why: the suites on record cover 245,900 SF of 245,400 leasable (the owner is told it is Floor 7), and each share is rounded on its own. The PDF cover carries the same note.
 - **The phone product bar is one row at 420 px and under**: the Stax mark, the building switcher, the date, Prospect-safe (its icon alone under 380 px) and a "…" menu holding Export, Colors and the theme.
