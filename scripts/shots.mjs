@@ -51,6 +51,8 @@ export const STATES = [
   // Round 25: the Timeline says why its bars are dimmed, and the Map answers a size typed in search.
   ['66-timeline-search', '?view=timeline&q=vantage'],
   ['67-map-search-size', '?view=map&q=12k%20direct%20by%20jun%202027'],
+  // Round 26: a Map link that carries a suite opens the Area panel (the suite waits for the plan).
+  ['70-map-link-suite', '?view=map&select=L13-U1'],
 ];
 
 const browser = await chromium.launch({ channel: 'chrome' });
@@ -144,6 +146,18 @@ await dark.mouse.move(0, 0);
 await dark.locator('.sp-area__place', { hasText: 'Parker Road Station' }).first().focus();
 await dark.waitForTimeout(1500);
 await dark.screenshot({ path: `${out}/69-map-stop-lit.png` });
+// Round 26: at five miles (`ring=5`) the places fold into the half-mile label's count, and a kind lit from the key
+// comes back; a KPI detail reached from the keyboard lights its suites, as pointing at it does.
+await dark.goto(base + '?view=map&ring=5', { waitUntil: 'load' });
+await dark.waitForTimeout(3000);
+await dark.locator('.sp-map-key__item--place', { hasText: 'Cafés' }).focus();
+await dark.waitForTimeout(400);
+await dark.screenshot({ path: `${out}/71-map-folded-lit.png` });
+await dark.goto(base + '?view=stack', { waitUntil: 'networkidle' });
+await dark.waitForTimeout(350);
+await dark.locator('[data-kpi="find"]').focus();
+await dark.waitForTimeout(400);
+await dark.screenshot({ path: `${out}/72-kpi-focus.png` });
 await mobile.goto(base + '?view=stack&lens=expiry', { waitUntil: 'networkidle' });
 await mobile.waitForTimeout(350);
 await mobile.locator('.sp-pstack__legend summary').click();
