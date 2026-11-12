@@ -312,8 +312,8 @@ describe('BuildingView', () => {
     // (The withheld KPIs are the bar's own business: KpiStrip.test.tsx.)
   });
 
-  it('names the legend as the toolbar names the lens: Occupancy, Expiration, Pipeline, Rent', () => {
-    for (const [lens, name] of [['status', 'Occupancy'], ['expiry', 'Expiration'], ['deals', 'Pipeline'], ['rent', 'Rent']])
+  it('names the legend as the toolbar names the lens: Leasing, Expiration, Pipeline, Rent', () => {
+    for (const [lens, name] of [['status', 'Leasing'], ['expiry', 'Expiration'], ['deals', 'Pipeline'], ['rent', 'Rent']])
       expect(render(`?lens=${lens}`), lens).toMatch(new RegExp(`<div class="sp-stack__title"><h2>${name}</h2>`));
   });
 });

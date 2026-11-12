@@ -10,7 +10,7 @@ export type LensId = 'status' | 'expiry' | 'deals' | 'rent';
  * legend's title, and (for Pipeline) the KPI that switches to it.
  */
 export const LENSES: Array<{ id: LensId; label: string; hint: string }> = [
-  { id: 'status', label: 'Occupancy', hint: 'Leased, available, committed and at-risk space' },
+  { id: 'status', label: 'Leasing', hint: 'Leased, available, signed and at-risk space' },
   { id: 'expiry', label: 'Expiration', hint: 'Months from the as-of date to lease expiration' },
   { id: 'deals', label: 'Pipeline', hint: 'Most advanced deal on each space' },
   { id: 'rent', label: 'Rent', hint: 'In-place or asking rent, $/SF/yr — full-service gross; NNN and MG shown separately' },

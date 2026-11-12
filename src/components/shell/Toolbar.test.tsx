@@ -38,8 +38,8 @@ describe('Toolbar with prospect-safe on and off: what stays keeps its place', ()
     it(`${view}: the lens tabs of prospect-safe are the first tabs of the full control`, () => {
       const normal = lensTabs(render(`?view=${view}`));
       const safe = lensTabs(render(`?view=${view}&safe=1`));
-      expect(normal).toEqual(['Occupancy', 'Rent', 'Expiration', 'Pipeline']);
-      expect(safe).toEqual(['Occupancy', 'Rent']);
+      expect(normal).toEqual(['Leasing', 'Rent', 'Expiration', 'Pipeline']);
+      expect(safe).toEqual(['Leasing', 'Rent']);
     });
 
     it(`${view}: the tool buttons keep their order, and Worklist and Data issues leave empty places behind, last`, () => {
