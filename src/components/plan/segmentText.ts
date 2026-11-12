@@ -2,7 +2,7 @@ import type { Segment } from '../../domain/derive';
 import type { ISODate } from '../../domain/types';
 import { fmtDate, fmtMonthYear, fmtMonthYearShort, fmtMonths } from '../../domain/dates';
 import { compactRate, num, rate, sf, usd, usd0 } from '../../domain/format';
-import { dealCount, NO_RECORD, rentType, rentValue, topDeal, toneFor, type LensId, type Tone, stageLabel } from '../../domain/lenses';
+import { dealCount, gapName, NO_RECORD, rentType, rentValue, topDeal, toneFor, type LensId, type Tone, stageLabel } from '../../domain/lenses';
 import { canShowActivity, canShowDeals, canShowInPlaceRent, canShowIssues, canShowLeaseTerm, canShowListingStatus, canShowTenant, canShowTenantRisk, leaseDatesHidden, marketedFor, rentVisible, tenantLabel, termHidden } from '../../domain/safe';
 import type { PatternKind } from './Patterns';
 
@@ -81,6 +81,13 @@ export function patternFor(seg: Segment, tone: Tone, lens: LensId): PatternKind 
   return null;
 }
 
+/**
+ * The Pipeline step a suite is drawn in, in words. A Lease Out deal counts only on the signed lease it produced
+ * (`topDeal`), so that suite reads "Signed", the legend's "Lease signed": never "Lease drafted" beside its own
+ * "Signed, not yet in" badge (round 23).
+ */
+const dealStep = (seg: Segment, stage: Parameters<typeof stageLabel>[0]): string => (seg.kind === 'committed' && stage === 'Lease Out' ? 'Signed' : stageLabel(stage));
+
 /** A badge as it is spoken or listed: the deal badge draws only its count ("1"), which means nothing read alone. */
 export const badgeLabel = (b: Badge): string => (b.kind === 'deal' ? `${b.text} live deal${b.text === '1' ? '' : 's'}` : b.text);
 
@@ -151,15 +158,11 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
       break;
     }
     case 'unmarketed': {
-      // A gap in the records is a data issue; a prospect sees space that is simply not on offer.
-      if (canShowIssues(safe)) {
-        // Plain words on the plan; that the records have a gap is for the Data issues panel, not a chip here.
-        name = `${sf(seg.size)} not listed`;
-        meta = seg.suspect ? `Likely ${seg.suspect.tenant}` : 'No lease or availability';
-      } else {
-        name = `${sf(seg.size)} not available`;
-        meta = 'Not on the market';
-      }
+      // The legend's own name for it, in this mode (`gapName`): "No lease or listing" to the owner, "Not on the
+      // market" to a prospect. The SF is on the line under it, as on every block. That the records may have a
+      // gap is for the Data issues panel; the plan says only who the space likely belongs to.
+      name = gapName(safe);
+      meta = canShowIssues(safe) && seg.suspect ? `Likely ${seg.suspect.tenant}` : '';
       break;
     }
     case 'forsale': {
@@ -186,7 +189,7 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
   }
   if (lens === 'deals' && canShowDeals(safe)) {
     const d = topDeal(seg);
-    if (d) meta = `${stageLabel(d.stage)} · ${d.prospect}${d.kind === 'Renewal' ? ' (renewal)' : ''}`;
+    if (d) meta = `${dealStep(seg, d.stage)} · ${d.prospect}${d.kind === 'Renewal' ? ' (renewal)' : ''}`;
     else if (kind === 'available' || kind === 'projected' || kind === 'unmarketed') meta = 'No live deal';
   }
 
@@ -223,7 +226,7 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
   }
   if (lens === 'deals' && canShowDeals(safe)) {
     const d = topDeal(seg);
-    if (d) lensShort = stageLabel(d.stage);
+    if (d) lensShort = dealStep(seg, d.stage);
   }
   if (kind === 'committed' && lens === 'status' && lease && !leaseDatesHidden(kind, safe)) lensShort = `In ${fmtMonthYearShort(lease.commencement)}`;
   let term = '';

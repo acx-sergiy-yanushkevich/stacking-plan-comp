@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../../data/mock/property';
 import { deriveFloors, segmentIndex } from '../../domain/derive';
 import { safeFloors } from '../../domain/safe';
+import { gapName, legendFor } from '../../domain/lenses';
+import { findIssues } from '../../domain/issues';
+import { cedarSprings } from '../../data/mock/buildings/cedarSprings';
 import { badgeLabel, LARGEST_BLOCK, segmentText } from './segmentText';
 
 const index = segmentIndex(deriveFloors(property, TODAY, TODAY));
@@ -190,13 +193,66 @@ describe('plain words on the plan, and no warning chips', () => {
       }
   });
 
-  it('a gap in the records reads "not listed", with its likely tenant; a month-to-month lease says so once', () => {
+  it('a gap in the records reads "No lease or listing", the legend’s name, with its likely tenant; a month-to-month lease says so once', () => {
     const gap = all.find((s) => s.kind === 'unmarketed')!;
     const t = segmentText(gap, opts);
-    expect(t.name).toMatch(/^[\d,]+ SF not listed$/);
+    expect(t.name).toBe('No lease or listing');
+    expect(t.sub).toMatch(/· 5,400 SF$/);
+    expect(t.meta).toBe('Likely Delta Dental Plan');
     expect(t.badges.map((b) => b.text)).not.toContain('Data gap');
     const mtm = all.find((s) => s.kind === 'mtm')!;
     const m = segmentText(mtm, opts);
     expect([m.meta, ...m.badges.map((b) => b.text)].filter((w) => /month-to-month/i.test(w))).toHaveLength(1);
+  });
+});
+
+describe('one name for floor area with no lease or listing, per mode (round 23)', () => {
+  const today = deriveFloors(property, TODAY, TODAY);
+  const NAME = { owner: 'No lease or listing', prospect: 'Not on the market' };
+
+  it('every legend, the block and the inspector heading call it the same thing, with the same dashed swatch', () => {
+    for (const safe of [false, true]) {
+      const name = safe ? NAME.prospect : NAME.owner;
+      const floors = safeFloors(today, safe);
+      const gaps = floors.flatMap((f) => f.segments).filter((s) => s.kind === 'unmarketed');
+      expect(gaps.length).toBeGreaterThan(0);
+      for (const lens of ['status', 'expiry', 'deals', 'rent'] as const) {
+        const legend = legendFor(lens, safe, floors);
+        for (const gap of gaps) {
+          const t = segmentText(gap, { ...opts, safe, lens });
+          const where = `${lens}${safe ? ' (safe)' : ''}`;
+          expect(t.name, where).toBe(name);
+          expect(t.pattern, where).toBe('dashed');
+          const item = legend.find((i) => i.tone === t.tone && !i.overlay)!;
+          expect(item, where).toMatchObject({ label: name, pattern: 'dashed' });
+          expect(t.aria, where).toContain(name);
+        }
+      }
+      expect(gapName(safe)).toBe(name);
+    }
+  });
+
+  it('Data issues names it as the legend does, on a building with a gap no lease explains', () => {
+    const floors = deriveFloors(cedarSprings, TODAY, TODAY);
+    const gaps = findIssues(cedarSprings, floors, TODAY).filter((i) => i.id.startsWith('gap-'));
+    expect(gaps.length).toBeGreaterThan(0);
+    for (const i of gaps) {
+      expect(i.title).toMatch(/ SF on Floor \d+ has no lease or listing$/);
+      expect(`${i.title} ${i.detail}`).not.toMatch(/unaccounted|not listed/i);
+    }
+  });
+});
+
+describe('a signed lease reached through its Lease Out deal reads as signed in the Pipeline lens (round 23)', () => {
+  it('the block says "Signed · Lumen Analytics", keeps its hatch, and never "Lease drafted" beside its Signed badge', () => {
+    const seg = index.get('L09-U1')!;
+    expect(seg.kind).toBe('committed');
+    const t = segmentText(seg, { ...opts, lens: 'deals' });
+    expect(t.meta).toBe('Signed · Lumen Analytics');
+    expect(t.lensShort).toBe('Signed');
+    expect(t.tone).toBe('deal-3');
+    expect(t.pattern).toBe('hatch');
+    expect(t.tooltip).not.toMatch(/drafted/i);
+    expect(legendFor('deals', false, deriveFloors(property, TODAY, TODAY)).find((i) => i.tone === 'deal-3')).toMatchObject({ label: 'Lease signed', pattern: 'hatch' });
   });
 });

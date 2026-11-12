@@ -88,8 +88,9 @@ describe('hintThatFits', () => {
   const widthOf = (t: string) => t.length * 6;
 
   it('shows the fullest placeholder that fits the field (round 16: "Find tenant, suite or prospe" was cut on the Map at 1280)', () => {
-    expect(hintThatFits(SEARCH_HINTS.owner, 400, widthOf)).toBe('Find tenant, suite or prospect');
-    expect(hintThatFits(SEARCH_HINTS.owner, 170, widthOf)).toBe('Tenant, suite or prospect');
+    expect(hintThatFits(SEARCH_HINTS.owner, 400, widthOf)).toBe('Find tenant, suite, prospect or size (12k SF)');
+    expect(hintThatFits(SEARCH_HINTS.owner, 200, widthOf)).toBe('Tenant, suite, prospect or size');
+    expect(hintThatFits(SEARCH_HINTS.owner, 170, widthOf)).toBe('Tenant, suite or size');
     expect(hintThatFits(SEARCH_HINTS.owner, 120, widthOf)).toBe('Search the plan');
     expect(hintThatFits(SEARCH_HINTS.owner, 70, widthOf)).toBe('Search');
     expect(hintThatFits(SEARCH_HINTS.safe, 70, widthOf)).toBe('Search');
@@ -107,6 +108,11 @@ describe('hintThatFits', () => {
 
   it('shows the full one before the field has been measured', () => {
     expect(hintThatFits(SEARCH_HINTS.owner, null, widthOf)).toBe(SEARCH_HINTS.owner[0]);
+  });
+
+  it('the fullest placeholders say the box takes a size (round 23)', () => {
+    expect(SEARCH_HINTS.owner[0]).toMatch(/size \(12k SF\)/);
+    expect(SEARCH_HINTS.safe[0]).toMatch(/size \(12k SF\)/);
   });
 
   it('prospect-safe placeholders name no tenant or prospect', () => {

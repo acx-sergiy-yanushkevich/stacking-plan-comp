@@ -138,9 +138,12 @@ function expiryWords(f: FloorView): string {
   return words.join(' · ');
 }
 
+/** A signed lease on the floor reached through its Lease Out deal (the Pipeline lens draws it as "Lease signed"). */
+export const leaseSigned = (f: FloorView, safe: boolean): boolean => canShowDeals(safe) && f.segments.some((s) => s.kind === 'committed' && topDeal(s)?.stage === 'Lease Out');
+/** The earlier name of `leaseSigned`, kept for the Map view's colors until its redesign lands. */
+export const leaseDrafted = leaseSigned;
+
 /** The furthest stage any live deal on the floor has reached; null when it has none, or none a prospect may be told of. */
-/** A signed lease on the floor whose deal reached "Lease drafted" (the Pipeline lens draws it in that stage). */
-export const leaseDrafted = (f: FloorView, safe: boolean): boolean => canShowDeals(safe) && f.segments.some((s) => s.kind === 'committed' && topDeal(s)?.stage === 'Lease Out');
 
 export function furthestStage(f: FloorView, safe: boolean): DealStage | null {
   if (!canShowDeals(safe)) return null;
@@ -169,9 +172,9 @@ export function lensFact(f: FloorView, lens: LensId, safe: boolean): string {
       return canShowTenantRisk(safe) ? expiryWords(f) : '';
     case 'deals': {
       const furthest = furthestStage(f, safe);
-      // A signed lease whose deal reached "Lease drafted" is drawn in that stage's color: the label says so
-      // too, so the floor's color is never the only sign of it (round 22: Floor 4 read "100.0% leased" alone).
-      const parts = [furthest ? `${plural(floorDeals(f, safe).length, 'live deal')} · ${stageLabel(furthest)}` : '', leaseDrafted(f, safe) ? 'lease drafted' : ''];
+      // A signed lease reached through its Lease Out deal is drawn in that step's color: the label says so too,
+      // in the legend's words ("Lease signed"), so the floor's color is never the only sign of it (round 22).
+      const parts = [furthest ? `${plural(floorDeals(f, safe).length, 'live deal')} · ${stageLabel(furthest)}` : '', leaseSigned(f, safe) ? 'lease signed' : ''];
       return parts.filter(Boolean).join(' · ');
     }
     case 'rent':

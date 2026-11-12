@@ -148,14 +148,18 @@ export function buildWorklist(floors: FloorView[], window: WindowKey, asOf: ISOD
 }
 
 /** Search hits with the reason each block matched ("Prospect: Vantage Robotics (LOI)"). */
-function search(floors: FloorView[], q: string, safe: boolean, intent: QueryIntent | null): Map<string, string> {
+export function search(floors: FloorView[], q: string, safe: boolean, intent: QueryIntent | null): Map<string, string> {
   const needle = q.trim().toLowerCase();
   const out = new Map<string, string>();
   if (!needle || intent?.kind === 'size') return out;
-  // A state word lights that state ("sublease", "signed"); tenant risk ("holdover") says nothing to a prospect.
+  // A state word lights that state ("sublease", "signed"), on one floor when the query names it ("subleases on
+  // floor 7"); tenant risk ("holdover") says nothing to a prospect.
   if (intent?.kind === 'state') {
     if (intent.tenantRisk && !canShowTenantRisk(safe)) return out;
-    for (const f of floors) for (const s of f.segments) if (intent.kinds.has(s.kind)) out.set(s.key, intent.label);
+    for (const f of floors) {
+      if (intent.floor !== null && String(f.floor.sequence) !== intent.floor) continue;
+      for (const s of f.segments) if (intent.kinds.has(s.kind) && !(intent.now && s.kind === 'available' && s.availableFrom)) out.set(s.key, intent.floor !== null ? `${intent.label} on ${f.floor.name}` : intent.label);
+    }
     return out;
   }
   const hit = (v: string | undefined) => !!v && v.toLowerCase().includes(needle);

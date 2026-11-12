@@ -98,6 +98,8 @@ describe('lensFact', () => {
     expect(f.F12).toBe('1 live deal · Proposal');
     expect(f.F5).toBe('1 live deal · Tour');
     expect(f.F8).toBe('');
+    // Floor 4's signed lease, reached through its Lease Out deal, in the legend's words (round 23: "lease drafted").
+    expect(f.F4).toBe('lease signed');
   });
 
   it('rent: every figure says which rent it is, and a floor with space on offer gives the asking rent of that space', () => {

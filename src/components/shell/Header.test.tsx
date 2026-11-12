@@ -9,14 +9,17 @@ import { findIssues, issueCounts } from '../../domain/issues';
 import { pct, usd, usd0 } from '../../domain/format';
 import { parseState } from '../../state/planState';
 import type { PlanModel } from '../../model/usePlanModel';
+import type { Property } from '../../domain/types';
+import { cedarSprings } from '../../data/mock/buildings/cedarSprings';
+import { legacyWest } from '../../data/mock/buildings/legacyWest';
 import { Header } from './Header';
 import { switcherItems } from './switcher';
 
-function render(query: string) {
-  const floors = deriveFloors(property, TODAY, TODAY);
-  const kpis = computeKpis(property, floors, TODAY);
-  const issues = findIssues(property, floors, TODAY);
-  const model = { property, kpis, issues, counts: issueCounts(issues), today: TODAY } as unknown as PlanModel;
+function render(query: string, building: Property = property) {
+  const floors = deriveFloors(building, TODAY, TODAY);
+  const kpis = computeKpis(building, floors, TODAY);
+  const issues = findIssues(building, floors, TODAY);
+  const model = { property: building, kpis, issues, counts: issueCounts(issues), today: TODAY } as unknown as PlanModel;
   const html = renderToString(<Header model={model} state={parseState(query, TODAY)} patch={() => {}} onExport={() => {}} />);
   // The sale fact alone: the span that carries it on the facts row.
   // The facts row ends with it in the product skins; "Latest change" follows it in the embedded one.
@@ -25,6 +28,8 @@ function render(query: string) {
 }
 
 const listing = property.saleListing!;
+/** The words of an HTML fragment, as read. */
+const words = (html: string) => html.replace(/<svg.*?<\/svg>/g, '').replace(/<!--.*?-->/g, '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 
 describe('Header sale listing', () => {
   it('keeps every figure on the facts row: price, $/RSF and cap rate', () => {
@@ -42,12 +47,50 @@ describe('Header sale listing', () => {
 
   it('shows only "Listed for sale" in prospect-safe mode: no price, $/RSF, cap rate or broker', () => {
     const { html, sale, kpis } = render('?safe=1');
-    expect(sale.replace(/<svg.*?<\/svg>/, '').replace(/<!--.*?-->/g, '').trim()).toBe('Listed for sale');
+    expect(words(sale)).toBe('Listed for sale');
     expect(html).not.toContain(usd0(listing.price));
     expect(html).not.toContain(usd(listing.price / kpis.leasable));
     expect(html).not.toContain(' cap');
     expect(html).not.toContain(listing.broker);
     expect(html).not.toContain('Data issues');
+  });
+});
+
+describe('Header sale listing under contract (round 23: Cedar Springs read "For sale")', () => {
+  const contract = cedarSprings.saleListing!;
+
+  it('the owner reads the status first, then what it was listed at, $/RSF and cap rate', () => {
+    expect(contract.status).toBe('Under Contract');
+    const { sale } = render('?building=P005', cedarSprings);
+    expect(words(sale)).toBe('Under contract · listed at $92,000,000 · $504.94/RSF · 5.8% cap');
+    expect(words(sale)).not.toMatch(/for sale/i);
+  });
+
+  it('a prospect reads "Under contract" alone: no price, $/RSF, cap rate or broker', () => {
+    const { html, sale } = render('?building=P005&safe=1', cedarSprings);
+    expect(words(sale)).toBe('Under contract');
+    expect(html).not.toContain(usd0(contract.price));
+    expect(html).not.toContain('/RSF');
+    expect(html).not.toContain(' cap');
+    expect(html).not.toContain(contract.broker);
+    expect(html).not.toMatch(/Listed for sale/);
+  });
+});
+
+describe('Header facts row: "Latest change" always wraps with the fact before it (round 23)', () => {
+  const tail = (html: string) => /<span class="sp-header__tail">(.*?)<\/span><\/div>/.exec(html)?.[1] ?? '';
+
+  it('with no sale listing, the floor count and Latest change are one group', () => {
+    const { html } = render('?building=P002', legacyWest);
+    expect(legacyWest.saleListing).toBeNull();
+    expect(words(tail(html))).toMatch(/^22 floors ✓? ?Latest change /);
+    expect(tail(html)).toContain('sp-header__verified');
+  });
+
+  it('with a listing, the listing and Latest change are the group and the floor count stays outside it', () => {
+    const { html } = render('');
+    expect(words(tail(html))).toMatch(/^For sale .* Latest change /);
+    expect(words(tail(html))).not.toContain('floors');
   });
 });
 

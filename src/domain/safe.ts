@@ -227,8 +227,10 @@ function withoutQuietListing(s: Segment): Segment {
   if (!a || a.published !== false) return out;
   // A sublet suite goes back to being the lease it is; its months are the head lease's again.
   if (out.kind === 'sublease') return { ...out, kind: headKind(out), availability: undefined, monthsToExpiry: out.headMonths ?? null, headMonths: undefined };
-  // Vacant space listed quietly is, to a prospect, space that is not on the market.
-  return { ...out, kind: 'unmarketed', availability: undefined, lease: undefined, availableFrom: undefined };
+  // Vacant space listed quietly is, to a prospect, space that is not on the market. It is keyed as the floor's
+  // space, not by the listing's record id, so neither the plan nor a link to the selected suite carries the
+  // id of a listing that is not published (round 24's leak check: Cedar Springs drew "CS-A06").
+  return { ...out, key: `${out.floorId}-gap-${out.order}`, kind: 'unmarketed', availability: undefined, lease: undefined, availableFrom: undefined };
 }
 
 /**

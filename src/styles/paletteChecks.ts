@@ -153,6 +153,23 @@ export function expiryStepFaults(steps: readonly string[]): string[] {
   return faults;
 }
 
+/**
+ * An expiration ramp ordered from the hottest step to the quietest, as both Ascendix themes are (round 23):
+ *  - the soonest step is the reddest, and the warm steps run from red toward yellow (hue rising);
+ *  - the latest step is the quietest: the step closest in lightness to the card behind the plan.
+ * Every break of it, in words; empty when the ramp is ordered so.
+ */
+export function hottestFirstFaults(steps: readonly string[], cards: readonly string[]): string[] {
+  const faults: string[] = [];
+  const warm = steps.filter((s) => hue(s) <= 60);
+  for (let i = 1; i < warm.length; i += 1) if (hue(warm[i]) <= hue(warm[i - 1])) faults.push(`warm step ${warm[i]} (${hue(warm[i]).toFixed(0)}°) is not yellower than ${warm[i - 1]} (${hue(warm[i - 1]).toFixed(0)}°)`);
+  if (warm[0] !== steps[0]) faults.push(`the soonest step ${steps[0]} is not a warm colour`);
+  const off = (s: string) => Math.min(...cards.map((c) => Math.abs(lightness(s) - lightness(c))));
+  const quiet = steps.reduce((a, b) => (off(b) < off(a) ? b : a));
+  if (quiet !== steps[steps.length - 1]) faults.push(`the quietest step is ${quiet} (${off(quiet).toFixed(1)} L* from the card), not the latest ${steps[steps.length - 1]}`);
+  return faults;
+}
+
 /** The colour of each expiration step's wall on the 3D map, as MapView paints it in the theme. */
 export function expiryWalls(t: Tokens, theme: 'night' | 'day'): string[] {
   return expirySteps(t).map((fill, i) => (theme === 'night' ? mix(fill, '#ffffff', MAP_LIFT) : mix(fill, t.get(`--tone-exp-${i}-edge`)!, MAP_DEEPEN)));
@@ -169,6 +186,13 @@ export interface PaletteUnderTest {
   /** Card colours behind the plan, measured in the browser: typical, then the extremes of the glow. */
   nightCards: readonly string[];
   dayCards: readonly string[];
+  /**
+   * How the night expiration ramp is ordered. 'brightest' (the default): the soonest step is the lightest
+   * and every step is darker than the one before. 'hottest': the same way as by day, from the hottest step
+   * to the quietest (`hottestFirstFaults`); its warm steps rise in lightness toward the yellow, so lightness
+   * is not the order there.
+   */
+  nightExpiry?: 'brightest' | 'hottest';
 }
 
 export interface LoadedPalette extends PaletteUnderTest {
@@ -243,12 +267,18 @@ export function describePalette(p: LoadedPalette): void {
       expect(expiryStepFaults(expirySteps(t))).toEqual([]);
     });
 
-    it('runs one way in lightness from the soonest step to the latest', () => {
-      const ls = expirySteps(t).map(lightness);
-      const dir = Math.sign(ls[5] - ls[0]);
-      expect(dir).toBe(theme === 'night' ? -1 : 1);
-      for (let i = 1; i < ls.length; i += 1) expect(Math.sign(ls[i] - ls[i - 1]), `exp-${i - 1} to exp-${i}`).toBe(dir);
-    });
+    if (theme === 'day' || (p.nightExpiry ?? 'brightest') === 'brightest')
+      it('runs one way in lightness from the soonest step to the latest', () => {
+        const ls = expirySteps(t).map(lightness);
+        const dir = Math.sign(ls[5] - ls[0]);
+        expect(dir).toBe(theme === 'night' ? -1 : 1);
+        for (let i = 1; i < ls.length; i += 1) expect(Math.sign(ls[i] - ls[i - 1]), `exp-${i - 1} to exp-${i}`).toBe(dir);
+      });
+    else
+      it('runs one way from the hottest step to the quietest, as it does by day', () => {
+        expect(hottestFirstFaults(expirySteps(t), p.nightCards)).toEqual([]);
+        expect(hottestFirstFaults(expirySteps(p.day), p.dayCards)).toEqual([]);
+      });
 
     it(`keeps the steps apart on the 3D map as well: neighbouring walls ${EXPIRY_WALL_STEP_L} L* or more apart`, () => {
       const walls = expiryWalls(t, theme);
@@ -271,10 +301,11 @@ export function describePalette(p: LoadedPalette): void {
       expect(lightness(fill('rent-0')) - lightness(p.nightCards[0]), `rent-0 ${fill('rent-0')} on ${p.nightCards[0]}`).toBeGreaterThanOrEqual(8);
     });
 
-    it('orders the expiration ramp from soonest (brightest) to latest', () => {
-      const steps = [0, 1, 2, 3, 4, 5].map((i) => lightness(fill(`exp-${i}`)));
-      for (let i = 1; i < steps.length; i += 1) expect(steps[i], `exp-${i}`).toBeLessThan(steps[i - 1]);
-    });
+    if ((p.nightExpiry ?? 'brightest') === 'brightest')
+      it('orders the expiration ramp from soonest (brightest) to latest', () => {
+        const steps = [0, 1, 2, 3, 4, 5].map((i) => lightness(fill(`exp-${i}`)));
+        for (let i = 1; i < steps.length; i += 1) expect(steps[i], `exp-${i}`).toBeLessThan(steps[i - 1]);
+      });
 
     it('keeps the 1–2 yr step well away from the Holdover / MTM maroon', () => {
       expect(contrast(fill('exp-2'), fill('risk'))).toBeGreaterThanOrEqual(3);

@@ -26,8 +26,10 @@
 .sp-header__facts > span:not(.sp-dot) { border-left: 1px solid var(--sp-color-border-strong); margin-left: -1px; padding: 0 10px; line-height: 1.3; }
 .sp-header__facts .sp-dot { display: none; }
 .sp-header__facts > span { white-space: nowrap; }
-/* The listing and the latest change: one unit that wraps whole, each still drawn as a fact with its separator. */
-.sp-header__facts > .sp-header__tail { display: inline-flex; flex-wrap: nowrap; border-left: 0; padding: 0; margin-left: 0; }
+/* The last facts (the listing, or the floor count, then the latest change): one unit that wraps whole, each still
+   drawn as a fact with its separator. The group draws none of its own: `span.` outranks the rule above (round 23:
+   a second divider and 20 px of air stood before the group). */
+.sp-header__facts > span.sp-header__tail { display: inline-flex; flex-wrap: nowrap; border-left: 0; padding: 0; margin-left: 0; }
 .sp-header__tail > span { border-left: 1px solid var(--sp-color-border-strong); margin-left: -1px; padding: 0 10px; line-height: 1.3; }
 .sp-header__verified { display: inline-flex; align-items: center; gap: 4px; color: var(--sp-color-success); font-weight: 500; }
 /* The sale listing is one more fact: same size and colour as its neighbours, so it never competes with the title. */

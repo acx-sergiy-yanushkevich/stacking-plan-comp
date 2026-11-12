@@ -6,7 +6,8 @@ import { property, TODAY } from '../../data/mock/property';
 import { parseState } from '../../state/planState';
 import { buildModel } from '../inspector/testModel';
 import { area } from '../../data/mock/area';
-import type { Area } from '../../domain/types';
+import type { Area, Property } from '../../domain/types';
+import { cedarSprings } from '../../data/mock/buildings/cedarSprings';
 import { PrintLayout } from './PrintLayout';
 
 class RO {
@@ -16,9 +17,9 @@ class RO {
 }
 (globalThis as unknown as { ResizeObserver: typeof RO }).ResizeObserver = RO;
 
-const render = (search: string, withArea?: Area) => {
+const render = (search: string, withArea?: Area, building?: Property) => {
   const state = parseState(search, TODAY);
-  const model = buildModel(state);
+  const model = buildModel(state, building);
   const html = renderToString(<PrintLayout model={model} state={state} area={withArea ?? null} visible />);
   return { model, html: html.replace(/<!-- -->/g, '').replace(/&#x27;/g, "'") };
 };
@@ -319,3 +320,35 @@ describe('legend shares (round 19)', () => {
   });
 });
 
+
+describe('PrintLayout cover: the screen\'s pipeline words and the sale listing\'s status (round 23)', () => {
+  const words = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const sub = (html: string) => /<div class="sp-print__sub">(.*?)<\/div>/.exec(html)?.[1] ?? '';
+  const kpi = (html: string, label: string) => new RegExp(`<div class="sp-print__kpi-label">${label}</div>(.*?)</div></div>`).exec(html)?.[1] ?? '';
+
+  it('the owner Pipeline card says the SF in play, as the screen does, and what the deals request', () => {
+    const { html, model } = render('?print=1');
+    expect(model.kpis.pipeline.sf).toBe(57800);
+    expect(model.kpis.pipeline.requested).toBe(75800);
+    const card = words(kpi(html, 'Pipeline'));
+    expect(card).toContain('57,800 SF in play');
+    expect(card).toContain('deals request 75,800 SF');
+    expect(card).not.toMatch(/57,800 SF requested/);
+  });
+
+  it('a listing under contract says so: the owner gets the figures after the status, a prospect the status alone', () => {
+    const owner = words(sub(render('?building=P005&print=1', undefined, cedarSprings).html));
+    expect(owner).toContain('Under contract · listed at $92,000,000 · $504.94/RSF · 5.8% cap');
+    expect(owner).not.toMatch(/for sale/i);
+    const prospect = render('?building=P005&print=1&safe=1', undefined, cedarSprings).html;
+    expect(words(sub(prospect))).toMatch(/ Under contract$/);
+    expect(prospect).not.toContain('$92,000,000');
+    expect(prospect).not.toMatch(/Listed for sale/);
+  });
+
+  it('the listing is one unbreakable fact of the subtitle, so its last figure never sits alone on a line', () => {
+    const html = sub(render('?print=1').html);
+    expect(html).toMatch(/<span class="sp-dotjoin__part">For sale \$68,500,000 · \$[\d.]+\/RSF · 6\.4% cap<\/span>$/);
+    expect(words(sub(render('?print=1&safe=1').html))).toMatch(/ Listed for sale$/);
+  });
+});

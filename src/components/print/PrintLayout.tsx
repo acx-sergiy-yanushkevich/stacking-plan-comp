@@ -4,7 +4,8 @@ import type { PlanState } from '../../state/planState';
 import { fmtDate, fmtMonths } from '../../domain/dates';
 import { num, pct, rate, rateRange, sf, usd, usd0 } from '../../domain/format';
 import { RENT_ROLL_NUMERIC, rentRollDisplay, unplacedLeases } from '../../domain/exportCsv';
-import { comingSupply } from '../../domain/kpis';
+import { comingSupply, pipelineWords } from '../../domain/kpis';
+import { listingWords } from '../../domain/listing';
 import { canShowDeals, canShowInPlaceRent, canShowIssues, canShowLeaseTerm, canShowRollover, canShowTenantRisk, canShowWalt, marketedFor, rentVisible, tenantLabel } from '../../domain/safe';
 import { FixedWidth } from '../../lib/useWidth';
 import { Legend, sharesNote } from '../plan/Legend';
@@ -96,9 +97,10 @@ export function PrintLayout({ model, state, area = null, visible }: PrintLayoutP
           <div className="sp-print__eyebrow">Stacking plan{safe ? ' · Prospect-safe' : ''}</div>
           <h1>{p.name}</h1>
           <div className="sp-print__sub">
-            {p.propertyClass} · {p.street}, {p.city}, {p.state} · {num(k.leasable)} RSF leasable · {p.floors.length} floors
-            {/* The listing as the header says it: the price to the owner, the fact alone to a prospect. */}
-            {p.saleListing && (safe ? ' · Listed for sale' : ` · For sale ${usd0(p.saleListing.price)} · ${usd(p.saleListing.price / k.leasable)}/RSF${p.saleListing.capRate !== null ? ` · ${pct(p.saleListing.capRate)} cap` : ''}`)}
+            {/* Each fact stays whole and the line breaks between facts only. The listing is one fact, as the header
+                says it (`listingWords`): its status first, the figures to the owner, the state alone to a prospect.
+                So its last figure never sits alone on a line (round 23: "6.4% cap"). */}
+            <DotJoin parts={[p.propertyClass, `${p.street}, ${p.city}, ${p.state}`, `${num(k.leasable)} RSF leasable`, `${p.floors.length} floors`, p.saleListing ? listingWords(p.saleListing, k.leasable, safe).text : null]} />
           </div>
         </div>
         <div className="sp-print__meta">
@@ -116,7 +118,8 @@ export function PrintLayout({ model, state, area = null, visible }: PrintLayoutP
         <Kpi label="Largest block" value={sf(k.maxContiguous.size)} note={k.maxContiguous.floorName ?? ''} />
         {showRollover && <Kpi label="Expiring 12 mo" value={sf(k.expiring12)} note={`${k.expiring12Leases} leases`} />}
         {canShowWalt(safe) && <Kpi label="Avg term" value={`${k.walt.toFixed(2)} yr`} note="SF-weighted" />}
-        {showDeals && <Kpi label="Pipeline" value={`${k.pipeline.deals} deals`} note={`${sf(k.pipeline.sf)} requested`} />}
+        {/* The screen's words (`pipelineWords`): the space in play, then what the deals request in all. */}
+        {showDeals && <Kpi label="Pipeline" value={`${k.pipeline.deals} deals`} note={`${pipelineWords(k.pipeline).inPlay} · ${pipelineWords(k.pipeline).requested}`} />}
       </div>
       {/* The cover's legend says why its shares add up to more than 100%, as the Stack legend does. */}
       <Legend items={model.legend} compact full note={sharesNote(model.legend, k.leasable, safe ? [] : model.floors.filter((f) => f.overAllocatedBy > 0).map((f) => ({ name: f.floor.name, by: f.overAllocatedBy })))} />

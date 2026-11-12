@@ -1,6 +1,7 @@
 import type { KeyboardEvent } from 'react';
 import type { Segment } from '../../domain/derive';
 import { textTier } from '../../domain/layout';
+import { NO_RECORD, NOT_ON_MARKET } from '../../domain/lenses';
 import { fitParts, wrapWords, wrapWordsVar, fits, measure } from '../../lib/textFit';
 import { PATTERN_IDS } from '../plan/Patterns';
 import type { SegmentText } from '../plan/segmentText';
@@ -49,7 +50,7 @@ const CP = 12.5;
 /** One-letter state cue for blocks too narrow for any text. */
 const GLYPH: Partial<Record<Segment['kind'], string>> = { available: 'A', sublease: 'S', committed: 'C', forsale: '$', holdover: '!', mtm: '!', unmarketed: '?', projected: 'V' };
 /** The state in a word, for blocks too narrow for their name; same vocabulary as the legend. */
-const STATE_WORD: Partial<Record<Segment['kind'], string[]>> = { available: ['Available'], sublease: ['Sublease'], committed: ['Signed'], forsale: ['For sale'], unmarketed: ['No record'], projected: ['Vacant'] };
+const STATE_WORD: Partial<Record<Segment['kind'], string[]>> = { available: ['Available'], sublease: ['Sublease'], committed: ['Signed'], forsale: ['For sale'], unmarketed: [NO_RECORD, 'No record'], projected: ['Vacant'] };
 
 /**
  * A wrapped line as it is drawn. Where the wrap falls at a "·" ("Infinity Info Systems · sublease" on two
@@ -226,7 +227,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
     }
     /** The state in a word, for a block that cannot hold its name. */
     const wordLine = (): Line[] => {
-      const words = seg.kind === 'unmarketed' && /not available/.test(text.name) ? ['Not available'] : seg.kind === 'available' && seg.availability?.isVacant && !seg.availableFrom ? ['Available', 'Vacant'] : (STATE_WORD[seg.kind] ?? []);
+      const words = seg.kind === 'unmarketed' && text.name === NOT_ON_MARKET ? [NOT_ON_MARKET] : seg.kind === 'available' && seg.availability?.isVacant && !seg.availableFrom ? ['Available', 'Vacant'] : (STATE_WORD[seg.kind] ?? []);
       for (const t of words) {
         if (fits(t, inner, FONT_NAME)) return [nameLine(t)];
         if (fits(t, room(0, FONT_TINY, true), FONT_TINY)) return [{ t, cls: 'sp-seg__tiny', font: FONT_TINY }];

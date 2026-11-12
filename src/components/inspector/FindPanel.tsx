@@ -7,7 +7,7 @@ import { canShowDeals, canShowInquiries } from '../../domain/safe';
 import { Button, Chip, Icon, Segmented, SelectField, TextField } from '../ui';
 import { selectSegment, type Patch } from '../plan/actions';
 import { Section } from './parts';
-import { alternativesNote, checkNeededBy, chosenOption, rangeProblem, type FitOption, type NearMiss } from '../../domain/finder';
+import { alternativesNote, checkNeededBy, chosenOption, countWord, rangeProblem, type FitOption, type NearMiss } from '../../domain/finder';
 import { setHoverKeys, setPinnedOption } from '../../state/hoverStore';
 
 export interface FindPanelProps {
@@ -255,7 +255,8 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
                     <div className="sp-ins__row-main">
                       <div className="sp-ins__row-title">
                         <span>{o.floorName}</span>
-                        {o.multiFloor && <span className="sp-ins__tag">two floors</span>}
+                        {/* The count is said once: by this tag for a pair, by the name past two ("Floors 18–20 · three floors"). */}
+                        {o.multiFloor && !o.floorName.includes(' floors') && <span className="sp-ins__tag">two floors</span>}
                         {o.contiguous && <span className="sp-ins__tag">contiguous</span>}
                         {o.notMarketed && <span className="sp-ins__tag">not marketed</span>}
                       </div>
@@ -334,7 +335,7 @@ function NearMisses({ misses, patch, selected }: { misses: NearMiss[]; patch: Pa
                   <span>{m.type}</span>
                   <span>{m.from ? fmtMonthYear(m.from) : 'Now'}</span>
                   {m.shortfall > 0 && <span>{num(m.shortfall)} SF short</span>}
-                  {m.kind === 'stack' && <span>{plural(m.keys.length, 'suite')} on two floors</span>}
+                  {m.kind === 'stack' && <span>{plural(m.keys.length, 'suite')} on {countWord(m.floors)} floors</span>}
                 </div>
               </div>
               <div className="sp-ins__row-end">

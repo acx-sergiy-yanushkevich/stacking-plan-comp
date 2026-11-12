@@ -11,11 +11,15 @@ export function prospectFirst<T extends { id: string }>(lenses: readonly T[]): T
   return [...lenses.filter((l) => canUseLens(l.id, true)), ...lenses.filter((l) => !canUseLens(l.id, true))];
 }
 
-/** What the search field says when empty, fullest first: the first that fits the field is shown. */
+/**
+ * What the search field says when empty, fullest first: the first that fits the field is shown. It names a
+ * size too, with an example, because the box also reads a requirement ("12k direct by Jun 2027") and sends
+ * it to Find space (round 23: the size path could not be found from a box that named only names).
+ */
 export const SEARCH_HINTS = {
-  owner: ['Find tenant, suite or prospect', 'Tenant, suite or prospect', 'Search the plan', 'Search'],
+  owner: ['Find tenant, suite, prospect or size (12k SF)', 'Tenant, suite, prospect or size', 'Tenant, suite or size', 'Search the plan', 'Search'],
   // Prospect-safe search skips tenants and prospects.
-  safe: ['Find suite or floor', 'Suite or floor', 'Search'],
+  safe: ['Find suite, floor or size (12k SF)', 'Suite, floor or size', 'Suite or floor', 'Search'],
 } as const;
 
 /**

@@ -38,14 +38,31 @@ export function shiftIntoWindow(left: number, right: number, width: number): num
 }
 
 /**
+ * What Tab does in an open panel with `count` controls, focus on the `at`-th of them (-1: on the panel itself).
+ *  - 'leave': a panel of text alone (the legend's ⓘ note) is a disclosure, not a place to stay. Tab or
+ *    Shift+Tab closes it and moves on from its trigger, as if the trigger had been tabbed from (round 23: the
+ *    note swallowed Tab, a non-modal dialog behaving as a modal one).
+ *  - 'first' / 'last': a panel of controls keeps focus, cycling from its last control to its first and back.
+ *  - null: the browser moves focus within the panel.
+ */
+export function tabMove(count: number, at: number, shift: boolean): 'leave' | 'first' | 'last' | null {
+  if (count === 0) return 'leave';
+  if (shift && at <= 0) return 'last';
+  if (!shift && at === count - 1) return 'first';
+  return null;
+}
+
+/**
  * Anchored popover: Esc and outside click close it, focus moves inside on open and
- * returns to the trigger on close, Tab cycles within the panel.
+ * returns to the trigger on close. Tab cycles within a panel of controls and leaves a panel of text (`tabMove`).
  */
 export function Popover({ open, onOpenChange, trigger, children, align = 'start', role = 'dialog', label, className = '', panelClassName = '' }: PopoverProps) {
   const id = useId();
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const wasOpen = useRef(false);
+  /** Closed by Tab: focus has gone on from the trigger, and is not called back to it. */
+  const tabbedOut = useRef(false);
 
   useEffect(() => {
     if (open) {
@@ -54,7 +71,8 @@ export function Popover({ open, onOpenChange, trigger, children, align = 'start'
       wasOpen.current = true;
     } else if (wasOpen.current) {
       wasOpen.current = false;
-      triggerRef.current?.focus();
+      if (!tabbedOut.current) triggerRef.current?.focus();
+      tabbedOut.current = false;
     }
   }, [open]);
 
@@ -89,20 +107,16 @@ export function Popover({ open, onOpenChange, trigger, children, align = 'start'
     }
     if (e.key === 'Tab' && panelRef.current) {
       const items = Array.from(panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE));
-      // A panel of text alone (the legend's note) keeps focus until Escape or a click outside closes it:
-      // Tab out of it would leave it open with its key handler out of reach (round 22).
-      if (items.length === 0) {
+      const move = tabMove(items.length, items.indexOf(focused() as HTMLElement), e.shiftKey);
+      if (move === 'leave') {
+        // Closed, never left open behind the focus (round 22). Focus is put on the trigger and the key is not
+        // stopped, so the browser's own Tab or Shift+Tab moves on from there, in the page's order.
+        tabbedOut.current = true;
+        triggerRef.current?.focus();
+        onOpenChange(false);
+      } else if (move) {
         e.preventDefault();
-        return;
-      }
-      const first = items[0];
-      const last = items[items.length - 1];
-      if (e.shiftKey && focused() === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && focused() === last) {
-        e.preventDefault();
-        first.focus();
+        (move === 'first' ? items[0] : items[items.length - 1]).focus();
       }
     }
   };

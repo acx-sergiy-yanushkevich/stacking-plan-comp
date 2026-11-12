@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TODAY } from '../data/mock/property';
-import { DEFAULT_STATE, applyPatch, defaultState, deriveMode, enterSafe, isDark, openSession, palettePatch, paletteOf, parseState, safeState, serializeState, stepSession, type PlanSession, type PlanState } from './planState';
+import { DEFAULT_STATE, applyPatch, defaultState, deriveMode, enterSafe, isDark, openSession, palettePatch, paletteOf, parseState, safeState, serializeState, stepSession, switchBuilding, type PlanSession, type PlanState } from './planState';
 
 describe('parseState', () => {
   it('reads every supported field', () => {
@@ -388,6 +388,25 @@ describe('the Prospect-safe switch gives back what it took, in the same session'
     // The finder opened during the meeting stays open in place of the worklist that was there before.
     const found = step(step(step(session('?view=stack&mode=worklist&window=12'), { safe: true }), { mode: 'find', req: 5000 }), { safe: false });
     expect(found.state).toMatchObject({ mode: 'find', req: 5000, window: '12' });
+  });
+
+  it('a building switch forgets the search and inquiry of the building left, and keeps the lens and date (round 23)', () => {
+    // Search "vantage" on Preston Park, Prospect-safe on, switch to Legacy West, Prospect-safe off: no "vantage".
+    const on = step(session('?view=stack&q=vantage'), { safe: true });
+    expect(on.withheld?.was.q).toBe('vantage');
+    const moved = step(on, switchBuilding(on.state, 'P002'));
+    expect(moved.state.building).toBe('P002');
+    const off = step(moved, { safe: false });
+    expect(off.state.q).toBe('');
+    expect(off.state.building).toBe('P002');
+    // The same for an inquiry, a worklist and a rollover highlight, which name records of the building left.
+    const busy = step(session('?view=stack&inquiry=I02&mode=find&lens=expiry&asOf=2028-06-01'), { safe: true });
+    const there = step(step(busy, switchBuilding(busy.state, 'P005')), { safe: false });
+    expect(there.state).toMatchObject({ building: 'P005', inquiry: null, mode: 'building', q: '' });
+    // How the plan was looked at comes back, as a switch keeps it with the mode off.
+    expect(there.state).toMatchObject({ lens: 'expiry', asOf: '2028-06-01' });
+    // Without a switch, the same session gives everything back.
+    expect(step(busy, { safe: false }).state).toMatchObject({ inquiry: 'I02', lens: 'expiry' });
   });
 
   it('a matched inquiry does not come back over a requirement typed in its place', () => {

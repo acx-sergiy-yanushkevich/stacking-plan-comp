@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
 import { isDark, paletteOf, switchBuilding, type PlanState } from '../../state/planState';
 import { fmtDate } from '../../domain/dates';
-import { num, pct, usd, usd0 } from '../../domain/format';
+import { num } from '../../domain/format';
+import { listingWords } from '../../domain/listing';
 import { Button, Chip, Icon, Menu, Switch, useToastBoundary } from '../ui';
 import type { MenuItem } from '../ui/Menu';
 import { paletteMenuItems } from './paletteMenu';
@@ -134,6 +135,10 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
     </span>
   );
 
+  // The listing as the PDF says it too (`listingWords`): its status leads ("Under contract"), and a prospect is given the state alone.
+  const listing = property.saleListing ? listingWords(property.saleListing, kpis.leasable, state.safe) : null;
+  const floorCount = <span>{property.floors.length} floors</span>;
+
   const facts = (
     <div className="sp-header__facts">
       <span>{property.propertyClass}</span>
@@ -144,24 +149,24 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
       <span className="sp-dot">·</span>
       <span>{num(kpis.leasable)} RSF leasable</span>
       <span className="sp-dot">·</span>
-      <span>{property.floors.length} floors</span>
-      {/* The listing and the latest change wrap together: "Latest change" is never a line of its own (round 22). */}
+      {/* The last facts wrap together, so "Latest change" is never a line of its own (round 22, 23): with the listing
+          when there is one, otherwise with the floor count before it (Legacy West at 1024 px). */}
+      {listing ? floorCount : null}
       <span className="sp-header__tail">
-      {/* One more fact on the facts row, in the same quiet type: the title leads, the listing does not compete with it. */}
-      {property.saleListing &&
-        (state.safe ? (
-          <span className="sp-header__sale" title="The building is listed for sale; pricing is withheld in prospect-safe mode">
-            <Icon name="dollar" size={12} /> Listed for sale
-          </span>
-        ) : (
-          <span className="sp-header__sale" title={`Listed for sale by ${property.saleListing.broker} · ${property.saleListing.status}`}>
+        {listing ? null : floorCount}
+        {/* One more fact on the facts row, in the same quiet type: the title leads, the listing does not compete with it. */}
+        {listing && (
+          <span
+            className="sp-header__sale"
+            title={state.safe ? `${listing.label}; pricing is withheld in prospect-safe mode` : `Listed for sale by ${property.saleListing!.broker} · ${property.saleListing!.status}`}
+          >
             <Icon name="dollar" size={12} />
-            <span className="sp-header__sale-label">For sale</span> {usd0(property.saleListing.price)} · {usd(property.saleListing.price / kpis.leasable)}/RSF
-            {property.saleListing.capRate !== null ? ` · ${pct(property.saleListing.capRate)} cap` : ''}
+            <span className="sp-header__sale-label">{listing.label}</span>
+            {listing.text.slice(listing.label.length)}
           </span>
-        ))}
-      {/* The last fact, after the same separator: when the plan last changed. */}
-      {verified}
+        )}
+        {/* The last fact, after the same separator: when the plan last changed. */}
+        {verified}
       </span>
     </div>
   );

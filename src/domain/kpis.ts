@@ -1,6 +1,6 @@
 import type { ISODate, LeaseType, Property } from './types';
 import { yearsBetween } from './dates';
-import { annualRate } from './format';
+import { annualRate, num } from './format';
 import { activeDeals, isLeaseKind, type FloorView, type Segment, type SegmentKind } from './derive';
 import { marketedFor } from './safe';
 
@@ -210,4 +210,13 @@ export function kpiDeltas(
     pipelineDeals: now.pipeline.deals - base.pipeline.deals,
     maxContiguous: now.maxContiguous.size - base.maxContiguous.size,
   };
+}
+
+/**
+ * The Pipeline KPI in words, shared by the KPI strip and the PDF so they cannot drift (round 23: the PDF still
+ * said "57,800 SF requested"). `inPlay` counts each space once, at its largest live deal; `requested` is what
+ * the deals ask for in all, competing deals on one suite included.
+ */
+export function pipelineWords(p: Kpis['pipeline']): { inPlay: string; requested: string } {
+  return { inPlay: `${num(p.sf)} SF in play`, requested: `deals request ${num(p.requested)} SF` };
 }

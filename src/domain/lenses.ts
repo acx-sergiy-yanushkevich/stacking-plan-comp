@@ -140,8 +140,9 @@ function statusTone(seg: Segment, prospectSafe: boolean): Tone {
     case 'projected':
       return 'projected';
     case 'unmarketed':
-      // An unaccounted area is a data gap; a prospect sees space that is simply not on offer.
-      return canShowIssues(prospectSafe) ? 'empty' : 'muted';
+      // Floor area with no lease or listing: one dashed swatch in every mode. The owner's legend calls it
+      // "No lease or listing" (it may be a data gap); a prospect's calls it "Not on the market" (`gapName`).
+      return 'empty';
     case 'holdover':
     case 'mtm':
       // Prospects never see tenant risk; the suite is simply leased.
@@ -171,10 +172,14 @@ export function toneFor(seg: Segment, lens: LensId, prospectSafe: boolean): Tone
       if (seg.kind === 'available') return 'available';
       return 'empty';
     case 'deals': {
+      // No deal is shown to a prospect, so the lens has nothing of its own to draw: it draws what Leasing does,
+      // with the same legend (the state layer never opens it in prospect-safe mode; this keeps it honest if anything does).
+      if (!canShowDeals(prospectSafe)) return statusTone(seg, prospectSafe);
       if (seg.kind === 'forsale') return 'forsale';
-      if (!canShowDeals(prospectSafe)) return seg.kind === 'available' || seg.kind === 'sublease' ? 'empty' : 'muted';
       const d = topDeal(seg);
       if (d) return `deal-${stageRank(d.stage)}` as Tone;
+      // Space with no lease or listing may be a lease missing its units, so it is not "vacant": its own item.
+      if (seg.kind === 'unmarketed') return 'empty';
       return isVacantKind(seg) && seg.kind !== 'committed' ? 'deal-none' : 'muted';
     }
     case 'rent':
@@ -200,8 +205,18 @@ type LegendSpec = Omit<LegendItem, 'sf' | 'share'>;
  */
 export const NO_RECORD = 'No lease or listing';
 
+/** A prospect's word for the same space: it is not offered, and a prospect is told no more than that. */
+export const NOT_ON_MARKET = 'Not on the market';
+
+/**
+ * The one name of floor area with no lease or listing, in a mode: every legend, the block, the inspector,
+ * the floor labels, Data issues and the PDF use it, so the same space is never called two things.
+ */
+export const gapName = (prospectSafe: boolean): string => (canShowIssues(prospectSafe) ? NO_RECORD : NOT_ON_MARKET);
+
 function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
-  if (lens === 'status' && prospectSafe)
+  // A prospect's Pipeline draws what Leasing does (`toneFor`), so it has Leasing's legend.
+  if ((lens === 'status' || lens === 'deals') && prospectSafe)
     return [
       { tone: 'available', label: 'Available (direct)' },
       { tone: 'sublease', label: 'Sublease', pattern: 'dots' },
@@ -212,7 +227,7 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
       // The space tenants are in (80.2%): the KPI's "occupied". "Leased" there is the larger figure that
       // also counts signed leases not yet in and sublet space, so it is not this item's word.
       { tone: 'leased', label: 'Occupied' },
-      { tone: 'muted', label: 'Not available' },
+      { tone: 'empty', label: NOT_ON_MARKET, pattern: 'dashed' },
     ];
   switch (lens) {
     case 'status':
@@ -226,7 +241,7 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
         { tone: 'expiring', label: 'Expires < 12 mo' },
         { tone: 'risk', label: 'Holdover / month-to-month' },
         { tone: 'projected', label: 'Projected vacancy', pattern: 'dashed' },
-        { tone: 'empty', label: NO_RECORD, pattern: 'dashed' },
+        { tone: 'empty', label: gapName(prospectSafe), pattern: 'dashed' },
       ];
     case 'expiry':
       // Prospect-safe: lease terms are withheld, so the legend has no ramp to explain.
@@ -237,7 +252,7 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
           { tone: 'committed', label: 'Signed, not yet in', pattern: 'hatch' },
           { tone: 'available', label: 'Available' },
           { tone: 'projected', label: 'Projected vacancy', pattern: 'dashed' },
-          { tone: 'empty', label: 'Not on the market', pattern: 'dashed' },
+          { tone: 'empty', label: NOT_ON_MARKET, pattern: 'dashed' },
           { tone: 'muted', label: 'For sale' },
         ];
       return [
@@ -251,26 +266,22 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
         { tone: 'committed', label: 'Signed, not yet in', pattern: 'hatch' },
         { tone: 'available', label: 'Available' },
         { tone: 'projected', label: 'Projected vacancy', pattern: 'dashed' },
-        { tone: 'empty', label: NO_RECORD, pattern: 'dashed' },
+        { tone: 'empty', label: gapName(prospectSafe), pattern: 'dashed' },
         { tone: 'muted', label: 'For sale' },
       ];
     case 'deals':
-      return prospectSafe
-        ? [
-            { tone: 'empty', label: 'Available', pattern: 'dashed' },
-            { tone: 'muted', label: 'Not available' },
-            { tone: 'forsale', label: 'For sale' },
-          ]
-        : [
-            // Only a signed lease is ever this far (topDeal), so its swatch is hatched as the suite is drawn.
-            { tone: 'deal-3', label: 'Lease drafted', pattern: 'hatch' },
-            { tone: 'deal-2', label: 'LOI' },
-            { tone: 'deal-1', label: 'Proposal' },
-            { tone: 'deal-0', label: 'Tour' },
-            { tone: 'deal-none', label: 'Vacant, no deal', pattern: 'dashed' },
-            { tone: 'muted', label: 'Leased, no deal' },
-            { tone: 'forsale', label: 'For sale' },
-          ];
+      return [
+        // Only a signed lease is ever this far (`topDeal` counts a Lease Out only on the committed lease it
+        // produced), so the step is named for what it is, signed, and its swatch is hatched as the suite is drawn.
+        { tone: 'deal-3', label: 'Lease signed', pattern: 'hatch' },
+        { tone: 'deal-2', label: 'LOI' },
+        { tone: 'deal-1', label: 'Proposal' },
+        { tone: 'deal-0', label: 'Tour' },
+        { tone: 'deal-none', label: 'Vacant, no deal', pattern: 'dashed' },
+        { tone: 'empty', label: NO_RECORD, pattern: 'dashed' },
+        { tone: 'muted', label: 'Leased, no deal' },
+        { tone: 'forsale', label: 'For sale' },
+      ];
     case 'rent':
       return [
         { tone: 'rent-0', label: 'Gross < $28' },
@@ -285,7 +296,7 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
         // signed lease apart, so the figure is the KPI's occupied, not a second "Leased" that disagrees with it.
         ...(prospectSafe ? [{ tone: 'committed' as Tone, label: 'Signed, not yet in', pattern: 'hatch' as const }] : []),
         { tone: 'muted', label: prospectSafe ? 'Occupied' : 'No rent on record' },
-        { tone: 'empty', label: prospectSafe ? 'Not on the market' : NO_RECORD, pattern: 'dashed' },
+        { tone: 'empty', label: gapName(prospectSafe), pattern: 'dashed' },
         { tone: 'forsale', label: 'For sale' },
       ];
   }

@@ -295,8 +295,11 @@ describe('prospect-safe is today only', () => {
         // The floor's figures describe the segments beside them.
         expect([f.leased, f.available, f.maxContiguous, f.bestRun], `${asOf} ${f.floor.name}`).toEqual(Object.values(floorTotals(f.segments, f.leasable)));
       }
-      // Nothing is lost or resized: the same suites, the same SF.
-      expect(out.flatMap((f) => f.segments).map((s) => [s.key, s.size])).toEqual(raw.flatMap((f) => f.segments).map((s) => [s.key, s.size]));
+      // Nothing is lost or resized: the same suites, the same SF. Vacant space listed quietly is keyed as the
+      // floor's space, so no key is a quiet listing's record id.
+      const rekey = (s: { key: string; floorId: string; order: number; kind: string }) => (quiet.has(s.key) && s.kind === 'available' ? `${s.floorId}-gap-${s.order}` : s.key);
+      expect(out.flatMap((f) => f.segments).map((s) => [s.key, s.size])).toEqual(raw.flatMap((f) => f.segments).map((s) => [rekey(s), s.size]));
+      expect(out.flatMap((f) => f.segments).some((s) => quiet.has(s.key))).toBe(false);
     }
   });
 
@@ -305,7 +308,9 @@ describe('prospect-safe is today only', () => {
     const f6 = raw.find((f) => f.floor.id === 'F6')!;
     expect(f6.available).toBe(21400);
     const out = publishedFloors(raw, true).find((f) => f.floor.id === 'F6')!;
-    expect(out.segments.find((s) => s.key === 'A04')).toMatchObject({ kind: 'unmarketed', availability: undefined, lease: undefined });
+    // Keyed as the floor's space, not by the listing's record id: no block or link carries a quiet listing's id.
+    expect(out.segments.find((s) => s.key === 'A04')).toBeUndefined();
+    expect(out.segments.find((s) => s.key === 'F6-gap-1')).toMatchObject({ kind: 'unmarketed', availability: undefined, lease: undefined, size: 21400 });
     expect([out.available, out.maxContiguous, out.bestRun]).toEqual([0, 0, []]);
     // The broker's plan is untouched.
     expect(publishedFloors(raw, false)).toBe(raw);
