@@ -27,7 +27,7 @@ interface Kpi {
   detail: string;
   delta?: { text: string; good: boolean | null } | null;
   active: boolean;
-  /** What the figure is and what a click does. */
+  /** What the figure is (and, for a switch, what a click does). */
   title: string;
   /** A figure with nothing to open (prospect-safe: Expiring 12 mo, WALT and Pipeline). */
   static?: boolean;
@@ -53,7 +53,7 @@ function lightOn(keys: string[]) {
     setHoverKeys(null);
   };
   return {
-    onPointerEnter: (e: PointerEvent<HTMLButtonElement>) => {
+    onPointerEnter: (e: PointerEvent<HTMLElement>) => {
       if (e.pointerType === 'touch') return;
       clearTimeout(hoverTimer);
       hoverTimer = setTimeout(on, HOVER_MS);
@@ -71,12 +71,13 @@ function lightOn(keys: string[]) {
  * shows before a click:
  * - "Color by" (Leased, Pipeline): switches. Each colors the plan by its lens (status, deals); the one in
  *   use has a filled dot and an underline (and `aria-pressed`), as the toolbar's lens marks its own.
- * - "Details" (Available, Largest block, Expiring 12 mo, WALT): each opens something (the space finder, the
- *   worklist, the timeline) and carries an arrow. They are never pressed: what they open shows itself.
+ * - "Details" (Available, Largest block, Expiring 12 mo, Avg term): figures to read, nothing to click. What
+ *   they once opened (Find space, the Worklist, the Timeline) each has its own control in the toolbar, where
+ *   its name says what it does; a click on a number did not (Clara, Nov 12).
  *
- * Two figures are made of suites anyone can point to: "Available" and "Largest block". Pointing at one,
- * or focusing it, lights those suites on the plan (the model, the stack, the open floor's plate) through
- * the hover store, as pointing at a finder option does; nothing is written to the URL and nothing opens.
+ * Two figures are made of suites anyone can point to: "Available" and "Largest block". Pointing at one
+ * lights those suites on the plan (the model, the stack, the open floor's plate) through the hover store,
+ * as pointing at a finder option does; nothing is written to the URL and nothing opens.
  */
 export function KpiStrip({ model, state, onAction }: KpiStripProps) {
   const { kpis: k, deltas: d, safe } = model;
@@ -104,7 +105,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
       detail: `${available}${k.comingAvailable.sf ? ` · +${num(k.comingAvailable.sf)} ${k.comingAvailable.from ? fmtMonthYearShort(k.comingAvailable.from) : 'later'}` : ''}`,
       delta: d ? { text: sfDelta(d.availableDirect + d.availableSublease), good: d.availableDirect + d.availableSublease <= 0 } : null,
       active: false,
-      title: 'Space a tenant could take on the as-of date. Point at it to see it on the plan; click to find space by size.',
+      title: 'Space a tenant could take on the as-of date. Point at it to see it on the plan.',
       lights: k.availableKeys,
     },
     {
@@ -116,7 +117,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
       detail: k.maxContiguous.floorName ? `${k.maxContiguous.floorName} · direct · contiguous` : 'No direct space available',
       delta: d ? { text: sfDelta(d.maxContiguous), good: d.maxContiguous >= 0 } : null,
       active: false,
-      title: 'Largest run of adjacent direct availabilities. Point at it to see it on the plan; click to see every option at this size.',
+      title: 'Largest run of adjacent direct availabilities. Point at it to see it on the plan.',
       lights: k.maxContiguous.keys,
     },
     canShowRollover(safe)
@@ -129,7 +130,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
           detail: `${k.leased ? pct(k.expiring12 / k.leased) : '0%'} of leased · ${plural(k.expiring12Leases, 'lease')}`,
           delta: d ? { text: sfDelta(d.expiring12), good: d.expiring12 <= 0 } : null,
           active: false,
-          title: 'Lease SF ending within 12 months of the as-of date. Click for the expiration lens and the 12-month worklist.',
+          title: 'Lease SF ending within 12 months of the as-of date.',
         }
       : {
           // With every suite's RSF on the plan, the SF expiring (and the lease count) would name the suites: no figure at all.
@@ -226,19 +227,20 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
         <span className="sp-sr-only">{c.detail}</span>
       </span>
     );
-    return c.static ? (
-      <div key={c.id} className="sp-kpi sp-kpi--static" data-kpi={c.id} title={`${c.detail}. ${c.title}.`}>
+    // A detail is a figure to read: no button, nothing to click. Pointing at one still lights its suites.
+    return kind === 'open' ? (
+      <div key={c.id} className="sp-kpi sp-kpi--detail" data-kpi={c.id} title={`${c.detail}. ${c.title}`} {...(c.lights?.length ? lightOn(c.lights) : null)}>
         {body}
       </div>
     ) : (
       <button
         key={c.id}
         type="button"
-        className={`sp-kpi sp-kpi--${kind}${c.active ? ' is-active' : ''}`}
+        className={`sp-kpi sp-kpi--lens${c.active ? ' is-active' : ''}`}
         data-kpi={c.id}
         onClick={() => onAction(c.id)}
         title={`${c.detail}. ${c.title}`}
-        aria-pressed={kind === 'lens' ? c.active : undefined}
+        aria-pressed={c.active}
         {...(c.lights?.length ? lightOn(c.lights) : null)}
       >
         {body}
@@ -260,7 +262,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
   return (
     <section className={safe ? 'sp-kpis sp-no-print sp-kpis--safe' : 'sp-kpis sp-no-print'} aria-label="Key figures">
       {group('lens', 'Color the plan by', 'Color by', lenses)}
-      {group('open', 'Open a detail', 'Details', openFigures)}
+      {group('open', 'Details', 'Details', openFigures)}
     </section>
   );
 }

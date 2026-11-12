@@ -10,5 +10,5 @@ export const waltCard = (walt: number) => walt.toFixed(2);
 export function waltTitle(walt: number, safe = false): string {
   // Prospect-safe never says which lease states exist in the building (tenant risk is withheld).
   const zero = canShowTenantRisk(safe) ? ' Holdover and month-to-month leases count as 0 years; signed leases that have not commenced are left out.' : ' Signed leases that have not commenced are left out.';
-  return `Weighted average lease term remaining: ${walt.toFixed(4)} years (${(walt * 12).toFixed(2)} months), to four decimals; the card rounds to two. Each in-place lease counts its years to lease end, weighted by its SF.${zero} Click for the lease timeline.`;
+  return `Weighted average lease term remaining: ${walt.toFixed(4)} years (${(walt * 12).toFixed(2)} months), to four decimals; the card rounds to two. Each in-place lease counts its years to lease end, weighted by its SF.${zero}`;
 }

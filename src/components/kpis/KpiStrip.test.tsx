@@ -62,7 +62,7 @@ describe('WALT figure', () => {
 });
 
 describe('KpiStrip', () => {
-  it('is two surfaces: the figures that color the plan, and the figures that open something', () => {
+  it('is two surfaces: the switches that color the plan, and the details that only inform', () => {
     const { html } = render(TODAY);
     expect(html).toMatch(/^<section class="sp-kpis sp-no-print" aria-label="Key figures">/);
     // One card per group; no figure is a card of its own.
@@ -71,15 +71,17 @@ describe('KpiStrip', () => {
     const lens = group('lens');
     const open = group('open');
     expect([lens?.[1], lens?.[3]]).toEqual(['Color the plan by', 'Color by']);
-    expect([open?.[1], open?.[3]]).toEqual(['Open a detail', 'Details']);
+    expect([open?.[1], open?.[3]]).toEqual(['Details', 'Details']);
     const ids = (part = '') => [...part.matchAll(/data-kpi="([^"]+)"/g)].map((m) => m[1]);
     expect(ids(lens?.[2])).toEqual(['status', 'deals']);
     expect(ids(open?.[2])).toEqual(['find', 'find-largest', 'expiry-worklist', 'timeline']);
-    // A switch carries a dot that fills when it is on; a figure that opens something is styled as one
-    // (kpis.css draws its arrow, so the label's text is the label alone).
+    // A switch carries a dot that fills when it is on. A detail is a plain figure: nothing to click, no arrow,
+    // no button, so it promises no behaviour it would have to explain (Clara, Nov 12).
     expect(lens?.[2].match(/class="sp-kpi__dot"/g)?.length).toBe(2);
-    expect(lens?.[2].match(/class="sp-kpi sp-kpi--lens/g)?.length).toBe(2);
-    expect(open?.[2].match(/class="sp-kpi sp-kpi--open"/g)?.length).toBe(4);
+    expect(lens?.[2].match(/<button type="button" class="sp-kpi sp-kpi--lens/g)?.length).toBe(2);
+    expect(open?.[2].match(/<div class="sp-kpi sp-kpi--detail"/g)?.length).toBe(4);
+    expect(open?.[2]).not.toContain('<button');
+    expect(open?.[2]).not.toContain('sp-kpi--open');
     expect(open?.[2]).not.toContain('sp-kpi__dot');
     expect(html.match(/class="sp-kpi__label sp-label"/g)?.length).toBe(6);
     for (const label of ['Leased', 'Available', 'Largest block', 'Expiring 12 mo', 'Avg term', 'Pipeline']) expect(html).toContain(`>${label}</span>`);
@@ -114,9 +116,10 @@ describe('KpiStrip', () => {
       expect(spoken(el).endsWith(` ${detail.replace(/\s+/g, ' ')}`)).toBe(true);
       expect(el).not.toContain('aria-label');
     }
-    // The tooltips still say what the figure is and what a click does.
-    expect(attr(kpiOf(html, 'find'), 'title')).toContain('Space a tenant could take on the as-of date. Point at it to see it on the plan; click to find space by size.');
-    expect(attr(kpiOf(html, 'find-largest'), 'title')).toContain('Largest run of adjacent direct availabilities. Point at it to see it on the plan; click to see every option at this size.');
+    // The tooltips say what the figure is; a detail promises no click.
+    expect(attr(kpiOf(html, 'find'), 'title')).toContain('Space a tenant could take on the as-of date. Point at it to see it on the plan.');
+    expect(attr(kpiOf(html, 'find-largest'), 'title')).toContain('Largest run of adjacent direct availabilities. Point at it to see it on the plan.');
+    for (const id of ['find', 'find-largest', 'expiry-worklist', 'timeline']) expect(attr(kpiOf(html, id), 'title'), id).not.toMatch(/click/i);
     expect(attr(kpiOf(html, 'timeline'), 'title')).toContain(`${kpis.walt.toFixed(4)} years`);
     // The name starts with the label and the exact figure with its unit.
     expect(spoken(kpiOf(html, 'find'))).toBe("Available 33,200 SF 26,200 direct · 7,000 sublease · +21,400 Apr '27");

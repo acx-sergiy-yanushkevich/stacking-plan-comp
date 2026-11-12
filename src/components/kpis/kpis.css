@@ -1,6 +1,6 @@
 /* The KPI bar: the building's six key figures above the toolbar, in every view, in two cards side by side:
    "Color by" (Leased, Pipeline: switches for the plan's lens) and "Details" (Available, Largest block,
-   Expiring 12 mo, WALT: each opens a tool or a view). Hairlines between the figures in a card, no tile
+   Expiring 12 mo, Avg term: figures to read, nothing to click). Hairlines between the figures in a card, no tile
    of its own for any of them. Its height does not depend on the view, on an open floor, on the inspector
    or on what the figures say, so nothing under it moves. Tokens only. */
 .sp-kpis {
@@ -13,6 +13,12 @@
 .sp-kpis__group { display: grid; overflow: hidden; min-width: 0; }
 .sp-kpis__group--lens { grid-template-columns: minmax(0, 0.81fr) minmax(0, 0.92fr); }
 .sp-kpis__group--open { grid-template-columns: minmax(0, 1.09fr) minmax(0, 1.16fr) minmax(0, 1.2fr) minmax(0, 0.82fr); }
+/* A wide window, where each change chip stands beside its figure: the columns are sized to the label, figure and
+   chip on one line (270, 303, 253, 224 px measured), so no chip wraps and pushes its note out of sight. With the
+   narrower widths above, Avg term's chip wrapped there and "SF-weighted" went unseen. */
+@media (min-width: 1600px) {
+  .sp-kpis__group--open { grid-template-columns: minmax(0, 1.08fr) minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.9fr); }
+}
 /* Prospect-safe: three figures (Leased; Available, Largest block), the strip sized to them so no group is half empty. */
 @media (min-width: 761px) {
   .sp-kpis--safe { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
@@ -33,14 +39,6 @@
 }
 button.sp-kpi--lens:hover .sp-kpi__dot { border-color: var(--sp-color-brand); }
 .sp-kpi--lens.is-active .sp-kpi__dot { background: var(--sp-color-brand); border-color: var(--sp-color-brand); }
-/* A figure that opens something: an arrow after its label, which leans forward on hover. It is drawn, not
-   written: the label's text stays the label alone, and the arrow (empty alternative text) is not read. */
-.sp-kpi--open .sp-kpi__label::after {
-  content: '›' / ''; display: inline-block; margin-left: 5px; font-size: 13px; line-height: 0;
-  color: var(--sp-color-text-faint); transition: transform var(--sp-ease), color var(--sp-ease);
-}
-button.sp-kpi--open:hover .sp-kpi__label::after { color: var(--sp-color-brand-strong); transform: translateX(2px); }
-button.sp-kpi--open:hover .sp-kpi__label { color: var(--sp-color-brand-strong); }
 .sp-kpi { position: relative; display: block; min-width: 0; padding: 7px 14px; text-align: left; transition: background var(--sp-ease); }
 /* The hairline between two figures stops short of the bar's edges. */
 .sp-kpi + .sp-kpi::before { content: ''; position: absolute; left: 0; top: 9px; bottom: 9px; width: 1px; background: var(--sp-color-border-strong); opacity: 0.55; }
@@ -50,7 +48,7 @@ button.sp-kpi:hover { background: var(--sp-color-card-2); }
 .sp-kpi.is-active .sp-kpi__label { color: var(--sp-color-brand-strong); }
 /* The bar clips its corners, so the focus ring is drawn inside the figure. */
 .sp-kpi:focus-visible { outline-offset: -3px; border-radius: 9px; }
-.sp-kpi--static { cursor: default; }
+.sp-kpi--detail { cursor: default; }
 
 /* A figure's two lines: the label and the figure, then one short note. The time-travel change stands
    beside its figure where every column has the room for that (a wide window, below), and otherwise leads
