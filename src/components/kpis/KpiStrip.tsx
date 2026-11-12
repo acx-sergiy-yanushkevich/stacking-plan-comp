@@ -2,16 +2,23 @@ import type { PointerEvent } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { fmtMonthYearShort } from '../../domain/dates';
-import { num, pct, plural, sfDelta } from '../../domain/format';
+import { dollars, num, pct, plural, sfDelta, usd } from '../../domain/format';
 import { pipelineWords } from '../../domain/kpis';
+import { LENSES, type LensId } from '../../domain/lenses';
 import { waltCard, waltTitle } from './walt';
-import { canShowRollover, canShowWalt } from '../../domain/safe';
+import { canShowInPlaceRent, canShowRollover, canShowWalt, canUseLens } from '../../domain/safe';
 import { setHoverKeys } from '../../state/hoverStore';
+import { prospectFirst } from '../shell/toolbarRules';
 
-/** What a KPI click does: only the Color-by switches act; the Details figures are read-only (team review, Nov 12). */
-export type KpiAction = 'status' | 'deals';
-/** Every figure's id (`data-kpi`): the two switches, then the four details. */
-type KpiId = KpiAction | 'find' | 'find-largest' | 'expiry-worklist' | 'timeline';
+/** What a KPI click does: a Color-by switch sets its lens; the Details figures are read-only (team review, Nov 12). */
+export type KpiAction = LensId;
+/** Every figure's id (`data-kpi`): the four switches, then the three details. */
+type KpiId = KpiAction | 'find' | 'find-largest' | 'timeline';
+
+/** The switches in the strip's order: those a prospect is also offered first, so they stay put when the others go. */
+const SWITCHES = prospectFirst(LENSES);
+/** A switch's label is its lens's one name (Leasing, Rent, Expiration, Pipeline). */
+const lensLabel = (id: LensId) => LENSES.find((l) => l.id === id)!.label;
 
 export interface KpiStripProps {
   model: PlanModel;
@@ -32,7 +39,7 @@ interface Kpi {
   active: boolean;
   /** What the figure is (and, for a switch, what a click does). */
   title: string;
-  /** A figure with nothing to open (prospect-safe: Expiring 12 mo, WALT and Pipeline). */
+  /** A figure withheld from a prospect (Expiration, Avg term and Pipeline): left out of the strip. */
   static?: boolean;
   /**
    * The suites the figure is made of, where that is plain: pointing at the KPI (or focusing it) lights
@@ -68,15 +75,17 @@ function lightOn(keys: string[]) {
 }
 
 /**
- * The building's six key figures: one quiet bar above the toolbar, the same element in the same place in
+ * The building's seven key figures: one quiet bar above the toolbar, the same element in the same place in
  * every view and every state, so nothing under it moves when the view changes, a floor opens or the
  * inspector comes in. The figures do one of two things, and they stand in two groups so the difference
  * shows before a click:
- * - "Color by" (Leased, Pipeline): switches. Each colors the plan by its lens (status, deals); the one in
- *   use has a filled dot and an underline (and `aria-pressed`), as the toolbar's lens marks its own.
- * - "Details" (Available, Largest block, Expiring 12 mo, Avg term): figures to read, nothing to click. What
- *   they once opened (Find space, the Worklist, the Timeline) each has its own control in the toolbar, where
- *   its name says what it does; a click on a number did not (team review, Nov 12).
+ * - "Color by" (Leasing, Rent, Expiration, Pipeline): switches, one per lens and the page's only lens
+ *   picker (the toolbar had a second one that offered the same choice: team review, Nov 12). Each is
+ *   named for its lens and shows the figure the lens is about; the one in use has a filled dot and an
+ *   underline (and `aria-pressed`).
+ * - "Details" (Available, Largest block, Avg term): figures to read, nothing to click. What they once
+ *   opened (Find space, the Timeline) each has its own control in the toolbar, where its name says what
+ *   it does; a click on a number did not (team review, Nov 12).
  *
  * Two figures are made of suites anyone can point to: "Available" and "Largest block". Pointing at one
  * lights those suites on the plan (the model, the stack, the open floor's plate) through the hover store,
@@ -88,15 +97,16 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
   // Leased is capped per floor while the parts are recorded SF: name the gap so the context reconciles.
   const overAlloc = k.committed + k.availableSublease - (k.leased - Math.round(k.physical * k.leasable));
   const available = `${num(k.availableDirect)} direct · ${num(k.availableSublease)} sublease`;
+  // The lens in use, as the plan is drawn: a prospect-safe link naming a withheld lens draws Leasing (App.tsx).
+  const inUse = (id: LensId) => state.view !== 'map' && (canUseLens(state.lens, safe) ? state.lens : 'status') === id;
   const leased: Kpi = {
     id: 'status',
-    label: 'Leased',
+    label: lensLabel('status'),
     value: pct(k.occupancy),
     note: `${pct(k.physical)} occupied`,
     detail: `${pct(k.physical)} occupied${k.committed ? ` · ${num(k.committed)} SF signed, not yet in` : ''}`,
     delta: d ? { text: `${d.occupancy >= 0 ? '+' : '−'}${Math.abs(d.occupancy * 100).toFixed(1)} pts`, good: d.occupancy >= 0 } : null,
-    // Pressed whenever the plan is coloured by status, as Pipeline is whenever it is coloured by deals.
-    active: state.view !== 'map' && state.lens === 'status',
+    active: inUse('status'),
     title: `Leased share of leasable RSF, including signed leases that have not commenced.${safe ? '' : ` ${num(Math.round(k.physical * k.leasable))} SF occupied + ${num(k.committed)} signed, not in + ${num(k.availableSublease)} sublet vacant${overAlloc > 0 ? ` − ${num(overAlloc)} over-allocated (capped)` : ''} = ${num(k.leased)} SF leased.`} Click to color the plan by leasing status.`,
   };
   const opens: Kpi[] = [
@@ -124,29 +134,6 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
       title: 'Largest run of adjacent direct availabilities. Point at it to see it on the plan.',
       lights: k.maxContiguous.keys,
     },
-    canShowRollover(safe)
-      ? {
-          id: 'expiry-worklist',
-          label: 'Expiring 12 mo',
-          value: num(k.expiring12),
-          unit: 'SF',
-          note: `${k.leased ? pct(k.expiring12 / k.leased) : '0%'} of leased · ${plural(k.expiring12Leases, 'lease')}`,
-          detail: `${k.leased ? pct(k.expiring12 / k.leased) : '0%'} of leased · ${plural(k.expiring12Leases, 'lease')}`,
-          delta: d ? { text: sfDelta(d.expiring12), good: d.expiring12 <= 0 } : null,
-          active: false,
-          title: 'Lease SF ending within 12 months of the as-of date.',
-        }
-      : {
-          // With every suite's RSF on the plan, the SF expiring (and the lease count) would name the suites: no figure at all.
-          id: 'expiry-worklist',
-          label: 'Expiring 12 mo',
-          value: 'Withheld',
-          note: 'Lease terms not shown',
-          detail: 'Lease terms are not shown in prospect-safe mode',
-          active: false,
-          title: 'When leases end is withheld in prospect-safe mode',
-          static: true,
-        },
     // WALT is made of nothing but lease terms: it shows only where the terms themselves may be shown
     // (`canShowWalt` is `canShowLeaseTerm`, domain/safe.ts).
     canShowWalt(safe)
@@ -175,10 +162,67 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
           static: true,
         },
   ];
+  // The Expiration switch shows what is ending soonest: the SF expiring inside 12 months.
+  const expiry: Kpi = canShowRollover(safe)
+    ? {
+        id: 'expiry',
+        label: lensLabel('expiry'),
+        value: num(k.expiring12),
+        unit: 'SF',
+        note: `${k.leased ? pct(k.expiring12 / k.leased) : '0%'} of leased · ${plural(k.expiring12Leases, 'lease')}`,
+        detail: `${k.leased ? pct(k.expiring12 / k.leased) : '0%'} of leased · ${plural(k.expiring12Leases, 'lease')}`,
+        delta: d ? { text: sfDelta(d.expiring12), good: d.expiring12 <= 0 } : null,
+        active: inUse('expiry'),
+        title: 'Lease SF ending within 12 months of the as-of date. Click to color the plan by lease expiration.',
+      }
+    : {
+        // With every suite's RSF on the plan, the SF expiring (and the lease count) would name the suites: no figure,
+        // and no Expiration lens either (`canUseLens`).
+        id: 'expiry',
+        label: lensLabel('expiry'),
+        value: 'Withheld',
+        note: 'Lease terms not shown',
+        detail: 'Lease terms are not shown in prospect-safe mode',
+        active: false,
+        title: 'When leases end is withheld in prospect-safe mode',
+        static: true,
+      };
+  // The Rent switch: the owner reads the in-place average of the largest lease type (never blended across
+  // types); a prospect, whose plan withholds in-place rents but still colors asking rents, reads the asking
+  // range of the space on offer. Either way the card is a switch, so the Rent lens is always within reach.
+  const rent: Kpi = canShowInPlaceRent(safe)
+    ? (() => {
+        const top = k.rentByType[0];
+        return {
+          id: 'rent' as const,
+          label: lensLabel('rent'),
+          value: top ? usd(top.avg) : 'No rent on record',
+          unit: top ? '/SF/yr' : undefined,
+          note: top ? `${top.type} · in place` : 'No rents on record',
+          detail: top ? k.rentByType.map((r) => `${r.type} ${usd(r.avg)}/SF/yr on ${num(r.sf)} SF`).join(' · ') : 'No lease on the plan carries a rent',
+          delta: null,
+          active: inUse('rent'),
+          title: 'Average in-place rent of the largest lease type, each lease weighted by its recorded SF; never blended across types. Click to color the plan by rent.',
+        };
+      })()
+    : (() => {
+        const top = k.askingByType[0];
+        return {
+          id: 'rent' as const,
+          label: lensLabel('rent'),
+          value: top ? `${dollars(top.low)}–${dollars(top.high)}` : 'No asking rents',
+          unit: top ? '/SF/yr' : undefined,
+          note: top ? 'asking · vacancies' : 'Nothing on offer',
+          detail: top ? k.askingByType.map((a) => `${a.type} ${dollars(a.low)}–${dollars(a.high)}/SF/yr on ${num(a.sf)} SF`).join(' · ') : 'No space on offer carries an asking rent',
+          delta: null,
+          active: inUse('rent'),
+          title: 'Asking rent on the space on offer. Click to color the plan by rent.',
+        };
+      })();
   const pipeline: Kpi = safe
     ? {
         id: 'deals',
-        label: 'Pipeline',
+        label: lensLabel('deals'),
         value: 'Withheld',
         note: 'Deal activity not shown',
         detail: 'Deal activity is not shown in prospect-safe mode',
@@ -188,7 +232,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
       }
     : {
         id: 'deals',
-        label: 'Pipeline',
+        label: lensLabel('deals'),
         value: String(k.pipeline.deals),
         unit: k.pipeline.deals === 1 ? 'deal' : 'deals',
         // Space in play, each space once: competing deals on one suite are alternatives (round 22: "requested"
@@ -196,13 +240,14 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
         note: pipelineWords(k.pipeline).inPlay,
         detail: `${k.pipeline.onVacancy} on vacancies · ${plural(k.pipeline.deals - k.pipeline.onVacancy, 'renewal')} · ${pipelineWords(k.pipeline).inPlay}, each space once at its largest live deal (the ${pipelineWords(k.pipeline).requested} in all)`,
         delta: d ? { text: `${d.pipelineDeals >= 0 ? '+' : '−'}${Math.abs(d.pipelineDeals)} ${Math.abs(d.pipelineDeals) === 1 ? 'deal' : 'deals'}`, good: d.pipelineDeals >= 0 } : null,
-        active: state.view !== 'map' && state.lens === 'deals',
+        active: inUse('deals'),
         title: 'Live deals on this building. Click to color the plan by pipeline.',
       };
   // A prospect is shown what they can use: a figure withheld from them (Pipeline, Expiring 12 mo, Avg lease
   // term) is left out of the strip, not printed as "Withheld", so the bar reads as a clean summary.
   const shown = (c: Kpi) => !c.static;
-  const lenses = [leased, pipeline].filter(shown);
+  const switches: Record<LensId, Kpi> = { status: leased, rent, expiry, deals: pipeline };
+  const lenses = SWITCHES.map((l) => switches[l.id]).filter(shown);
   const openFigures = opens.filter(shown);
   const kpi = (c: Kpi, kind: 'lens' | 'open') => {
     // The accessible name is the content itself: the label, the figure, the change, then the whole note
@@ -254,7 +299,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
         type="button"
         className={`sp-kpi sp-kpi--lens${c.active ? ' is-active' : ''}`}
         data-kpi={c.id}
-        onClick={() => (c.id === 'status' || c.id === 'deals') && onAction(c.id)}
+        onClick={() => onAction(c.id as KpiAction)}
         title={`${c.detail}. ${c.title}`}
         aria-pressed={c.active}
         {...(c.lights?.length ? lightOn(c.lights) : null)}
