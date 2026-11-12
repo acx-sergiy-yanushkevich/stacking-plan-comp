@@ -99,6 +99,22 @@ for (const [name, qs, w] of [
   await dark.waitForTimeout(qs.includes('view=map') ? 2500 : 350);
   await dark.screenshot({ path: `${out}/${name}.png`, fullPage: !qs.includes('view=map') });
 }
+// Round 22: the legend from the keyboard (an entry focused, its figures in a tooltip), the ⓘ note opened as a
+// popover, and the phone's unfolded legend with each entry's figures.
+await dark.setViewportSize({ width: 1440, height: 1100 });
+await dark.goto(base + '?view=stack&lens=expiry', { waitUntil: 'networkidle' });
+await dark.waitForTimeout(350);
+await dark.locator('.sp-legend__item').first().focus();
+await dark.waitForTimeout(150);
+await dark.screenshot({ path: `${out}/54-legend-focus.png` });
+await dark.locator('.sp-legend__info').first().click();
+await dark.waitForTimeout(250);
+await dark.screenshot({ path: `${out}/55-legend-note.png` });
+await mobile.goto(base + '?view=stack&lens=expiry', { waitUntil: 'networkidle' });
+await mobile.waitForTimeout(350);
+await mobile.locator('.sp-pstack__legend summary').click();
+await mobile.waitForTimeout(250);
+await mobile.screenshot({ path: `${out}/56-mobile-legend.png` });
 const print = await browser.newPage({ viewport: { width: 1400, height: 1000 }, locale: 'en-US', reducedMotion: 'reduce' });
 hook(print, 'print');
 await print.goto(base + '?view=stack&print=1', { waitUntil: 'networkidle' });
