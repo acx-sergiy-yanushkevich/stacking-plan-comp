@@ -105,7 +105,7 @@ export function FloorSummary({ floor, model, state, patch }: FloorSummaryProps) 
             <Button
               size="sm"
               icon="phone"
-              aria-label={`Log call with ${call.lease.tenant} (${call.reason})`}
+              aria-label={`Log call · ${call.lease.tenant} (${call.reason})`}
               title={`${call.lease.tenant}: ${call.why} on ${name}`}
               onClick={() => run('log-call', `Lease ${call.lease.id} (${call.lease.tenant})`)}
             >

@@ -124,3 +124,9 @@ button.sp-kpi:hover { background: var(--sp-color-card-2); }
   .sp-kpi__unit { font-size: var(--sp-text-11); }
   .sp-kpi__delta { padding: 0 4px; line-height: 15px; }
 }
+/* Prospect-safe: the line that stands where the withheld figures would be. A phone only, where they took a
+   row of their own; wider, the bar is one row whatever it holds. */
+.sp-kpis__withheld { display: none; }
+@media (max-width: 760px) {
+  .sp-kpis__withheld { display: flex; align-items: center; grid-column: 1 / -1; margin: 0; padding: 0 10px; min-height: 43px; font-size: var(--sp-text-12); color: var(--sp-color-text-weak); border-top: 1px solid var(--sp-color-border); }
+}

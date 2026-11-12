@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { planLegendNote } from '../plan/legendNote';
 import { lensName } from '../../domain/lenses';
 import { fmtDate } from '../../domain/dates';
 import { num } from '../../domain/format';
@@ -14,7 +15,6 @@ import { FloorSummary } from '../floor/FloorSummary';
 import { MiniStack } from '../floor/MiniStack';
 import { plateAspect, usePlateSize } from '../floor/usePlateSize';
 import { FilterBar } from '../stack/FilterBar';
-import { rampNote } from '../stack/rampNote';
 import { Button } from '../ui';
 import { useMedia, usePrefersReducedMotion } from '../../lib/useMedia';
 import { find, focused, on, sizeObserver } from '../../lib/host';
@@ -22,7 +22,6 @@ import { floorHeading, floorLabel, floorLabelParts, floorSentence, lensDetail } 
 import { FloorLabels, type FloorLabelRow } from './FloorLabels';
 import { clearFrom, cubicBezier, type Box, type Glide } from './glide';
 import { openFloorOf } from './openFloor';
-import { canShowIssues } from '../../domain/safe';
 import '../floor/floor.css';
 import './building.css';
 
@@ -273,7 +272,6 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
   const plateHeight = size.width < 720 ? Math.min(size.height, squat) : size.height;
 
   const title = lensName(state.lens);
-  const over = floors.filter((f) => f.overAllocatedBy > 0);
   const lobby = buildingUse(floors);
   const head = (
     <div className="sp-stack__head">
@@ -291,14 +289,7 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
         extras={lobby ? [lobby] : undefined}
         compact
         id="sp-legend"
-        note={
-          [
-            rampNote(state.lens, safe),
-            over.length > 0 && canShowIssues(model.safe) ? `${over.map((f) => `${f.floor.name} records exceed its leasable area by ${num(f.overAllocatedBy)} SF`).join('; ')}; legend shares use recorded SF, leased occupancy is capped.` : null,
-          ]
-            .filter(Boolean)
-            .join(' ') || null
-        }
+        note={planLegendNote(model, state.lens)}
       />
     </div>
   );

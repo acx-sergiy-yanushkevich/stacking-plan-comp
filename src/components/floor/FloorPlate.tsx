@@ -124,6 +124,20 @@ export function sliceName(text: SegmentText): string {
   return [floorName, text.name, ...text.sub.split(' · '), text.meta, short, ...text.badges.map(badgeLabel)].filter(Boolean).join(', ');
 }
 
+/**
+ * The name a slice is read by: its floor, then what it draws, in the order it is drawn (the key number, the
+ * lines, the badges), then the facts it had no room to draw. The drawn words are one run in the name, as
+ * WCAG 2.5.3 asks (round 20: axe label-content-name-mismatch where the short date sat between two facts).
+ */
+export function drawnSliceName(text: SegmentText, drawn: ReadonlyArray<string>): string {
+  const floorName = text.aria.split(',')[0];
+  const shown = drawn.map((t) => t.trim()).filter(Boolean);
+  const said = shown.join(' ');
+  const facts = sliceName(text).split(', ').slice(1);
+  const rest = facts.filter((f) => f && !said.includes(f));
+  return [floorName, ...shown, ...rest].join(', ');
+}
+
 type NameMode = 'name' | 'tiny' | 'none';
 /** A rent with its unit and lease type: "$31–$33/SF/yr FSG". */
 const isRate = (t: string) => /^\$\S+\/SF\/(yr|mo) \S+$/.test(t);
@@ -379,12 +393,19 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
   }, [floor, points, model.req, property.inquiries, safe, asOf, lens, largest]);
   const keyed = slices.filter((s) => s.keyNo !== undefined);
 
+  // The keys move between the suites one can select: the lobby is drawn and named, but it is not a stop
+  // (round 20: End on Floor 1 went to the lobby and left the plate with no tab stop at all).
+  const stops = slices.map((s, i) => (s.seg.key.endsWith('-lobby') ? -1 : i)).filter((i) => i >= 0);
   const focusAt = (i: number) => {
-    const n = slices.length;
+    if (!stops.length) return;
+    setFocusIdx(i);
+    refs.current[i]?.focus();
+  };
+  const step = (i: number, by: 1 | -1) => {
+    const n = stops.length;
     if (!n) return;
-    const next = ((i % n) + n) % n;
-    setFocusIdx(next);
-    refs.current[next]?.focus();
+    const at = stops.indexOf(i);
+    focusAt(stops[(((at === -1 ? 0 : at) + by) % n + n) % n]);
   };
 
   const onKey = (e: KeyboardEvent<SVGGElement>, i: number) => {
@@ -397,20 +418,20 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
       case 'ArrowRight':
       case 'ArrowDown':
         e.preventDefault();
-        focusAt(i + 1);
+        step(i, 1);
         break;
       case 'ArrowLeft':
       case 'ArrowUp':
         e.preventDefault();
-        focusAt(i - 1);
+        step(i, -1);
         break;
       case 'Home':
         e.preventDefault();
-        focusAt(0);
+        if (stops.length) focusAt(stops[0]);
         break;
       case 'End':
         e.preventDefault();
-        focusAt(slices.length - 1);
+        if (stops.length) focusAt(stops[stops.length - 1]);
         break;
       case 'Enter':
       case ' ':
@@ -421,7 +442,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
   };
 
   const selectedIdx = slices.findIndex((s) => s.seg.key === state.select);
-  const tabStop = Math.min(focusIdx, Math.max(0, slices.length - 1));
+  const tabStop = stops.includes(focusIdx) ? focusIdx : (stops[0] ?? -1);
 
   return (
     <>
@@ -452,7 +473,7 @@ export function FloorPlate({ floor, model, state, patch, width, height }: FloorP
             className={['sp-seg', selected ? 'is-selected' : '', dim ? 'is-dim' : '', p === 'dashed' ? 'sp-seg--dashed' : '', s.seg.key.endsWith('-lobby') ? 'sp-seg--lobby' : '', patternFill ? 'sp-seg--patterned' : ''].filter(Boolean).join(' ')}
             role={s.seg.key.endsWith('-lobby') ? 'img' : 'button'}
             tabIndex={s.seg.key.endsWith('-lobby') ? undefined : i === tabStop ? 0 : -1}
-            aria-label={s.seg.key.endsWith('-lobby') ? s.text.aria : sliceName(s.text)}
+            aria-label={drawnSliceName(s.text, [...s.lines.map((l) => l.t), ...s.badges.map((b) => b.text)])}
             aria-pressed={s.seg.key.endsWith('-lobby') ? undefined : selected}
             data-key={s.seg.key}
             style={{ color: edge }}

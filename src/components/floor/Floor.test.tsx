@@ -106,15 +106,15 @@ describe('FloorView', () => {
     // Short on the button; the floor and the reason in the accessible name and the tooltip.
     expect(html).toMatch(/<button[^>]*aria-label="New deal on Floor 6"[^>]*>.*?New deal<\/button>/);
     expect(html).toContain('Create availability');
-    expect(html).toMatch(/<button(?=[^>]*aria-label="Log call with Cirrus Energy \(expires Mar\s'27\)")[^>]*>.*?Log call · Cirrus Energy<\/button>/);
+    expect(html).toMatch(/<button(?=[^>]*aria-label="Log call · Cirrus Energy \(expires Mar\s'27\)")[^>]*>.*?Log call · Cirrus Energy<\/button>/);
     expect(html).not.toMatch(/>New deal on Floor/);
     expect(text(render('?view=floor&floor=F12'))).toContain('aria-label="New deal on Floor 12"');
   });
 
   it('the floor-level call goes to the holdover tenant on Floor 3, not to the lease expiring in 2029', () => {
     const html = text(render('?view=floor&floor=F3'));
-    expect(html).toContain('Log call with Argosy Partners (holdover)');
-    expect(html).not.toContain('Log call with S&amp;P Enterprises');
+    expect(html).toContain('Log call · Argosy Partners (holdover)');
+    expect(html).not.toContain('Log call · S&amp;P Enterprises');
   });
 
   it('prospect-safe: no floor names a next expiry, and no lease on any plate shows its term', () => {
@@ -184,8 +184,11 @@ describe('floor plate key', () => {
 
   it('names Floor 8\'s Ste 860 the same with or without the suite selected', () => {
     const name = (q: string) => /<g class="sp-seg[^"]*"[^>]*aria-label="([^"]*)"[^>]*data-key="A07"/.exec(text(render(q)))?.[1];
-    expect(name('?view=floor&floor=F8')).toBe('Floor 8, Available now, Ste 860, 3,200 SF, $31–$33/SF/yr FSG');
-    expect(name('?view=floor&floor=F8&select=A07')).toBe('Floor 8, Available now, Ste 860, 3,200 SF, $31–$33/SF/yr FSG');
+    // It starts with what the slice draws, in order (here its key number and suite), then the facts it has no room for.
+    const own = name('?view=floor&floor=F8')!;
+    expect(own).toMatch(/^Floor 8, /);
+    for (const fact of ['Available now', 'Ste 860', '3,200 SF', '$31–$33/SF/yr FSG']) expect(own).toContain(fact);
+    expect(name('?view=floor&floor=F8&select=A07')).toBe(own);
   });
 
   it('every asking rent is on its slice or in the key, whole, with its unit and lease type: never split, never dropped', () => {

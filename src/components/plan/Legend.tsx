@@ -55,7 +55,7 @@ export function sharesNote(items: ReadonlyArray<LegendItem>, leasable: number, o
   const total = leasable > 0 ? tenths(recorded / leasable) : 0;
   const parts: string[] = [];
   if (recorded > leasable) {
-    const which = over.length ? ` (${over.map((f) => `${f.name} records exceed its leasable area by ${num(f.by)} SF`).join('; ')})` : '';
+    const which = over.length ? ` (${over.map((f) => `${f.name}'s records exceed its leasable area by ${num(f.by)} SF`).join('; ')})` : '';
     parts.push(`Shares are of ${num(leasable)} RSF leasable; the suites on record add up to ${num(recorded)} SF, ${pct(total / 1000)}${which}.`);
   }
   if (printed !== total) parts.push(`Each share is rounded on its own, so the shares shown add up to ${pct(printed / 1000)}.`);
