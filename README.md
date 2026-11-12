@@ -22,9 +22,9 @@ A typical stacking plan is a picture of the building: one color scheme, several 
 
 One model of the building, shown four ways, with the answers to the questions above one click away.
 
-| Stack | Timeline | 3D map |
+| Stack | Timeline | Map |
 |---|---|---|
-| ![Stack view](docs/shots/readme/00-stack-status.png) | ![Lease timeline](docs/shots/readme/16-timeline.png) | ![3D building on the map](docs/shots/readme/18-map.png) |
+| ![Stack view](docs/shots/readme/00-stack-status.png) | ![Lease timeline](docs/shots/readme/16-timeline.png) | ![The building and its surroundings on the map](docs/shots/readme/18-map.png) |
 
 **For the broker**
 
@@ -36,7 +36,7 @@ One model of the building, shown four ways, with the answers to the questions ab
 - **Space finder.** Enter a size, a date and direct or sublease; matching blocks light up, including pairs of adjacent floors and near misses. An open inquiry can be matched to space the same way.
 - **Renewal worklist.** Leases at risk or expiring within 90 days, 180 days, 12 or 24 months, with the last touch on each.
 - **Data issues.** Over-allocated floors, unaccounted area, leases without a floor, holdover and month-to-month leases and stale deals are listed and marked on the plan.
-- **Timeline and 3D map.** Every lease as a bar against time; the building extruded floor by floor on a real map.
+- **Timeline and map.** Every lease as a bar against time; the building in its surroundings on a real map, with transit, amenities and the walking ring, and its height among its neighbours in 3D.
 - **The area around the building.** Demographics, amenities and transit as charts from the Area button in every view, compared with the US. One toggle widens the panel to the location brief, a full-width page to show a client or decision maker, which also closes the PDF report.
 
 **For the prospect, tenant or buyer**
@@ -63,7 +63,7 @@ It works with a keyboard and a screen reader, and on a phone. It opens in the As
 **Application**
 
 - React 19, TypeScript and Vite
-- MapLibre GL with OpenFreeMap tiles for the 3D map
+- MapLibre GL with OpenFreeMap tiles for the map
 - Plain CSS on design tokens, with no UI framework
 
 **Quality**
@@ -174,7 +174,7 @@ All state lives in the URL, so every view can be linked to.
 | `live` | `1` | Fetch footprint and area data live |
 | `census` | API key | US Census API key for live demographics |
 
-Examples: `/?floor=F8` pins floor 8; `/?req=12000` finds 12,000 SF; `/?safe=1` is the prospect-safe plan; `/?view=stack` is the classic stacking plan; `/?view=map&mode=area` is the 3D map with the area panel.
+Examples: `/?floor=F8` pins floor 8; `/?req=12000` finds 12,000 SF; `/?safe=1` is the prospect-safe plan; `/?view=stack` is the classic stacking plan; `/?view=map` is the map of the surroundings, with the Area panel beside it.
 
 ### Project layout
 
