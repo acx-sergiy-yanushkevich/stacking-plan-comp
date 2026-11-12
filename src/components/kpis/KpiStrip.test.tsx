@@ -76,7 +76,7 @@ describe('KpiStrip', () => {
     expect(ids(lens?.[2])).toEqual(['status', 'deals']);
     expect(ids(open?.[2])).toEqual(['find', 'find-largest', 'expiry-worklist', 'timeline']);
     // A switch carries a dot that fills when it is on. A detail is a plain figure: nothing to click, no arrow,
-    // no button, so it promises no behaviour it would have to explain (Clara, Nov 12).
+    // no button, so it promises no behaviour it would have to explain (team review, Nov 12).
     expect(lens?.[2].match(/class="sp-kpi__dot"/g)?.length).toBe(2);
     expect(lens?.[2].match(/<button type="button" class="sp-kpi sp-kpi--lens/g)?.length).toBe(2);
     expect(open?.[2].match(/<div class="sp-kpi sp-kpi--detail"/g)?.length).toBe(4);

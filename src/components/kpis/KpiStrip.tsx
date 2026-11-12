@@ -8,7 +8,10 @@ import { waltCard, waltTitle } from './walt';
 import { canShowRollover, canShowWalt } from '../../domain/safe';
 import { setHoverKeys } from '../../state/hoverStore';
 
-export type KpiAction = 'status' | 'find' | 'find-largest' | 'expiry-worklist' | 'timeline' | 'deals';
+/** What a KPI click does: only the Color-by switches act; the Details figures are read-only (team review, Nov 12). */
+export type KpiAction = 'status' | 'deals';
+/** Every figure's id (`data-kpi`): the two switches, then the four details. */
+type KpiId = KpiAction | 'find' | 'find-largest' | 'expiry-worklist' | 'timeline';
 
 export interface KpiStripProps {
   model: PlanModel;
@@ -17,7 +20,7 @@ export interface KpiStripProps {
 }
 
 interface Kpi {
-  id: KpiAction;
+  id: KpiId;
   label: string;
   value: string;
   unit?: string;
@@ -73,7 +76,7 @@ function lightOn(keys: string[]) {
  *   use has a filled dot and an underline (and `aria-pressed`), as the toolbar's lens marks its own.
  * - "Details" (Available, Largest block, Expiring 12 mo, Avg term): figures to read, nothing to click. What
  *   they once opened (Find space, the Worklist, the Timeline) each has its own control in the toolbar, where
- *   its name says what it does; a click on a number did not (Clara, Nov 12).
+ *   its name says what it does; a click on a number did not (team review, Nov 12).
  *
  * Two figures are made of suites anyone can point to: "Available" and "Largest block". Pointing at one
  * lights those suites on the plan (the model, the stack, the open floor's plate) through the hover store,
@@ -238,7 +241,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
         type="button"
         className={`sp-kpi sp-kpi--lens${c.active ? ' is-active' : ''}`}
         data-kpi={c.id}
-        onClick={() => onAction(c.id)}
+        onClick={() => (c.id === 'status' || c.id === 'deals') && onAction(c.id)}
         title={`${c.detail}. ${c.title}`}
         aria-pressed={c.active}
         {...(c.lights?.length ? lightOn(c.lights) : null)}
