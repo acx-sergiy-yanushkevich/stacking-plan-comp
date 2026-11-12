@@ -48,6 +48,9 @@ export const STATES = [
   ['61-legacy-west', '?view=building&building=P002'],
   ['62-cedar-springs', '?view=stack&building=P005'],
   ['63-bluebonnet-map', '?view=map&building=P007'],
+  // Round 25: the Timeline says why its bars are dimmed, and the Map answers a size typed in search.
+  ['66-timeline-search', '?view=timeline&q=vantage'],
+  ['67-map-search-size', '?view=map&q=12k%20direct%20by%20jun%202027'],
 ];
 
 const browser = await chromium.launch({ channel: 'chrome' });
@@ -125,6 +128,22 @@ await dark.screenshot({ path: `${out}/59-map-places-lit.png` });
 await dark.getByRole('button', { name: 'Show in 3D' }).click();
 await dark.waitForTimeout(1500);
 await dark.screenshot({ path: `${out}/64-map-3d.png` });
+// Round 25: the ring chosen in the map's key (5 miles: the rail stations come into the frame), a kind of place
+// in the key lighting its pins, and a rail station's row bringing the station into view with the building.
+await dark.goto(base + '?view=map', { waitUntil: 'load' });
+await dark.waitForTimeout(3000);
+await dark.getByRole('radiogroup', { name: 'Ring around the building' }).getByRole('radio', { name: '5 mi' }).click();
+await dark.waitForTimeout(1500);
+await dark.screenshot({ path: `${out}/65-map-ring-5mi.png` });
+await dark.goto(base + '?view=map', { waitUntil: 'load' });
+await dark.waitForTimeout(3000);
+await dark.locator('.sp-map-key__item--place', { hasText: 'Cafés' }).hover();
+await dark.waitForTimeout(300);
+await dark.screenshot({ path: `${out}/68-map-key-lit.png` });
+await dark.mouse.move(0, 0);
+await dark.locator('.sp-area__place', { hasText: 'Parker Road Station' }).first().focus();
+await dark.waitForTimeout(1500);
+await dark.screenshot({ path: `${out}/69-map-stop-lit.png` });
 await mobile.goto(base + '?view=stack&lens=expiry', { waitUntil: 'networkidle' });
 await mobile.waitForTimeout(350);
 await mobile.locator('.sp-pstack__legend summary').click();

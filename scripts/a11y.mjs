@@ -35,6 +35,9 @@ const states = [
   '?building=P005&view=stack&lens=deals',
   // A search that reads as a requirement: the bar's offer and Clear.
   '?view=stack&q=12k%20direct%20by%20jun%202027',
+  // Round 25: the same bar on the Map (with the map's key) and on the Timeline.
+  '?view=map&q=12k%20direct%20by%20jun%202027',
+  '?view=timeline&q=vantage',
 ];
 const browser = await chromium.launch({ channel: 'chrome' });
 const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, reducedMotion: 'reduce' });
