@@ -1,44 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { planLegendNote } from '../plan/legendNote';
-import type { FilterSpecification, GeoJSONSource, Map as MapLibreMap, MapLayerMouseEvent } from 'maplibre-gl';
+import { createPortal } from 'react-dom';
+import { Marker, type GeoJSONSource, type Map as MapLibreMap, type MapLayerMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import type { FeatureCollection, Polygon } from 'geojson';
 import type { DataSource, FootprintResult } from '../../data/sources/DataSource';
 import type { FloorView } from '../../domain/derive';
-import { num, pct } from '../../domain/format';
 import { suiteExtrusionFeatures } from '../../domain/geometry';
-import { lensName, toneFor } from '../../domain/lenses';
+import { placesAround, ringBounds, ringCoordinates, offset, WALK_MI, type Place } from '../../domain/places';
+import type { Area } from '../../domain/types';
 import type { PlanModel } from '../../model/usePlanModel';
 import { isDark, paletteOf, type PlanState } from '../../state/planState';
-import { useIsPhone, usePrefersDark, usePrefersReducedMotion } from '../../lib/useMedia';
-import { openFloor, openFloorPlate } from '../plan/actions';
-import { Legend } from '../plan/Legend';
+import { usePrefersDark, usePrefersReducedMotion } from '../../lib/useMedia';
+import { openFloor } from '../plan/actions';
 import { Chip, Icon, useToast } from '../ui';
 import { FootprintFallback } from './FootprintFallback';
 import { MapControls } from './MapControls';
-import { MapFloorList } from './MapFloorList';
-import {
-  BUILDINGS_DARK,
-  BUILDINGS_LIGHT,
-  CAMERA,
-  LAYER_BUILDINGS,
-  LAYER_CAP,
-  LAYER_FLOORS,
-  SOURCE_FLOORS,
-  dominantTone,
-  floorColorExpression,
-  guardedFilter,
-  resolveToneHex,
-  resolveVarHex,
-  toFloorFeatures,
-  mixHex,
-  type FloorFeatureCollection,
-} from './mapStyle';
+import { BUILDINGS_DARK, BUILDINGS_LIGHT, CAMERA, CAMERA_3D, LAYER_BUILDINGS, LAYER_FLOORS, SOURCE_FLOORS, dominantTone, guardedFilter, resolveVarHex, toFloorFeatures, type FloorFeatureCollection } from './mapStyle';
+import { placeHighlight, placeLook, usePlaceHighlight } from './placeHighlight';
 import { useMapLibre } from './useMapLibre';
 import { usePresent } from './usePresent';
 import { useRecorder } from './useRecorder';
 import { RECORD_REQUEST } from './recordSignal';
-import { cancelFrame, requestFrame } from '../../lib/host';
-import '../plan/plan.css';
+import { cancelFrame, createElement, requestFrame } from '../../lib/host';
 import './map.css';
 
 export interface MapViewProps {
@@ -46,53 +29,68 @@ export interface MapViewProps {
   state: PlanState;
   patch: (p: Partial<PlanState>) => void;
   dataSource: DataSource;
+  /** The area around the building (App's `useArea`): its stops and places are pinned, its rings drawn. */
+  area: Area | null;
 }
 
-/** Floors are drawn 1.5 % larger than the OSM footprint so they never z-fight the tiles' own extrusion. */
+/** The building is drawn 1.5 % larger than the OSM footprint so it never z-fights the tiles' own extrusion. */
 const INFLATE = 1.015;
-const CAP_M = 0.35;
-const NO_FLOOR: FilterSpecification = ['==', ['get', 'floorId'], '__none__'];
+/** The map frames the one-mile ring, the Area panel's first ring; the half mile is the walk the amenities are counted in. */
+const FRAME_MI = 1;
+const SOURCE_RINGS = 'sp-rings';
+const LAYER_RING_FILL = 'sp-rings-fill';
+const LAYER_RING_LINE = 'sp-rings-line';
 
 interface LayerInputs {
   features: FloorFeatureCollection;
-  hexByTone: Record<string, string>;
+  rings: FeatureCollection<Polygon, { miles: number }>;
   brandHex: string;
   dark: boolean;
-  selected: string | null;
 }
 
-const capFilter = (floorId: string | null): FilterSpecification => (floorId ? ['==', ['get', 'floorId'], floorId] : NO_FLOOR);
+/** Rings at the half mile and the mile, as GeoJSON lines (and the half mile as a faint disc). */
+function ringFeatures(center: { lat: number; lng: number }): FeatureCollection<Polygon, { miles: number }> {
+  return {
+    type: 'FeatureCollection',
+    features: [WALK_MI, FRAME_MI].map((miles) => ({
+      type: 'Feature',
+      properties: { miles },
+      geometry: { type: 'Polygon', coordinates: [ringCoordinates(center, miles)] },
+    })),
+  };
+}
 
-/** Add the surrounding-buildings layer, the floors source and both floor layers to a freshly loaded style. */
+/** The neighbourhood, the rings and the building, added to a freshly loaded style. */
 function installLayers(map: MapLibreMap, inp: LayerInputs) {
   const style = map.getStyle();
   if (!style) return;
-  // Insert above every fill and line layer (roads, building footprints) but under the labels. Styles
-  // such as the dark one place a symbol layer early; anchoring on the first symbol would bury the building.
+  // Above every fill and line layer (roads, footprints) and under the labels.
   let lastFlat = -1;
   style.layers.forEach((l, i) => {
     if (l.type === 'fill' || l.type === 'line' || l.type === 'background' || l.type === 'raster' || l.type === 'hillshade') lastFlat = i;
   });
   const firstSymbol = style.layers[lastFlat + 1]?.id;
-  // The dark basemap ships its own 3D buildings; they would bury our floors in black. Hide them
-  // and draw the neighbourhood with our muted extrusion layer instead.
+  // The dark basemap ships its own 3D buildings in black: hide them and draw the neighbourhood with ours.
   for (const l of style.layers) {
-    if (l.type === 'fill-extrusion' && l.id !== LAYER_FLOORS && l.id !== LAYER_CAP && l.id !== LAYER_BUILDINGS) {
-      map.setLayoutProperty(l.id, 'visibility', 'none');
-    }
+    if (l.type === 'fill-extrusion' && l.id !== LAYER_FLOORS && l.id !== LAYER_BUILDINGS) map.setLayoutProperty(l.id, 'visibility', 'none');
   }
-  // The basemap compares a property some features lack (road shields by `ref_length`), which MapLibre
-  // reports in the console on every load: those filters are given a fallback that leaves the same features out.
+  // The basemap compares a property some features lack (road shields by `ref_length`): give those filters a
+  // fallback that leaves the same features out, so the console stays clean.
   for (const l of style.layers) {
-    if (!('filter' in l) || !l.filter || l.id === LAYER_FLOORS || l.id === LAYER_CAP || l.id === LAYER_BUILDINGS) continue;
+    if (!('filter' in l) || !l.filter || l.id === LAYER_FLOORS || l.id === LAYER_BUILDINGS) continue;
     const safe = guardedFilter(l.filter);
     if (safe !== l.filter) map.setFilter(l.id, safe);
   }
-  // Flat, front-on light: the default sun washes the walls toward white and darkens the far side, so the
-  // floors stopped matching the legend swatches above the map.
   map.setLight({ anchor: 'viewport', position: [1.2, 210, 30], intensity: 0.18, color: '#ffffff' });
   const vectorSource = map.getSource('openmaptiles') ? 'openmaptiles' : Object.entries(style.sources).find(([, s]) => s.type === 'vector')?.[0];
 
+  if (!map.getSource(SOURCE_RINGS)) map.addSource(SOURCE_RINGS, { type: 'geojson', data: inp.rings });
+  if (!map.getLayer(LAYER_RING_FILL)) {
+    map.addLayer(
+      { id: LAYER_RING_FILL, type: 'fill', source: SOURCE_RINGS, filter: ['==', ['get', 'miles'], WALK_MI], paint: { 'fill-color': inp.brandHex, 'fill-opacity': inp.dark ? 0.1 : 0.06 } },
+      firstSymbol,
+    );
+  }
   if (vectorSource && !map.getLayer(LAYER_BUILDINGS)) {
     map.addLayer(
       {
@@ -100,71 +98,64 @@ function installLayers(map: MapLibreMap, inp: LayerInputs) {
         type: 'fill-extrusion',
         source: vectorSource,
         'source-layer': 'building',
-        minzoom: 14,
+        minzoom: 13,
         filter: ['!=', ['get', 'hide_3d'], true],
         paint: {
           'fill-extrusion-color': inp.dark ? BUILDINGS_DARK : BUILDINGS_LIGHT,
           'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 8],
           'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
-          // Quieter than the property, so the building with the lens on it is the subject.
+          // Quieter than the property, so the building is the subject.
           'fill-extrusion-opacity': inp.dark ? 0.55 : 0.4,
         },
       },
       firstSymbol,
     );
   }
-
   if (!map.getSource(SOURCE_FLOORS)) map.addSource(SOURCE_FLOORS, { type: 'geojson', data: inp.features });
   if (!map.getLayer(LAYER_FLOORS)) {
+    // The building in one colour: its height among its neighbours, not its floors (they are the Building tab's).
     map.addLayer(
       {
         id: LAYER_FLOORS,
         type: 'fill-extrusion',
         source: SOURCE_FLOORS,
-        paint: {
-          'fill-extrusion-base': ['get', 'base'],
-          'fill-extrusion-height': ['get', 'height'],
-          'fill-extrusion-color': floorColorExpression(inp.hexByTone),
-          'fill-extrusion-opacity': 1,
-          'fill-extrusion-vertical-gradient': false,
-        },
+        paint: { 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-color': inp.brandHex, 'fill-extrusion-opacity': 1, 'fill-extrusion-vertical-gradient': false },
       },
       firstSymbol,
     );
   }
-  if (!map.getLayer(LAYER_CAP)) {
+  if (!map.getLayer(LAYER_RING_LINE)) {
     map.addLayer(
       {
-        id: LAYER_CAP,
-        type: 'fill-extrusion',
-        source: SOURCE_FLOORS,
-        filter: capFilter(inp.selected),
-        paint: {
-          'fill-extrusion-base': ['get', 'height'],
-          'fill-extrusion-height': ['+', ['get', 'height'], CAP_M],
-          'fill-extrusion-color': inp.brandHex,
-          'fill-extrusion-opacity': 1,
-        },
+        id: LAYER_RING_LINE,
+        type: 'line',
+        source: SOURCE_RINGS,
+        paint: { 'line-color': inp.brandHex, 'line-width': ['case', ['==', ['get', 'miles'], WALK_MI], 2, 1.5], 'line-dasharray': [3, 2], 'line-opacity': 0.85 },
       },
       firstSymbol,
     );
   }
 }
 
-interface Tip {
-  x: number;
-  y: number;
-  text: string;
+/** Google's own links (Maps URLs): free, no key, for the client who wants directions or a look at the entrance. */
+const googleMaps = (lat: number, lng: number) => `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+const streetView = (lat: number, lng: number) => `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`;
+
+/** "0.2 mi" for a stop or a place: a tenth of a mile is as close as the source is. */
+const miText = (d: number) => `${d.toFixed(1)} mi`;
+
+interface Pinned {
+  place: Place;
+  el: HTMLElement;
 }
 
-const floorTip = (f: FloorView) => `${f.floor.name} · ${pct(f.leasable > 0 ? f.leased / f.leasable : 0)} leased · ${num(f.leasable)} RSF`;
-
 /**
- * Map view (DESIGN.md §2.6): the property extruded floor by floor over OpenFreeMap tiles,
- * colored by the active lens; hover tooltips, click to select, double-click to drill in;
- * Present and Record; an SVG fallback when the map cannot load.
+ * Map view (DESIGN.md §2.6): where the building is and what is around it. A top-down map framed on the half-mile
+ * and one-mile rings, the building in the brand colour, and the area's transit stops and places pinned; the Area
+ * panel beside it lists the same places, and a row lights its pins. 3D shows the building's height among its
+ * neighbours, in one colour: its floors are the Building tab's. Present orbits it; Record films that.
  */
-export default function MapView({ model, state, patch, dataSource }: MapViewProps) {
+export default function MapView({ model, state, patch, dataSource, area }: MapViewProps) {
   const { property, floors } = model;
   const containerRef = useRef<HTMLDivElement>(null);
   const prefersDark = usePrefersDark();
@@ -186,36 +177,20 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
     };
   }, [state.live, dataSource, property]);
   const mapProperty = useMemo(() => (live ? { ...property, footprint: live.polygon, footprintSource: live.source } : property), [property, live]);
+  const center = property.location;
 
-  const toneOf = useCallback((f: FloorView) => dominantTone(f, state.lens, state.safe), [state.lens, state.safe]);
-  const toneOfSeg = useCallback((s: FloorView['segments'][number]) => toneFor(s, state.lens, state.safe), [state.lens, state.safe]);
-  const features = useMemo(() => toFloorFeatures(suiteExtrusionFeatures(mapProperty, floors, toneOfSeg, property.floorHeightFt), INFLATE), [mapProperty, floors, toneOfSeg, property.floorHeightFt]);
-  const toneKey = useMemo(() => [...new Set(features.features.map((f) => f.properties.tone))].sort().join(','), [features]);
+  const features = useMemo(() => toFloorFeatures(suiteExtrusionFeatures(mapProperty, floors, () => 'neutral', property.floorHeightFt), INFLATE), [mapProperty, floors, property.floorHeightFt]);
+  const rings = useMemo(() => ringFeatures(center), [center]);
+  const places = useMemo(() => (area ? placesAround(property.id, center, area) : []), [area, property.id, center]);
 
-  // Tone → hex from the CSS tokens, re-read after a change of theme, palette or skin has reached the DOM.
-  // All three change what the tokens resolve to; the palette and the skin do so without touching the theme
-  // or the lens, so they are named here (switching to Vice City on the map used to leave the building in
-  // the Ascendix colours until something else changed).
+  // The brand colour from the tokens, re-read after a change of theme, palette or skin has reached the DOM.
   const palette = paletteOf(state);
   const skin = state.skin ?? null;
-  const [hexByTone, setHexByTone] = useState<Record<string, string>>({});
   const [brandHex, setBrandHex] = useState('#0176d3');
   useEffect(() => {
     let second: number | null = null;
-    const read = () => {
-      const out: Record<string, string> = {};
-      // Night tokens sit a little dark for a wall against the dark basemap: lift them slightly.
-      // Daytime fills are pastels made to carry text; as a wall on a pale basemap they vanish, so each is
-      // deepened toward its own edge colour (the same hue the legend swatch is outlined in).
-      for (const t of toneKey.split(',').filter(Boolean)) {
-        const fill = resolveToneHex(t);
-        out[t] = dark ? mixHex(fill, '#ffffff', 0.12) : mixHex(fill, resolveVarHex(`--tone-${t}-edge`, fill), 0.45);
-      }
-      setHexByTone(out);
-      setBrandHex(resolveVarHex('--sp-color-brand', '#0176d3'));
-    };
-    // The app writes the palette and the theme to the root element in its own effects, which run after
-    // this one: read on the next frame, and once more on the frame after, when they are certain to be there.
+    const read = () => setBrandHex(resolveVarHex('--sp-color-brand', '#0176d3'));
+    // The app writes the palette and the theme to the root in its own effects, which run after this one.
     const first = requestFrame(() => {
       read();
       second = requestFrame(read);
@@ -224,81 +199,37 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
       cancelFrame(first);
       cancelFrame(second);
     };
-  }, [toneKey, dark, palette, skin]);
+  }, [dark, palette, skin]);
 
-  const inputsRef = useRef<LayerInputs>({ features, hexByTone, brandHex, dark, selected: state.floor });
-  inputsRef.current = { features, hexByTone, brandHex, dark, selected: state.floor };
+  const inputsRef = useRef<LayerInputs>({ features, rings, brandHex, dark });
+  inputsRef.current = { features, rings, brandHex, dark };
   const onStyleLoad = useCallback((m: MapLibreMap) => installLayers(m, inputsRef.current), []);
-  const { map, status } = useMapLibre(containerRef, { center: property.location, dark, onStyleLoad });
+  const { map, status } = useMapLibre(containerRef, { center, dark, onStyleLoad });
 
-  // Keep the floors source, colours and selection in step with the model.
   useEffect(() => {
-    if (!map) return;
-    const src = map.getSource(SOURCE_FLOORS) as GeoJSONSource | undefined;
-    src?.setData(features);
+    (map?.getSource(SOURCE_FLOORS) as GeoJSONSource | undefined)?.setData(features);
   }, [map, features]);
   useEffect(() => {
-    if (!map || !map.getLayer(LAYER_FLOORS)) return;
-    map.setPaintProperty(LAYER_FLOORS, 'fill-extrusion-color', floorColorExpression(hexByTone));
-    if (map.getLayer(LAYER_CAP)) map.setPaintProperty(LAYER_CAP, 'fill-extrusion-color', brandHex);
-  }, [map, hexByTone, brandHex]);
-  useEffect(() => {
-    if (!map || !map.getSource(SOURCE_FLOORS)) return;
-    for (const f of features.features) map.setFeatureState({ source: SOURCE_FLOORS, id: f.id }, { selected: f.properties.floorId === state.floor });
-    if (map.getLayer(LAYER_CAP)) map.setFilter(LAYER_CAP, capFilter(state.floor));
-  }, [map, features, state.floor]);
-
-  // Pointer interaction on the floors layer.
-  const [tip, setTip] = useState<Tip | null>(null);
-  const floorsRef = useRef(floors);
-  floorsRef.current = floors;
-  const patchRef = useRef(patch);
-  patchRef.current = patch;
+    (map?.getSource(SOURCE_RINGS) as GeoJSONSource | undefined)?.setData(rings);
+  }, [map, rings]);
   useEffect(() => {
     if (!map) return;
-    let hoverId: number | string | null = null;
-    const clearHover = () => {
-      if (hoverId !== null && map.getSource(SOURCE_FLOORS)) map.setFeatureState({ source: SOURCE_FLOORS, id: hoverId }, { hover: false });
-      hoverId = null;
-    };
-    const onMove = (e: MapLayerMouseEvent) => {
-      const f = e.features?.[0];
-      if (!f || f.id === undefined) return;
-      if (hoverId !== f.id) {
-        clearHover();
-        hoverId = f.id;
-        map.setFeatureState({ source: SOURCE_FLOORS, id: f.id }, { hover: true });
-      }
-      map.getCanvas().style.cursor = 'pointer';
-      const fv = floorsRef.current.find((x) => x.floor.id === f.properties.floorId);
-      if (fv) setTip({ x: e.point.x, y: e.point.y, text: floorTip(fv) });
-    };
-    const onLeave = () => {
-      clearHover();
-      map.getCanvas().style.cursor = '';
-      setTip(null);
-    };
-    const onClick = (e: MapLayerMouseEvent) => {
-      const id = e.features?.[0]?.properties.floorId as string | undefined;
-      if (id) openFloor(patchRef.current, id);
-    };
-    const onDbl = (e: MapLayerMouseEvent) => {
-      const id = e.features?.[0]?.properties.floorId as string | undefined;
-      if (id) openFloorPlate(patchRef.current, id);
-    };
-    map.on('mousemove', LAYER_FLOORS, onMove);
-    map.on('mouseleave', LAYER_FLOORS, onLeave);
-    map.on('click', LAYER_FLOORS, onClick);
-    map.on('dblclick', LAYER_FLOORS, onDbl);
-    return () => {
-      map.off('mousemove', LAYER_FLOORS, onMove);
-      map.off('mouseleave', LAYER_FLOORS, onLeave);
-      map.off('click', LAYER_FLOORS, onClick);
-      map.off('dblclick', LAYER_FLOORS, onDbl);
-    };
-  }, [map]);
+    if (map.getLayer(LAYER_FLOORS)) map.setPaintProperty(LAYER_FLOORS, 'fill-extrusion-color', brandHex);
+    if (map.getLayer(LAYER_RING_LINE)) map.setPaintProperty(LAYER_RING_LINE, 'line-color', brandHex);
+    if (map.getLayer(LAYER_RING_FILL)) map.setPaintProperty(LAYER_RING_FILL, 'fill-color', brandHex);
+  }, [map, brandHex]);
 
-  // Camera state for the tilt toggle.
+  // The camera: top-down, framed on the mile; 3D leans in on the building.
+  const padding = useMemo(() => ({ top: 64, bottom: 28, left: 28, right: 56 }), []);
+  const duration = reducedMotion ? 0 : 600;
+  const frame = useCallback(
+    (animate: boolean) => map?.fitBounds(ringBounds(center, FRAME_MI), { padding, pitch: 0, bearing: 0, duration: animate ? duration : 0 }),
+    [map, center, padding, duration],
+  );
+  useEffect(() => {
+    if (status === 'ready') frame(false);
+  }, [status, frame]);
+  const threeD = useCallback(() => map?.easeTo({ center: [center.lng, center.lat], zoom: CAMERA_3D.zoom, pitch: CAMERA_3D.pitch, bearing: CAMERA_3D.bearing, duration }), [map, center, duration]);
   const [pitch, setPitch] = useState<number>(CAMERA.pitch);
   useEffect(() => {
     if (!map) return;
@@ -308,86 +239,166 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
       map.off('pitchend', on);
     };
   }, [map]);
+  const tilted = pitch > 5;
 
-  const present = usePresent({ map, today: model.today, patch, enabled: !reducedMotion });
+  // The building: a click opens its floors in the Building tab; a hover says so.
+  const [tip, setTip] = useState<{ x: number; y: number } | null>(null);
+  const patchRef = useRef(patch);
+  patchRef.current = patch;
+  useEffect(() => {
+    if (!map) return;
+    const onMove = (e: MapLayerMouseEvent) => {
+      map.getCanvas().style.cursor = 'pointer';
+      setTip({ x: e.point.x, y: e.point.y });
+    };
+    const onLeave = () => {
+      map.getCanvas().style.cursor = '';
+      setTip(null);
+    };
+    const onClick = () => patchRef.current({ view: 'building' });
+    map.on('mousemove', LAYER_FLOORS, onMove);
+    map.on('mouseleave', LAYER_FLOORS, onLeave);
+    map.on('click', LAYER_FLOORS, onClick);
+    return () => {
+      map.off('mousemove', LAYER_FLOORS, onMove);
+      map.off('mouseleave', LAYER_FLOORS, onLeave);
+      map.off('click', LAYER_FLOORS, onClick);
+    };
+  }, [map]);
+
+  // Pins: one DOM marker per place, drawn by React through a portal so they share the app's icons and tokens.
+  // They are not tab stops (there may be dozens): the Area panel's rows are the keyboard way to the same places.
+  const [pinned, setPinned] = useState<Pinned[]>([]);
+  const [labels, setLabels] = useState<{ el: HTMLElement; text: string }[]>([]);
+  useEffect(() => {
+    if (!map) return;
+    const made: Marker[] = [];
+    const mk = (lng: number, lat: number, anchor: 'center' | 'bottom') => {
+      const el = createElement('div') ?? undefined;
+      const marker = new Marker({ element: el, anchor }).setLngLat([lng, lat]).addTo(map);
+      made.push(marker);
+      return marker.getElement();
+    };
+    setPinned(places.map((place) => ({ place, el: mk(place.lng, place.lat, 'center') })));
+    const walk = offset(center, WALK_MI, 0);
+    const mile = offset(center, FRAME_MI, 0);
+    setLabels([
+      { el: mk(walk.lng, walk.lat, 'bottom'), text: '½ mi · 10-min walk' },
+      { el: mk(mile.lng, mile.lat, 'bottom'), text: '1 mi' },
+      { el: mk(center.lng, center.lat, 'bottom'), text: property.name },
+    ]);
+    return () => {
+      made.forEach((m) => m.remove());
+      setPinned([]);
+      setLabels([]);
+    };
+  }, [map, places, center, property.name]);
+  const lit = usePlaceHighlight();
+  useEffect(() => () => placeHighlight.set(null), []);
+
+  const present = usePresent({ map, enabled: !reducedMotion, onStart: threeD });
   const notify = useCallback((message: string, icon?: 'video' | 'warning' | 'download') => toast.push(message, { icon }), [toast]);
   const recorder = useRecorder({ map, onStart: present.start, onStop: present.stop, notify });
   // "Record video" in the header's Export menu starts a recording, or stops the one under way.
   const toggleRecording = recorder.toggle;
   useEffect(() => RECORD_REQUEST.on(toggleRecording), [toggleRecording]);
 
+  const toneOf = useCallback((f: FloorView) => dominantTone(f, state.lens, state.safe), [state.lens, state.safe]);
   const selectFloor = useCallback((id: string) => openFloor(patch, id), [patch]);
-  const floorCount = floors.length;
-  // A phone has room for the map or for eight legend rows, not both: the legend folds to one row, as on the phone timeline.
-  const phone = useIsPhone();
-  const legendStates = model.legend.filter((i) => i.sf > 0).length;
   const footprintLabel = mapProperty.footprintSource === 'osm' ? 'OpenStreetMap' : 'demo';
+  const samplePlaces = !!area?.sample && places.length > 0;
 
   return (
-    <div className={`sp-map ${status === 'failed' ? 'is-fallback' : ''}`.trim()} data-status={status}>
-      {phone ? (
-        <details className="sp-map-legend sp-map-legend--fold">
-          <summary>
-            {lensName(state.lens)} legend · {legendStates} states
-            <Icon name="chevron-down" size={14} />
-          </summary>
-          <Legend items={model.legend} compact figures title={lensName(state.lens)} note={planLegendNote(model, state.lens)} />
-        </details>
-      ) : (
-        <div className="sp-map-legend">
-          <Legend items={model.legend} compact title={lensName(state.lens)} note={planLegendNote(model, state.lens)} />
-        </div>
-      )}
-      <div className="sp-map__stage">
-        {/* The list of floors stands beside the map (under it where the card is narrow), never over the building:
-            the same labels, in the same type, as the list beside the Building view's model. */}
-        <MapFloorList floors={floors} lens={state.lens} safe={state.safe} asOf={model.asOf} selected={state.floor} largestId={model.kpis.maxContiguous.floorId} onSelect={selectFloor} />
-        <div className="sp-map__view">
-          <div ref={containerRef} className="sp-map__canvas" aria-label="3D map of the property" role="application" />
-          {status === 'failed' && <FootprintFallback footprint={mapProperty.footprint} floors={floors} toneOf={toneOf} selectedFloorId={state.floor} onSelect={selectFloor} />}
+    <div className={`sp-map ${status === 'failed' ? 'is-fallback' : ''} ${lit ? 'has-lit' : ''}`.replace(/ +/g, ' ').trim()} data-status={status}>
+      <div className="sp-map__view">
+        <div ref={containerRef} className="sp-map__canvas" aria-label={`Map of the area around ${property.name}: the half-mile and one-mile rings, transit stops and places nearby. The Area panel lists them.`} role="application" />
+        {status === 'failed' && <FootprintFallback footprint={mapProperty.footprint} floors={floors} toneOf={toneOf} selectedFloorId={state.floor} onSelect={selectFloor} />}
 
-          <div className="sp-map-overlay sp-map-info">
-            <h2 className="sp-map-info__name">{property.name}</h2>
-            <p className="sp-weak">
-              {property.street}, {property.city}, {property.state}
-            </p>
-            <p className="sp-map-info__meta">
-              <span>
-                Footprint: {footprintLabel} <Chip tone={mapProperty.footprintSource === 'osm' ? 'success' : 'neutral'}>{mapProperty.footprintSource === 'osm' ? 'OSM' : 'demo'}</Chip>
-              </span>
-              <span className="sp-num">
-                {floorCount} floors · {property.floorHeightFt} ft each
-              </span>
-            </p>
+        <div className="sp-map-overlay sp-map-info">
+          <h2 className="sp-map-info__name">{property.name}</h2>
+          <p className="sp-weak">
+            {property.street}, {property.city}, {property.state}
+          </p>
+          <p className="sp-map-info__meta">
+            <span>
+              Footprint: {footprintLabel} <Chip tone={mapProperty.footprintSource === 'osm' ? 'success' : 'neutral'}>{mapProperty.footprintSource === 'osm' ? 'OSM' : 'demo'}</Chip>
+            </span>
+            {samplePlaces && (
+              <Chip tone="neutral" title="The demo building's places are drawn at sample positions inside the distance they were counted in">
+                Sample places
+              </Chip>
+            )}
+          </p>
+          <p className="sp-map-info__links">
+            <button type="button" className="sp-linkbtn" onClick={() => patch({ view: 'building' })}>
+              See its floors <Icon name="chevron-right" size={12} />
+            </button>
+            <a href={googleMaps(center.lat, center.lng)} target="_blank" rel="noopener noreferrer">
+              Google Maps <Icon name="external" size={12} />
+            </a>
+            <a href={streetView(center.lat, center.lng)} target="_blank" rel="noopener noreferrer">
+              Street View <Icon name="external" size={12} />
+            </a>
+          </p>
+        </div>
+
+        {status === 'ready' && (
+          <MapControls
+            onZoomIn={() => map?.zoomIn()}
+            onZoomOut={() => map?.zoomOut()}
+            onCompass={() => frame(true)}
+            onTilt={() => (tilted ? frame(true) : threeD())}
+            tilted={tilted}
+            presenting={present.presenting}
+            onPresent={present.toggle}
+            presentDisabledReason={reducedMotion ? 'Present is off because your system prefers reduced motion' : null}
+            recording={recorder.recording}
+            onRecord={recorder.toggle}
+          />
+        )}
+
+        {tip && status === 'ready' && (
+          <div className="sp-map-tip" style={{ left: tip.x + 14, top: tip.y + 14 }} role="tooltip">
+            {property.name} · click to see its floors
           </div>
-
-          {status === 'ready' && (
-            <MapControls
-              onZoomIn={() => map?.zoomIn()}
-              onZoomOut={() => map?.zoomOut()}
-              onCompass={() => map?.easeTo({ bearing: 0, pitch: CAMERA.pitch })}
-              onTilt={() => map?.easeTo({ pitch: pitch > 5 ? 0 : CAMERA.pitch })}
-              tilted={pitch > 5}
-              presenting={present.presenting}
-              onPresent={present.toggle}
-              presentDisabledReason={reducedMotion ? 'Present is off because your system prefers reduced motion' : null}
-              recording={recorder.recording}
-              onRecord={recorder.toggle}
-            />
-          )}
-
-          {tip && status === 'ready' && (
-            <div className="sp-map-tip" style={{ left: tip.x + 14, top: tip.y + 14 }} role="tooltip">
-              {tip.text}
-            </div>
-          )}
-          {present.presenting && (
-            <div className="sp-map-overlay sp-map-present" role="status" aria-live="polite">
-              Presenting · as of {model.asOf}
-            </div>
-          )}
-        </div>
+        )}
+        {present.presenting && (
+          <div className="sp-map-overlay sp-map-present" role="status" aria-live="polite">
+            Presenting
+          </div>
+        )}
       </div>
+      {pinned.map(({ place, el }) => {
+        const look = placeLook(place.group);
+        const on = lit === place.key;
+        return createPortal(
+          <span
+            className={`sp-pin sp-pin--${look.cls} ${place.kind === 'transit' ? 'sp-pin--stop' : ''} ${on ? 'is-lit' : ''}`.replace(/ +/g, ' ').trim()}
+            data-label={`${place.name} · ${miText(place.distanceMi)}`}
+            aria-hidden="true"
+            onClick={() => placeHighlight.set(on ? null : place.key)}
+          >
+            {look.icon && <Icon name={look.icon} size={11} />}
+          </span>,
+          el,
+          place.id,
+        );
+      })}
+      {labels.map(({ el, text }, i) =>
+        createPortal(
+          i === labels.length - 1 ? (
+            <span className="sp-map-label sp-map-label--building" aria-hidden="true">
+              {text}
+            </span>
+          ) : (
+            <span className="sp-map-label" aria-hidden="true">
+              {text}
+            </span>
+          ),
+          el,
+          `label-${i}`,
+        ),
+      )}
     </div>
   );
 }

@@ -31,13 +31,13 @@ export function MapControls({ onZoomIn, onZoomOut, onCompass, onTilt, tilted, pr
         <Ctl icon="minus" label="Zoom out" onClick={onZoomOut} />
       </div>
       <div className="sp-map-ctl-group">
-        <Ctl icon="compass" label="Reset bearing and pitch" onClick={onCompass} />
-        <Ctl icon="tilt" label={tilted ? 'Flatten the map' : 'Tilt the map'} pressed={tilted} onClick={onTilt} />
+        <Ctl icon="compass" label="Back to the top-down view" onClick={onCompass} />
+        <Ctl icon="tilt" label={tilted ? 'Show top-down' : 'Show in 3D'} pressed={tilted} onClick={onTilt} />
       </div>
       <div className="sp-map-ctl-group">
         <Ctl
           icon={presenting ? 'pause' : 'play'}
-          label={presenting ? 'Stop presenting' : 'Present: orbit and time-lapse'}
+          label={presenting ? 'Stop presenting' : 'Present: orbit the building in 3D'}
           title={presentDisabledReason ?? undefined}
           pressed={presenting}
           disabled={!!presentDisabledReason}

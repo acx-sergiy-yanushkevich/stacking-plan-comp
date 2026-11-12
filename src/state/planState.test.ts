@@ -434,3 +434,26 @@ describe('the Prospect-safe switch gives back what it took, in the same session'
     expect(step(on, { lens: 'expiry' }).state).toEqual(applyPatch(on.state, { lens: 'expiry' }, TODAY));
   });
 });
+
+describe('the Map tab opens with the Area panel beside it (round 24)', () => {
+  it('a link to the map with no panel named opens Area, and says so in no extra words', () => {
+    const s = parseState('?view=map', TODAY);
+    expect(s.mode).toBe('area');
+    expect(serializeState(s, TODAY)).toBe('?view=map');
+    // A panel named in the link is the one that opens.
+    expect(parseState('?view=map&mode=find', TODAY).mode).toBe('find');
+    expect(parseState('?view=map&mode=building', TODAY).mode).toBe('building');
+    expect(serializeState(parseState('?view=map&mode=building', TODAY), TODAY)).toBe('?view=map&mode=building');
+  });
+
+  it('arriving at the map opens Area; leaving puts it away; a panel opened on purpose stays', () => {
+    const plan = parseState('?view=stack', TODAY);
+    const map = applyPatch(plan, { view: 'map' }, TODAY);
+    expect(map.mode).toBe('area');
+    expect(applyPatch(map, { view: 'building' }, TODAY).mode).toBe('building');
+    expect(applyPatch(map, { mode: 'brief' }, TODAY).mode).toBe('brief');
+    expect(applyPatch(applyPatch(map, { mode: 'brief' }, TODAY), { view: 'stack' }, TODAY).mode).toBe('building');
+    const finding = applyPatch(plan, { mode: 'find' }, TODAY);
+    expect(applyPatch(finding, { view: 'map' }, TODAY).mode).toBe('find');
+  });
+});

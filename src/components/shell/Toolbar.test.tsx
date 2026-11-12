@@ -38,6 +38,12 @@ describe('Toolbar with prospect-safe on and off: what stays keeps its place', ()
     it(`${view}: the lens tabs of prospect-safe are the first tabs of the full control`, () => {
       const normal = lensTabs(render(`?view=${view}`));
       const safe = lensTabs(render(`?view=${view}&safe=1`));
+      // The Map shows the surroundings, not the floors: nothing there is colored by a lens (round 24).
+      if (view === 'map') {
+        expect(normal).toEqual([]);
+        expect(safe).toEqual([]);
+        return;
+      }
       expect(normal).toEqual(['Leasing', 'Rent', 'Expiration', 'Pipeline']);
       expect(safe).toEqual(['Leasing', 'Rent']);
     });

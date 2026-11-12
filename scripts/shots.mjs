@@ -31,7 +31,6 @@ export const STATES = [
   ['16-timeline', '?view=timeline'],
   ['17-timeline-2028-expiry', '?view=timeline&asOf=2028-01-01&lens=expiry'],
   ['18-map', '?view=map'],
-  ['19-map-expiry', '?view=map&lens=expiry'],
   ['20-map-area', '?view=map&mode=area'],
   ['21-floor-6', '?view=floor&floor=F6'],
   ['22-floor-1', '?view=floor&floor=F1'],
@@ -117,12 +116,15 @@ await dark.screenshot({ path: `${out}/54-legend-focus.png` });
 await dark.locator('.sp-legend__info').first().click();
 await dark.waitForTimeout(250);
 await dark.screenshot({ path: `${out}/55-legend-note.png` });
-// Round 23: the Map legend's note, opened over the map.
-await dark.goto(base + '?view=map&lens=expiry', { waitUntil: 'networkidle' });
-await dark.waitForTimeout(2500);
-await dark.locator('.sp-legend__info').first().click();
-await dark.waitForTimeout(250);
-await dark.screenshot({ path: `${out}/59-map-legend-note.png` });
+// Round 24: the Map's surroundings, a place row of the Area panel lighting its pins, and the building in 3D.
+await dark.goto(base + '?view=map', { waitUntil: 'load' });
+await dark.waitForTimeout(3000);
+await dark.locator('.sp-area__place', { hasText: 'Restaurants' }).first().focus();
+await dark.waitForTimeout(300);
+await dark.screenshot({ path: `${out}/59-map-places-lit.png` });
+await dark.getByRole('button', { name: 'Show in 3D' }).click();
+await dark.waitForTimeout(1500);
+await dark.screenshot({ path: `${out}/64-map-3d.png` });
 await mobile.goto(base + '?view=stack&lens=expiry', { waitUntil: 'networkidle' });
 await mobile.waitForTimeout(350);
 await mobile.locator('.sp-pstack__legend summary').click();
