@@ -43,23 +43,24 @@ Design principles, in order:
 - **Export** menu: PDF (print layout), PNG of the current plan, Excel-ready CSV rent roll, Copy link, and in Map view, Record video.
 
 ### 2.2 KPI bar
-One quiet bar above the toolbar, the same element in the same place in every view and every state (Building with and without a floor open, Stack, Timeline, Map, Floor; with and without the inspector), so the toolbar and the plan never move when the view or the selection changes. One surface, about 55 px tall on a desktop, with hairlines between six figures; no figure is a card of its own. Each figure: label 11 px uppercase and value 18 px semibold tabular on one line, one short muted note under them. A note is shown whole or not at all (never cut); the whole note is in the tooltip and the accessible name. When the as-of date is not today, each figure carries a delta chip against today ("−6,500 SF"): beside the figure from 1600 px, leading the note line under that. The figure in use is marked by a 2 px underline and `aria-pressed`. Under 1200 px the figure stands under its label and the notes are left to the tooltips; on a phone the six are a 3 × 2 grid. Each figure is a button that applies the related view or lens (the table's Context column is the whole note):
+One quiet bar above the toolbar, the same element in the same place in every view and every state (Building with and without a floor open, Stack, Timeline, Map, Floor; with and without the inspector), so the toolbar and the plan never move when the view or the selection changes. Two surfaces, about 55 px tall on a desktop, with hairlines between seven figures; no figure is a card of its own. The first surface, "Color by", is the page's one lens picker: a switch per lens (Leasing, Rent, Expiration, Pipeline), each named for its lens and showing the figure the lens is about, the one in use with a filled dot and an underline. The second, "Details" (Available, Largest block, Avg term), holds figures to read, nothing to click (team review, Nov 12: the toolbar's own lens control said the same thing twice, and went). Each figure: label 11 px uppercase and value 18 px semibold tabular on one line, one short muted note under them. A note is shown whole or not at all (never cut); the whole note is in the tooltip and the accessible name. When the as-of date is not today, each figure carries a delta chip against today ("−6,500 SF"): beside the figure from 1600 px, leading the note line under that. The switch in use is marked by a 2 px underline and `aria-pressed`. Under 1200 px the figure stands under its label and the notes are left to the tooltips; on a phone the switches are a 2 × 2 grid and the details one row of three. On the Map the switches only read (nothing there is colored by a lens). The table's Context column is the whole note:
 
 | Card | Value | Context | Click |
 |---|---|---|---|
-| Leased | 87.0 % | 81.0 % physically occupied · 8,000 SF signed, not in | Status lens |
-| Available | 33,200 SF | 26,200 direct · 7,000 sublease · +21,400 coming Apr 2027 | Find space |
-| Largest block | 9,300 SF | Floor 12 · direct · divisible to 4,500 | Find space, pre-filled |
-| Expiring 12 mo | 35,300 SF | 16.7 % of leased · 4 leases | Expiration lens + Worklist 12 mo |
-| WALT | 3.0 yr | In-place, SF-weighted · MTM counted as 0 | Timeline |
-| Pipeline | 9 deals | 6 on vacancies · 3 renewals · 57,800 SF | Deals lens |
+| Leasing | 87.0 % | 81.0 % physically occupied · 8,000 SF signed, not in | Leasing lens |
+| Rent | $31.50/SF/yr | FSG · in place (every other lease type in the tooltip; a prospect reads the asking range of the space on offer instead, in-place rents being withheld) | Rent lens |
+| Expiration | 35,300 SF | 16.7 % of leased · 4 leases | Expiration lens |
+| Pipeline | 9 deals | 6 on vacancies · 3 renewals · 57,800 SF | Pipeline lens |
+| Available | 33,200 SF | 26,200 direct · 7,000 sublease · +21,400 coming Apr 2027 | — (points at its suites) |
+| Largest block | 9,300 SF | Floor 12 · direct · contiguous | — (points at its suites) |
+| Avg term | 3.0 yr | In-place, SF-weighted · MTM counted as 0 | — |
 
 Two figures are made of suites anyone can point to, and the plan shows where they are. Pointing at **Available** or **Largest block** (or focusing it) lights its suites and greys the rest, as a finder match does: on the building model, in the Stack and on the plate of an open floor that holds any of them. Moving away or blurring restores the plan at once; it is a transient highlight (the hover store), never URL state, and the click still opens the finder. The largest block is also marked at rest, in words: a "Largest block" badge on each of its suites in the Stack and on the floor plate, and a "Largest block" tag on its floor's label beside the building model. One rule (`largestBlock`, domain/kpis.ts) gives the KPI its figure and the plan its suites. The mark stays in prospect-safe mode: available space is marketing information.
 
 **Building view, no floor open.** The floors are listed once: a label beside each floor of the model, level with it ("12 · 50.0% leased · 9,300 SF available", then what the active lens adds), with a small bar for the leased share. Each label is a button, so the list is the floor picker: one tab stop, ↑ ↓ between floors, Home and End, Enter or Space to open; pointing at a label lights its floor and puts its numbers on the one caption line above the model. The model takes the height left under that line. Where the list has no room beside a model of a readable width, it stands under it. With a floor open the model docks beside a compact picker, and the floor's heading gives its name and size only: the cards under the plate carry leased and available.
 
 ### 2.3 Toolbar
-View tabs (Stack, Timeline, Map), lens segmented control, search field ("Find tenant, suite or prospect"), Find space, Worklist. One row. On narrow widths the lens becomes a select and the two buttons collapse into a "Tools" menu.
+View tabs (Building, Stack, Timeline, Map), search field ("Find tenant, suite or prospect"), Find space, Area, Worklist, Data issues. One row. The lens is chosen in the KPI bar above (§2.2), not here. On narrow widths the search takes a row of its own and the buttons share the row under it.
 
 ### 2.4 Stack view (default)
 - SVG. One row per floor, top floor first. Left gutter: floor name (15 px semibold), leased % with a 4-step mini bar, leasable RSF. The floor name is a button: opens Floor mode in the inspector; the inspector offers "Open floor plate".
@@ -138,7 +139,7 @@ Hover: border darkens, cursor pointer, 120 ms. Selected: 2 px brand outline, 4 p
 120 ms colour and border transitions; 180 ms inspector content swap (fade and 6 px rise); the as-of cursor and KPI deltas update without animation so numbers never read as interpolated. Map orbit 0.6°/frame, disabled under reduced motion.
 
 ## 4. Responsive
-- ≥ 1200: as drawn. under 1200: KPI notes are left to the tooltips. 760–1100: inspector becomes a bottom sheet; the toolbar wraps to two rows. ≤ 760: header stacks; the KPI bar is a 3 × 2 grid of label and figure; lens becomes a select; floor gutter shows the floor number only; blocks 56 px; the timeline scrolls horizontally with the cursor pinned; the map fills the width and the Area panel is a sheet.
+- ≥ 1200: as drawn. under 1200: KPI notes are left to the tooltips. 760–1100: inspector becomes a bottom sheet; the toolbar wraps to two rows. ≤ 760: header stacks; the KPI bar is a 2 × 2 grid of switches over a row of three details; the lens is chosen there (the toolbar has no lens control); floor gutter shows the floor number only; blocks 56 px; the timeline scrolls horizontally with the cursor pinned; the map fills the width and the Area panel is a sheet.
 
 ## 5. Print and exports
 - Print (landscape Letter): page 1, a cover with property facts, the six KPIs, the plan with legend, the as-of date and "Prospect-safe" when on; page 2, the rent roll table; page 3, the rollover chart and the renewal worklist; last, the location brief (§2.6), in the prospect-safe report too. Hidden: toolbar, inspector, buttons.

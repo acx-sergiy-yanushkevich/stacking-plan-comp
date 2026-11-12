@@ -14,8 +14,8 @@ await page.goto(base + '?view=stack', { waitUntil: 'networkidle' });
 check((await page.locator('.sp-stage [role="grid"] [role="row"]').count()) === 12, '12 floor rows');
 const blocks = await page.locator('.sp-stage [role="gridcell"]').count();
 check(blocks >= 28, `≥ 28 blocks (${blocks})`);
-check((await page.locator('.sp-kpi').count()) === 6, '6 KPI cards');
-const leasedToday = await page.locator('.sp-kpi').first().innerText();
+check((await page.locator('.sp-kpi').count()) === 7, '7 KPI cards');
+const leasingToday = await page.locator('.sp-kpi').first().innerText();
 
 // Keyboard grid: focus first block, ArrowRight moves to the next block in the row
 await page.locator('.sp-stage [role="gridcell"][tabindex="0"]').first().focus();
@@ -43,8 +43,8 @@ check(page.url().includes('floor=F12'), 'floor label opens floor summary');
 
 // Time travel changes KPIs
 await page.goto(base + '?view=stack&asOf=2028-01-01', { waitUntil: 'networkidle' });
-const leased2028 = await page.locator('.sp-kpi').first().innerText();
-check(leased2028 !== leasedToday, 'as-of 2028 changes the Leased KPI');
+const leasing2028 = await page.locator('.sp-kpi').first().innerText();
+check(leasing2028 !== leasingToday, 'as-of 2028 changes the Leasing KPI');
 check((await page.locator('.sp-kpi__delta').count()) >= 3, 'delta chips shown when projected');
 check((await page.locator('.sp-header__asof--projected').count()) === 1, 'header marks the date as projected');
 
