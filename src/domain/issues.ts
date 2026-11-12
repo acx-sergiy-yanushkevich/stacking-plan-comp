@@ -116,7 +116,7 @@ export function findIssues(p: Property, floors: FloorView[], today: ISODate): Is
           id: `mtm-${s.key}`,
           severity: 'info',
           title: `${s.lease.tenant} is month-to-month`,
-          detail: 'No expiration date. Counted as 0 years in WALT and shown as At risk, not in a rollover year.',
+          detail: 'No expiration date. Counted as 0 years in Avg term and shown as At risk, not in a rollover year.',
           fix: 'Open lease',
           floorId: f.floor.id,
           segKey: s.key,

@@ -1,4 +1,5 @@
-import { Legend } from '../plan/Legend';
+import { Legend, LegendInfo } from '../plan/Legend';
+import { lensName } from '../../domain/lenses';
 import { planLegendNote } from '../plan/legendNote';
 import { fmtDate } from '../../domain/dates';
 import { num } from '../../domain/format';
@@ -114,6 +115,8 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
   const height = rowsTop + rowsHeight(laid) + BOTTOM_PAD;
   const clipId = `sp-tl-plot-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
   const legendStates = model.legend.filter((i) => i.sf > 0).length;
+  const lensLabel = lensName(state.lens);
+  const legendNote = planLegendNote(model, state.lens);
 
   const [hover, setHover] = useState<BarHover | null>(null);
 
@@ -158,18 +161,19 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
           <span className="sp-weak">
             as of {fmtDate(model.asOf)}
             {!stackedMode && ` · ${num(model.kpis.leasable)} RSF leasable`}
+            {legendNote && <> <LegendInfo note={legendNote} /></>}
           </span>
         </div>
         {stackedMode ? (
           <details className="sp-tl-legend">
             <summary>
-              Legend · {legendStates} states
+              {lensLabel} legend · {legendStates} states
               <Icon name="chevron-down" size={14} />
             </summary>
-            <Legend items={model.legend} compact note={planLegendNote(model, state.lens)} />
+            <Legend items={model.legend} compact figures title={lensLabel} note={legendNote} infoElsewhere />
           </details>
         ) : (
-          <Legend items={model.legend} compact note={planLegendNote(model, state.lens)} />
+          <Legend items={model.legend} compact title={lensLabel} note={legendNote} infoElsewhere />
         )}
       </div>
     <div className={`sp-timeline ${stackedMode ? 'sp-timeline--stacked' : ''}`} ref={hostRef}>

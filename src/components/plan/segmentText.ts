@@ -176,7 +176,8 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
   if (lens === 'rent') {
     const v = rentValue(seg);
     const t = rentType(seg);
-    if (!canShowInPlaceRent(safe) && kind !== 'available' && kind !== 'sublease') meta = 'Rent hidden';
+    // A prospect sees no rent line on a leased suite: no word stands in for a figure they are not shown (round 21).
+    if (!canShowInPlaceRent(safe) && kind !== 'available' && kind !== 'sublease') meta = '';
     else if (seg.lease?.confidential && kind !== 'available') meta = 'Rent confidential';
     else if (v !== null && t && seg.availability && (kind === 'available' || kind === 'sublease'))
       meta = `Asking ${compactRate(seg.availability.rentLow, seg.availability.rentHigh, seg.availability.rateUnit, seg.availability.leaseType)}`;

@@ -310,7 +310,7 @@ async function findDomLeaks() {
   const lensOptions = await page.evaluate(() => [...document.querySelectorAll('.sp-toolbar__lens [role="radio"], .sp-toolbar__lens button, .sp-toolbar__lens-select option')].map((el) => (el.textContent ?? '').trim()));
   const withheldLens = lensOptions.filter((t) => /Expiration|Deals/.test(t));
   if (withheldLens.length) found.push(`a withheld lens is offered (${[...new Set(withheldLens)].join(', ')})`);
-  if (lensOptions.length && !lensOptions.some((t) => /Status/.test(t))) found.push('the lens control was not read');
+  if (lensOptions.length && !lensOptions.some((t) => /Leasing/.test(t))) found.push('the lens control was not read');
   // Every sublease bar and block is drawn with no end: nothing stops on the sublandlord's lease end.
   const subEnds = await page.evaluate(() => document.querySelectorAll('[data-bar$="-sub"]').length);
   if (subEnds) found.push(`a sublease bar with an end date is drawn (${subEnds})`);
@@ -352,7 +352,7 @@ if (!expiringFigure) {
 }
 // The broker's WALT figure ("2.98"): it must be nowhere on a prospect's page, print or file.
 const waltFigure = await page.evaluate(() => {
-  const card = [...document.querySelectorAll('.sp-kpi')].find((c) => c.querySelector('.sp-kpi__label')?.textContent === 'WALT');
+  const card = [...document.querySelectorAll('.sp-kpi')].find((c) => c.querySelector('.sp-kpi__label')?.textContent === 'Avg term');
   return card?.querySelector('.sp-kpi__value')?.textContent?.match(/\d+\.\d{2}/)?.[0] ?? null;
 });
 if (!waltFigure) {
@@ -442,7 +442,7 @@ const transitions = [
   ['select a block by keyboard (Enter) in the Stack', '?view=stack', async () => { await block('L13-U1').focus(); await page.keyboard.press('Enter'); }, 'Cirrus Energy'],
   ['open the Vantage Robotics deal record (Building, Floor 6, Deals)', '?view=building&floor=F6', async () => { await tab('Deals').click(); await page.getByRole('button', { name: /^Open record: Vantage Robotics deal/ }).first().click(); }, 'Vantage Robotics'],
   ['open an inquiry record (Floor view, Floor 8, Inquiries)', '?view=floor&floor=F8', async () => { await tab('Inquiries').click(); await page.getByRole('button', { name: /^Open record: .* inquiry/ }).first().click(); }, 'Would open'],
-  ['log a call from the floor actions (Floor 3)', '?view=floor&floor=F3', async () => { await page.getByRole('button', { name: /^Log call with/ }).click(); }, 'Argosy Partners'],
+  ['log a call from the floor actions (Floor 3)', '?view=floor&floor=F3', async () => { await page.getByRole('button', { name: /^Log call · / }).click(); }, 'Argosy Partners'],
   ['run a lease action from the inspector (Open lease)', '?view=stack&select=L13-U1', async () => { await page.getByRole('button', { name: /^Open lease/ }).first().click(); }, 'Would open'],
   ['search for a tenant name ("cirrus")', '?view=stack', async () => { await search().fill('cirrus'); }, 'cirrus'],
   ['search for a prospect name ("vantage") on the Building view', '?view=building', async () => { await search().fill('vantage'); }, 'vantage'],
@@ -466,7 +466,7 @@ const transitions = [
   ['the sublease selected (its end date on screen)', '?view=stack&select=L14-U2', async () => {}, 'thru'],
   ['the sublease selected in the Timeline', '?view=timeline&select=L14-U2', async () => {}, 'thru'],
   ['the expiration lens in the Stack', '?view=stack&lens=expiry', async () => {}, 'Expiration'],
-  ['the WALT figure on screen', '?view=stack', async () => {}, 'WALT'],
+  ['the WALT figure on screen', '?view=stack', async () => {}, 'Avg term'],
   ['the deals lens with a suite selected', '?view=stack&lens=deals&select=A02', async () => {}, null],
   ['the expiration lens in the Timeline, projected to 2028', '?view=timeline&lens=expiry&asOf=2028-01-01', async () => {}, null],
   ['the Stack projected to April 2027 (a suite vacated, a quiet listing open)', '?view=stack&asOf=2027-04-15', async () => {}, 'Vacated'],
@@ -528,7 +528,8 @@ async function exportCsv(qs) {
 if (wanted('prospect-safe CSV export')) try {
   const { csv, name } = await exportCsv('?view=stack&safe=1');
   const found = findLeaks(csv);
-  const rows = csv.split(/\r?\n/).map((r) => r.split(','));
+  // RFC 4180: a quoted cell may hold a comma ("Signed, not yet in").
+  const rows = csv.split(/\r?\n/).map((r) => [...r.matchAll(/(?:^|,)("(?:[^"]|"")*"|[^,]*)/g)].map((m) => m[1].replace(/^"|"$/g, '').replace(/""/g, '"')));
   const col = (h) => rows[0].indexOf(h);
   for (const r of rows.slice(1)) if (r[col('State')] === 'Leased' && (r[col('Expiration')] || r[col('Months remaining')] || r[col('Rate')])) found.push(`CSV: Ste ${r[col('Suite')]} shows a term or rent`);
   // No lease has a start or an end in the file, and no sublease an end: no row has a date in those columns at all.
@@ -541,7 +542,7 @@ if (wanted('prospect-safe CSV export')) try {
   const anyDate = /\b\d{4}-\d{2}-\d{2}\b/.exec(csv);
   if (anyDate) found.push(`CSV: a date is in the file (${anyDate[0]})`);
   if (/WALT|weighted/i.test(csv)) found.push('CSV: a WALT figure or heading is in the file');
-  if (!rows.some((r) => r[col('State')] === 'Committed')) found.push('CSV: the signed lease is missing, so its dates were not checked');
+  if (!rows.some((r) => r[col('State')] === 'Signed, not yet in')) found.push('CSV: the signed lease is missing, so its dates were not checked');
   // Asking rents are marketing information: the sublet suite's must be in the file, as it is in the PDF.
   if (!rows.some((r) => r[col('State')] === 'Sublease' && /^\d+(\.\d+)?–\d+(\.\d+)?$/.test(r[col('Rate')] ?? ''))) found.push('CSV: the sublease asking rent is missing');
   report('prospect-safe CSV export', found);
@@ -566,9 +567,10 @@ if (wanted('prospect-safe print layout')) {
   await page.goto(base + '?view=stack&safe=1&print=1', { waitUntil: 'networkidle' });
   const printed = (await page.evaluate(() => document.querySelector('.sp-print')?.innerText ?? '')).replace(/\u00a0/g, ' ');
   const found = findLeaks(printed);
-  // WALT reads "Withheld" beside Expiring 12 mo and Pipeline: three cards, no figure.
-  const withheldCards = await page.evaluate(() => [...document.querySelectorAll('.sp-print__kpi')].filter((k) => k.querySelector('.sp-print__kpi-value')?.textContent === 'Withheld').map((k) => k.querySelector('.sp-print__kpi-label')?.textContent));
-  for (const card of ['Expiring 12 mo', 'WALT', 'Pipeline']) if (!withheldCards.includes(card)) found.push(`the report's ${card} card does not read "Withheld"`);
+  // Expiring 12 mo, Avg term and Pipeline are left off the cover (as on screen), and the cards that are there are read.
+  const cards = await page.evaluate(() => [...document.querySelectorAll('.sp-print__kpi')].map((k) => k.querySelector('.sp-print__kpi-label')?.textContent));
+  if (!cards.includes('Leased')) found.push("the report's figures were not read");
+  for (const card of ['Expiring 12 mo', 'Avg term', 'Pipeline']) if (cards.includes(card)) found.push(`the report prints its ${card} card`);
   // The sublease is listed as space on offer, with its asking rent.
   if (!/Sublease\s+Now\s+\$\d+–\$\d+\/SF\/yr/.test(printed)) found.push('the report does not list the sublease as space on offer with its asking rent');
   for (const must of ['Rent roll', 'Available from', 'Space on offer', 'Coming supply', 'Withheld']) if (!printed.toLowerCase().includes(must.toLowerCase())) found.push(`the report has no "${must}": it was not read`); // table headings are drawn in capitals

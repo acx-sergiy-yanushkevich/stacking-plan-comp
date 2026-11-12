@@ -1,6 +1,8 @@
 import type { LegendItem } from '../../domain/lenses';
 import { num, pct } from '../../domain/format';
+import { useId, useState, type ReactNode } from 'react';
 import { Icon } from '../ui/Icon';
+import { Popover } from '../ui/Popover';
 
 /** An entry for something drawn on the plan that is not a state of the lens: building use (the lobby). */
 export interface LegendExtra {
@@ -28,6 +30,12 @@ export interface LegendProps {
    * so the plan's key reads at a glance and caveats do not crowd it.
    */
   full?: boolean;
+  /** On screen, print each entry's SF and share after its name too (a phone's unfolded legend list has room). */
+  figures?: boolean;
+  /** The lens the legend keys, named before its entries (Map and Timeline, whose card titles do not name it). */
+  title?: string;
+  /** The view puts the info mark on its own title line (`LegendInfo`), so the legend does not draw one. */
+  infoElsewhere?: boolean;
 }
 
 /**
@@ -63,46 +71,109 @@ export function sharesNote(items: ReadonlyArray<LegendItem>, leasable: number, o
   return parts.length ? parts.join(' ') : null;
 }
 
-/** Legend whose items carry the SF and share they currently cover; an overlay carries its SF only. */
-export function Legend({ items, extras, note, id, compact, full }: LegendProps) {
+/** What an entry's tooltip and its screen-reader text say: its SF and share (an overlay: its SF, counted in its band). */
+export function entryFigures(i: Pick<LegendItem, 'sf' | 'share' | 'overlay'>): string {
+  return i.overlay ? `${num(i.sf)} SF, also counted in its rent band` : `${num(i.sf)} SF${i.share > 0 ? `, ${pct(i.share)} of leasable` : ''}`;
+}
+
+/**
+ * One legend entry on screen. It is a tab stop: hover or focus (a tap focuses it) shows its figures in a
+ * tooltip, and a screen reader reads them with its name, so the figures are not a mouse-only title (round 21).
+ */
+function Entry({ label, figures, swatch, extra, showNum, num: numText }: { label: string; figures: string; swatch: ReactNode; extra?: boolean; showNum: boolean; num: string }) {
+  const [tip, setTip] = useState(false);
+  const id = useId();
   return (
-    <div className="sp-legend" id={id} aria-label="Legend">
+    <span
+      className={`sp-legend__item ${extra ? 'sp-legend__item--extra' : ''}`.trim()}
+      tabIndex={showNum ? undefined : 0}
+      onMouseEnter={() => setTip(true)}
+      onMouseLeave={() => setTip(false)}
+      onFocus={() => setTip(true)}
+      onBlur={() => setTip(false)}
+      onKeyDown={(e) => e.key === 'Escape' && setTip(false)}
+    >
+      {swatch}
+      <span className="sp-legend__label">{label}</span>
+      {showNum ? <span className="sp-legend__num">{numText}</span> : <span className="sp-sr-only">: {figures}</span>}
+      {tip && !showNum && (
+        <span role="tooltip" id={id} className="sp-tip sp-tip--bottom sp-legend__tip" aria-hidden="true">
+          {label}: {figures}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/**
+ * The legend's info mark: a real button (Enter, Space, a click or a tap) that opens the note in a small
+ * popover, closed by Escape or a click outside. Exported so a view can put it on its title line.
+ */
+export function LegendInfo({ note }: { note: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover
+      open={open}
+      onOpenChange={setOpen}
+      label="About this legend"
+      className="sp-legend__infowrap"
+      panelClassName="sp-legend__pop"
+      trigger={(p) => (
+        <button type="button" {...p} className="sp-legend__info" aria-label="About this legend" title={note}>
+          <Icon name="info" size={14} />
+        </button>
+      )}
+    >
+      <p className="sp-legend__poptext">{note}</p>
+    </Popover>
+  );
+}
+
+/** Legend whose items carry the SF and share they currently cover; an overlay carries its SF only. */
+export function Legend({ items, extras, note, id, compact, full, figures, title, infoElsewhere }: LegendProps) {
+  const showNum = !!(full || figures);
+  return (
+    <div className="sp-legend" id={id} aria-label={title ? `${title} legend` : 'Legend'}>
+      {title && <span className="sp-legend__title">{title}</span>}
       {items
         .filter((i) => i.sf > 0 || !compact)
         .map((i) => (
-          <span key={i.tone + i.label} className="sp-legend__item" title={i.overlay ? `${i.label}: ${num(i.sf)} SF, also counted in its rent band` : `${i.label}: ${num(i.sf)} SF${i.share > 0 ? `, ${pct(i.share)} of leasable` : ''}`}>
-            <span
-              className={`sp-legend__swatch ${i.pattern ? `sp-legend__swatch--${i.pattern}` : ''}`}
-              style={{ backgroundColor: i.pattern === 'dashed' ? 'transparent' : `var(--tone-${i.tone}-fill)`, borderColor: `var(--tone-${i.tone}-edge)`, color: `var(--tone-${i.tone}-edge)` }}
-              aria-hidden="true"
-            />
-            <span className="sp-legend__label">{i.label}</span>
-            {/* An overlay (the rent lens's asking rent) is drawn over space already counted in a band: it
-                carries its SF and says so, and no share, so the shares printed add up to 100%. */}
-            {full && i.sf > 0 && (
-              <span className="sp-legend__num">
-                {i.overlay ? `${num(i.sf)} SF · also in its band` : `${num(i.sf)}${i.share > 0 ? ` · ${pct(i.share)}` : ''}`}
-              </span>
-            )}
-          </span>
+          <Entry
+            key={i.tone + i.label}
+            label={i.label}
+            figures={entryFigures(i)}
+            showNum={showNum && i.sf > 0}
+            /* An overlay (the rent lens's asking rent) is drawn over space already counted in a band: it
+               carries its SF and says so, and no share, so the shares printed add up to 100%. */
+            num={i.overlay ? `${num(i.sf)} SF · also in its band` : `${num(i.sf)}${i.share > 0 ? ` · ${pct(i.share)}` : ''}`}
+            swatch={
+              <span
+                className={`sp-legend__swatch ${i.pattern ? `sp-legend__swatch--${i.pattern}` : ''}`}
+                style={{ backgroundColor: i.pattern === 'dashed' ? 'transparent' : `var(--tone-${i.tone}-fill)`, borderColor: `var(--tone-${i.tone}-edge)`, color: `var(--tone-${i.tone}-edge)` }}
+                aria-hidden="true"
+              />
+            }
+          />
         ))}
       {extras?.map((x) => (
-        <span key={`extra-${x.label}`} className="sp-legend__item sp-legend__item--extra" title={x.title}>
-          <span
-            className={`sp-legend__swatch sp-legend__swatch--${x.pattern}`}
-            style={{ backgroundColor: x.pattern === 'dashed' ? 'transparent' : `var(--tone-${x.tone}-solid, var(--tone-${x.tone}-fill))`, borderColor: `var(--tone-${x.tone}-edge)`, color: `var(--tone-${x.tone}-edge)` }}
-            aria-hidden="true"
-          />
-          <span className="sp-legend__label">{x.label}</span>
-          {full && <span className="sp-legend__num">{num(x.sf)}</span>}
-        </span>
+        <Entry
+          key={`extra-${x.label}`}
+          extra
+          label={x.label}
+          figures={x.title.replace(/^[^:]*:\s*/, '')}
+          showNum={showNum}
+          num={num(x.sf)}
+          swatch={
+            <span
+              className={`sp-legend__swatch sp-legend__swatch--${x.pattern}`}
+              style={{ backgroundColor: x.pattern === 'dashed' ? 'transparent' : `var(--tone-${x.tone}-solid, var(--tone-${x.tone}-fill))`, borderColor: `var(--tone-${x.tone}-edge)`, color: `var(--tone-${x.tone}-edge)` }}
+              aria-hidden="true"
+            />
+          }
+        />
       ))}
       {note && full && <span className="sp-legend__note">{note}</span>}
-      {note && !full && (
-        <span className="sp-legend__info" title={note} aria-label={note} role="img" tabIndex={0}>
-          <Icon name="info" size={14} />
-        </span>
-      )}
+      {note && !full && !infoElsewhere && <LegendInfo note={note} />}
     </div>
   );
 }

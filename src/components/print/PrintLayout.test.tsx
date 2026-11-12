@@ -144,7 +144,7 @@ describe('PrintLayout', () => {
   it('prospect-safe report withholds rents by type, the pipeline, tenant risk, brokers and data issues', () => {
     const { html } = render('?print=1&safe=1');
     expect(html).not.toContain('In-place rent by lease type');
-    expect(html).toContain('Withheld');
+    expect(html).toContain('in-place rents');
     expect(html).not.toMatch(/holdover|month-to-month|\bMTM\b/i);
     // The report's own pages (rent roll, rollover, supply, expirations); the cover's plan is the stack view's.
     const pages = html.slice(html.indexOf('<h2>Rent roll</h2>'));
@@ -170,7 +170,7 @@ describe('PrintLayout', () => {
     expect(roll).toContain('<th>Available from</th>');
     const leased = [...roll.matchAll(/<tr>(.*?)<\/tr>/g)].map((m) => [...m[1].matchAll(/<td[^>]*>(.*?)<\/td>/g)].map((c) => c[1])).filter((r) => r[4] === 'Leased');
     expect(leased.length).toBeGreaterThan(10);
-    for (const r of leased) expect(r.slice(5), `Ste ${r[1]}`).toEqual(['—', 'Withheld']);
+    for (const r of leased) expect(r.slice(5), `Ste ${r[1]}`).toEqual(['—', '—']);
   });
 
   it('prospect-safe report: the rows and the leased total reconcile, in exact figures, without naming a data issue (round 17)', () => {
@@ -180,7 +180,7 @@ describe('PrintLayout', () => {
     const pages = html.slice(html.indexOf('<h2>Rent roll</h2>'));
     const roll = pages.slice(0, pages.indexOf('<h2>Space on offer</h2>'));
     // The rows of space under lease (in place, sublet, signed and not yet in), as printed.
-    const rows = [...roll.matchAll(/<tr>(.*?)<\/tr>/g)].map((m) => [...m[1].matchAll(/<td[^>]*>(.*?)<\/td>/g)].map((c) => c[1])).filter((r) => ['Leased', 'Sublease', 'Committed'].includes(r[4]));
+    const rows = [...roll.matchAll(/<tr>(.*?)<\/tr>/g)].map((m) => [...m[1].matchAll(/<td[^>]*>(.*?)<\/td>/g)].map((c) => c[1])).filter((r) => ['Leased', 'Sublease', 'Signed, not yet in'].includes(r[4]));
     const sum = rows.reduce((t, r) => t + Number(r[3].replace(/,/g, '')), 0);
     expect(sum).toBe(model.kpis.leased + over);
     const note = /<p class="sp-print__note sp-print__note--recorded">(.*?)<\/p>/.exec(roll)?.[1] ?? '';

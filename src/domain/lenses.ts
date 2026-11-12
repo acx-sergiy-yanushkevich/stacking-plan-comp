@@ -166,6 +166,9 @@ export function toneFor(seg: Segment, lens: LensId, prospectSafe: boolean): Tone
       if (seg.kind === 'leased' || seg.kind === 'sublease') return expiryTone(seg.monthsToExpiry);
       if (seg.kind === 'committed') return 'committed';
       if (seg.kind === 'projected') return 'projected';
+      // Space on the market has its own item, so "Vacant, not listed" counts only the space with no record
+      // (round 21: one swatch read 31,600 SF while the blocks said Available now).
+      if (seg.kind === 'available') return 'available';
       return 'empty';
     case 'deals': {
       if (seg.kind === 'forsale') return 'forsale';
@@ -222,8 +225,9 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
           { tone: 'leased', label: 'Leased' },
           { tone: 'sublease', label: 'Sublease', pattern: 'dots' },
           { tone: 'committed', label: 'Signed, not yet in', pattern: 'hatch' },
+          { tone: 'available', label: 'Available' },
           { tone: 'projected', label: 'Projected vacancy', pattern: 'dashed' },
-          { tone: 'empty', label: 'Vacant', pattern: 'dashed' },
+          { tone: 'empty', label: 'Not on the market', pattern: 'dashed' },
           { tone: 'muted', label: 'For sale' },
         ];
       return [
@@ -235,8 +239,9 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
         { tone: 'exp-5', label: '5+ yr' },
         { tone: 'risk', label: 'Holdover / month-to-month' },
         { tone: 'committed', label: 'Signed, not yet in', pattern: 'hatch' },
+        { tone: 'available', label: 'Available' },
         { tone: 'projected', label: 'Projected vacancy', pattern: 'dashed' },
-        { tone: 'empty', label: 'Vacant', pattern: 'dashed' },
+        { tone: 'empty', label: 'Vacant, not listed', pattern: 'dashed' },
         { tone: 'muted', label: 'For sale (no lease term)' },
       ];
     case 'deals':
@@ -265,7 +270,7 @@ function legendSpecs(lens: LensId, prospectSafe: boolean): LegendSpec[] {
         { tone: 'rent-net', label: 'Net or modified gross', pattern: 'topbar' },
         { tone: 'empty', label: 'Asking rent (vacancy)', pattern: 'asking' },
         { tone: 'confidential', label: 'Confidential' },
-        { tone: 'muted', label: prospectSafe ? 'Rent withheld' : 'No rent on record' },
+        { tone: 'muted', label: prospectSafe ? 'Leased' : 'No rent on record' },
         { tone: 'forsale', label: 'For sale' },
       ];
   }

@@ -41,16 +41,28 @@ describe('Legend', () => {
     const shares = [...html.matchAll(/sp-legend__num">[^<]*· ([\d.]+)%/g)].map((m) => Number(m[1]));
     expect(shares).toEqual([60, 40]);
     expect(html).toContain('<span class="sp-legend__num">300 SF · also in its band</span>');
-    expect(html).toContain('title="Asking rent (vacancy): 300 SF, also counted in its rent band"');
+    // On screen its figures are read with its name, not a mouse-only title.
+    const screen = renderToString(<Legend items={rent} />).replace(/<!-- -->/g, '');
+    expect(screen).toContain('<span class="sp-sr-only">: 300 SF, also counted in its rent band</span>');
   });
 
-  it('on screen: names only, the figures in each entry\'s tooltip; the note behind an info mark, not as a paragraph', () => {
-    const html = renderToString(<Legend items={items} extras={[buildingUse([{ floor: { nonLeasable: 2600 } }])!]} note="A note." />);
+  it('on screen: names only, each entry a tab stop whose figures are read with it; the note behind a real info button', () => {
+    const html = renderToString(<Legend items={items} extras={[buildingUse([{ floor: { nonLeasable: 2600 } }])!]} note="A note." />).replace(/<!-- -->/g, '');
     expect(html).not.toContain('sp-legend__num');
-    expect(html).toContain('title="Leased: 1,000 SF, 50.0% of leasable"');
+    expect(html).toMatch(/<span class="sp-legend__item" tabindex="0"/);
+    expect(html).toContain('<span class="sp-sr-only">: 1,000 SF, 50.0% of leasable</span>');
+    expect(html).toContain('<span class="sp-sr-only">: 2,600 SF non-leasable (lobby, loading, building use). Not counted in occupancy.</span>');
     expect(html).not.toContain('<span class="sp-legend__note">');
-    expect(html).toMatch(/<span class="sp-legend__info"(?=[^>]*title="A note\.")(?=[^>]*aria-label="A note\.")[^>]*>/);
-    // No note, no mark.
+    expect(html).toMatch(/<button type="button"(?=[^>]*aria-expanded="false")(?=[^>]*class="sp-legend__info")(?=[^>]*aria-label="About this legend")(?=[^>]*title="A note\.")[^>]*>/);
+    // No note, no mark; a view that puts the mark on its title line gets none in the legend.
     expect(renderToString(<Legend items={items} />)).not.toContain('sp-legend__info');
+    expect(renderToString(<Legend items={items} note="A note." infoElsewhere />)).not.toContain('sp-legend__info');
+  });
+
+  it('a phone\'s unfolded list prints the figures after each name; a Map or Timeline legend names its lens', () => {
+    const html = renderToString(<Legend items={items} figures title="Leasing" />).replace(/<!-- -->/g, '');
+    expect(html).toContain('<span class="sp-legend__num">1,000 · 50.0%</span>');
+    expect(html).toContain('aria-label="Leasing legend"');
+    expect(html).toContain('<span class="sp-legend__title">Leasing</span>');
   });
 });
