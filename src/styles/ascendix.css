@@ -72,11 +72,13 @@
        1 and 2 (Secondary Blue 1 carries dark text). The lowest step is a blue in its own right, 9 L* or
        more above the card wherever the glow puts it and far more saturated than the confidential grey: a
        $27 lease is a rent, not a blank. */
-    --tone-rent-0-fill: #1b5182; --tone-rent-0-text: #e3eff9; --tone-rent-0-edge: #86a8cc;
-    --tone-rent-1-fill: #1f70af; --tone-rent-1-text: #ffffff; --tone-rent-1-edge: #8cbde3;
-    --tone-rent-2-fill: #2491dd; --tone-rent-2-text: #04182a; --tone-rent-2-edge: #86c6f2;
-    --tone-rent-3-fill: #5cc3f2; --tone-rent-3-text: #04202e; --tone-rent-3-edge: #b0e2f9;
-    --tone-rent-4-fill: #bdebff; --tone-rent-4-text: #04202e; --tone-rent-4-edge: #e6f7ff;
+    /* Rent lens (Clara, Nov 12): the Leasing view's own colours, from its slate navy for the cheapest rents
+       through teal to its sky blue for the dearest, 13 L* or more apart, instead of five saturated blues. */
+    --tone-rent-0-fill: #3f4e8f; --tone-rent-0-text: #eef1fb; --tone-rent-0-edge: #9aa9d6;
+    --tone-rent-1-fill: #5c6fa5; --tone-rent-1-text: #ffffff; --tone-rent-1-edge: #b1bde3;
+    --tone-rent-2-fill: #1fa3b8; --tone-rent-2-text: #03191d; --tone-rent-2-edge: #8fd6e2;
+    --tone-rent-3-fill: #62c6ee; --tone-rent-3-text: #04202e; --tone-rent-3-edge: #b5e2f6;
+    --tone-rent-4-fill: #c4ebfa; --tone-rent-4-text: #04202e; --tone-rent-4-edge: #eef9fe;
     --tone-rent-net-fill: #2d3c4c; --tone-rent-net-text: #e8eef4; --tone-rent-net-edge: #5cc3f2;
 
     /* Deals lens: the further a deal has gone, the hotter the orange. */
@@ -174,11 +176,12 @@
     /* Rent lens by day: the same company blues, lightest to darkest. The lowest step is a blue a reader
        can see on the white card (it was #e6f5fd, 5 ΔE from the card where the glow tints it, the same
        fault as the old 5+ yr step), and the step after it keeps 8 L* below it. */
-    --tone-rent-0-fill: #d1eefe; --tone-rent-0-text: #292d3b; --tone-rent-0-edge: #5a89a8;
-    --tone-rent-1-fill: #a1daf7; --tone-rent-1-text: #292d3b; --tone-rent-1-edge: #4a84ab;
-    --tone-rent-2-fill: #5cc3f2; --tone-rent-2-text: #04202e; --tone-rent-2-edge: #2a79a8;
-    --tone-rent-3-fill: #2491dd; --tone-rent-3-text: #04182a; --tone-rent-3-edge: #17629c;
-    --tone-rent-4-fill: #284058; --tone-rent-4-text: #ffffff; --tone-rent-4-edge: #16293c;
+    /* Rent by day: the same colours the other way up, pale sky for the cheapest rents to slate navy for the dearest. */
+    --tone-rent-0-fill: #c6e5f5; --tone-rent-0-text: #292d3b; --tone-rent-0-edge: #5a89a8;
+    --tone-rent-1-fill: #93cfec; --tone-rent-1-text: #292d3b; --tone-rent-1-edge: #3f87ab;
+    --tone-rent-2-fill: #45b0e2; --tone-rent-2-text: #06202d; --tone-rent-2-edge: #1c6f9c;
+    --tone-rent-3-fill: #1b7f92; --tone-rent-3-text: #ffffff; --tone-rent-3-edge: #145e6c;
+    --tone-rent-4-fill: #3d4c78; --tone-rent-4-text: #ffffff; --tone-rent-4-edge: #26304f;
     --tone-rent-net-fill: #eef1f5; --tone-rent-net-text: #292d3b; --tone-rent-net-edge: #1c78bd;
 
     /* Deals lens by day: pale to hot. */
