@@ -202,12 +202,8 @@
   }
 
   /* ── The few rules a token cannot reach ─────────────────────────────────────────────── */
-  /* The property name carries the brand: white running into a light Primary Blue at night, Primary Text
-     running into the blues by day. */
-  :root[data-skin='glass'][data-palette='ascendix'] .sp-header__title h1 {
-    background: var(--sp-title-grad); -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent; color: transparent;
-  }
+  /* The property name is one colour, the text colour: a gradient across it tinted its last word on its own
+     ("Center", round 21). The brand is carried by the mark beside it. */
   /* The app's mark is a large shape: Primary Blue itself, in both themes. */
   :root[data-skin='glass'][data-palette='ascendix'] .sp-header__icon { background: linear-gradient(135deg, #00aff0, #2491dd); box-shadow: 0 8px 20px rgba(0, 175, 240, 0.3); color: #062233; }
   /* Text on the brand colour follows the token: the night brand is light, so its text is dark. */

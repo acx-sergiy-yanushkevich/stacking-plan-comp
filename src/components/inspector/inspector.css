@@ -139,3 +139,6 @@
 .sp-ins__row-actions .sp-btn { height: 24px; padding: 0 8px; font-size: var(--sp-text-11); }
 
 .sp-ins__content { animation: sp-ins-swap var(--sp-ease-slow); }
+
+/* The Area panel's "Location brief" / "Show plan" button: words beside Close, kept on one line. */
+.sp-ins__brief { flex: none; white-space: nowrap; }

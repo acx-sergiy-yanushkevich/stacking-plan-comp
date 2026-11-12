@@ -127,6 +127,18 @@
   /* A tablet's header is two rows tall (the controls take their own): less padding round it, so the plan starts sooner. */
   @media (min-width: 761px) and (max-width: 1099px) { :root[data-skin='glass'] .sp-header { padding: 12px 16px; } }
   :root[data-skin='glass'] .sp-header__icon { border-radius: 12px; background: var(--sp-brand-grad); box-shadow: var(--sp-brand-glow); }
+  /* The building card is one line on a desktop or tablet: the mark, the name, then its facts after the same
+     separator as between them. The name is already in the switcher above it, so the card is a caption, not a
+     second banner; it gives the plan back ~35 px (at 1280 x 720, half a floor more on the first screen). */
+  @media (min-width: 761px) {
+    :root[data-skin='glass'] .sp-header:not(.sp-header--classic) { padding: 9px 20px; gap: 12px; }
+    :root[data-skin='glass'] .sp-header:not(.sp-header--classic) .sp-header__icon { width: 30px; height: 30px; border-radius: 8px; }
+    :root[data-skin='glass'] .sp-header:not(.sp-header--classic) .sp-header__icon svg { width: 17px; height: 17px; }
+    :root[data-skin='glass'] .sp-header:not(.sp-header--classic) .sp-header__text { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 0; }
+    :root[data-skin='glass'] .sp-header:not(.sp-header--classic) .sp-header__title { margin-right: 10px; }
+    :root[data-skin='glass'] .sp-header:not(.sp-header--classic) .sp-header__title h1 { font-size: 18px; letter-spacing: -0.015em; }
+    :root[data-skin='glass'] .sp-header:not(.sp-header--classic) .sp-header__facts { margin: 0; flex: 1 1 0; min-width: min(100%, 420px); min-height: 0; }
+  }
 
   /* Floating surfaces sit over busy content: nearly opaque, still frosted. */
   :root[data-skin='glass'] .sp-pop__panel,

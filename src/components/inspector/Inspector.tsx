@@ -166,7 +166,11 @@ export default function Inspector({ model, state, patch, mode, areaPanel, areaPr
           )}
         </div>
         {isArea(mode) && (
-          <Button variant="ghost" size="sm" icon={wide ? 'collapse' : 'expand'} iconOnly aria-label="Location brief" aria-pressed={wide} title={wide ? 'Back to the side panel (Esc)' : 'Expand to the full page: the location brief'} onClick={toggleWide} />
+          // Words, not an icon alone: the brief is a page of its own, and a bare expand mark beside Close was
+          // missed (round 18). The words say what the click does: open the brief, or bring the plan back.
+          <Button variant="neutral" size="sm" icon={wide ? 'collapse' : 'expand'} className="sp-ins__brief" title={wide ? 'Close the brief and show the plan (Esc)' : 'Open the full-page location brief'} onClick={toggleWide}>
+            {wide ? 'Show plan' : 'Location brief'}
+          </Button>
         )}
         {head.close && <Button variant="ghost" size="sm" icon="close" iconOnly aria-label="Close" title="Close (Esc)" onClick={head.close} />}
       </div>
