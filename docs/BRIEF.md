@@ -45,9 +45,9 @@ From the `cre-personas` skill:
 
 ## Scoring rubric
 
-Each judge gives two separate scores, **UI /20** and **UX /20**, plus an informational **Engineering /10**.
+Each judge gives three separate scores: **UI /20**, **UX /20** and **Engineering /10**. A judge's score out of 100 is **(UI + UX + Engineering) × 2**, and a round's score is the average of its judges' scores.
 
-**Target: 95/100.** Defined as the combined UI + UX score, averaged across the three judges, of at least **38/40**, with neither UI nor UX averaging below **18.5/20**.
+**Target: 95/100.** A round reaches it when its judges' scores average at least 95.
 
 ### UI score (/20): how it looks
 
@@ -69,7 +69,7 @@ Each judge gives two separate scores, **UI /20** and **UX /20**, plus an informa
 | X4 | **Accessibility of interaction.** Keyboard paths, focus management, screen-reader labels, motion and contrast in practice. | 3 |
 | X5 | **CRM workflows and differentiation.** Uses what only a CRM knows (deals, inquiries, activities, record actions, change history) to beat VTS, CoStar, Yardi and Prophia. | 4 |
 
-### Engineering (/10, informational)
+### Engineering (/10)
 
 | # | Criterion | Points |
 |---|---|---|
