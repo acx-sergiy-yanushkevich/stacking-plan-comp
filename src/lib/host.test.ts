@@ -381,3 +381,21 @@ describe('the host in use', () => {
     expect(readUrl()).toBe('');
   });
 });
+
+describe('browser host: what the browser keeps between visits (round 26)', () => {
+  it('reads and writes the local storage, and is quiet where the browser keeps nothing', () => {
+    const kept = new Map<string, string>();
+    const { page } = fakePage();
+    const host = createBrowserHost({ ...page, localStorage: { getItem: (k) => kept.get(k) ?? null, setItem: (k, v) => void kept.set(k, v) } });
+    expect(host.readStore('a')).toBeNull();
+    host.writeStore('a', '1');
+    expect(host.readStore('a')).toBe('1');
+    // Blocked site data throws on use; a page without storage has none: neither breaks the plan.
+    const refusing = createBrowserHost({ ...page, localStorage: { getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('blocked'); } } });
+    expect(refusing.readStore('a')).toBeNull();
+    expect(() => refusing.writeStore('a', '1')).not.toThrow();
+    expect(createBrowserHost(page).readStore('a')).toBeNull();
+    expect(NO_HOST.readStore('a')).toBeNull();
+  });
+});
+

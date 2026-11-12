@@ -154,6 +154,11 @@ describe('live transit out to the widest ring (round 25)', () => {
     ]);
   });
 
+  it('calls a stop buses share with a trolley rail, as Uptown\'s M-Line stops are tagged (round 26)', () => {
+    const n = toNearby([north(1, 0.12, { highway: 'bus_stop', railway: 'platform', public_transport: 'platform', tram: 'yes', bus: 'yes', name: 'Cole & Allen' }), north(2, 0.13, { railway: 'tram_stop', tram: 'yes', name: 'Cole & Allen' })], c)!;
+    expect(n.transit.map((t) => [t.name, t.type])).toEqual([['Cole & Allen', 'Rail']]);
+  });
+
   it('keeps a distance unrounded, so a stop at the door reads "< 0.1 mi" and not a rounded-up 0.1', () => {
     const n = toNearby([north(1, 0.07, { highway: 'bus_stop', name: 'At the door' })], c)!;
     expect(n.transit[0].distanceMi).toBeCloseTo(0.07, 2);

@@ -1,4 +1,4 @@
-import { BACHELORS_LABEL, locationBrief, pct1, US_BENCHMARK } from '../../domain/areaBrief';
+import { areaCredit, BACHELORS_LABEL, locationBrief, pct1, US_BENCHMARK } from '../../domain/areaBrief';
 import { keepUnits, mi, num, usd0 } from '../../domain/format';
 import type { Area, AreaRing, Property } from '../../domain/types';
 import { DotJoin } from '../hero/DotJoin';
@@ -144,7 +144,7 @@ export function LocationBrief({ property, area, print }: LocationBriefProps) {
       </div>
 
       <footer className="sp-brief__foot">
-        <p>{area.sample ? area.source : `Area figures: ${area.source}. Amenities and transit: OpenStreetMap.`}</p>
+        <p>{areaCredit(area)}</p>
         <p>{US_BENCHMARK.source}. A figure is said to stand out when it is at least 10% from the US figure.</p>
       </footer>
     </article>

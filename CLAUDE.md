@@ -27,6 +27,7 @@ npm run leakcheck     # nothing withheld leaks in prospect-safe mode
 npm run exportcheck   # the PNG and CSV exports
 npm run pdfcheck      # the printed report's pages
 node scripts/one.mjs "?view=map&safe=1" /tmp/map.png 1440 1100   # one screenshot
+node scripts/osm-snapshot.mjs  # re-record live mode's copies of OpenStreetMap's stops and places (src/data/snapshots/)
 ```
 
 `BASE=<url>` points any script at another server. Scratch screenshots go outside the repo. Every URL parameter is in the README's "Jump to any view" table.

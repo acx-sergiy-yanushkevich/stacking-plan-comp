@@ -1,5 +1,5 @@
 import { useEffect, useRef, type FocusEvent, type MouseEvent } from 'react';
-import { compareRing, US_BENCHMARK } from '../../domain/areaBrief';
+import { areaCredit, compareRing, US_BENCHMARK } from '../../domain/areaBrief';
 import { inMiles, mi, num, ringName } from '../../domain/format';
 import { categoryKey, stopKey } from '../../domain/places';
 import type { Area } from '../../domain/types';
@@ -244,7 +244,7 @@ export function AreaPanel({ model, area, expanded, onMap, ring: chosen = 1, onRi
           <footer className="sp-area__foot">
             {/* Sample figures say so first; only live figures are credited to the Census. How to turn live
                 mode on is for the team (docs), not for a client looking at this panel. */}
-            <p>{area.sample ? area.source : `Area figures: ${area.source}. Amenities and transit: OpenStreetMap.`}</p>
+            <p>{areaCredit(area)}</p>
             <p className="sp-faint">{US_BENCHMARK.source}</p>
           </footer>
         </>

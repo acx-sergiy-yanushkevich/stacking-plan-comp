@@ -1,0 +1,386 @@
+{
+ "recordedAt": "2026-11-12",
+ "source": "OpenStreetMap contributors (ODbL), read through the OSM API and Nominatim",
+ "center": {
+  "lat": 32.99652,
+  "lng": -96.74951
+ },
+ "elements": [
+  {
+   "type": "node",
+   "id": 421424724,
+   "lat": 32.9408625,
+   "lon": -96.7374057,
+   "tags": {
+    "name": "Spring Valley",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 421424725,
+   "lat": 32.9636306,
+   "lon": -96.7228317,
+   "tags": {
+    "name": "Arapaho Center",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 421424726,
+   "lat": 32.9851603,
+   "lon": -96.7109292,
+   "tags": {
+    "name": "Galatyn Park",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 421424728,
+   "lat": 33.0207827,
+   "lon": -96.700895,
+   "tags": {
+    "name": "Downtown Plano",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 421424729,
+   "lat": 33.0335172,
+   "lon": -96.7007251,
+   "tags": {
+    "name": "Parker Road",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 1138410139,
+   "lat": 33.0021289,
+   "lon": -96.7034037,
+   "tags": {
+    "name": "CityLine/Bush",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 1285548295,
+   "lat": 33.0150796,
+   "lon": -96.6985576,
+   "tags": {
+    "name": "12th Street",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 1285548296,
+   "lat": 33.0117876,
+   "lon": -96.6666906,
+   "tags": {
+    "name": "Shiloh Road",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 1285683633,
+   "lat": 33.0144073,
+   "lon": -96.701028,
+   "tags": {
+    "name": "12th Street",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 1285683634,
+   "lat": 32.9970335,
+   "lon": -96.7488679,
+   "tags": {
+    "name": "UT Dallas",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 1285683636,
+   "lat": 32.9627798,
+   "lon": -96.8177653,
+   "tags": {
+    "name": "Knoll Trail",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 5025400854,
+   "lat": 32.9935031,
+   "lon": -96.7502291,
+   "tags": {
+    "name": "Chopped Halal Grill",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 6589736491,
+   "lat": 32.9935027,
+   "lon": -96.7501032,
+   "tags": {
+    "name": "Fukuro",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 6589736492,
+   "lat": 32.9935033,
+   "lon": -96.750349,
+   "tags": {
+    "name": "Pinto Thai Urban Diner",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 6589736494,
+   "lat": 32.9934871,
+   "lon": -96.7490937,
+   "tags": {
+    "name": "Bindaas Bar & Restaurant",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10686664874,
+   "lat": 32.9976756,
+   "lon": -96.7573733,
+   "tags": {
+    "name": "Frankford @ Reveillie Run - W - MB",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10686664875,
+   "lat": 32.9959585,
+   "lon": -96.7557912,
+   "tags": {
+    "name": "Waterview @ Frankford - N - MB",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10686664876,
+   "lat": 32.9932089,
+   "lon": -96.7525686,
+   "tags": {
+    "name": "Synergy Park @ Stewart - W - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10686664877,
+   "lat": 32.9931883,
+   "lon": -96.7483569,
+   "tags": {
+    "name": "Synergy Park @ Eugene - W - FS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10686664879,
+   "lat": 32.9966809,
+   "lon": -96.7444734,
+   "tags": {
+    "name": "Synergy Park @ Floyd - S - MB",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10686664899,
+   "lat": 32.9967707,
+   "lon": -96.7555155,
+   "tags": {
+    "name": "Waterview @ Frankford - S - FS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10686664901,
+   "lat": 32.9963331,
+   "lon": -96.7444046,
+   "tags": {
+    "name": "Synergy Park @ Point North - N - MB",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10686664902,
+   "lat": 32.9928772,
+   "lon": -96.7480383,
+   "tags": {
+    "name": "Synergy Park @ Facilities - E - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10686664903,
+   "lat": 32.992875,
+   "lon": -96.7498282,
+   "tags": {
+    "name": "Synergy Park @ Rutford - E - FS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10686664904,
+   "lat": 32.9929011,
+   "lon": -96.7546582,
+   "tags": {
+    "name": "Synergy Park @ Stewart - E - MB",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10687012329,
+   "lat": 32.9918659,
+   "lon": -96.7510179,
+   "tags": {
+    "name": "Residence Hall North",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13742250066,
+   "lat": 32.9969817,
+   "lon": -96.7484017,
+   "tags": {
+    "name": "5",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13742250067,
+   "lat": 32.9969317,
+   "lon": -96.7486136,
+   "tags": {
+    "name": "4",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13742250068,
+   "lat": 32.9967747,
+   "lon": -96.7493083,
+   "tags": {
+    "name": "1",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13742250069,
+   "lat": 32.9968259,
+   "lon": -96.7491004,
+   "tags": {
+    "name": "2",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13742250070,
+   "lat": 32.996872,
+   "lon": -96.7488999,
+   "tags": {
+    "name": "3",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13742289519,
+   "lat": 32.9926011,
+   "lon": -96.7561647,
+   "tags": {
+    "name": "Waterview @ Synergy Park - N - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13743951053,
+   "lat": 32.9971206,
+   "lon": -96.75502,
+   "tags": {
+    "name": "Waterview @ Frankford - S - MB",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14190232484,
+   "lat": 32.993502,
+   "lon": -96.7500002,
+   "tags": {
+    "name": "Chillax Hub",
+    "amenity": "restaurant"
+   }
+  }
+ ]
+}

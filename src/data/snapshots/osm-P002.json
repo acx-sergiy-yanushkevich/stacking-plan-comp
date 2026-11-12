@@ -1,0 +1,708 @@
+{
+ "recordedAt": "2026-11-12",
+ "source": "OpenStreetMap contributors (ODbL), read through the OSM API and Nominatim",
+ "center": {
+  "lat": 33.07843,
+  "lng": -96.82634
+ },
+ "elements": [
+  {
+   "type": "node",
+   "id": 2936291078,
+   "lat": 33.0774584,
+   "lon": -96.8211343,
+   "tags": {
+    "name": "Mi Cocina",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2936291079,
+   "lat": 33.0774783,
+   "lon": -96.8208879,
+   "tags": {
+    "name": "Starbucks",
+    "amenity": "cafe"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2941379592,
+   "lat": 33.0774615,
+   "lon": -96.820308,
+   "tags": {
+    "name": "Bob's Steak & Chop House",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2941379603,
+   "lat": 33.0784007,
+   "lon": -96.8202329,
+   "tags": {
+    "name": "La La Land Kind Cafe",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9239045135,
+   "lat": 33.0784364,
+   "lon": -96.8262625,
+   "tags": {
+    "name": "Del Frisco's Double Eagle Steakhouse",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9240501982,
+   "lat": 33.0837793,
+   "lon": -96.8257403,
+   "tags": {
+    "name": "Fogo de Chão",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9240501984,
+   "lat": 33.0828495,
+   "lon": -96.8259443,
+   "tags": {
+    "name": "HayWire",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9240599207,
+   "lat": 33.0819145,
+   "lon": -96.8258869,
+   "tags": {
+    "name": "Darna Mediterranean Eatery + Bar",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9240599213,
+   "lat": 33.0815154,
+   "lon": -96.8258949,
+   "tags": {
+    "name": "Mendocino Farms",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9240639697,
+   "lat": 33.0813405,
+   "lon": -96.8259001,
+   "tags": {
+    "name": "Starbucks Reserve",
+    "amenity": "cafe"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9242904963,
+   "lat": 33.0810269,
+   "lon": -96.826351,
+   "tags": {
+    "name": "True Food Kitchen",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9242904964,
+   "lat": 33.0807396,
+   "lon": -96.8264406,
+   "tags": {
+    "name": "North Italia",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9242904965,
+   "lat": 33.0806159,
+   "lon": -96.8264422,
+   "tags": {
+    "name": "Mesero",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9242904966,
+   "lat": 33.0804744,
+   "lon": -96.8264445,
+   "tags": {
+    "name": "CAVA",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9242904967,
+   "lat": 33.0802119,
+   "lon": -96.8264503,
+   "tags": {
+    "name": "Tommy Bahama Restaurant",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9242904971,
+   "lat": 33.0793368,
+   "lon": -96.8265149,
+   "tags": {
+    "name": "Earls",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9242904973,
+   "lat": 33.0790964,
+   "lon": -96.8266308,
+   "tags": {
+    "name": "Toulouse",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9242904974,
+   "lat": 33.0789659,
+   "lon": -96.826672,
+   "tags": {
+    "name": "KAI",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9242904976,
+   "lat": 33.0785632,
+   "lon": -96.8270409,
+   "tags": {
+    "name": "Bulla Gastrobar",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9243219483,
+   "lat": 33.0796687,
+   "lon": -96.8259805,
+   "tags": {
+    "name": "Taverna",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10607201911,
+   "lat": 33.0781249,
+   "lon": -96.8228577,
+   "tags": {
+    "name": "Legacy @ Lone Star - W - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10607201912,
+   "lat": 33.0780831,
+   "lon": -96.8193525,
+   "tags": {
+    "name": "Legacy @ Parkwood - W - FS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10607222203,
+   "lat": 33.0778164,
+   "lon": -96.8228808,
+   "tags": {
+    "name": "Legacy @ Bishop - E - MB",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10607222205,
+   "lat": 33.0778101,
+   "lon": -96.8208219,
+   "tags": {
+    "name": "Legacy @ Bishop - E - FS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10607222206,
+   "lat": 33.0778323,
+   "lon": -96.8270774,
+   "tags": {
+    "name": "Legacy @ Dallas Parkway - E - MB",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10607222207,
+   "lat": 33.0762348,
+   "lon": -96.8282228,
+   "tags": {
+    "name": "Communications @ Legacy - N - MB",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10607222208,
+   "lat": 33.072635,
+   "lon": -96.8282549,
+   "tags": {
+    "name": "Communication @ Tennyson - N - FS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10607222210,
+   "lat": 33.0765707,
+   "lon": -96.8285641,
+   "tags": {
+    "name": "Communications @ Legacy - S - FS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10665645690,
+   "lat": 33.0816871,
+   "lon": -96.8276804,
+   "tags": {
+    "name": "Communications @ Water - S - FS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10665645691,
+   "lat": 33.084348,
+   "lon": -96.824639,
+   "tags": {
+    "name": "Headquarters @ Dallas - W - FS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10665645692,
+   "lat": 33.0842926,
+   "lon": -96.8215788,
+   "tags": {
+    "name": "Headquarters @ Bishop - W - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10665645694,
+   "lat": 33.0803982,
+   "lon": -96.8183942,
+   "tags": {
+    "name": "Parkwood @ Hathaway - N - MB",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10665645695,
+   "lat": 33.078994,
+   "lon": -96.8184091,
+   "tags": {
+    "name": "Parkwood @ Legacy - N - FS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10665654885,
+   "lat": 33.0771551,
+   "lon": -96.8187481,
+   "tags": {
+    "name": "Parkwood @ Legacy - S - FS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10665654886,
+   "lat": 33.0840467,
+   "lon": -96.8254995,
+   "tags": {
+    "name": "Headquarters @ Dallas N Tollway - E - MB",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10665654888,
+   "lat": 33.0804099,
+   "lon": -96.8276169,
+   "tags": {
+    "name": "Communications @ Water - N - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10665654889,
+   "lat": 33.0784979,
+   "lon": -96.8282202,
+   "tags": {
+    "name": "Communication @ Legacy - N - FS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10746519196,
+   "lat": 33.0788835,
+   "lon": -96.8191381,
+   "tags": {
+    "name": "Salata",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10746519199,
+   "lat": 33.0784309,
+   "lon": -96.8191306,
+   "tags": {
+    "name": "Bank of America",
+    "amenity": "bank"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12308319739,
+   "lat": 33.0754607,
+   "lon": -96.8216023,
+   "tags": {
+    "name": "Truluck's",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12404228524,
+   "lat": 33.0784272,
+   "lon": -96.8226811,
+   "tags": {
+    "name": "Seasons 52",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12404228525,
+   "lat": 33.0775643,
+   "lon": -96.8230904,
+   "tags": {
+    "name": "Fleming's",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12404228529,
+   "lat": 33.0784275,
+   "lon": -96.8208111,
+   "tags": {
+    "name": "Grimaldi's Pizzeria",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12404228531,
+   "lat": 33.0774832,
+   "lon": -96.8191026,
+   "tags": {
+    "name": "Benchmark Bank",
+    "amenity": "bank"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12404228542,
+   "lat": 33.0774783,
+   "lon": -96.8207259,
+   "tags": {
+    "name": "Kizuki Ramen & Izakaya",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12404228546,
+   "lat": 33.0784175,
+   "lon": -96.8193741,
+   "tags": {
+    "name": "Original ChopShop",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12404228548,
+   "lat": 33.0784011,
+   "lon": -96.8212097,
+   "tags": {
+    "name": "Brasao Brazillian Steakhouse",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12404228549,
+   "lat": 33.077497,
+   "lon": -96.8193641,
+   "tags": {
+    "name": "The Yellow Chili",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12432201892,
+   "lat": 33.0803209,
+   "lon": -96.8187277,
+   "tags": {
+    "name": "Parkwood @ Hathaway - S - MB",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12511369764,
+   "lat": 33.0775743,
+   "lon": -96.8236322,
+   "tags": {
+    "name": "UBS",
+    "amenity": "bank"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12511411352,
+   "lat": 33.0784306,
+   "lon": -96.8232328,
+   "tags": {
+    "name": "The Capital Grille",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12520298586,
+   "lat": 33.0784749,
+   "lon": -96.8289982,
+   "tags": {
+    "name": "Chase",
+    "amenity": "bank"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13288554904,
+   "lat": 33.076263,
+   "lon": -96.8212399,
+   "tags": {
+    "name": "Del Frisco's Grille",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13288554907,
+   "lat": 33.0763202,
+   "lon": -96.8216799,
+   "tags": {
+    "name": "Half Shells",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13288554910,
+   "lat": 33.0770681,
+   "lon": -96.8212269,
+   "tags": {
+    "name": "Sambuca 360",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13288554916,
+   "lat": 33.0766948,
+   "lon": -96.8212468,
+   "tags": {
+    "name": "Maman",
+    "amenity": "cafe"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13327122218,
+   "lat": 33.0805619,
+   "lon": -96.8224614,
+   "tags": {
+    "name": "Benihana",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13327122220,
+   "lat": 33.0798671,
+   "lon": -96.8227604,
+   "tags": {
+    "name": "Urla Turkish Grill",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13327122221,
+   "lat": 33.0794129,
+   "lon": -96.8228112,
+   "tags": {
+    "name": "Sakhuu Thai",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13327122222,
+   "lat": 33.0802684,
+   "lon": -96.8231686,
+   "tags": {
+    "name": "Mexican Sugar",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13327122226,
+   "lat": 33.0793269,
+   "lon": -96.8231482,
+   "tags": {
+    "name": "Le Beef",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13327122229,
+   "lat": 33.0796666,
+   "lon": -96.823122,
+   "tags": {
+    "name": "Jashran",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13435829595,
+   "lat": 33.0784278,
+   "lon": -96.8235904,
+   "tags": {
+    "name": "PNC Bank",
+    "amenity": "bank"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13472655943,
+   "lat": 33.0745323,
+   "lon": -96.8218412,
+   "tags": {
+    "name": "Starbucks",
+    "amenity": "cafe"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13745065508,
+   "lat": 33.0843751,
+   "lon": -96.8226828,
+   "tags": {
+    "name": "Headquarters @ Dallas N Tollway - W - MB",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13773232520,
+   "lat": 33.0838996,
+   "lon": -96.8262536,
+   "tags": {
+    "name": "Uchiko",
+    "amenity": "restaurant"
+   }
+  }
+ ]
+}

@@ -142,6 +142,11 @@ export interface Area {
   amenities: Array<{ category: string; count: number }>;
   /** Amenities with a position on record, when the source has them; the Map pins each one. */
   places?: Array<{ name: string; category: string; distanceMi: number; lat: number; lng: number }>;
+  /**
+   * The day the stops and places were copied from OpenStreetMap, when live mode shows a kept or recorded copy
+   * while its servers have not answered; absent for a live answer and for sample data.
+   */
+  placesRecordedAt?: ISODate;
 }
 
 export interface GeoPolygon {

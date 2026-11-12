@@ -1,5 +1,6 @@
 import type { Area, GeoPolygon, Property } from '../../domain/types';
 import { oneOf } from '../../domain/places';
+import { bestBackup, keepBackup } from './placesBackup';
 import type { AreaOptions, DataSource, FootprintResult } from './DataSource';
 import { CensusSource } from './CensusSource';
 import { MockSource } from './MockSource';
@@ -35,6 +36,8 @@ export interface OverpassElement {
 
 interface OverpassResponse {
   elements?: OverpassElement[];
+  /** When the data was last brought up to date (`timestamp_osm_base`, ISO): a kept copy is dated by it. */
+  osm3s?: { timestamp_osm_base?: string };
 }
 
 /** Approximate ground distance in metres (equirectangular; fine under a few km). */
@@ -85,6 +88,11 @@ export function toPolygon(elements: OverpassElement[], center: { lat: number; ln
 
 /** POST an Overpass QL query, trying each endpoint in order with a per-request timeout. */
 export async function queryOverpass(ql: string, endpoints: string[] = OVERPASS_ENDPOINTS): Promise<OverpassElement[]> {
+  return (await queryOverpassDated(ql, endpoints)).elements;
+}
+
+/** The same, with the day OpenStreetMap's data is as of (null when the answer does not say). */
+export async function queryOverpassDated(ql: string, endpoints: string[] = OVERPASS_ENDPOINTS): Promise<{ elements: OverpassElement[]; at: string | null }> {
   let lastError: unknown = null;
   for (const url of endpoints) {
     const ctl = new AbortController();
@@ -98,7 +106,7 @@ export async function queryOverpass(ql: string, endpoints: string[] = OVERPASS_E
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as OverpassResponse;
-      return data.elements ?? [];
+      return { elements: data.elements ?? [], at: data.osm3s?.timestamp_osm_base?.slice(0, 10) ?? null };
     } catch (e) {
       lastError = e;
     } finally {
@@ -130,10 +138,18 @@ const AMENITY_LABEL: Record<string, string> = {
   hotel: 'Hotels',
 };
 
-/** A station's kind from its tags: rail when it says so (a bus station is a `public_transport` station too). */
+/**
+ * A stop's kind from its tags: rail when it says so. A bus station is a `public_transport` station too, and a stop
+ * buses share with a trolley is a bus stop and a rail platform at once: rail, when trains or trams call there
+ * (round 26: Uptown's M-Line stops read "Bus").
+ */
 const RAIL_MODES = ['train', 'light_rail', 'subway', 'tram'];
 const isRailStop = (tags: Record<string, string>) =>
-  ['station', 'halt', 'tram_stop'].includes(tags.railway ?? '') || (tags.public_transport === 'station' && RAIL_MODES.some((m) => tags[m] === 'yes'));
+  ['station', 'halt', 'tram_stop'].includes(tags.railway ?? '') ||
+  ((tags.public_transport === 'station' || tags.public_transport === 'platform' || tags.railway === 'platform') && RAIL_MODES.some((m) => tags[m] === 'yes'));
+
+/** What live mode lays over the figures: the stops and places, and the copy's date when they are a copy. */
+type Nearby = Pick<Area, 'transit' | 'amenities' | 'places' | 'placesRecordedAt'>;
 
 /**
  * Transit stops and amenities from the nodes the query returns: the counts the Area panel ranks, and each stop's and
@@ -205,5 +221,48 @@ export class OverpassSource implements DataSource {
         .catch(() => null),
     ]);
     return nearby ? { ...area, transit: nearby.transit, amenities: nearby.amenities, places: nearby.places } : area;
+  }
+
+  /**
+   * The area at once, then fresher (round 26: a demo waited up to 36 s on the shared servers before the map had a
+   * pin, and they often refuse outright). First, together: the figures the Census source gives without waiting (the
+   * sample, without a key) and the stops and places of the best copy on hand, the last live answer this browser
+   * kept or the one recorded with the app, so the map never draws sample pins first. Then, each as it comes:
+   * OpenStreetMap's own answer, kept for the next visit, and the Census's figures when a key is given. A copy says
+   * its date (`placesRecordedAt`) until a live answer replaces it.
+   */
+  watchArea(p: Property, opts: AreaOptions | undefined, onArea: (area: Area) => void): () => void {
+    let alive = true;
+    let ready = false;
+    let live = false;
+    let figures: Area | null = null;
+    let places: Nearby | null = null;
+    const emit = () => {
+      if (alive && ready && figures) onArea(places ? { ...figures, ...places } : figures);
+    };
+    void Promise.all([this.fallback.getArea(p, opts), bestBackup(p.id)]).then(([sample, copy]) => {
+      figures ??= { ...sample, sample: true };
+      const copied = copy && !live ? toNearby(copy.elements, p.location) : null;
+      if (copied) places = { ...copied, placesRecordedAt: copy!.recordedAt };
+      ready = true;
+      emit();
+    });
+    void this.census.getArea(p, opts).then((a) => {
+      figures = a;
+      emit();
+    });
+    void queryOverpassDated(nearbyQuery(p.location), this.endpoints)
+      .then(({ elements, at }) => {
+        const fresh = toNearby(elements, p.location);
+        if (!fresh) return;
+        live = true;
+        places = fresh;
+        if (at) keepBackup(p.id, { recordedAt: at, elements });
+        emit();
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
   }
 }

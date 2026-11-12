@@ -94,6 +94,12 @@ export interface Host {
   sizeObserver(callback: () => void): ElementWatch | null;
   /** An observer that calls `callback` when the children under an observed node change; `null` where there is none. */
   mutationObserver(callback: () => void): ElementWatch | null;
+
+  // ── What this browser keeps between visits ─────────────────────────────────────────────────────
+  /** A string this browser keeps under `key` (its local storage); `null` when there is none or none can be read. */
+  readStore(key: string): string | null;
+  /** Keep `value` under `key` for the next visit; quietly nothing where nothing can be kept (a private window). */
+  writeStore(key: string, value: string): void;
 }
 
 /** The part of a `ResizeObserver` or `MutationObserver` the plan uses. */
@@ -144,6 +150,8 @@ export interface BrowserPage extends Listens {
   requestAnimationFrame?(callback: (time: number) => void): number;
   cancelAnimationFrame?(handle: number): void;
   ResizeObserver?: new (callback: () => void) => { observe(target: Element): void; unobserve(target: Element): void; disconnect(): void };
+  /** Absent, or throwing on use, where the browser keeps nothing (blocked site data, some private windows). */
+  localStorage?: { getItem(key: string): string | null; setItem(key: string, value: string): void };
   MutationObserver?: new (callback: () => void) => { observe(target: Node, options?: MutationObserverInit): void; disconnect(): void };
   document: Listens & {
     title: string;
@@ -262,6 +270,20 @@ export function createBrowserHost(page: BrowserPage): Host {
       const watch = new page.MutationObserver(callback);
       return { observe: (target, options) => watch.observe(target, options ?? { childList: true, subtree: true }), disconnect: () => watch.disconnect() };
     },
+    readStore: (key) => {
+      try {
+        return page.localStorage?.getItem(key) ?? null;
+      } catch {
+        return null;
+      }
+    },
+    writeStore: (key, value) => {
+      try {
+        page.localStorage?.setItem(key, value);
+      } catch {
+        // Full, blocked or private: the next visit simply starts without it.
+      }
+    },
   };
 }
 
@@ -294,6 +316,8 @@ export const NO_HOST: Host = {
   computedStyle: () => null,
   sizeObserver: () => null,
   mutationObserver: () => null,
+  readStore: () => null,
+  writeStore: () => {},
 };
 
 let host: Host | null = null;
@@ -349,3 +373,5 @@ export const expose = (name: string, value: unknown): void => current().expose(n
 export const computedStyle = (element: Element): CSSStyleDeclaration | null => current().computedStyle(element);
 export const sizeObserver = (callback: () => void): ElementWatch | null => current().sizeObserver(callback);
 export const mutationObserver = (callback: () => void): ElementWatch | null => current().mutationObserver(callback);
+export const readStore = (key: string): string | null => current().readStore(key);
+export const writeStore = (key: string, value: string): void => current().writeStore(key, value);
