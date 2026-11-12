@@ -3,6 +3,7 @@ import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { fmtMonthYearShort } from '../../domain/dates';
 import { num, pct, plural, sfDelta } from '../../domain/format';
+import { pipelineWords } from '../../domain/kpis';
 import { waltCard, waltTitle } from './walt';
 import { canShowRollover, canShowWalt } from '../../domain/safe';
 import { setHoverKeys } from '../../state/hoverStore';
@@ -187,8 +188,8 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
         unit: k.pipeline.deals === 1 ? 'deal' : 'deals',
         // Space in play, each space once: competing deals on one suite are alternatives (round 22: "requested"
         // undercounted what the deals ask for, which the detail now gives).
-        note: `${num(k.pipeline.sf)} SF in play`,
-        detail: `${k.pipeline.onVacancy} on vacancies · ${plural(k.pipeline.deals - k.pipeline.onVacancy, 'renewal')} · ${num(k.pipeline.sf)} SF in play, each space once at its largest live deal (the deals request ${num(k.pipeline.requested)} SF in all)`,
+        note: pipelineWords(k.pipeline).inPlay,
+        detail: `${k.pipeline.onVacancy} on vacancies · ${plural(k.pipeline.deals - k.pipeline.onVacancy, 'renewal')} · ${pipelineWords(k.pipeline).inPlay}, each space once at its largest live deal (the ${pipelineWords(k.pipeline).requested} in all)`,
         delta: d ? { text: `${d.pipelineDeals >= 0 ? '+' : '−'}${Math.abs(d.pipelineDeals)} ${Math.abs(d.pipelineDeals) === 1 ? 'deal' : 'deals'}`, good: d.pipelineDeals >= 0 } : null,
         active: state.lens === 'deals',
         title: 'Live deals on this building. Click to color the plan by pipeline.',

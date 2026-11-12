@@ -1,6 +1,7 @@
-import { property, TODAY } from '../../data/mock/property';
+import { property as prestonPark, TODAY } from '../../data/mock/property';
+import type { Property } from '../../domain/types';
 import { activeDeals, deriveFloors, isLeaseKind, segmentIndex, type FloorView } from '../../domain/derive';
-import { checkNeededBy, searchSpace } from '../../domain/finder';
+import { checkNeededBy, rangeProblem, searchSpace } from '../../domain/finder';
 import { findIssues, issueCounts, recentChanges } from '../../domain/issues';
 import { computeKpis, kpiDeltas } from '../../domain/kpis';
 import { legendFor } from '../../domain/lenses';
@@ -14,7 +15,7 @@ import type { PlanState, WindowKey } from '../../state/planState';
  * Test support: the same derivation as `usePlanModel` over the mock property, without the hook, so
  * views and panels can be rendered to a string. Imported by tests only; nothing in the app uses it.
  */
-export function buildModel(state: PlanState): PlanModel {
+export function buildModel(state: PlanState, property: Property = prestonPark): PlanModel {
   const asOf = planDate(state.asOf, TODAY, state.safe);
   // As in `usePlanModel`: totals keep the real lease terms; `floors` is the prospect-safe projection every view draws.
   const totals = publishedFloors(deriveFloors(property, asOf, TODAY), state.safe);
@@ -29,7 +30,8 @@ export function buildModel(state: PlanState): PlanModel {
     : state.req
       ? { size: state.req, max: state.max, by: checkNeededBy(state.by, asOf).date, type: state.fit }
       : null;
-  const fits = req ? searchSpace(floors, req, property.inquiries, asOf) : null;
+  // As in `usePlanModel`: a range whose maximum is below its minimum runs nothing.
+  const fits = req && !rangeProblem(req.size, req.max) ? searchSpace(floors, req, property.inquiries, asOf) : null;
   const worklist = (w: WindowKey): WorklistRow[] => worklistRows(floors, w);
   const segIndex = segmentIndex(floors);
   const selected = state.select ? segIndex.get(state.select) ?? null : null;
