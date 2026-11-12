@@ -17,6 +17,7 @@ From the `cre-personas` skill:
 | **Landlord rep / leasing agent** | Thursday leasing call with the owner, monthly owner report, renewal sweep at 90 / 180 / 365 days | Where is the vacancy, and what is the largest contiguous block? Who expires in the next 12–24 months? What is the asking rent? What is occupancy? Which deals are working each vacancy? |
 | **Marketing / research coordinator** | Owns the plan's data: loads rent rolls, closes leased availabilities, splits floors, exports the plan | What is missing or wrong: a lease with no floor, a vacancy that overlaps a lease, floor SF that doesn't add up? |
 | **Tenant rep** | Scouts target buildings for a requirement of N SF | Is there N SF of contiguous space, and on which floors? Direct or sublease? From what date? Which neighbours expire soon? |
+| **Prospective tenant / buyer** (non-broker; added because the Best UX award covers "both brokers and buyers / potential tenants", see [CHALLENGE_RULES.md](CHALLENGE_RULES.md)) | Looks at a plan the broker shares, or a prospect-safe view, before or after a tour | Which spaces fit my size and date? Where are they in the building, and what's next to them? What does it roughly cost? Can I understand this without a broker explaining it, and without seeing other tenants' private terms? |
 | **Investment sales analyst** | Checks the rent roll behind a broker opinion of value (BOV) or an offer | How much SF rolls in each of the next 5 years? Occupancy and WALT? Does one tenant occupy several floors? In-place rents? |
 
 ## Top jobs, ranked
