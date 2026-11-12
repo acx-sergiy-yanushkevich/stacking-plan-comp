@@ -1,0 +1,1350 @@
+{
+ "recordedAt": "2026-11-12",
+ "source": "OpenStreetMap contributors (ODbL), read through the OSM API and Nominatim",
+ "center": {
+  "lat": 32.80152,
+  "lng": -96.80447
+ },
+ "elements": [
+  {
+   "type": "node",
+   "id": 421424709,
+   "lat": 32.7808696,
+   "lon": -96.8056604,
+   "tags": {
+    "name": "West End",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 421424710,
+   "lat": 32.7819136,
+   "lon": -96.8006933,
+   "tags": {
+    "name": "Akard",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 421424711,
+   "lat": 32.7842895,
+   "lon": -96.7970506,
+   "tags": {
+    "name": "Saint Paul",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 421424712,
+   "lat": 32.7864392,
+   "lon": -96.7945311,
+   "tags": {
+    "name": "Pearl/Arts District",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 421424715,
+   "lat": 32.8378263,
+   "lon": -96.7749552,
+   "tags": {
+    "name": "SMU/Mockingbird",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 421424716,
+   "lat": 32.8486414,
+   "lon": -96.771749,
+   "tags": {
+    "name": "Lovers Lane",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 421432878,
+   "lat": 32.8429541,
+   "lon": -96.8621472,
+   "tags": {
+    "name": "Burbank",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 421432879,
+   "lat": 32.8222028,
+   "lon": -96.8333833,
+   "tags": {
+    "name": "Inwood/Love Field",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 421432880,
+   "lat": 32.8138458,
+   "lon": -96.8333029,
+   "tags": {
+    "name": "Southwestern Medical District/Parkland",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 421432884,
+   "lat": 32.7688797,
+   "lon": -96.7937866,
+   "tags": {
+    "name": "Cedars",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 421432885,
+   "lat": 32.7481448,
+   "lon": -96.7983807,
+   "tags": {
+    "name": "8th & Corinth",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 421432886,
+   "lat": 32.7406773,
+   "lon": -96.8130144,
+   "tags": {
+    "name": "Dallas Zoo",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 421432906,
+   "lat": 32.7663057,
+   "lon": -96.7424683,
+   "tags": {
+    "name": "Hatcher",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 421432907,
+   "lat": 32.7737345,
+   "lon": -96.7645771,
+   "tags": {
+    "name": "MLK Jr.",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 421432908,
+   "lat": 32.7820373,
+   "lon": -96.7659238,
+   "tags": {
+    "name": "Fair Park",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 421432909,
+   "lat": 32.7865443,
+   "lon": -96.7819903,
+   "tags": {
+    "name": "Baylor University Medical Center",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 421432910,
+   "lat": 32.7859593,
+   "lon": -96.7886749,
+   "tags": {
+    "name": "Deep Ellum",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 421435188,
+   "lat": 32.7397355,
+   "lon": -96.8026426,
+   "tags": {
+    "name": "Morrell",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 566518216,
+   "lat": 32.805768,
+   "lon": -96.7986704,
+   "tags": {
+    "name": "Hook Line & Sinker",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 566518217,
+   "lat": 32.8055155,
+   "lon": -96.7988421,
+   "tags": {
+    "name": "Velvet Taco",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 566518220,
+   "lat": 32.8045018,
+   "lon": -96.7994806,
+   "tags": {
+    "name": "Breadwinner's Bakery Cafe",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 1148367642,
+   "lat": 32.8045992,
+   "lon": -96.8236011,
+   "tags": {
+    "name": "Market Center Station",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067210,
+   "lat": 32.7864398,
+   "lon": -96.8006567,
+   "tags": {
+    "name": "Saint Paul & Ross",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067213,
+   "lat": 32.7878079,
+   "lon": -96.8022732,
+   "tags": {
+    "name": "Saint Paul & Woodall Rodgers",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067222,
+   "lat": 32.7890476,
+   "lon": -96.8037478,
+   "tags": {
+    "name": "Saint Paul & McKinney",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067260,
+   "lat": 32.7908745,
+   "lon": -96.8035535,
+   "tags": {
+    "name": "McKinney & Harwood",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067268,
+   "lat": 32.792701,
+   "lon": -96.8029109,
+   "tags": {
+    "name": "McKinney & Pearl (N)",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067278,
+   "lat": 32.7931065,
+   "lon": -96.8028118,
+   "tags": {
+    "name": "McKinney & Pearl (S)",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067279,
+   "lat": 32.7938117,
+   "lon": -96.8025447,
+   "tags": {
+    "name": "McKinney & Maple (N)",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067284,
+   "lat": 32.7941541,
+   "lon": -96.8024627,
+   "tags": {
+    "name": "McKinney & Maple (S)",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067291,
+   "lat": 32.7961819,
+   "lon": -96.8017895,
+   "tags": {
+    "name": "McKinney & Routh (N)",
+    "railway": "tram_stop",
+    "public_transport": "stop_position",
+    "tram": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067294,
+   "lat": 32.7965454,
+   "lon": -96.8017154,
+   "tags": {
+    "name": "McKinney & Routh (S)",
+    "railway": "tram_stop",
+    "public_transport": "stop_position",
+    "tram": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067298,
+   "lat": 32.7977545,
+   "lon": -96.8013831,
+   "tags": {
+    "name": "McKinney & Boll (S)",
+    "railway": "tram_stop",
+    "public_transport": "stop_position",
+    "tram": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067299,
+   "lat": 32.7983135,
+   "lon": -96.801196,
+   "tags": {
+    "name": "McKinney & Worthington (N)",
+    "railway": "tram_stop",
+    "public_transport": "stop_position",
+    "tram": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067304,
+   "lat": 32.7995267,
+   "lon": -96.8009078,
+   "tags": {
+    "name": "McKinney & Allen (N)",
+    "railway": "tram_stop",
+    "public_transport": "stop_position",
+    "tram": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067305,
+   "lat": 32.7995797,
+   "lon": -96.8009286,
+   "tags": {
+    "name": "McKinney & Allen (S)",
+    "railway": "tram_stop",
+    "public_transport": "stop_position",
+    "tram": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067353,
+   "lat": 32.8019927,
+   "lon": -96.8023623,
+   "tags": {
+    "name": "Cole & Allen",
+    "railway": "tram_stop",
+    "public_transport": "stop_position",
+    "tram": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067381,
+   "lat": 32.8036099,
+   "lon": -96.7997639,
+   "tags": {
+    "name": "McKinney & Hall",
+    "railway": "tram_stop",
+    "public_transport": "stop_position",
+    "tram": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067382,
+   "lat": 32.8036085,
+   "lon": -96.8013019,
+   "tags": {
+    "name": "Cole & Bowen",
+    "railway": "tram_stop",
+    "public_transport": "stop_position",
+    "tram": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067410,
+   "lat": 32.8051415,
+   "lon": -96.8003009,
+   "tags": {
+    "name": "Cole & Hall",
+    "railway": "tram_stop",
+    "public_transport": "stop_position",
+    "tram": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067413,
+   "lat": 32.8055581,
+   "lon": -96.794103,
+   "tags": {
+    "name": "Uptown Station",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067414,
+   "lat": 32.8057199,
+   "lon": -96.7984239,
+   "tags": {
+    "name": "McKinney & Lemmon",
+    "railway": "tram_stop",
+    "public_transport": "stop_position",
+    "tram": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067426,
+   "lat": 32.8063747,
+   "lon": -96.7995018,
+   "tags": {
+    "name": "Cole & Lemmon (Far)",
+    "railway": "tram_stop",
+    "public_transport": "stop_position",
+    "tram": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067469,
+   "lat": 32.8081404,
+   "lon": -96.7985582,
+   "tags": {
+    "name": "Cole & West Village",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067470,
+   "lat": 32.8085335,
+   "lon": -96.7960749,
+   "tags": {
+    "name": "McKinney & Blackburn",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2174067485,
+   "lat": 32.8092196,
+   "lon": -96.7965349,
+   "tags": {
+    "name": "Blackburn & West Village",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 4250978966,
+   "lat": 32.7857009,
+   "lon": -96.7964041,
+   "tags": {
+    "name": "Federal & Olive",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 4250978979,
+   "lat": 32.7878543,
+   "lon": -96.7986797,
+   "tags": {
+    "name": "Olive & Ross",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 4296998270,
+   "lat": 32.7845497,
+   "lon": -96.798463,
+   "tags": {
+    "name": "Saint Paul & Federal",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 4296998272,
+   "lat": 32.7856662,
+   "lon": -96.799752,
+   "tags": {
+    "name": "Saint Paul & San Jacinto",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 4296998273,
+   "lat": 32.7866873,
+   "lon": -96.7972062,
+   "tags": {
+    "name": "Olive & San Jacinto",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 4296998274,
+   "lat": 32.7885284,
+   "lon": -96.7999304,
+   "tags": {
+    "name": "Olive & Flora",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 4296998276,
+   "lat": 32.7911684,
+   "lon": -96.8029274,
+   "tags": {
+    "name": "Olive & Colby",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 4491433375,
+   "lat": 32.8071426,
+   "lon": -96.8001363,
+   "tags": {
+    "name": "Gloria's Latin Cuisine",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 4491433379,
+   "lat": 32.7974544,
+   "lon": -96.8012248,
+   "tags": {
+    "name": "Jake's",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 4491434790,
+   "lat": 32.7995449,
+   "lon": -96.8011182,
+   "tags": {
+    "name": "Christies",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 4491434795,
+   "lat": 32.8003496,
+   "lon": -96.8006129,
+   "tags": {
+    "name": "Shell Shack",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 4491434804,
+   "lat": 32.8004015,
+   "lon": -96.8011749,
+   "tags": {
+    "name": "Starbucks",
+    "amenity": "cafe"
+   }
+  },
+  {
+   "type": "node",
+   "id": 5818005704,
+   "lat": 32.7760083,
+   "lon": -96.8083758,
+   "tags": {
+    "name": "Dallas Union Station",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 5818006724,
+   "lat": 32.8091942,
+   "lon": -96.8399632,
+   "tags": {
+    "name": "Medical/Market Center",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 6368932349,
+   "lat": 32.8072212,
+   "lon": -96.7960459,
+   "tags": {
+    "name": "CityPlace & Noble",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 6368932350,
+   "lat": 32.8077871,
+   "lon": -96.7967047,
+   "tags": {
+    "name": "CityPlace & McKinney",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 6368932361,
+   "lat": 32.8024903,
+   "lon": -96.8005303,
+   "tags": {
+    "name": "McKinney & Bowen",
+    "railway": "tram_stop",
+    "public_transport": "stop_position",
+    "tram": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 6368932371,
+   "lat": 32.7849748,
+   "lon": -96.797161,
+   "tags": {
+    "name": "Federal & Harwood",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 7020820218,
+   "lat": 32.7760501,
+   "lon": -96.808164,
+   "tags": {
+    "name": "Union Station",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 7127084435,
+   "lat": 32.7896884,
+   "lon": -96.8124796,
+   "tags": {
+    "name": "Victory",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8455895633,
+   "lat": 32.7892673,
+   "lon": -96.8008824,
+   "tags": {
+    "name": "KWP/Arts District",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8455970505,
+   "lat": 32.8020164,
+   "lon": -96.8024073,
+   "tags": {
+    "name": "Cole & Allen",
+    "highway": "bus_stop",
+    "railway": "platform",
+    "public_transport": "platform",
+    "tram": "yes",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8455970506,
+   "lat": 32.803641,
+   "lon": -96.8013538,
+   "tags": {
+    "name": "Cole & Bowen",
+    "highway": "bus_stop",
+    "railway": "platform",
+    "public_transport": "platform",
+    "tram": "yes",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8455970515,
+   "lat": 32.8057117,
+   "lon": -96.7984071,
+   "tags": {
+    "name": "McKinney & Lemmon",
+    "highway": "bus_stop",
+    "railway": "platform",
+    "public_transport": "platform",
+    "tram": "yes",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8455993617,
+   "lat": 32.8024786,
+   "lon": -96.8005147,
+   "tags": {
+    "name": "McKinney & Bowen",
+    "highway": "bus_stop",
+    "railway": "platform",
+    "public_transport": "platform",
+    "tram": "yes",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8455993622,
+   "lat": 32.7982975,
+   "lon": -96.8011326,
+   "tags": {
+    "name": "McKinney & Worthington (N)",
+    "highway": "bus_stop",
+    "railway": "platform",
+    "public_transport": "platform",
+    "tram": "yes",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8455993634,
+   "lat": 32.7917889,
+   "lon": -96.8032484,
+   "tags": {
+    "name": "McKinney & Olive (S)",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8459498228,
+   "lat": 32.8055969,
+   "lon": -96.7933465,
+   "tags": {
+    "name": "CityPlace/Uptown",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9943431750,
+   "lat": 32.8039497,
+   "lon": -96.7993321,
+   "tags": {
+    "name": "Mi Cocina",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9960204231,
+   "lat": 32.8048153,
+   "lon": -96.7992595,
+   "tags": {
+    "name": "Primo's MX Kitchen Uptown",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9960205023,
+   "lat": 32.8034033,
+   "lon": -96.7997756,
+   "tags": {
+    "name": "Ka Thai",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10181287403,
+   "lat": 32.7970199,
+   "lon": -96.8060754,
+   "tags": {
+    "name": "Maple @ Randall - N - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10181287404,
+   "lat": 32.7989449,
+   "lon": -96.8083486,
+   "tags": {
+    "name": "Maple @ Kittrell - N - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10181287405,
+   "lat": 32.8012345,
+   "lon": -96.8108724,
+   "tags": {
+    "name": "Maple @ Turtle Creek - N - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10204578765,
+   "lat": 32.8027052,
+   "lon": -96.8128429,
+   "tags": {
+    "name": "Maple @ Hood - S - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10204578766,
+   "lat": 32.8009213,
+   "lon": -96.8108229,
+   "tags": {
+    "name": "Maple @ Turtle Creek - S - FS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10204578767,
+   "lat": 32.7980538,
+   "lon": -96.8075727,
+   "tags": {
+    "name": "Maple @ Wolf - S - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10204578768,
+   "lat": 32.7964026,
+   "lon": -96.8056149,
+   "tags": {
+    "name": "Maple @ Cedar Springs - S - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10602827679,
+   "lat": 32.7965183,
+   "lon": -96.8096342,
+   "tags": {
+    "name": "McKinnon @ Wolf - N - FS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10659251984,
+   "lat": 32.795302,
+   "lon": -96.8021564,
+   "tags": {
+    "name": "McKinney @ Fairmount - S - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10659251985,
+   "lat": 32.7965531,
+   "lon": -96.8017765,
+   "tags": {
+    "name": "McKinney @ Routh - S - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10659251987,
+   "lat": 32.7977354,
+   "lon": -96.8014406,
+   "tags": {
+    "name": "McKinney @ Boll - S - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10659251989,
+   "lat": 32.7988283,
+   "lon": -96.8011686,
+   "tags": {
+    "name": "McKinney @ Worthington - S - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10659251990,
+   "lat": 32.8006959,
+   "lon": -96.8011785,
+   "tags": {
+    "name": "Allen @ Oak Grove - S - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10659251991,
+   "lat": 32.8051821,
+   "lon": -96.8003491,
+   "tags": {
+    "name": "Cole @ Hall - S - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10659251992,
+   "lat": 32.8066693,
+   "lon": -96.7994197,
+   "tags": {
+    "name": "Lemmon @ Cole - S - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10659275627,
+   "lat": 32.8040931,
+   "lon": -96.7994705,
+   "tags": {
+    "name": "McKinney @ Hall - N - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10659275628,
+   "lat": 32.8016249,
+   "lon": -96.8009328,
+   "tags": {
+    "name": "McKinney @ Sneed - N - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10659275629,
+   "lat": 32.7961571,
+   "lon": -96.8017272,
+   "tags": {
+    "name": "McKinney @ Routh - N - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10659772310,
+   "lat": 32.8073185,
+   "lon": -96.8063777,
+   "tags": {
+    "name": "Cedar Springs @ Hood - N - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10659772311,
+   "lat": 32.8059047,
+   "lon": -96.8045703,
+   "tags": {
+    "name": "Cedar Springs @ Turtle Creek - N - FS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10659772313,
+   "lat": 32.8004975,
+   "lon": -96.8053722,
+   "tags": {
+    "name": "Cedar Springs @ Carlisle - N - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10659772314,
+   "lat": 32.796048,
+   "lon": -96.8052215,
+   "tags": {
+    "name": "Cedar Springs @ Maple - N - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10659772320,
+   "lat": 32.7960235,
+   "lon": -96.8054352,
+   "tags": {
+    "name": "Cedar Springs @ Maple - S - FS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10659772321,
+   "lat": 32.8007294,
+   "lon": -96.8056995,
+   "tags": {
+    "name": "Cedar Springs @ Carlisle - S - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10659772322,
+   "lat": 32.8058033,
+   "lon": -96.8047004,
+   "tags": {
+    "name": "Cedar Springs @ Cedar Springs - S - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10659772323,
+   "lat": 32.807565,
+   "lon": -96.8069366,
+   "tags": {
+    "name": "Cedar Springs @ Hood - S - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10682019028,
+   "lat": 32.8046461,
+   "lon": -96.7971044,
+   "tags": {
+    "name": "Lemmon @ Oak Grove - S - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10682019029,
+   "lat": 32.8059625,
+   "lon": -96.7985931,
+   "tags": {
+    "name": "Lemmon @ McKinney - S - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10682019030,
+   "lat": 32.8080955,
+   "lon": -96.8010581,
+   "tags": {
+    "name": "Lemmon @ Travis - S - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11580852165,
+   "lat": 32.7950232,
+   "lon": -96.8021454,
+   "tags": {
+    "name": "McKinney & Fairmount (N)",
+    "railway": "tram_stop",
+    "public_transport": "stop_position",
+    "tram": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11580852167,
+   "lat": 32.7952832,
+   "lon": -96.8020976,
+   "tags": {
+    "name": "McKinney & Fairmount (S)",
+    "railway": "tram_stop",
+    "public_transport": "stop_position",
+    "tram": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11581205355,
+   "lat": 32.8072921,
+   "lon": -96.7996011,
+   "tags": {
+    "name": "Cole & Lemmon (Near)",
+    "railway": "tram_stop",
+    "public_transport": "stop_position",
+    "tram": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11879886434,
+   "lat": 32.7994573,
+   "lon": -96.8011507,
+   "tags": {
+    "name": "Sushi Sakana",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12688127488,
+   "lat": 32.8021633,
+   "lon": -96.7998878,
+   "tags": {
+    "name": "San Martín Bakery",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13326535680,
+   "lat": 32.7998368,
+   "lon": -96.8021714,
+   "tags": {
+    "name": "AMLI Quadrangle Parking Garage",
+    "amenity": "parking"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13343796022,
+   "lat": 32.7984854,
+   "lon": -96.8075248,
+   "tags": {
+    "name": "Nick & Sam’s",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13428620897,
+   "lat": 32.7992004,
+   "lon": -96.8034488,
+   "tags": {
+    "name": "Crushcraft",
+    "amenity": "cafe"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13428634854,
+   "lat": 32.7985235,
+   "lon": -96.8038548,
+   "tags": {
+    "name": "Mamani",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13428674994,
+   "lat": 32.7985372,
+   "lon": -96.8034036,
+   "tags": {
+    "name": "DOMO DOMO",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13428726318,
+   "lat": 32.7983046,
+   "lon": -96.803683,
+   "tags": {
+    "name": "Two Hands",
+    "amenity": "cafe"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13428728249,
+   "lat": 32.7984352,
+   "lon": -96.8035324,
+   "tags": {
+    "name": "Written by the Seasons, The Quad",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13555462571,
+   "lat": 32.7976005,
+   "lon": -96.8074366,
+   "tags": {
+    "name": "Lions Den",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13938840192,
+   "lat": 32.790194,
+   "lon": -96.8018893,
+   "tags": {
+    "name": "KWP/Uptown",
+    "railway": "tram_stop"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14068608728,
+   "lat": 32.806837,
+   "lon": -96.8003787,
+   "tags": {
+    "name": "Visitor and Retail Parking",
+    "amenity": "parking"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14095963649,
+   "lat": 32.8035879,
+   "lon": -96.7995492,
+   "tags": {
+    "name": "Daily Coffee",
+    "amenity": "cafe"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14226693054,
+   "lat": 32.7977961,
+   "lon": -96.8015176,
+   "tags": {
+    "name": "S. & D. Oyster Company",
+    "amenity": "restaurant"
+   }
+  }
+ ]
+}

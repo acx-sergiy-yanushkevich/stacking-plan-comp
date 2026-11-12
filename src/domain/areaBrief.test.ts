@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { area } from '../data/mock/area';
 import type { Area, AreaRing } from './types';
-import { compareRing, locationBrief, relativeToUs, standsOut, US_BENCHMARK } from './areaBrief';
+import { areaCredit, compareRing, locationBrief, relativeToUs, standsOut, US_BENCHMARK } from './areaBrief';
 
 const ring1 = area.rings[0];
 const withRing = (patch: Partial<AreaRing>): Area => ({ ...area, rings: area.rings.map((r) => (r.miles === 1 ? { ...r, ...patch } : r)) });
@@ -92,3 +92,13 @@ describe('locationBrief', () => {
     expect(b.points.at(-1)).toBe('A rail station 0.4 miles away.');
   });
 });
+
+describe('areaCredit (round 26)', () => {
+  it('credits the sample, the Census and OpenStreetMap, with the day of a recorded copy', () => {
+    expect(areaCredit(area)).toBe(area.source);
+    const places = [{ name: 'CAVA', category: 'Restaurants', distanceMi: 0.17, lat: 0, lng: 0 }];
+    expect(areaCredit({ ...area, places, placesRecordedAt: '2026-11-12' })).toBe(`${area.source} Amenities and transit: OpenStreetMap, recorded Nov 12, 2026.`);
+    expect(areaCredit({ ...area, sample: false, source: 'US Census Bureau ACS 5-year', places })).toBe('Area figures: US Census Bureau ACS 5-year. Amenities and transit: OpenStreetMap.');
+  });
+});
+

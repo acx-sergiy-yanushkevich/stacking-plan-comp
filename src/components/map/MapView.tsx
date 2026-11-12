@@ -14,6 +14,7 @@ import { usePrefersDark, usePrefersReducedMotion } from '../../lib/useMedia';
 import { openFloor } from '../plan/actions';
 import { Chip, Icon, Segmented, useToast } from '../ui';
 import { mi, num } from '../../domain/format';
+import { fmtDate } from '../../domain/dates';
 import { categoryKey } from '../../domain/places';
 import { FilterBar } from '../stack/FilterBar';
 import { FootprintFallback } from './FootprintFallback';
@@ -450,6 +451,12 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
             {samplePlaces && (
               <Chip tone="neutral" title="The demo building's places are drawn at sample positions inside the distance they were counted in">
                 Sample places
+              </Chip>
+            )}
+            {/* Live mode shows a copy of OpenStreetMap's places at once and says so until its servers answer (round 26). */}
+            {area?.placesRecordedAt && (
+              <Chip tone="neutral" title={`OpenStreetMap's stops and places as recorded on ${fmtDate(area.placesRecordedAt)}, shown until its servers answer`}>
+                Recorded places
               </Chip>
             )}
           </p>

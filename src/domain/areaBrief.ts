@@ -1,3 +1,4 @@
+import { fmtDate } from './dates';
 import { inMiles, mi, num, usd0 } from './format';
 import type { Area, AreaRing } from './types';
 
@@ -144,4 +145,15 @@ export function locationBrief(area: Area, us: Benchmark = US_BENCHMARK): Locatio
   }
 
   return { near, wide, headline, points, comparisons, rings };
+}
+
+/**
+ * Where the area's figures and places come from, as the Area panel and the brief end: the sample note or the
+ * Census, then OpenStreetMap for the stops and places whenever they are its, with the day of the copy when live
+ * mode shows one (round 26).
+ */
+export function areaCredit(area: Area): string {
+  const figures = area.sample ? area.source : `Area figures: ${area.source}.`;
+  if (area.sample && !area.places) return figures;
+  return `${figures} Amenities and transit: OpenStreetMap${area.placesRecordedAt ? `, recorded ${fmtDate(area.placesRecordedAt)}` : ''}.`;
 }

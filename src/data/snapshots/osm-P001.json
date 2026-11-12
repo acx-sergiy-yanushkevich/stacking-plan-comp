@@ -1,0 +1,394 @@
+{
+ "recordedAt": "2026-11-12",
+ "source": "OpenStreetMap contributors (ODbL), read through the OSM API and Nominatim",
+ "center": {
+  "lat": 33.023482,
+  "lng": -96.79358
+ },
+ "elements": [
+  {
+   "type": "node",
+   "id": 655578705,
+   "lat": 33.0273929,
+   "lon": -96.7888038,
+   "tags": {
+    "name": "Mango Thai Plano",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 1106154458,
+   "lat": 32.9589587,
+   "lon": -96.8282584,
+   "tags": {
+    "name": "Addison",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 1285683634,
+   "lat": 32.9970335,
+   "lon": -96.7488679,
+   "tags": {
+    "name": "UT Dallas",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 1285683636,
+   "lat": 32.9627798,
+   "lon": -96.8177653,
+   "tags": {
+    "name": "Knoll Trail",
+    "railway": "station"
+   }
+  },
+  {
+   "type": "node",
+   "id": 4370218778,
+   "lat": 33.0275237,
+   "lon": -96.7927293,
+   "tags": {
+    "name": "Snuffer's",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 6589729650,
+   "lat": 33.0191342,
+   "lon": -96.7958259,
+   "tags": {
+    "name": "Black Sheep Coffee",
+    "amenity": "cafe"
+   }
+  },
+  {
+   "type": "node",
+   "id": 7272144415,
+   "lat": 33.0276148,
+   "lon": -96.7939964,
+   "tags": {
+    "name": "Capital One",
+    "amenity": "bank"
+   }
+  },
+  {
+   "type": "node",
+   "id": 7729451439,
+   "lat": 33.0256922,
+   "lon": -96.7991391,
+   "tags": {
+    "name": "Starbucks",
+    "amenity": "cafe"
+   }
+  },
+  {
+   "type": "node",
+   "id": 7729451440,
+   "lat": 33.0269265,
+   "lon": -96.7960807,
+   "tags": {
+    "name": "La Madeleine",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8122048144,
+   "lat": 33.0250039,
+   "lon": -96.7959444,
+   "tags": {
+    "name": "CAVA",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8252573054,
+   "lat": 33.0276183,
+   "lon": -96.7903586,
+   "tags": {
+    "name": "Yao Fuzi Cuisine",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8252573055,
+   "lat": 33.0273993,
+   "lon": -96.7886838,
+   "tags": {
+    "name": "Rockfish Seafood & Grill",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8252573061,
+   "lat": 33.027403,
+   "lon": -96.7883762,
+   "tags": {
+    "name": "Burning Rice Korean BBQ Bibimbop",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8252573072,
+   "lat": 33.0277834,
+   "lon": -96.7909349,
+   "tags": {
+    "name": "Pizza Hut",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8252573075,
+   "lat": 33.0281991,
+   "lon": -96.790362,
+   "tags": {
+    "name": "Tomoya Sushi & Hibachi",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8252573080,
+   "lat": 33.0273925,
+   "lon": -96.7891272,
+   "tags": {
+    "name": "Kenny's East Coast Pizza",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8252573084,
+   "lat": 33.0274965,
+   "lon": -96.7903905,
+   "tags": {
+    "name": "Blue Goose Cantina",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8265516262,
+   "lat": 33.0182979,
+   "lon": -96.7963962,
+   "tags": {
+    "name": "Zorba's Greek Cafe",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 8265516280,
+   "lat": 33.0184668,
+   "lon": -96.796403,
+   "tags": {
+    "name": "Canton Express",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9556637161,
+   "lat": 33.0299506,
+   "lon": -96.7939817,
+   "tags": {
+    "name": "Original Chop Shop",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 9556640413,
+   "lat": 33.0301343,
+   "lon": -96.7939453,
+   "tags": {
+    "name": "bellagreen American Bistro",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10764950417,
+   "lat": 33.017727,
+   "lon": -96.7950177,
+   "tags": {
+    "name": "Preston @ Plano - N - FS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10764950418,
+   "lat": 33.021253,
+   "lon": -96.794978,
+   "tags": {
+    "name": "Preston @ Old Shepard - N - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10764950419,
+   "lat": 33.0212333,
+   "lon": -96.7953406,
+   "tags": {
+    "name": "Preston @ Old Shepard - S - FS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10764950637,
+   "lat": 33.0280632,
+   "lon": -96.7947663,
+   "tags": {
+    "name": "Preston @ Park - N - FS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 10764950638,
+   "lat": 33.0268431,
+   "lon": -96.7952744,
+   "tags": {
+    "name": "Preston @ W Park - S - FS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11411064139,
+   "lat": 33.023621,
+   "lon": -96.7958581,
+   "tags": {
+    "name": "Starbucks",
+    "amenity": "cafe"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12304394040,
+   "lat": 33.0291818,
+   "lon": -96.7967543,
+   "tags": {
+    "name": "Market Plate",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12618623020,
+   "lat": 33.0302294,
+   "lon": -96.7956269,
+   "tags": {
+    "name": "La La Land Kind Cafe",
+    "amenity": "cafe"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13391799913,
+   "lat": 33.0265352,
+   "lon": -96.790011,
+   "tags": {
+    "name": "Kauboi Japanese BBQ & Izakaya",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13644299205,
+   "lat": 33.0191327,
+   "lon": -96.7960156,
+   "tags": {
+    "name": "Oceanic Thai Kitchen",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13644299206,
+   "lat": 33.0181054,
+   "lon": -96.7959552,
+   "tags": {
+    "name": "Andrew's Pizza Kitchen",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13745065510,
+   "lat": 33.02504,
+   "lon": -96.7948481,
+   "tags": {
+    "name": "Preston @ Park - N - MB",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 13745065511,
+   "lat": 33.0226416,
+   "lon": -96.7949259,
+   "tags": {
+    "name": "Preston @ Preston Park - N - NS",
+    "highway": "bus_stop",
+    "public_transport": "platform",
+    "bus": "yes"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14360604977,
+   "lat": 33.0243916,
+   "lon": -96.7958023,
+   "tags": {
+    "name": "Mo' Bettahs",
+    "amenity": "restaurant"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14360890622,
+   "lat": 33.0224277,
+   "lon": -96.7960288,
+   "tags": {
+    "name": "First Foundation Bank",
+    "amenity": "bank"
+   }
+  },
+  {
+   "type": "node",
+   "id": 14361260873,
+   "lat": 33.0252274,
+   "lon": -96.7979935,
+   "tags": {
+    "name": "South Fork Cafe",
+    "amenity": "restaurant"
+   }
+  }
+ ]
+}
