@@ -158,7 +158,8 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
             {property.saleListing.capRate !== null ? ` · ${pct(property.saleListing.capRate)} cap` : ''}
           </span>
         ))}
-      {!standalone && verified}
+      {/* The last fact, after the same separator: when the plan last changed. */}
+      {verified}
     </div>
   );
 
@@ -215,12 +216,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
           <div className="sp-header__title">
             <h1>{property.name}</h1>
           </div>
-          {/* When the plan last changed sits on the facts' line, at its right end: level with Class A Office and
-              the address, apart from the facts themselves. */}
-          <div className="sp-header__factsrow">
-            {facts}
-            <div className="sp-header__aside">{verified}</div>
-          </div>
+          {facts}
         </div>
       </header>
     </>
