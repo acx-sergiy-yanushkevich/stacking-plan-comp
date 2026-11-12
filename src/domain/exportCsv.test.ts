@@ -44,7 +44,7 @@ describe('rentRollRows', () => {
     const states = new Set(open.slice(1).map((r) => r[col('State')]));
     expect(states).toContain('Holdover');
     expect(states).toContain('Month-to-month');
-    expect(states).toContain('Committed');
+    expect(states).toContain('Signed, not yet in');
     expect(states).toContain('Sublease');
     expect(states).toContain('For sale');
     const a02 = open.find((r) => r[col('Suite')] === '350')!;
@@ -73,7 +73,7 @@ describe('rentRollRows', () => {
     for (const pr of prospects) expect(text).not.toContain(pr);
     expect(text).not.toContain('$');
     // In-place rents are withheld; asking rents on availabilities are marketing data and stay.
-    expect(safe.slice(1).filter((r) => r[col('State')] === 'Leased' || r[col('State')] === 'Leased (term withheld)' || r[col('State')] === 'Committed').every((r) => r[col('Rate')] === '')).toBe(true);
+    expect(safe.slice(1).filter((r) => r[col('State')] === 'Leased' || r[col('State')] === 'Leased (term withheld)' || r[col('State')] === 'Signed, not yet in').every((r) => r[col('Rate')] === '')).toBe(true);
     expect(safe.find((r) => r[col('Suite')] === '350')![col('Rate')]).toBe('30–32');
     expect(safe.find((r) => r[col('Suite')] === '600')![col('Tenant')]).toBe('Tenant');
     expect(safe.length).toBe(open.length - unplacedLeases(property, TODAY).length);
@@ -128,12 +128,12 @@ describe('toCsv', () => {
 
   it('safe mode gives a signed lease no move-in and no end date (Ste 450), in the CSV and in the printed roll', () => {
     const open = rentRollRows(property, floors, TODAY, false).find((r) => r[col('Suite')] === '450')!;
-    expect([open[col('State')], open[col('Commencement')], open[col('Expiration')]]).toEqual(['Committed', '2027-02-01', '2034-01-31']);
+    expect([open[col('State')], open[col('Commencement')], open[col('Expiration')]]).toEqual(['Signed, not yet in', '2027-02-01', '2034-01-31']);
     for (const input of [floors, safeFloors(floors, true)]) {
       const row = rentRollRows(property, input, TODAY, true).find((r) => r[col('Suite')] === '450')!;
-      expect([row[col('State')], row[col('Commencement')], row[col('Expiration')], row[col('Months remaining')]]).toEqual(['Committed', '', '', '']);
+      expect([row[col('State')], row[col('Commencement')], row[col('Expiration')], row[col('Months remaining')]]).toEqual(['Signed, not yet in', '', '', '']);
       const pdf = rentRollDisplay(property, input, TODAY, true).find((r) => r[1] === '450')!;
-      expect([pdf[4], pdf[5]]).toEqual(['Committed', '—']);
+      expect([pdf[4], pdf[5]]).toEqual(['Signed, not yet in', '—']);
     }
   });
 

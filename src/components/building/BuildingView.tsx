@@ -7,7 +7,7 @@ import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { setHoverFloor, useHoverFloor } from '../../state/hoverStore';
 import { openFloor, openFloorPlate } from '../plan/actions';
-import { buildingUse, Legend } from '../plan/Legend';
+import { buildingUse, Legend, LegendInfo } from '../plan/Legend';
 import { BuildingHero } from '../hero/BuildingHero';
 import { DotJoin, DotSep } from '../hero/DotJoin';
 import { FloorPlate } from '../floor/FloorPlate';
@@ -273,12 +273,14 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
 
   const title = lensName(state.lens);
   const lobby = buildingUse(floors);
+  const legendNote = planLegendNote(model, state.lens);
   const head = (
     <div className="sp-stack__head">
       <div className="sp-stack__title">
         <h2>{title}</h2>
         <span className="sp-weak">
           as of {fmtDate(model.asOf)} · {num(model.kpis.leasable)} RSF leasable
+          {legendNote && <> <LegendInfo note={legendNote} /></>}
         </span>
       </div>
       {/* The model draws the lobby as a grey hatch; the Stack view labels it in the block, here the legend names it. */}
@@ -289,7 +291,8 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
         extras={lobby ? [lobby] : undefined}
         compact
         id="sp-legend"
-        note={planLegendNote(model, state.lens)}
+        note={legendNote}
+        infoElsewhere
       />
     </div>
   );

@@ -6,7 +6,7 @@ import type { DataSource, FootprintResult } from '../../data/sources/DataSource'
 import type { FloorView } from '../../domain/derive';
 import { num, pct } from '../../domain/format';
 import { suiteExtrusionFeatures } from '../../domain/geometry';
-import { toneFor } from '../../domain/lenses';
+import { lensName, toneFor } from '../../domain/lenses';
 import type { PlanModel } from '../../model/usePlanModel';
 import { isDark, paletteOf, type PlanState } from '../../state/planState';
 import { useIsPhone, usePrefersDark, usePrefersReducedMotion } from '../../lib/useMedia';
@@ -328,14 +328,14 @@ export default function MapView({ model, state, patch, dataSource }: MapViewProp
       {phone ? (
         <details className="sp-map-legend sp-map-legend--fold">
           <summary>
-            Legend · {legendStates} states
+            {lensName(state.lens)} legend · {legendStates} states
             <Icon name="chevron-down" size={14} />
           </summary>
-          <Legend items={model.legend} compact note={planLegendNote(model, state.lens)} />
+          <Legend items={model.legend} compact figures title={lensName(state.lens)} note={planLegendNote(model, state.lens)} />
         </details>
       ) : (
         <div className="sp-map-legend">
-          <Legend items={model.legend} compact note={planLegendNote(model, state.lens)} />
+          <Legend items={model.legend} compact title={lensName(state.lens)} note={planLegendNote(model, state.lens)} />
         </div>
       )}
       <div className="sp-map__stage">

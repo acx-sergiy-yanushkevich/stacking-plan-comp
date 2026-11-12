@@ -225,7 +225,7 @@ describe('BuildingView', () => {
 
   it('explains an over-allocated floor in the legend\'s info mark, not as a line beside it', () => {
     const html = render('');
-    expect(html).toMatch(/<span class="sp-legend__info"[^>]*title="[^"]*Floor 7(?:'|&#x27;)s records exceed its leasable area by 500 SF/);
+    expect(html).toMatch(/<button[^>]*class="sp-legend__info"[^>]*title="[^"]*Floor 7(?:'|&#x27;)s records exceed its leasable area by 500 SF/);
     expect(html).not.toContain('<p class="sp-legend__note">');
   });
 

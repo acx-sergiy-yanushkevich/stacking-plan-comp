@@ -15,7 +15,7 @@ import { focusFacts } from '../plan/focusFacts';
 import { useWidth } from '../../lib/useWidth';
 import { wrapWords } from '../../lib/textFit';
 import { clearSelection, openFloor, selectSegment } from '../plan/actions';
-import { Legend, sharesNote } from '../plan/Legend';
+import { Legend, LegendInfo, sharesNote } from '../plan/Legend';
 import { segmentText } from '../plan/segmentText';
 import { availabilityFact } from '../floor/floorData';
 import { spaceOf } from '../building/floorFact';
@@ -240,9 +240,10 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
             <h2>{title}</h2>
             <span className="sp-weak">
               as of {fmtDate(model.asOf)} · {num(totalLeasable)} RSF leasable
+              {legendNote && <> <LegendInfo note={legendNote} /></>}
             </span>
           </div>
-          <Legend items={model.legend} compact id="sp-legend" note={legendNote} />
+          <Legend items={model.legend} compact id="sp-legend" note={legendNote} infoElsewhere />
         </div>
       )}
       {!bare && model.filterLabel && <FilterBar label={model.filterLabel} alternatives={!!model.partial && model.partial.size > 0} patch={patch} />}

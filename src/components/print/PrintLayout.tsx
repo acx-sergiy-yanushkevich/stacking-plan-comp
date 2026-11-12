@@ -423,7 +423,7 @@ function spaceOnOffer(model: PlanModel): Offer[] {
 }
 
 /** The states of a prospect-safe rent-roll row that are space under lease: in place, sublet, signed and not yet in. */
-const UNDER_LEASE = new Set(['Leased', 'Sublease', 'Committed']);
+const UNDER_LEASE = new Set(['Leased', 'Sublease', 'Signed, not yet in']);
 
 /** Exact sum of the RSF of the rent-roll rows under lease, read from the rows as they are printed. */
 export function recordedUnderLease(rows: ReadonlyArray<ReadonlyArray<string>>): number {

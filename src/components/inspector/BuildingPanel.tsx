@@ -177,10 +177,10 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
             <div className="sp-ins__row">
               <div className="sp-ins__row-main">
                 <div className="sp-ins__row-title">
-                  <span>Committed</span>
+                  <span>Signed, not yet in</span>
                 </div>
                 <div className="sp-ins__row-meta">
-                  <span>Signed, not in</span>
+                  <span>Lease starts later</span>
                 </div>
               </div>
               <div className="sp-ins__row-end">

@@ -25,7 +25,7 @@ const STATE_LABEL: Record<SegmentKind, string> = {
   mtm: 'Month-to-month',
   available: 'Available',
   sublease: 'Sublease',
-  committed: 'Committed',
+  committed: 'Signed, not yet in',
   projected: 'Projected vacancy',
   unmarketed: 'Unmarketed',
   forsale: 'For sale',
@@ -37,7 +37,7 @@ const STATE_LABEL: Record<SegmentKind, string> = {
  * skipped. RSF is the exact number, never formatted. Rates carry no `$` so the
  * CSV opens as numbers; the Unit column says `yr`/`mo`. In prospect-safe mode the Live deals column
  * is dropped (deal activity is not for prospects), no lease has a commencement, an expiration or
- * months remaining, whether it is in place ("Leased") or signed and not yet in ("Committed"), and a
+ * months remaining, whether it is in place ("Leased") or signed and not yet in ("Signed, not yet in"), and a
  * sublet suite is written as the space on offer: its asking rent with unit and lease type, and no end
  * date (a sublease ends with its sublandlord's lease), the same facts the prospect-safe PDF prints
  * for it. The file is a rent roll: it carries no building-wide figure (no WALT, no rollover) in any mode.
@@ -175,7 +175,7 @@ export function rentRollDisplay(p: Property, floors: FloorView[], asOf: ISODate,
         tenant = tenantLabel(lease, safe);
         start = hidden ? '—' : fmtDate(lease.commencement);
         end = hidden ? '—' : s.endDate ? fmtDate(s.endDate) : canShowTenantRisk(safe) ? 'Month-to-month' : '—';
-        rate = rentVisible(lease, safe) && lease.rate !== null ? fmtRate(lease.rate, lease.rateUnit, lease.leaseType) : !canShowInPlaceRent(safe) ? 'Withheld' : lease.confidential ? 'Confidential' : '—';
+        rate = rentVisible(lease, safe) && lease.rate !== null ? fmtRate(lease.rate, lease.rateUnit, lease.leaseType) : !canShowInPlaceRent(safe) ? '—' : lease.confidential ? 'Confidential' : '—';
       } else if (a) {
         tenant = s.kind === 'forsale' ? 'For sale' : 'Available';
         start = s.availableFrom ? fmtDate(s.availableFrom) : 'Now';

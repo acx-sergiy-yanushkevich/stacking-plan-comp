@@ -68,7 +68,8 @@ describe('expiry lens', () => {
   it('risk, committed, vacant and for sale keep their own tones', () => {
     expect(tone('L06-U1', 'expiry')).toBe('risk');
     expect(tone('L09-U1', 'expiry')).toBe('committed');
-    expect(tone('A02', 'expiry')).toBe('empty');
+    // Round 22: space on the market has its own "Available" item, apart from space with no record.
+    expect(tone('A02', 'expiry')).toBe('available');
     expect(tone('A10', 'expiry')).toBe('muted');
   });
 });
@@ -232,7 +233,7 @@ describe('prospect-safe: no lease can be told apart by its term', () => {
 
   it('the safe expiration legend has no ramp, no risk and no "term not disclosed" entry: one Leased tone', () => {
     const legend = legendFor('expiry', true, safeFloors(today, true));
-    expect(legend.map((i) => i.tone)).toEqual(['leased', 'sublease', 'committed', 'projected', 'empty', 'muted']);
+    expect(legend.map((i) => i.tone)).toEqual(['leased', 'sublease', 'committed', 'available', 'projected', 'empty', 'muted']);
     expect(legend.map((i) => i.label).join(' ')).not.toMatch(/not disclosed|Holdover|MTM|mo\b|yr\b/);
     expect(toneLabel('leased', 'expiry', true)).toBe('Leased');
     // Its SF is every lease in place, the at-risk ones included.

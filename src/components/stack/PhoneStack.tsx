@@ -41,10 +41,10 @@ export function PhoneStack({ model, state, patch, title, legendNote, textFor, hi
         </div>
         <details className="sp-pstack__legend">
           <summary>
-            Legend · {states} states
+            {title} legend · {states} states
             <Icon name="chevron-down" size={14} />
           </summary>
-          <Legend items={model.legend} compact id="sp-legend" note={legendNote} />
+          <Legend items={model.legend} compact figures id="sp-legend" note={legendNote} />
         </details>
       </div>
       {model.filterLabel && <FilterBar label={model.filterLabel} alternatives={!!model.partial && model.partial.size > 0} patch={patch} />}
