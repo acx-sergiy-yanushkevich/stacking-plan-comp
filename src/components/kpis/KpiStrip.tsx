@@ -232,10 +232,11 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
       </span>
     );
     // A detail is a figure to read: no button, nothing to click. Pointing at one still lights its suites on the
-    // plan; the Map has no suites to light, so there it only reads (round 25: it promised what the map cannot show).
+    // plan, and so does reaching it from the keyboard: one that lights is a tab stop, as a legend entry is (round 25:
+    // the focus half of lightOn could never run). The Map has no suites to light, so there it only reads.
     if (kind === 'open')
       return (
-        <div key={c.id} className="sp-kpi sp-kpi--detail" data-kpi={c.id} title={`${c.detail}. ${onMap ? c.title.replace(' Point at it to see it on the plan.', '') : c.title}`} {...(!onMap && c.lights?.length ? lightOn(c.lights) : null)}>
+        <div key={c.id} className="sp-kpi sp-kpi--detail" data-kpi={c.id} title={`${c.detail}. ${onMap ? c.title.replace(' Point at it to see it on the plan.', '') : c.title}`} {...(!onMap && c.lights?.length ? { tabIndex: 0, ...lightOn(c.lights) } : null)}>
           {body}
         </div>
       );

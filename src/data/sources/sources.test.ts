@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { aggregate, parseAcs, type CensusRow } from './CensusSource';
-import { toNearby, toPolygon, type OverpassElement } from './OverpassSource';
+import { nearbyQuery, toNearby, toPolygon, type OverpassElement } from './OverpassSource';
 import { createDataSource, MockSource } from './index';
 import { property } from '../mock/property';
 
@@ -120,6 +120,43 @@ describe('toNearby', () => {
       ['Corner Café', 'Cafés', 33.0236, -96.793],
       ['Café', 'Cafés', 33.0265, -96.793],
     ]);
+  });
+});
+
+describe('live transit out to the widest ring (round 25)', () => {
+  const c = { lat: 33.0235, lng: -96.7936 };
+  // A node `mi` miles due north of the centre.
+  const north = (id: number, mi: number, tags: Record<string, string>): OverpassElement => ({ type: 'node', id, lat: c.lat + mi / 69.05, lon: c.lng, tags });
+
+  it('asks for rail out to five miles, and for bus stops and places within half a mile', () => {
+    const q = nearbyQuery(c);
+    expect(q).toContain(`node["railway"~"^(station|halt|tram_stop)$"](around:8047,${c.lat},${c.lng})`);
+    expect(q).toContain(`node["highway"="bus_stop"](around:800,${c.lat},${c.lng})`);
+    expect(q).toMatch(/node\["amenity"~[^\]]+\]\(around:800,/);
+  });
+
+  it('keeps the nearest rail stations however many bus stops are closer, nearest first', () => {
+    const els = [
+      ...[0.1, 0.15, 0.2, 0.25, 0.3, 0.35].map((mi, i) => north(i + 1, mi, { highway: 'bus_stop', name: `Stop ${i + 1}` })),
+      north(20, 3.1, { railway: 'station', name: 'Parker Road Station' }),
+      north(21, 4.6, { railway: 'station', name: 'Downtown Plano Station' }),
+    ];
+    const n = toNearby(els, c)!;
+    expect(n.transit.map((t) => t.name)).toEqual(['Stop 1', 'Stop 2', 'Stop 3', 'Stop 4', 'Parker Road Station', 'Downtown Plano Station']);
+    expect(n.transit.filter((t) => t.type === 'Rail')).toHaveLength(2);
+  });
+
+  it('calls a bus station a bus stop, and a station with trains rail', () => {
+    const n = toNearby([north(1, 0.2, { public_transport: 'station', bus: 'yes', name: 'Transit Center' }), north(2, 0.3, { public_transport: 'station', light_rail: 'yes', name: 'Light Rail' })], c)!;
+    expect(n.transit.map((t) => [t.name, t.type])).toEqual([
+      ['Transit Center', 'Bus'],
+      ['Light Rail', 'Rail'],
+    ]);
+  });
+
+  it('keeps a distance unrounded, so a stop at the door reads "< 0.1 mi" and not a rounded-up 0.1', () => {
+    const n = toNearby([north(1, 0.07, { highway: 'bus_stop', name: 'At the door' })], c)!;
+    expect(n.transit[0].distanceMi).toBeCloseTo(0.07, 2);
   });
 });
 

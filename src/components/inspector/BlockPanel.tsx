@@ -71,8 +71,9 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
   // Field history for this suite's own records (lease, availability), newest first.
   const changesFor = property.history.filter((c) => c.segKey === seg.key || (lease && c.recordType === 'Lease' && c.recordLabel.includes(lease.tenant)) || (a && c.recordType === 'Availability' && c.recordLabel.includes(a.suite))).sort((x, y) => (x.at < y.at ? 1 : -1));
 
-  // Lease facts
-  const rentText = lease ? (rentVisible(lease, safe) && lease.rate !== null ? rate(lease.rate, lease.rateUnit, lease.leaseType) : !canShowInPlaceRent(safe) ? 'Hidden' : lease.confidential ? 'Confidential' : 'Not on record') : undefined;
+  // Lease facts. A prospect gets no rent row at all, not a word standing in for it (round 25: "Rent / Hidden"; round 22
+  // settled that prospect-safe says nothing rather than "Withheld"). Asking rents below are marketing and stay.
+  const rentText = lease && canShowInPlaceRent(safe) ? (rentVisible(lease, safe) && lease.rate !== null ? rate(lease.rate, lease.rateUnit, lease.leaseType) : lease.confidential ? 'Confidential' : 'Not on record') : undefined;
   const remaining = (() => {
     if (!lease) return undefined;
     // Prospect-safe: no date of any lease, in place or signed.
@@ -176,7 +177,7 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
               canShowListingStatus(safe) && ['Listing', a.published === false ? 'Quiet · not published' : 'Published'],
               ['Available', seg.availableFrom ? fmtDate(seg.availableFrom) : a.availableFrom && a.availableFrom > asOf ? fmtDate(a.availableFrom) : 'Now'],
               a.sublease && a.subleaseExpiration ? ['Sublease thru', fmtDate(a.subleaseExpiration)] : null,
-              ['Asking', rentVisible(a, safe) && a.rentHigh > 0 ? rateRange(a.rentLow, a.rentHigh, a.rateUnit, a.leaseType) : 'Hidden'],
+              ['Asking', rentVisible(a, safe) && a.rentHigh > 0 ? rateRange(a.rentLow, a.rentHigh, a.rateUnit, a.leaseType) : 'Not on record'],
               ['Divisible', a.divisible ? (a.minDivisible ? `Yes · min ${sf(a.minDivisible)}` : 'Yes') : 'No'],
               canShowActivity(safe) && ['Verified', <Verified key="v" at={a.verifiedAt} today={today} safe={safe} />],
             ]}
@@ -190,8 +191,8 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
             items={[
               ['Type', 'Condo unit'],
               ['Status', a.status],
-              ['Asking price', rentVisible(a, safe) && a.askingPrice ? usd0(a.askingPrice) : 'Hidden'],
-              ['Per SF', rentVisible(a, safe) && a.askingPrice ? `${usd(a.askingPrice / seg.size)}/SF` : 'Hidden'],
+              ['Asking price', rentVisible(a, safe) && a.askingPrice ? usd0(a.askingPrice) : 'Not on record'],
+              ['Per SF', rentVisible(a, safe) && a.askingPrice ? `${usd(a.askingPrice / seg.size)}/SF` : 'Not on record'],
               ['Size', sf(seg.size)],
               canShowActivity(safe) && ['Verified', <Verified key="v" at={a.verifiedAt} today={today} safe={safe} />],
             ]}
@@ -266,8 +267,8 @@ export function BlockPanel({ seg, model, patch }: BlockPanelProps) {
                 ['Type', availabilityType(marketed)],
                 marketed.kind === 'Lease' && ['Available from', marketed.availableFrom ? fmtDate(marketed.availableFrom) : 'Now'],
                 canShowListingStatus(safe) && ['Listing', marketed.published === false ? 'Quiet · not published' : 'Published'],
-                marketed.kind === 'Lease' && ['Asking', rentVisible(marketed, safe) && marketed.rentHigh > 0 ? rateRange(marketed.rentLow, marketed.rentHigh, marketed.rateUnit, marketed.leaseType) : 'Hidden'],
-                marketed.kind === 'Sale' && ['Asking price', rentVisible(marketed, safe) && marketed.askingPrice ? usd0(marketed.askingPrice) : 'Hidden'],
+                marketed.kind === 'Lease' && ['Asking', rentVisible(marketed, safe) && marketed.rentHigh > 0 ? rateRange(marketed.rentLow, marketed.rentHigh, marketed.rateUnit, marketed.leaseType) : 'Not on record'],
+                marketed.kind === 'Sale' && ['Asking price', rentVisible(marketed, safe) && marketed.askingPrice ? usd0(marketed.askingPrice) : 'Not on record'],
                 ['Size', sf(marketed.size)],
                 marketed.kind === 'Lease' && ['Divisible', marketed.divisible ? (marketed.minDivisible ? `Yes · min ${sf(marketed.minDivisible)}` : 'Yes') : 'No'],
               ]}

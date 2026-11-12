@@ -73,6 +73,7 @@ describe('serializeState', () => {
       inquiry: 'I02',
       q: 'suite 600 & more',
       mode: 'area',
+      ring: 5,
       live: true,
       census: 'income',
       theme: 'dark',
@@ -468,5 +469,35 @@ describe('the Map opens its Area panel even with a suite chosen, and gives the s
     expect(deriveMode(applyPatch(map, { view: 'stack' }, TODAY))).toBe('block');
     const elsewhere = applyPatch(map, switchBuilding(map, 'P002'), TODAY);
     expect(elsewhere).toMatchObject({ view: 'map', mode: 'area', select: null, building: 'P002' });
+  });
+});
+
+describe('round 25: a Map link with a suite opens Area, and the ring is in the address', () => {
+  it('a cold Map link with a suite or a floor opens the Area panel, and the suite waits for the plan', () => {
+    const suite = parseState('?view=map&select=L13-U1', TODAY);
+    expect(suite).toMatchObject({ mode: 'area', select: 'L13-U1' });
+    expect(deriveMode(suite)).toBe('area');
+    expect(serializeState(suite, TODAY)).toBe('?view=map&select=L13-U1');
+    expect(deriveMode(applyPatch(suite, { view: 'stack' }, TODAY))).toBe('block');
+    expect(parseState('?view=map&floor=F6', TODAY).mode).toBe('area');
+    // Off the Map a link with a suite still opens that suite.
+    expect(deriveMode(parseState('?view=stack&select=A02', TODAY))).toBe('block');
+    expect(serializeState(parseState('?view=stack&select=A02', TODAY), TODAY)).toBe('?view=stack&select=A02');
+  });
+
+  it('reads and writes the ring, one mile by default and unwritten', () => {
+    expect(parseState('?view=map', TODAY).ring).toBe(1);
+    expect(parseState('?view=map&ring=5', TODAY).ring).toBe(5);
+    expect(parseState('?view=stack&ring=3', TODAY).ring).toBe(3);
+    for (const bad of ['2', '0', 'five', '']) expect(parseState(`?view=map&ring=${bad}`, TODAY).ring, bad).toBe(1);
+    expect(serializeState(parseState('?view=map&ring=5', TODAY), TODAY)).toBe('?view=map&ring=5');
+    expect(serializeState(parseState('?view=map&ring=1', TODAY), TODAY)).toBe('?view=map');
+  });
+
+  it('keeps the ring through a change of view, of building and of prospect-safe', () => {
+    const five = applyPatch(parseState('?view=map', TODAY), { ring: 5 }, TODAY);
+    expect(applyPatch(five, { view: 'stack' }, TODAY).ring).toBe(5);
+    expect(applyPatch(five, switchBuilding(five, 'P002'), TODAY).ring).toBe(5);
+    expect(applyPatch(five, { safe: true }, TODAY).ring).toBe(5);
   });
 });

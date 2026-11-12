@@ -11,7 +11,16 @@ export const OVERPASS_ENDPOINTS = [
 ];
 const TIMEOUT_MS = 12_000;
 const FOOTPRINT_RADIUS_M = 120;
+/** Amenities and bus stops are looked for within half a mile: the walk the map shades. */
 const NEARBY_RADIUS_M = 800;
+/**
+ * Rail out to the widest ring, five miles: a station three miles out is part of the commute the 5-mile ring is there
+ * to show (round 25: live mode asked within half a mile and dropped the DART stations the sample listed).
+ */
+const RAIL_RADIUS_M = 8047;
+/** The nearest of each kind, so a street of bus stops never pushes the rail stations off the list. */
+const BUS_STOPS = 4;
+const RAIL_STOPS = 3;
 const METRES_PER_MILE = 1609.34;
 
 export interface OverpassElement {
@@ -104,8 +113,8 @@ export const footprintQuery = (c: { lat: number; lng: number }) =>
 
 export const nearbyQuery = (c: { lat: number; lng: number }) =>
   `[out:json][timeout:25];(` +
+  `node["railway"~"^(station|halt|tram_stop)$"](around:${RAIL_RADIUS_M},${c.lat},${c.lng});` +
   `node["public_transport"="station"](around:${NEARBY_RADIUS_M},${c.lat},${c.lng});` +
-  `node["railway"="station"](around:${NEARBY_RADIUS_M},${c.lat},${c.lng});` +
   `node["highway"="bus_stop"](around:${NEARBY_RADIUS_M},${c.lat},${c.lng});` +
   `node["amenity"~"^(restaurant|cafe|bank|gym|fitness_centre|parking)$"](around:${NEARBY_RADIUS_M},${c.lat},${c.lng});` +
   `node["tourism"="hotel"](around:${NEARBY_RADIUS_M},${c.lat},${c.lng});` +
@@ -121,22 +130,28 @@ const AMENITY_LABEL: Record<string, string> = {
   hotel: 'Hotels',
 };
 
+/** A station's kind from its tags: rail when it says so (a bus station is a `public_transport` station too). */
+const RAIL_MODES = ['train', 'light_rail', 'subway', 'tram'];
+const isRailStop = (tags: Record<string, string>) =>
+  ['station', 'halt', 'tram_stop'].includes(tags.railway ?? '') || (tags.public_transport === 'station' && RAIL_MODES.some((m) => tags[m] === 'yes'));
+
 /**
- * Transit stops and amenities from the nodes within half a mile: the counts the Area panel ranks, and each stop's
- * and place's own position and name, which the Map pins where they are (round 25: live mode kept the counts and
- * dropped the positions, so its map had no pins). Null when nothing came back.
+ * Transit stops and amenities from the nodes the query returns: the counts the Area panel ranks, and each stop's and
+ * place's own position and name, which the Map pins where they are (round 25: live mode kept the counts and dropped
+ * the positions, so its map had no pins). Distances stay unrounded: "< 0.1 mi" is decided on the real figure.
+ * Null when nothing came back.
  */
 export function toNearby(elements: OverpassElement[], center: { lat: number; lng: number }): Pick<Area, 'transit' | 'amenities' | 'places'> | null {
   const transit: Area['transit'] = [];
   const counts = new Map<string, number>();
   const places: NonNullable<Area['places']> = [];
-  const miles = (lat: number, lng: number) => Math.round((metres({ lat, lng }, center) / METRES_PER_MILE) * 10) / 10;
+  const miles = (lat: number, lng: number) => metres({ lat, lng }, center) / METRES_PER_MILE;
   for (const el of elements) {
     const tags = el.tags ?? {};
     const lat = el.lat;
     const lng = el.lon;
-    const isRail = tags.railway === 'station' || tags.public_transport === 'station';
-    const isBus = tags.highway === 'bus_stop';
+    const isRail = isRailStop(tags);
+    const isBus = !isRail && (tags.highway === 'bus_stop' || tags.public_transport === 'station');
     if ((isRail || isBus) && lat !== undefined && lng !== undefined) {
       transit.push({ name: tags.name ?? (isRail ? 'Station' : 'Bus stop'), type: isRail ? 'Rail' : 'Bus', distanceMi: miles(lat, lng), lat, lng });
       continue;
@@ -150,9 +165,9 @@ export function toNearby(elements: OverpassElement[], center: { lat: number; lng
   const seen = new Set<string>();
   const dedup = transit
     .sort((a, b) => a.distanceMi - b.distanceMi || (a.type === 'Rail' ? -1 : 1))
-    .filter((t) => (seen.has(t.name) ? false : (seen.add(t.name), true)))
-    .slice(0, 6);
-  return { transit: dedup, amenities: [...counts].map(([category, count]) => ({ category, count })).sort((a, b) => b.count - a.count), places: places.sort((a, b) => a.distanceMi - b.distanceMi) };
+    .filter((t) => (seen.has(t.name) ? false : (seen.add(t.name), true)));
+  const nearest = [...dedup.filter((t) => t.type === 'Bus').slice(0, BUS_STOPS), ...dedup.filter((t) => t.type === 'Rail').slice(0, RAIL_STOPS)].sort((a, b) => a.distanceMi - b.distanceMi);
+  return { transit: nearest, amenities: [...counts].map(([category, count]) => ({ category, count })).sort((a, b) => b.count - a.count), places: places.sort((a, b) => a.distanceMi - b.distanceMi) };
 }
 
 /**

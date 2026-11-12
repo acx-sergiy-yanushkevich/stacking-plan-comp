@@ -204,4 +204,10 @@ describe('KpiStrip on the Map (round 25)', () => {
     // Off the map the switches are buttons again.
     expect(render(TODAY, false, '?view=stack').html).toMatch(/<button type="button" class="sp-kpi sp-kpi--lens/);
   });
+
+  it('a detail that lights suites is a tab stop on the plan views, so the keyboard lights them too, and only reads on the Map', () => {
+    const stops = (qs: string) => [...render(TODAY, false, qs).html.matchAll(/<div class="sp-kpi sp-kpi--detail" data-kpi="([^"]+)"[^>]*>/g)].filter((m) => m[0].includes('tabindex="0"')).map((m) => m[1]);
+    expect(stops('?view=stack')).toEqual(['find', 'find-largest']);
+    expect(stops('?view=map')).toEqual([]);
+  });
 });

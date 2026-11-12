@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compactRate, inMiles, keepUnits, mi, pct, rate, rateRange, sf, sfDelta, usdCompact } from './format';
+import { compactRate, inMiles, keepUnits, mi, pct, rate, rateRange, ringName, sf, sfDelta, usdCompact } from './format';
 
 describe('format', () => {
   it('never rounds SF', () => {
@@ -29,10 +29,19 @@ describe('format', () => {
     expect(mi(3.1)).toBe('3.1 mi');
     expect(mi(0)).toBe('< 0.1 mi');
     expect(mi(0.04)).toBe('< 0.1 mi');
-    expect(mi(0.05)).toBe('0.1 mi');
+    // The boundary is a tenth of a mile itself, not where rounding would reach 0.0 (round 25: 0.07 read "0.1 mi").
+    expect(mi(0.049)).toBe('< 0.1 mi');
+    expect(mi(0.05)).toBe('< 0.1 mi');
+    expect(mi(0.099)).toBe('< 0.1 mi');
+    expect(mi(0.1)).toBe('0.1 mi');
+    expect(mi(0.14)).toBe('0.1 mi');
     expect(inMiles(0.2)).toBe('0.2 miles');
     expect(inMiles(1)).toBe('1.0 mile');
     expect(inMiles(0)).toBe('under 0.1 miles');
+    expect(inMiles(0.07)).toBe('under 0.1 miles');
+    expect(inMiles(0.1)).toBe('0.1 miles');
+    expect(ringName(1)).toBe('1 mile');
+    expect(ringName(5)).toBe('5 miles');
   });
   it('keeps a figure on one line with its unit, and a "<" with its figure', () => {
     expect(keepUnits('A bus stop 0.2 miles away')).toBe('A bus stop 0.2\u00a0miles away');

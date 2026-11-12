@@ -245,7 +245,7 @@ function Shell() {
   const area = useArea(dataSource, property, state.census);
   const areaPanel = (
     <Suspense fallback={<p className="sp-weak" style={{ padding: 16 }}>Loading area data…</p>}>
-      <AreaPanel model={model} area={area} expanded={mode === 'brief'} onMap={state.view === 'map'} />
+      <AreaPanel model={model} area={area} expanded={mode === 'brief'} onMap={state.view === 'map'} ring={state.ring} onRing={(ring) => patch({ ring })} />
     </Suspense>
   );
   const areaPreview = <AreaPreview area={area} patch={patch} />;
