@@ -16,11 +16,11 @@ const BARS: ReadonlyArray<{ x: number; y: number; w: number; h: number; open?: t
   { x: 12, y: 46, w: 40, h: 9 },
 ];
 
+/** The mark is the bars alone, on no tile (Clara, Nov 12): the frame is cut tight to them, so they fill the box. */
 export function StaxMark({ size = 40 }: { size?: number }) {
-  const glyph = Math.round(size * 0.65);
   return (
     <span className="sp-mark" style={{ width: size, height: size }} aria-hidden="true">
-      <svg width={glyph} height={glyph} viewBox="0 0 64 64" focusable="false">
+      <svg width={size} height={size} viewBox="11 9 42 47" focusable="false">
         {BARS.map((b) => (
           <rect key={`${b.x}-${b.y}`} x={b.x} y={b.y} width={b.w} height={b.h} rx={2.5} className={b.open ? 'sp-mark__bar sp-mark__bar--open' : 'sp-mark__bar'} />
         ))}
