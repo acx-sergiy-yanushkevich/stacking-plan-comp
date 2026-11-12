@@ -305,6 +305,10 @@ describe('Header building card: the facts, then when the plan last changed at th
     const facts = /<div class="sp-header__facts">(.*?)<\/div>/.exec(card)![1];
     expect(facts).not.toContain('Latest change');
     expect(card).toMatch(/<div class="sp-header__aside"><span class="sp-header__verified[^"]*"[^>]*>.*Latest change/);
+    // It stands on the facts' line (Class A Office · address · …), at its right end, not on the title's line.
+    const title = /<div class="sp-header__title">(.*?)<\/div>/.exec(card)![1];
+    expect(title).not.toContain('Latest change');
+    expect(card).toMatch(/<div class="sp-header__factsrow"><div class="sp-header__facts">.*?<\/div><div class="sp-header__aside">.*Latest change/);
     const classic = render('?skin=classic').html;
     expect(/<div class="sp-header__facts">(.*?)<\/div>/.exec(classic)![1]).toContain('Latest change');
   });

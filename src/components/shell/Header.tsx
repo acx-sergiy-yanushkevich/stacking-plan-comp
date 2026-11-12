@@ -214,11 +214,13 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
         <div className="sp-header__text">
           <div className="sp-header__title">
             <h1>{property.name}</h1>
-            {/* When the plan last changed stands apart from the building's facts, at the right of the title's
-                line: it takes room from the title, never from the facts, which keep their lines in both modes. */}
+          </div>
+          {/* When the plan last changed sits on the facts' line, at its right end: level with Class A Office and
+              the address, apart from the facts themselves. */}
+          <div className="sp-header__factsrow">
+            {facts}
             <div className="sp-header__aside">{verified}</div>
           </div>
-          {facts}
         </div>
       </header>
     </>
