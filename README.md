@@ -87,7 +87,7 @@ It works with a keyboard and a screen reader, and on a phone. It opens in the As
 - The mock data is shaped like the AscendixRE objects (Property, Floor, Lease, Unit, Availability, Deal, Inquiry), so the same screens can later read real records.
 - The mock building contains each awkward case at least once: holdover, month-to-month, a committed future lease, occupied-but-marketed space, a sublease, an over-allocated floor, a multi-floor tenant, a confidential lease, records with no floor, and a for-sale unit.
 - "Today" is fixed at November 9, 2026, so screenshots are reproducible.
-- The other buildings in the header's switcher are fictional sample entries; only the first opens.
+- Three more buildings open from the header's switcher: Legacy West Tower II, Cedar Springs Exchange and Bluebonnet Office Park. Their names, records and footprints are fictional sample data. The switcher's other entries are samples with no data behind them and do not open.
 - Demographics are sample figures unless live mode is on. Floor plates are schematic, derived from the footprint, and are not real floor plans.
 
 **Domain**
@@ -100,7 +100,7 @@ It works with a keyboard and a screen reader, and on a phone. It opens in the As
 
 **Scope**
 
-- One building. No sign-in and no saving of changes.
+- Four buildings, one at a time. No sign-in and no saving of changes.
 - Record actions (open record, new deal, log call, start renewal) show a message describing what they would do in the CRM.
 - Built and checked in desktop Chrome. Video recording needs Chrome or Edge.
 
@@ -152,6 +152,7 @@ All state lives in the URL, so every view can be linked to.
 
 | Parameter | Values | Meaning |
 |---|---|---|
+| `building` | property id: `P002`, `P005`, `P007` | Which building is open (default: Preston Park Financial Center, `P001`) |
 | `view` | `building`, `stack`, `timeline`, `map`, `floor` | Which view is shown (default `building`; on a phone the stack stands in for it) |
 | `lens` | `status`, `expiry`, `deals`, `rent` | What the colors encode |
 | `asOf` | `YYYY-MM-DD` | As-of date |
@@ -196,7 +197,8 @@ docs/           Brief, design spec, development plan, competitor analysis, revie
 |---|---|
 | [`docs/BRIEF.md`](docs/BRIEF.md) | Personas, their top jobs, domain rules, the review rubric |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Screen-by-screen design specification |
-| [`docs/PLAN.md`](docs/PLAN.md) | Feature inventory and development plan |
+| [`docs/PLAN.md`](docs/PLAN.md) | Feature inventory, numbered requirements and development plan |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | How the code in `src/` is built: layers, state, prospect-safe policy |
 | [`docs/INFRASTRUCTURE.md`](docs/INFRASTRUCTURE.md) | Iframe deployment: architecture, sign-in, running cost |
 | [`docs/COMPETITORS.md`](docs/COMPETITORS.md) | Competitor analysis |
 | `docs/judging/` | AI reviewer reports for each round |
