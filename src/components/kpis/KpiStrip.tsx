@@ -146,7 +146,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
     canShowWalt(safe)
       ? {
           id: 'timeline',
-          label: 'Avg lease term',
+          label: 'Avg term',
           value: waltCard(k.walt),
           unit: 'yr',
           note: 'SF-weighted',
@@ -160,7 +160,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
           // The weighted average of the lease terms is a lease-term figure: it is withheld with the terms it averages,
           // in the same words as "Expiring 12 mo" beside it.
           id: 'timeline',
-          label: 'Avg lease term',
+          label: 'Avg term',
           value: 'Withheld',
           note: 'Lease terms not shown',
           detail: 'Lease terms are not shown in prospect-safe mode',
@@ -252,7 +252,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
     </div>
   );
   return (
-    <section className="sp-kpis sp-no-print" aria-label="Key figures">
+    <section className={safe ? 'sp-kpis sp-no-print sp-kpis--safe' : 'sp-kpis sp-no-print'} aria-label="Key figures">
       {group('lens', 'Color the plan by', 'Color by', lenses)}
       {group('open', 'Open a detail', 'Details', openFigures)}
     </section>

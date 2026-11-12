@@ -82,7 +82,7 @@ describe('KpiStrip', () => {
     expect(open?.[2].match(/class="sp-kpi sp-kpi--open"/g)?.length).toBe(4);
     expect(open?.[2]).not.toContain('sp-kpi__dot');
     expect(html.match(/class="sp-kpi__label sp-label"/g)?.length).toBe(6);
-    for (const label of ['Leased', 'Available', 'Largest block', 'Expiring 12 mo', 'Avg lease term', 'Pipeline']) expect(html).toContain(`>${label}</span>`);
+    for (const label of ['Leased', 'Available', 'Largest block', 'Expiring 12 mo', 'Avg term', 'Pipeline']) expect(html).toContain(`>${label}</span>`);
   });
 
   it('gives each figure one short note and keeps the whole note in the tooltip and the accessible name', () => {
@@ -178,7 +178,7 @@ describe('KpiStrip', () => {
     // No "Withheld" placeholders: a prospect sees a clean strip, not a list of what is hidden from them.
     expect(html).not.toContain('Withheld');
     expect(html).not.toContain('sp-kpi--static');
-    for (const gone of ['Pipeline', 'Expiring 12 mo', 'Avg lease term', 'SF-weighted', 'of leased']) expect(html, gone).not.toContain(gone);
+    for (const gone of ['Pipeline', 'Expiring 12 mo', 'Avg term', 'SF-weighted', 'of leased']) expect(html, gone).not.toContain(gone);
     // Nor do their figures leak through a tooltip or a name.
     expect(html).not.toContain(waltCard(open.kpis.walt));
     expect(html).not.toContain(open.kpis.walt.toFixed(4));

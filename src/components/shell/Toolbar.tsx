@@ -6,7 +6,7 @@ import { shownView, type PlanState, type View } from '../../state/planState';
 import { Button, Icon, Segmented, SelectField, TextField } from '../ui';
 import { rememberTrigger } from '../../state/focusStore';
 import { floorKept, openArea } from '../plan/actions';
-import { useIsPhone } from '../../lib/useMedia';
+import { useIsPhone, useMedia } from '../../lib/useMedia';
 import { measure } from '../../lib/textFit';
 import { SEARCH_HINTS, hintThatFits, prospectFirst } from './toolbarRules';
 
@@ -77,6 +77,9 @@ function Slot({ icon, label, count }: { icon: 'clock' | 'warning'; label: string
 
 export function Toolbar({ state, patch, issueCount }: ToolbarProps) {
   const phone = useIsPhone();
+  // A phone of 420 px or less shares one row between the four tool buttons: there "Data issues" is drawn
+  // as "Issues" (its accessible name stays "Data issues"), so the word and its count fit the button.
+  const narrow = useMedia('(max-width: 420px)');
   const view: View = state.view === 'floor' ? 'stack' : shownView(state.view, phone);
   // A phone has no room for the model, and its tabs are words alone: without their icons the lens picker fits beside them.
   const views = phone ? VIEWS.filter((v) => v.id !== 'building').map(({ id, label }) => ({ id, label })) : VIEWS;
@@ -152,12 +155,18 @@ export function Toolbar({ state, patch, issueCount }: ToolbarProps) {
           {/* Data issues, in every view and at every width (round 19: with the header button gone, a tablet or
               phone had no way to it). Withheld from a prospect like the worklist, its place kept the same way. */}
           {canShowIssues(state.safe) ? (
-            <Button icon="warning" active={state.mode === 'issues'} count={issueCount} onClick={() => toggleMode('issues')} title="Data issues: records to fix or verify">
-              {/* On a phone the four tool buttons share one row: the word there is "Issues", drawn and read. */}
-              {ISSUES_LABEL}
+            <Button
+              icon="warning"
+              active={state.mode === 'issues'}
+              count={issueCount}
+              onClick={() => toggleMode('issues')}
+              title="Data issues: records to fix or verify"
+              aria-label={narrow ? `${ISSUES_LABEL}${issueCount ? ` (${issueCount})` : ''}` : undefined}
+            >
+              {narrow ? 'Issues' : ISSUES_LABEL}
             </Button>
           ) : (
-            <Slot icon="warning" label={ISSUES_LABEL} count={issueCount} />
+            <Slot icon="warning" label={narrow ? 'Issues' : ISSUES_LABEL} count={issueCount} />
           )}
         </div>
       </div>
