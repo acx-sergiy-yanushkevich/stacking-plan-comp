@@ -42,11 +42,13 @@ const INFLATE = 1.015;
 /** A transit kind's key: the key's Bus or Rail item lights every stop of that kind. */
 export const kindKey = (group: string) => `kind:${group}`;
 /**
- * The half mile's radius on screen below which the places fold away: their pins would sit on top of one another and
- * on the building's name (round 25: 81 of 83 overlapped at five miles, and a phone's one-mile map buried the name).
- * Folded, the half-mile label counts them, and a kind of place lit from the key or the Area panel still shows.
+ * The half mile's radius on screen below which the places fold away: their pins would sit on top of one another
+ * (round 25: 81 of 83 overlapped at five miles). Folded, the half-mile label counts them, and a kind of place lit
+ * from the key or the Area panel still shows. 60 px folds the 3- and 5-mile maps and never the 1-mile one, on a
+ * laptop or a phone (team review: at 120 px a 1366 x 768 laptop opened the map with its places folded away, which
+ * read as data not loaded); the labels sit over the pins, so the building's name still reads.
  */
-const FOLD_PX = 120;
+const FOLD_PX = 60;
 const SOURCE_RINGS = 'sp-rings';
 const LAYER_RING_FILL = 'sp-rings-fill';
 const LAYER_RING_LINE = 'sp-rings-line';
