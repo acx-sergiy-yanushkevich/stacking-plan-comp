@@ -11,6 +11,7 @@ import { Legend, sharesNote } from '../plan/Legend';
 import { DotJoin } from '../hero/DotJoin';
 import StackView from '../stack/StackView';
 import { ExportStage } from './ExportStage';
+import { stageLabel } from '../../domain/lenses';
 import { StaxLockup } from '../shell/Brand';
 import { LocationBrief } from '../area/LocationBrief';
 import type { Area } from '../../domain/types';
@@ -105,14 +106,15 @@ export function PrintLayout({ model, state, area = null, visible }: PrintLayoutP
           {!(safe && p.saleListing && p.owner === p.saleListing.broker) && <div>{p.owner}</div>}
         </div>
       </header>
-      <div className="sp-print__kpis">
+      {/* The cover's figures are the screen's: a figure withheld from a prospect is left off, not printed as
+          "Withheld", and the grid takes as many columns as there are figures. */}
+      <div className="sp-print__kpis" style={{ gridTemplateColumns: `repeat(${3 + (showRollover ? 1 : 0) + (canShowWalt(safe) ? 1 : 0) + (showDeals ? 1 : 0)}, 1fr)` }}>
         <Kpi label="Leased" value={pct(k.occupancy)} note={`${pct(k.physical)} occupied`} />
         <Kpi label="Available" value={sf(k.availableDirect + k.availableSublease)} note={`${num(k.availableDirect)} direct · ${num(k.availableSublease)} sublease`} />
         <Kpi label="Largest block" value={sf(k.maxContiguous.size)} note={k.maxContiguous.floorName ?? ''} />
-        <Kpi label="Expiring 12 mo" value={showRollover ? sf(k.expiring12) : 'Withheld'} note={showRollover ? `${k.expiring12Leases} leases` : 'Prospect-safe'} />
-        {/* WALT is made of lease terms only: withheld with them, as on screen. */}
-        <Kpi label="WALT" value={canShowWalt(safe) ? `${k.walt.toFixed(2)} yr` : 'Withheld'} note={canShowWalt(safe) ? 'SF-weighted' : 'Prospect-safe'} />
-        <Kpi label="Pipeline" value={showDeals ? `${k.pipeline.deals} deals` : 'Withheld'} note={showDeals ? `${sf(k.pipeline.sf)} requested` : 'Prospect-safe'} />
+        {showRollover && <Kpi label="Expiring 12 mo" value={sf(k.expiring12)} note={`${k.expiring12Leases} leases`} />}
+        {canShowWalt(safe) && <Kpi label="Avg term" value={`${k.walt.toFixed(2)} yr`} note="SF-weighted" />}
+        {showDeals && <Kpi label="Pipeline" value={`${k.pipeline.deals} deals`} note={`${sf(k.pipeline.sf)} requested`} />}
       </div>
       {/* The cover's legend says why its shares add up to more than 100%, as the Stack legend does. */}
       <Legend items={model.legend} compact full note={sharesNote(model.legend, k.leasable, safe ? [] : model.floors.filter((f) => f.overAllocatedBy > 0).map((f) => ({ name: f.floor.name, by: f.overAllocatedBy })))} />
@@ -123,7 +125,7 @@ export function PrintLayout({ model, state, area = null, visible }: PrintLayoutP
         </FixedWidth>
       </div>
       <footer className="sp-print__foot">
-        Floor width is proportional to gross floor area; suite width to RSF. Figures are exact RSF from AscendixRE records.{recorded > 0 ? ' Suite areas are as recorded; floor totals are capped at the floor’s leasable area.' : ''} {safe ? 'Tenant names, contacts, in-place rents, lease and sublease dates, WALT and rollover are withheld.' : ''}
+        Floor width is proportional to gross floor area; suite width to RSF. Figures are exact RSF from AscendixRE records.{recorded > 0 ? ' Suite areas are as recorded; floor totals are capped at the floor’s leasable area.' : ''} {safe ? 'Tenant names, contacts, in-place rents, lease and sublease dates, average lease term and rollover are not shown.' : ''}
       </footer>
     </>
   );
@@ -297,7 +299,7 @@ export function PrintLayout({ model, state, area = null, visible }: PrintLayoutP
               <td>{r.kind === 'holdover' ? `Holdover · expired ${r.endDate ? fmtDate(r.endDate) : ''}` : 'Month-to-month'}</td>
               <td className="num">—</td>
               {showRent && <td>{rentText(r, safe)}</td>}
-              {showDeals && <td>{r.renewal ? r.renewal.stage : '—'}</td>}
+              {showDeals && <td>{r.renewal ? stageLabel(r.renewal.stage) : '—'}</td>}
             </tr>
           ))}
           {worklist.map((r) => (
@@ -307,10 +309,10 @@ export function PrintLayout({ model, state, area = null, visible }: PrintLayoutP
                 {r.floorName.replace(/^Floor /, 'Fl ')} · {r.suite}
               </td>
               <td className="num">{num(r.size)}</td>
-              <td>{r.endDate ? fmtDate(r.endDate) : 'MTM'}</td>
+              <td>{r.endDate ? fmtDate(r.endDate) : 'Month-to-month'}</td>
               <td className="num">{r.months === null ? '—' : fmtMonths(r.months)}</td>
               {showRent && <td>{rentText(r, safe)}</td>}
-              {showDeals && <td>{r.renewal ? r.renewal.stage : '—'}</td>}
+              {showDeals && <td>{r.renewal ? stageLabel(r.renewal.stage) : '—'}</td>}
             </tr>
           ))}
           {worklist.length === 0 && (
