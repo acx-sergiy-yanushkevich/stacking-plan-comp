@@ -158,6 +158,14 @@ await dark.waitForTimeout(350);
 await dark.locator('[data-kpi="find"]').focus();
 await dark.waitForTimeout(400);
 await dark.screenshot({ path: `${out}/72-kpi-focus.png` });
+// Live mode: OpenStreetMap's real places at once, from the copy recorded with the app (the shared servers are asked
+// in the background, so this waits for the page, not for the network to go quiet). Its own page, not hooked: the
+// servers' refusals (502, 429) are the network's console errors, not the app's.
+const live = await browser.newPage({ viewport: { width: 1440, height: 1100 }, colorScheme: 'dark', locale: 'en-US', reducedMotion: 'reduce' });
+await live.goto(base + '?view=map&live=1', { waitUntil: 'load' });
+await live.waitForTimeout(3000);
+await live.screenshot({ path: `${out}/73-map-live.png` });
+await live.close();
 await mobile.goto(base + '?view=stack&lens=expiry', { waitUntil: 'networkidle' });
 await mobile.waitForTimeout(350);
 await mobile.locator('.sp-pstack__legend summary').click();
