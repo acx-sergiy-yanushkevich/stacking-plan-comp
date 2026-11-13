@@ -23,6 +23,17 @@ svg { display: block; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
+/* Entrances (DESIGN.md §3.5): what a view does as it arrives. Each starts from its own first frame and ends
+   on the element's resting state. On SVG they use `translate` and `scale`, never `transform`: a row placed by
+   its transform attribute would be thrown to the origin. Run with `backwards`, so nothing is left on an
+   element at rest (the PNG export copies what it finds). The stage's `--sp-enter-shift` (App, enterClock)
+   is added to every delay, so a remount part-way through resumes the entrance instead of replaying it. */
+@keyframes sp-enter-rise { from { opacity: 0; translate: 0 10px; } }
+@keyframes sp-enter-drop { from { opacity: 0; translate: 0 -18px; } }
+@keyframes sp-enter-fade { from { opacity: 0; } }
+@keyframes sp-enter-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes sp-enter-settle { from { opacity: 0; scale: 0.98; } }
+@keyframes sp-enter-grow { from { scale: 0 1; } }
 .sp-skip { position: absolute; left: 8px; top: -40px; z-index: 200; padding: 6px 10px; background: var(--sp-color-brand); color: #fff; border-radius: 4px; font-weight: 600; }
 .sp-skip:focus { top: 8px; }
 .sp-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
