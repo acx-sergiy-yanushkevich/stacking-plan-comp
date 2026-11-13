@@ -354,7 +354,14 @@ describe('totals by period in prospect-safe mode', () => {
     expect(kpis.walt).toBeGreaterThan(0);
     const out = safeKpis(kpis, true);
     expect([out.expiring12, out.expiring12Leases, out.walt]).toEqual([0, 0, 0]);
-    expect({ ...out, expiring12: kpis.expiring12, expiring12Leases: kpis.expiring12Leases, walt: kpis.walt }).toEqual(kpis);
+    expect({ ...out, expiring12: kpis.expiring12, expiring12Leases: kpis.expiring12Leases, walt: kpis.walt, rentByType: kpis.rentByType }).toEqual(kpis);
+  });
+
+  it('safeKpis withholds in-place rent by type and keeps asking rents (a prospect may see what is on offer)', () => {
+    expect(kpis.rentByType.length).toBeGreaterThan(0);
+    const out = safeKpis(kpis, true);
+    expect(out.rentByType).toEqual([]);
+    expect(out.askingByType).toEqual(kpis.askingByType);
   });
 
   it('WALT is withheld with the lease terms it is made of', () => {

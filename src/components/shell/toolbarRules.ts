@@ -1,7 +1,8 @@
 import { canUseLens } from '../../domain/safe';
 
 /**
- * The order of the toolbar's controls that come and go with prospect-safe mode.
+ * The order of the controls that come and go with prospect-safe mode: the toolbar's buttons, and the
+ * KPI strip's Color-by switches (one per lens).
  *
  * A control that the mode removes must not move the ones that stay. So in every group the controls a
  * prospect is also given come first, in their usual order, and those that are withheld come last: taking

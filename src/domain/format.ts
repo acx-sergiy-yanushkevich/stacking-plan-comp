@@ -9,7 +9,8 @@ export const sf = (n: number) => `${int.format(n)} SF`;
 export const num = (n: number) => int.format(n);
 export const pct = (ratio: number) => pct1.format(ratio);
 
-const dollars = (v: number) => (Number.isInteger(v) ? `$${int.format(v)}` : money.format(v));
+/** "$42" or "$42.10": whole dollars without cents, anything else to the cent. */
+export const dollars = (v: number) => (Number.isInteger(v) ? `$${int.format(v)}` : money.format(v));
 
 /** "$31.50/SF/yr FSG": a rate always carries its unit and lease type. */
 export function rate(value: number, unit: RateUnit, type: LeaseType): string {

@@ -175,7 +175,6 @@
 /* ── Toolbar ────────────────────────────────────────────── */
 .sp-toolbar { display: flex; align-items: center; gap: var(--sp-space-3); padding: 8px var(--sp-space-3); flex-wrap: wrap; }
 .sp-toolbar__group { display: flex; align-items: center; gap: 8px; }
-.sp-toolbar__label { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); font-weight: 500; white-space: nowrap; }
 /* Search and tools are one unit. It takes what the row has left; when that is under 440 px it wraps to a
    row of its own and fills it, so the search starts at the card's left padding and the buttons end at its
    right: no orphaned buttons, no empty band beside the search (768–1100 px). */
@@ -191,23 +190,14 @@
 .sp-toolbar__search .sp-field { width: 100%; }
 /* Wide enough that the toolbar is always one row: the search stops growing and sits beside its buttons. */
 @media (min-width: 1280px) { .sp-toolbar__search { max-width: 420px; } }
-/* Prospect-safe offers two of the four lenses. The group keeps the width of all four (their names are no
-   secret), so the search and tools after it wrap at the same window width with the mode on and off. The
-   four measure 303.8 to 304.4 px, by which of them is selected (it is set in semibold): 306 px is over
-   every case, so the group is one width whatever the lens and the mode. (At 304 px the toolbar wrapped
-   with the mode off and not with it on, at a window 1176 px wide.) */
-@media (min-width: 761px) { .sp-toolbar__lens { min-width: 306px; } }
 /* Prospect-safe withholds the Worklist button and keeps its place: an empty box with the button's own
    metrics (it is laid out as one, around the same icon and the same word, which CSS supplies so that the
    word is not in the page), invisible and inert. The search field and Find space stand where they do
    with the mode off, at every width. */
 .sp-toolbar__slot { visibility: hidden; pointer-events: none; cursor: default; }
 .sp-toolbar__slot-label::after { content: var(--sp-slot-label); }
-.sp-toolbar__lens-select { display: none; }
 @media (max-width: 760px) {
   .sp-toolbar { gap: 6px; padding: 6px 8px; }
-  .sp-toolbar__lens { display: none; }
-  .sp-toolbar__lens-select { display: block; flex: 1 1 auto; }
   .sp-toolbar .sp-segmented--lg .sp-segmented__opt { padding: 0 8px; }
   /* Phone: the search on its own row, the tool buttons sharing the row under it. */
   .sp-toolbar__find { flex: 1 1 100%; flex-wrap: wrap; gap: 6px; }
@@ -247,8 +237,6 @@
   .sp-header .sp-btn--icon, .sp-topbar .sp-btn--icon { padding: 0; }
   .sp-toolbar { padding: 5px 8px; gap: 5px 6px; }
   :root[data-skin] .sp-toolbar .sp-segmented { padding: 2px; }
-  .sp-toolbar__lens-select { flex: 1 1 150px; min-width: 0; }
-  .sp-toolbar__lens-select .sp-field, .sp-toolbar__lens-select .sp-select { width: 100%; }
   .sp-toolbar__find { gap: 5px; }
 }
 /* A phone of 420 px or less: one row of controls (Header.tsx makes each one compact and puts Export in the

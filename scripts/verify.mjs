@@ -14,8 +14,8 @@ await page.goto(base + '?view=stack', { waitUntil: 'networkidle' });
 check((await page.locator('.sp-stage [role="grid"] [role="row"]').count()) === 12, '12 floor rows');
 const blocks = await page.locator('.sp-stage [role="gridcell"]').count();
 check(blocks >= 28, `≥ 28 blocks (${blocks})`);
-check((await page.locator('.sp-kpi').count()) === 6, '6 KPI cards');
-const leasedToday = await page.locator('.sp-kpi').first().innerText();
+check((await page.locator('.sp-kpi').count()) === 7, '7 KPI cards');
+const leasingToday = await page.locator('.sp-kpi').first().innerText();
 
 // Keyboard grid: focus first block, ArrowRight moves to the next block in the row
 await page.locator('.sp-stage [role="gridcell"][tabindex="0"]').first().focus();
@@ -43,9 +43,23 @@ check(page.url().includes('floor=F12'), 'floor label opens floor summary');
 
 // Time travel changes KPIs
 await page.goto(base + '?view=stack&asOf=2028-01-01', { waitUntil: 'networkidle' });
-const leased2028 = await page.locator('.sp-kpi').first().innerText();
-check(leased2028 !== leasedToday, 'as-of 2028 changes the Leased KPI');
+const leasing2028 = await page.locator('.sp-kpi').first().innerText();
+check(leasing2028 !== leasingToday, 'as-of 2028 changes the Leasing KPI');
 check((await page.locator('.sp-kpi__delta').count()) >= 3, 'delta chips shown when projected');
+// Seven cards at a narrow desktop: no chip is pushed out of its card (review, Nov 12: two were cut at 1280).
+for (const width of [1200, 1280, 1366, 1400, 1439, 1440, 1500]) {
+  await page.setViewportSize({ width, height: 900 });
+  await page.waitForTimeout(150);
+  const cut = await page.evaluate(() =>
+    [...document.querySelectorAll('.sp-kpi')].filter((card) => {
+      const chip = card.querySelector('.sp-kpi__delta');
+      const body = card.querySelector('.sp-kpi__body');
+      return chip && body && chip.getBoundingClientRect().bottom > body.getBoundingClientRect().bottom + 1;
+    }).map((card) => card.getAttribute('data-kpi')),
+  );
+  check(cut.length === 0, `every change chip is inside its card at ${width} px${cut.length ? ` (cut: ${cut.join(', ')})` : ''}`);
+}
+await page.setViewportSize({ width: 1440, height: 1100 });
 check((await page.locator('.sp-header__asof--projected').count()) === 1, 'header marks the date as projected');
 
 // Filters dim

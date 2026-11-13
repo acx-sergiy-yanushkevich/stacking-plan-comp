@@ -41,6 +41,18 @@ describe('computeKpis today', () => {
     expect(k.rentByType[0].type).toBe('FSG');
     expect(new Set(k.rentByType.map((r) => r.type)).size).toBe(k.rentByType.length);
   });
+  it('asking rent by type covers the marketed vacancies (direct and sublease), lowest low to highest high, largest share first', () => {
+    const listed = floors.flatMap((f) => f.segments).filter((s) => s.availability && (s.kind === 'available' || s.kind === 'sublease'));
+    expect(listed.length).toBeGreaterThan(0);
+    expect(k.askingByType.length).toBeGreaterThan(0);
+    expect(k.askingByType.map((a) => a.sf)).toEqual([...k.askingByType.map((a) => a.sf)].sort((a, b) => b - a));
+    for (const a of k.askingByType) {
+      const own = listed.filter((s) => s.availability!.leaseType === a.type);
+      expect(a.sf, `${a.type} SF`).toBe(own.reduce((t, s) => t + s.size, 0));
+      expect(a.low).toBe(Math.min(...own.map((s) => annualRate(s.availability!.rentLow, s.availability!.rateUnit))));
+      expect(a.high).toBe(Math.max(...own.map((s) => annualRate(s.availability!.rentHigh, s.availability!.rateUnit))));
+    }
+  });
   it('rent by type is weighted by recorded SF, so each figure is a sum of rent-roll rows', () => {
     // The lease rows that carry a rent: in place (holdover, MTM and sublandlords included), not confidential.
     const rows = floors.flatMap((f) => f.segments).filter((s) => s.lease && isLeaseKind(s.kind) && !s.lease.confidential && s.lease.rate !== null);
