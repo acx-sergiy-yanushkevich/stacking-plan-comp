@@ -2,4 +2,6 @@
 @media print {
   body { background: #fff; color: #000; }
   .sp-no-print { display: none !important; }
+  /* Paper is drawn at rest: a crossfade or a ring drawing in at the moment of printing would be printed part-way. */
+  *, *::before, *::after { transition: none !important; animation: none !important; }
 }

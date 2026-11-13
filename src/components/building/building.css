@@ -204,3 +204,19 @@
 .sp-bview > .sp-stack__head .sp-legend { order: 2; flex: 1 1 100%; }
 /* The legend's own note (how to read the lens's colour ramp) closes the legend's line, as its last item. */
 .sp-bview > .sp-stack__head .sp-legend .sp-legend__note { order: 0; flex: 0 1 auto; width: auto; text-align: left; font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }
+
+/* Entrance (DESIGN.md §3.5): the floors drop onto one another, the ground floor first, the last by 180 ms
+   (`--i` is the floor's level: BuildingHero); the list of floors and its leaders follow. Opening a
+   floor is not an entrance: the model glides and turns (above), it does not remount. The list of floors is
+   also faded by the glide (BuildingView) when it comes back; that animation wins while it runs. */
+.sp-stage .sp-hero--stage .sp-hero__floor {
+  --n: var(--sp-hero-floors, 1);
+  animation: sp-enter-drop var(--sp-enter-ms) var(--sp-enter-curve) backwards;
+  animation-delay: calc(var(--sp-enter-shift, 0ms) + var(--i, 0) * min(30ms, 180ms / var(--n, 1)));
+}
+/* Not the caption line or the floor's pane: they have their own animation while the model docks, and a
+   rule that took over when that ends would play a second time. */
+.sp-stage .sp-bview__grid.is-alone .sp-flabels {
+  animation: sp-enter-fade 240ms ease backwards;
+  animation-delay: calc(var(--sp-enter-shift, 0ms) + 200ms);
+}

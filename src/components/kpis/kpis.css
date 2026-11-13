@@ -136,3 +136,8 @@ button.sp-kpi:hover { background: var(--sp-color-card-2); }
 @media (max-width: 760px) {
   .sp-kpis__withheld { display: flex; align-items: center; grid-column: 1 / -1; margin: 0; padding: 0 10px; min-height: 43px; font-size: var(--sp-text-12); color: var(--sp-color-text-weak); border-top: 1px solid var(--sp-color-border); }
 }
+
+/* Entrance (DESIGN.md §3.5), on the first load only: "Color by", then "Details", rise into place. Whole groups,
+   not cards: the lens cards are rebuilt as read-only cards on the Map, and would rise again there. */
+.sp-kpis .sp-kpis__wrap { animation: sp-enter-rise var(--sp-enter-ms) var(--sp-enter-curve) backwards; }
+.sp-kpis .sp-kpis__wrap--open { animation-delay: 80ms; }

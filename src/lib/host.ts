@@ -88,8 +88,8 @@ export interface Host {
   expose(name: string, value: unknown): void;
 
   // ── Measuring and watching an element ──────────────────────────────────────────────────────────
-  /** The element's computed style: its padding, font and the like, as the page lays it out. */
-  computedStyle(element: Element): CSSStyleDeclaration | null;
+  /** The element's computed style (or that of its `::before` / `::after`): its padding, font and the like, as the page lays it out. */
+  computedStyle(element: Element, pseudo?: string): CSSStyleDeclaration | null;
   /** An observer that calls `callback` when an observed element changes size; `null` where there is none. */
   sizeObserver(callback: () => void): ElementWatch | null;
   /** An observer that calls `callback` when the children under an observed node change; `null` where there is none. */
@@ -141,7 +141,7 @@ export interface BrowserPage extends Listens {
   navigator: { clipboard?: { writeText(text: string): Promise<void> } };
   scrollBy(options: { top: number; behavior: 'smooth' | 'auto' }): void;
   print(): void;
-  getComputedStyle(element: Element): { getPropertyValue(name: string): string };
+  getComputedStyle(element: Element, pseudo?: string): { getPropertyValue(name: string): string };
   matchMedia?(query: string): {
     matches: boolean;
     addEventListener(type: 'change', listener: () => void): void;
@@ -263,7 +263,7 @@ export function createBrowserHost(page: BrowserPage): Host {
     expose: (name, value) => {
       (page as unknown as Record<string, unknown>)[name] = value;
     },
-    computedStyle: (element) => page.getComputedStyle(element) as CSSStyleDeclaration,
+    computedStyle: (element, pseudo) => page.getComputedStyle(element, pseudo) as CSSStyleDeclaration,
     sizeObserver: (callback) => (page.ResizeObserver ? new page.ResizeObserver(callback) : null),
     mutationObserver: (callback) => {
       if (!page.MutationObserver) return null;
@@ -370,7 +370,7 @@ export const requestFrame = (callback: (time: number) => void): number | null =>
 export const cancelFrame = (handle: number | null): void => current().cancelFrame(handle);
 export const expose = (name: string, value: unknown): void => current().expose(name, value);
 
-export const computedStyle = (element: Element): CSSStyleDeclaration | null => current().computedStyle(element);
+export const computedStyle = (element: Element, pseudo?: string): CSSStyleDeclaration | null => current().computedStyle(element, pseudo);
 export const sizeObserver = (callback: () => void): ElementWatch | null => current().sizeObserver(callback);
 export const mutationObserver = (callback: () => void): ElementWatch | null => current().mutationObserver(callback);
 export const readStore = (key: string): string | null => current().readStore(key);

@@ -1,5 +1,6 @@
 import { useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { Icon, type IconName } from './Icon';
+import { useSlideMark } from './slideMark';
 
 export interface SegmentedOption<T extends string> {
   id: T;
@@ -24,6 +25,9 @@ export interface SegmentedProps<T extends string> {
 /** Radio-group style segmented control with roving tabindex and arrow-key movement. */
 export function Segmented<T extends string>({ options, value, onChange, size = 'md', iconsOnly, className = '', ...rest }: SegmentedProps<T>) {
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
+  // The chosen option's pill (its ::before) slides over from the option chosen before.
+  const group = useRef<HTMLDivElement | null>(null);
+  useSlideMark(group, '[aria-checked="true"]', value, '::before');
   const onKey = (e: KeyboardEvent<HTMLButtonElement>, i: number) => {
     const n = options.length;
     let next: number | null = null;
@@ -38,7 +42,7 @@ export function Segmented<T extends string>({ options, value, onChange, size = '
     }
   };
   return (
-    <div role="radiogroup" aria-label={rest['aria-label']} className={`sp-segmented ${size === 'lg' ? 'sp-segmented--lg' : ''} ${className}`}>
+    <div ref={group} role="radiogroup" aria-label={rest['aria-label']} className={`sp-segmented ${size === 'lg' ? 'sp-segmented--lg' : ''} ${className}`}>
       {options.map((o, i) => {
         const checked = o.id === value;
         return (

@@ -1,5 +1,6 @@
 import { Component, createRef, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
 import { getFontEpoch, subscribeFonts } from './lib/textFit';
+import { enterShift, type EnterClock } from './lib/enterClock';
 import { segmentText } from './components/plan/segmentText';
 import { TODAY } from './data/mock/property';
 import { buildingById } from './data/mock/buildings';
@@ -80,8 +81,10 @@ function findMarked(root: HTMLElement | null, mark: FocusMark): HTMLElement | SV
  * stage as soon as that is in the page (`componentDidUpdate`, in the same commit). Nothing waits on a
  * timer, so there is no moment at which a key press finds no focused control.
  */
-class Stage extends Component<{ epoch: string; children: ReactNode }> {
+class Stage extends Component<{ epoch: string; enter: string; children: ReactNode }> {
   private el = createRef<HTMLDivElement>();
+  /** When the view on the stage arrived: a remount for the fonts resumes its entrance (enterClock). */
+  private clock: EnterClock | null = null;
 
   getSnapshotBeforeUpdate(prev: { epoch: string }): FocusMark | null {
     return prev.epoch === this.props.epoch ? null : focusMark(this.el.current);
@@ -95,8 +98,10 @@ class Stage extends Component<{ epoch: string; children: ReactNode }> {
   }
 
   render() {
+    // Idempotent for a second render of the same props (StrictMode): the clock only moves on a change.
+    this.clock = enterShift(this.clock, this.props.enter, this.props.epoch, performance.now());
     return (
-      <div className="sp-stage" key={this.props.epoch} ref={this.el}>
+      <div className="sp-stage" key={this.props.epoch} ref={this.el} style={{ '--sp-enter-shift': `${-Math.round(this.clock.shift)}ms` } as CSSProperties}>
         {this.props.children}
       </div>
     );
@@ -321,7 +326,7 @@ function Shell() {
       <KpiStrip model={model} state={state} onAction={onKpi} />
       <Toolbar state={state} patch={patch} issueCount={model.issues.length} queryFind={model.queryFind} />
       <main className={`sp-main sp-no-print ${showInspector ? '' : 'sp-main--wide'} ${showInspector && wide ? 'sp-main--panel-wide' : ''}`} id="sp-plan" tabIndex={-1}>
-        <Stage epoch={view === 'map' ? `map-${property.id}` : `${property.id}-fonts-${fontTick}`}>
+        <Stage epoch={view === 'map' ? `map-${property.id}` : `${property.id}-fonts-${fontTick}`} enter={`${view}:${property.id}`}>
           {view === 'building' && <BuildingView model={model} state={state} patch={patch} />}
           {view === 'stack' && <StackView model={model} state={state} patch={patch} />}
           {view === 'floor' && <FloorView model={model} state={state} patch={patch} />}

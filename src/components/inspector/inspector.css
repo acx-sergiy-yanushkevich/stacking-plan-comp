@@ -142,3 +142,7 @@
 
 /* The Area panel's "Location brief" / "Show plan" button: words beside Close, kept on one line. */
 .sp-ins__brief { flex: none; white-space: nowrap; }
+
+/* Entrance (DESIGN.md §3.5): the rollover bars grow from the baseline as the panel opens. Their figures are
+   written beside them at once. */
+:is(.sp-inspector, .sp-sheet) .sp-roll__mark { transform-box: fill-box; transform-origin: 0 50%; animation: sp-enter-grow 360ms var(--sp-enter-curve) backwards; }

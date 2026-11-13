@@ -241,3 +241,17 @@ export function guardedFilter<T>(filter: T): T {
   const out = walk(filter);
   return changed ? (out as T) : filter;
 }
+
+/**
+ * The building rising from the ground as the map tilts into 3D (DESIGN.md §3.5): each floor's base and top
+ * scaled by `k`, so the whole building grows from the street; at `k = 1` the expression is the recorded one.
+ */
+export function riseExpr(prop: 'height' | 'base', k: number): unknown[] {
+  return k >= 1 ? ['get', prop] : ['*', ['get', prop], k];
+}
+
+/** How far the rise is at `t` (0 to 1 of its time): fast at first and settling, like the camera's ease. */
+export function riseAt(t: number): number {
+  const c = Math.min(1, Math.max(0, t));
+  return 1 - (1 - c) ** 3;
+}

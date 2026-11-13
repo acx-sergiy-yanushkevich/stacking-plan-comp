@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
 import { lensName } from '../../domain/lenses';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
@@ -259,6 +259,8 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
           aria-label={`Stacking plan, ${rows.length} floors, top floor first`}
           aria-describedby={bare ? undefined : 'sp-legend'}
           aria-rowcount={rows.length}
+          // The entrance's stagger (stack.css): the floors count, and each row's place from the ground floor.
+          style={{ '--n': rows.length } as CSSProperties}
         >
           {rows.map((r, ri) => {
             const f = r.f;
@@ -266,7 +268,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
             const floorSelected = state.floor === f.floor.id;
             const floorNum = f.floor.name.replace(/^Floor\s+/i, '');
             return (
-              <g key={f.floor.id} role="row" className="sp-stack__row" data-row={f.floor.id} aria-rowindex={ri + 1} transform={`translate(0 ${r.y})`} onPointerEnter={() => setHoverFloor(f.floor.id)} onPointerLeave={() => setHoverFloor(null)}>
+              <g key={f.floor.id} role="row" className="sp-stack__row" data-row={f.floor.id} aria-rowindex={ri + 1} transform={`translate(0 ${r.y})`} style={{ '--i': rows.length - 1 - ri } as CSSProperties} onPointerEnter={() => setHoverFloor(f.floor.id)} onPointerLeave={() => setHoverFloor(null)}>
                 <rect className={`sp-stack__rowbg ${floorSelected || r.focused ? 'is-floor-selected' : ''} ${hoverFloor === f.floor.id ? 'is-hot' : ''}`} x={0} y={-3} width={gutter + r.w + 6} height={r.h + 6} rx={6} />
                 <line className="sp-stack__floorline" x1={gutter} x2={gutter + r.w} y1={r.h + 3} y2={r.h + 3} />
                 {/* Gutter */}

@@ -155,7 +155,7 @@
   /* Neutral badges sit on the brightest fills of the night ramps: give them a solid ground. */
   :root[data-skin='glass'][data-palette='vice'][data-theme='dark'] .sp-badge--info rect { fill: var(--sp-glass-float); }
   :root[data-skin='glass'][data-palette='vice'][data-theme='dark'] .sp-pbadge--info { background: var(--sp-glass-float); }
-  :root[data-skin='glass'][data-palette='vice'][data-theme='dark'] .sp-segmented__opt[aria-checked='true'] { box-shadow: 0 2px 8px rgba(6, 2, 20, 0.4); }
+  :root[data-skin='glass'][data-palette='vice'][data-theme='dark'] .sp-segmented__opt[aria-checked='true']::before { box-shadow: 0 2px 8px rgba(6, 2, 20, 0.4); }
   :root[data-skin='glass'][data-palette='vice'][data-theme='dark'] .sp-stack .sp-seg:hover .sp-seg__rect { filter: drop-shadow(0 3px 8px rgba(255, 95, 168, 0.35)); }
 
   /* Less transparency / more contrast / forced colours: solid panels, no blur, no backdrop, plain title. */

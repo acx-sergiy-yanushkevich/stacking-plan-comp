@@ -133,3 +133,7 @@
 .sp-plate__key li { flex-wrap: wrap; }
 
 @media (max-width: 760px) { .sp-mini__pct { display: none; } }
+
+/* Entrance (DESIGN.md §3.5): the plate settles into place, then its lists fade in. */
+.sp-stage .sp-floor .sp-plate__svg { animation: sp-enter-settle var(--sp-enter-ms) var(--sp-enter-curve) backwards; animation-delay: var(--sp-enter-shift, 0ms); }
+.sp-stage .sp-floor .sp-flists { animation: sp-enter-fade 240ms ease backwards; animation-delay: calc(var(--sp-enter-shift, 0ms) + 120ms); }

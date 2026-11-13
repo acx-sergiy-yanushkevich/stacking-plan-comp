@@ -19,7 +19,7 @@ import { categoryKey } from '../../domain/places';
 import { FilterBar } from '../stack/FilterBar';
 import { FootprintFallback } from './FootprintFallback';
 import { MapControls } from './MapControls';
-import { BUILDINGS_DARK, BUILDINGS_LIGHT, CAMERA, CAMERA_3D, LAYER_BUILDINGS, LAYER_FLOORS, SOURCE_FLOORS, dominantTone, guardedFilter, resolveVarHex, toFloorFeatures, type FloorFeatureCollection } from './mapStyle';
+import { BUILDINGS_DARK, BUILDINGS_LIGHT, CAMERA, CAMERA_3D, LAYER_BUILDINGS, LAYER_FLOORS, SOURCE_FLOORS, dominantTone, guardedFilter, resolveVarHex, riseAt, riseExpr, toFloorFeatures, type FloorFeatureCollection } from './mapStyle';
 import { placeHighlight, placeLook, usePlaceHighlight } from './placeHighlight';
 import { useMapLibre } from './useMapLibre';
 import { usePresent } from './usePresent';
@@ -252,7 +252,28 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
     frame(framed.current);
     framed.current = true;
   }, [status, frame]);
-  const threeD = useCallback(() => map?.easeTo({ center: [center.lng, center.lat], zoom: CAMERA_3D.zoom, pitch: CAMERA_3D.pitch, bearing: CAMERA_3D.bearing, duration }), [map, center, duration]);
+  // The building rises from the street as the map tilts into 3D, over the camera's own time (DESIGN.md §3.5).
+  // Only from a flat map: a tilted one already shows its height. Under reduced motion it is simply there.
+  const rising = useRef<number | null>(null);
+  useEffect(() => () => cancelFrame(rising.current), []);
+  const rise = useCallback(() => {
+    if (!map || reducedMotion || !map.getLayer(LAYER_FLOORS) || map.getPitch() > 5) return;
+    cancelFrame(rising.current);
+    let t0: number | null = null;
+    const step = (now: number) => {
+      t0 ??= now;
+      const k = riseAt((now - t0) / duration);
+      if (!map.getLayer(LAYER_FLOORS)) return;
+      map.setPaintProperty(LAYER_FLOORS, 'fill-extrusion-height', riseExpr('height', k));
+      map.setPaintProperty(LAYER_FLOORS, 'fill-extrusion-base', riseExpr('base', k));
+      rising.current = k < 1 ? requestFrame(step) : null;
+    };
+    rising.current = requestFrame(step);
+  }, [map, reducedMotion, duration]);
+  const threeD = useCallback(() => {
+    rise();
+    map?.easeTo({ center: [center.lng, center.lat], zoom: CAMERA_3D.zoom, pitch: CAMERA_3D.pitch, bearing: CAMERA_3D.bearing, duration });
+  }, [map, center, duration, rise]);
   const [pitch, setPitch] = useState<number>(CAMERA.pitch);
   useEffect(() => {
     if (!map) return;
