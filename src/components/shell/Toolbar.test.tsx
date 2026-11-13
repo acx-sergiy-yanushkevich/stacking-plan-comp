@@ -16,11 +16,6 @@ const tools = (html: string) => {
   const group = html.slice(html.indexOf('class="sp-toolbar__find"'));
   return [...group.matchAll(/<(button|span) [^>]*class="sp-btn [^"]*"[^>]*>(.*?)<\/\1>/g)].map((m) => m[2].replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, ''));
 };
-const lensTabs = (html: string) => {
-  const group = html.slice(html.indexOf('aria-label="Color lens"'), html.indexOf('class="sp-toolbar__lens-select"'));
-  return [...group.matchAll(/role="radio"[^>]*>([^<]*)</g)].map((m) => m[1]);
-};
-
 describe('prospectFirst', () => {
   it('puts the lenses a prospect is also offered first, each group in its usual order', () => {
     expect(prospectFirst(LENSES).map((l) => l.id)).toEqual(['status', 'rent', 'expiry', 'deals']);
@@ -34,19 +29,16 @@ describe('prospectFirst', () => {
 });
 
 describe('Toolbar with prospect-safe on and off: what stays keeps its place', () => {
+  it('offers no lens picker: the KPI strip is the one Color by (team review, Nov 12)', () => {
+    for (const view of ['building', 'stack', 'timeline', 'map']) {
+      const html = render(`?view=${view}`);
+      expect(html, view).not.toContain('Color lens');
+      expect(html, view).not.toContain('Color by');
+      expect(html, view).not.toContain('sp-toolbar__lens');
+    }
+  });
+
   for (const view of ['building', 'stack', 'timeline', 'map']) {
-    it(`${view}: the lens tabs of prospect-safe are the first tabs of the full control`, () => {
-      const normal = lensTabs(render(`?view=${view}`));
-      const safe = lensTabs(render(`?view=${view}&safe=1`));
-      // The Map shows the surroundings, not the floors: nothing there is colored by a lens (round 24).
-      if (view === 'map') {
-        expect(normal).toEqual([]);
-        expect(safe).toEqual([]);
-        return;
-      }
-      expect(normal).toEqual(['Leasing', 'Rent', 'Expiration', 'Pipeline']);
-      expect(safe).toEqual(['Leasing', 'Rent']);
-    });
 
     it(`${view}: the tool buttons keep their order; prospect-safe takes Worklist and Data issues away, last, and keeps no place for them`, () => {
       const normal = tools(render(`?view=${view}`));

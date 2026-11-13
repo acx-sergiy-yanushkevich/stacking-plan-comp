@@ -132,7 +132,7 @@ function Shell() {
   const narrow = useIsNarrow();
   const phone = useIsPhone();
   const reduceMotion = usePrefersReducedMotion();
-  useDocumentTitle(state.safe, state.skin === 'classic' ? undefined : property.name);
+  useDocumentTitle(state.safe);
   const mode = deriveMode(state);
   // The live region's text is dropped in the render in which prospect-safe changes, so a sentence written
   // for the broker ("Opened Cirrus Energy…") never outlives the moment the mode is turned on.
@@ -226,18 +226,9 @@ function Shell() {
   );
 
   // Only the Color-by switches act (the Details figures are read-only): a switch keeps the focus it has.
-  const onKpi = (a: KpiAction) => {
-    switch (a) {
-      // Leased and Pipeline are the "Color by" switches: they change how the plan is coloured and nothing
-      // else. An open panel, a search or a selection stays as it was (round 18: Leased closed the brief).
-      case 'status':
-        patch({ lens: 'status', bucket: null });
-        break;
-      case 'deals':
-        patch({ lens: 'deals', bucket: null });
-        break;
-    }
-  };
+  // A switch changes how the plan is coloured and nothing else: an open panel, a search or a selection
+  // stays as it was (round 18: Leased closed the brief). The rollover bucket goes with the lens it filtered.
+  const onKpi = (lens: KpiAction) => patch({ lens, bucket: null });
 
   const dataSource = useMemo(() => createDataSource(state.live, state.census), [state.live, state.census]);
   // The area around the building, loaded once: the Building panel's preview, the Area panel, the location

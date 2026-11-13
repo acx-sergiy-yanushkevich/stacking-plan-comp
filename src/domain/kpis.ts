@@ -15,6 +15,16 @@ export interface RentByType {
   sf: number;
 }
 
+/** Asking rent on the space on offer, per lease type: what a prospect may be shown (the in-place figures are not). */
+export interface AskingByType {
+  type: LeaseType;
+  /** Lowest asking low and highest asking high among the listings, annual $/SF. */
+  low: number;
+  high: number;
+  /** SF of the listings of this type. */
+  sf: number;
+}
+
 /** Occupied space already marketed for a later date. */
 export interface ComingSupply {
   sf: number;
@@ -63,6 +73,8 @@ export interface Kpis {
   walt: number;
   /** In-place rent per lease type, weighted by recorded SF, largest share first. Never blended across types. */
   rentByType: RentByType[];
+  /** Asking rent per lease type across the marketed vacancies (direct and sublease), largest share first. */
+  askingByType: AskingByType[];
   expiring12: number;
   /** Distinct leases behind `expiring12`. */
   expiring12Leases: number;
@@ -124,6 +136,22 @@ export function computeKpis(p: Property, floors: FloorView[], asOf: ISODate): Kp
   const rentByType = [...rent.entries()]
     .map(([type, r]) => ({ type, avg: r.num / r.sf, sf: r.sf }))
     .sort((a, b) => b.sf - a.sf);
+
+  // Asking rent: the listings on the plan (direct vacancies and sublease space), each type its own range.
+  // A prospect-safe plan has already left out quiet listings (safeFloors), so no asking rent of one reaches here.
+  const asking = new Map<LeaseType, { low: number; high: number; sf: number }>();
+  for (const s of all) {
+    if (!s.availability || (s.kind !== 'available' && s.kind !== 'sublease')) continue;
+    const a = s.availability;
+    const low = annualRate(a.rentLow, a.rateUnit);
+    const high = annualRate(a.rentHigh, a.rateUnit);
+    const r = asking.get(a.leaseType) ?? { low, high, sf: 0 };
+    r.low = Math.min(r.low, low);
+    r.high = Math.max(r.high, high);
+    r.sf += s.size;
+    asking.set(a.leaseType, r);
+  }
+  const askingByType = [...asking.entries()].map(([type, r]) => ({ type, ...r })).sort((a, b) => b.sf - a.sf);
 
   const expiringSegs = all.filter((s) => {
     if (s.kind !== 'leased' && s.kind !== 'sublease' && s.kind !== 'committed') return false;
@@ -188,6 +216,7 @@ export function computeKpis(p: Property, floors: FloorView[], asOf: ISODate): Kp
     availableKeys: all.filter((s) => (s.kind === 'available' && !s.availableFrom) || s.kind === 'sublease').map((s) => s.key),
     walt: waltDen ? waltNum / waltDen : 0,
     rentByType,
+    askingByType,
     expiring12,
     expiring12Leases,
     leaseCount,

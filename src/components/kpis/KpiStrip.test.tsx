@@ -3,15 +3,17 @@ import { describe, expect, it } from 'vitest';
 import { renderToString } from 'react-dom/server';
 import { property, TODAY } from '../../data/mock/property';
 import { deriveFloors } from '../../domain/derive';
-import { computeKpis, kpiDeltas } from '../../domain/kpis';
+import { computeKpis, kpiDeltas, type Kpis } from '../../domain/kpis';
+import { safeKpis } from '../../domain/safe';
 import { parseState } from '../../state/planState';
 import type { PlanModel } from '../../model/usePlanModel';
 import { KpiStrip } from './KpiStrip';
 import { waltCard, waltTitle } from './walt';
+import { dollars, num, usd } from '../../domain/format';
 
-function render(asOf: string, safe = false, search = '') {
+function render(asOf: string, safe = false, search = '', override: Partial<Kpis> = {}) {
   const floors = deriveFloors(property, asOf, TODAY);
-  const kpis = computeKpis(property, floors, asOf);
+  const kpis = { ...safeKpis(computeKpis(property, floors, asOf), safe), ...override };
   const kpisToday = computeKpis(property, deriveFloors(property, TODAY, TODAY), TODAY);
   const model = { kpis, kpisToday, deltas: asOf === TODAY ? null : kpiDeltas(kpis, kpisToday), safe } as unknown as PlanModel;
   const html = renderToString(<KpiStrip model={model} state={parseState(search || (safe ? '?safe=1' : ''), TODAY)} onAction={() => {}} />);
@@ -73,38 +75,43 @@ describe('KpiStrip', () => {
     expect([lens?.[1], lens?.[3]]).toEqual(['Color the plan by', 'Color by']);
     expect([open?.[1], open?.[3]]).toEqual(['Details', 'Details']);
     const ids = (part = '') => [...part.matchAll(/data-kpi="([^"]+)"/g)].map((m) => m[1]);
-    expect(ids(lens?.[2])).toEqual(['status', 'deals']);
-    expect(ids(open?.[2])).toEqual(['find', 'find-largest', 'expiry-worklist', 'timeline']);
+    // One switch per lens, the ones a prospect is also offered first (so the mode takes the last away and moves none).
+    expect(ids(lens?.[2])).toEqual(['status', 'rent', 'expiry', 'deals']);
+    expect(ids(open?.[2])).toEqual(['find', 'find-largest', 'timeline']);
     // A switch carries a dot that fills when it is on. A detail is a plain figure: nothing to click, no arrow,
     // no button, so it promises no behaviour it would have to explain (team review, Nov 12).
-    expect(lens?.[2].match(/class="sp-kpi__dot"/g)?.length).toBe(2);
-    expect(lens?.[2].match(/<button type="button" class="sp-kpi sp-kpi--lens/g)?.length).toBe(2);
-    expect(open?.[2].match(/<div class="sp-kpi sp-kpi--detail"/g)?.length).toBe(4);
+    expect(lens?.[2].match(/class="sp-kpi__dot"/g)?.length).toBe(4);
+    expect(lens?.[2].match(/<button type="button" class="sp-kpi sp-kpi--lens/g)?.length).toBe(4);
+    expect(open?.[2].match(/<div class="sp-kpi sp-kpi--detail"/g)?.length).toBe(3);
     expect(open?.[2]).not.toContain('<button');
     expect(open?.[2]).not.toContain('sp-kpi--open');
     expect(open?.[2]).not.toContain('sp-kpi__dot');
-    expect(html.match(/class="sp-kpi__label sp-label"/g)?.length).toBe(6);
-    for (const label of ['Leased', 'Available', 'Largest block', 'Expiring 12 mo', 'Avg term', 'Pipeline']) expect(html).toContain(`>${label}</span>`);
+    expect(html.match(/class="sp-kpi__label sp-label"/g)?.length).toBe(7);
+    // A switch is named for its lens, one name per thing (the toolbar's picker is gone: team review, Nov 12).
+    for (const label of ['Leasing', 'Rent', 'Expiration', 'Pipeline', 'Available', 'Largest block', 'Avg term']) expect(html).toContain(`>${label}</span>`);
   });
 
   it('gives each figure one short note and keeps the whole note in the tooltip and the accessible name', () => {
     const { html, kpis } = render(TODAY);
-    const notes = Object.fromEntries(['status', 'find', 'find-largest', 'expiry-worklist', 'timeline', 'deals'].map((id) => [id, noteOf(kpiOf(html, id))]));
+    const notes = Object.fromEntries(['status', 'rent', 'expiry', 'deals', 'find', 'find-largest', 'timeline'].map((id) => [id, noteOf(kpiOf(html, id))]));
     expect(notes).toEqual({
       status: '80.2% occupied',
+      rent: 'FSG · in place',
+      expiry: '16.7% of leased · 4 leases',
+      deals: '57,800 SF in play',
       find: '26,200 direct · 7,000 sublease',
       'find-largest': 'Floor 12 · direct',
-      'expiry-worklist': '16.7% of leased · 4 leases',
       timeline: 'SF-weighted',
-      deals: '57,800 SF in play',
     });
     // What the short note leaves out is one hover (or one screen-reader stop) away, never lost.
     const whole: Record<string, string> = {
       status: '80.2% occupied · 8,000 SF signed, not yet in',
+      // Every lease type, largest share first; the card shows the first.
+      rent: kpis.rentByType.map((r) => `${r.type} ${usd(r.avg)}/SF/yr on ${num(r.sf)} SF`).join(' · '),
+      expiry: '16.7% of leased · 4 leases',
       // The month and its year are kept together by a no-break space.
       find: "26,200 direct · 7,000 sublease · +21,400 Apr\u00a0'27",
       'find-largest': 'Floor 12 · direct · contiguous',
-      'expiry-worklist': '16.7% of leased · 4 leases',
       timeline: 'In-place, SF-weighted',
       deals: '6 on vacancies · 3 renewals · 57,800 SF in play, each space once at its largest live deal (the deals request 75,800 SF in all)',
     };
@@ -119,11 +126,12 @@ describe('KpiStrip', () => {
     // The tooltips say what the figure is; a detail promises no click.
     expect(attr(kpiOf(html, 'find'), 'title')).toContain('Space a tenant could take on the as-of date. Point at it to see it on the plan.');
     expect(attr(kpiOf(html, 'find-largest'), 'title')).toContain('Largest run of adjacent direct availabilities. Point at it to see it on the plan.');
-    for (const id of ['find', 'find-largest', 'expiry-worklist', 'timeline']) expect(attr(kpiOf(html, id), 'title'), id).not.toMatch(/click/i);
+    for (const id of ['find', 'find-largest', 'timeline']) expect(attr(kpiOf(html, id), 'title'), id).not.toMatch(/click/i);
+    for (const id of ['status', 'rent', 'expiry', 'deals']) expect(attr(kpiOf(html, id), 'title'), id).toMatch(/Click to color the plan by/);
     expect(attr(kpiOf(html, 'timeline'), 'title')).toContain(`${kpis.walt.toFixed(4)} years`);
     // The name starts with the label and the exact figure with its unit.
     expect(spoken(kpiOf(html, 'find'))).toBe("Available 33,200 SF 26,200 direct · 7,000 sublease · +21,400 Apr '27");
-    expect(spoken(kpiOf(html, 'status'))).toBe('Leased 86.1% 80.2% occupied · 8,000 SF signed, not yet in');
+    expect(spoken(kpiOf(html, 'status'))).toBe('Leasing 86.1% 80.2% occupied · 8,000 SF signed, not yet in');
   });
 
   it('never abbreviates a figure: each is printed whole, with its unit', () => {
@@ -140,12 +148,16 @@ describe('KpiStrip', () => {
     expect(pressed(deals)).toEqual(['deals']);
     expect(kpiOf(deals, 'deals')).toContain('class="sp-kpi sp-kpi--lens is-active"');
     expect(kpiOf(deals, 'status')).not.toContain('is-active');
+    expect(pressed(render(TODAY, false, '?lens=rent').html)).toEqual(['rent']);
+    expect(pressed(render(TODAY, false, '?lens=expiry').html)).toEqual(['expiry']);
+    // A prospect-safe link that names a withheld lens draws Leasing (App falls back to status): Leasing is pressed.
+    expect(pressed(render(TODAY, true, '?safe=1&lens=deals').html)).toEqual(['status']);
     // A panel open over a status plan keeps Leased pressed: the plan is still coloured by status (round 18).
     for (const search of ['?mode=find', '?mode=area', '?mode=brief', '?q=cirrus']) expect(pressed(render(TODAY, false, search).html), search).toEqual(['status']);
     for (const search of ['?mode=find', '?lens=expiry&window=12&mode=worklist']) {
       const html = render(TODAY, false, search).html;
-      expect(pressed(html)).toEqual(search === '?mode=find' ? ['status'] : []);
-      for (const id of ['find', 'find-largest', 'expiry-worklist', 'timeline']) {
+      expect(pressed(html)).toEqual(search === '?mode=find' ? ['status'] : ['expiry']);
+      for (const id of ['find', 'find-largest', 'timeline']) {
         expect(kpiOf(html, id)).not.toContain('aria-pressed');
         expect(kpiOf(html, id)).not.toContain('is-active');
       }
@@ -154,8 +166,10 @@ describe('KpiStrip', () => {
 
   it('carries the time-travel change beside each figure, and in its name', () => {
     const { html } = render('2028-01-01');
+    // Six chips: the Rent card carries none (a dollar change against today is not worth the row's height).
     expect(html.match(/class="sp-kpi__delta/g)?.length).toBe(6);
-    for (const id of ['status', 'find', 'find-largest', 'expiry-worklist', 'timeline', 'deals']) {
+    expect(kpiOf(html, 'rent')).not.toContain('sp-kpi__delta');
+    for (const id of ['status', 'expiry', 'deals', 'find', 'find-largest', 'timeline']) {
       const el = kpiOf(html, id);
       const chip = /<span class="sp-kpi__delta[^"]*" title="Change against today">(.*?)<span class="sp-sr-only">/.exec(el)?.[1] ?? '';
       expect(chip).toMatch(/^[+−±-]?\d/);
@@ -174,14 +188,15 @@ describe('KpiStrip', () => {
     expect(chips.join(' ')).toMatch(/−\d+ deals?/);
   });
 
-  it('prospect-safe: the strip is what a prospect can use (Leased, Available, Largest block); the withheld figures are not shown at all', () => {
+  it('prospect-safe: the strip is what a prospect can use (Leasing, Rent; Available, Largest block); the withheld figures are not shown at all', () => {
     const open = render(TODAY);
     const { html } = render(TODAY, true);
-    expect([...html.matchAll(/data-kpi="([^"]+)"/g)].map((m) => m[1])).toEqual(['status', 'find', 'find-largest']);
+    expect([...html.matchAll(/data-kpi="([^"]+)"/g)].map((m) => m[1])).toEqual(['status', 'rent', 'find', 'find-largest']);
     // No "Withheld" placeholders: a prospect sees a clean strip, not a list of what is hidden from them.
     expect(html).not.toContain('Withheld');
     expect(html).not.toContain('sp-kpi--static');
-    for (const gone of ['Pipeline', 'Expiring 12 mo', 'Avg term', 'SF-weighted', 'of leased']) expect(html, gone).not.toContain(gone);
+    for (const gone of ['Pipeline', 'Expiration', 'Avg term', 'SF-weighted', 'of leased', 'in place']) expect(html, gone).not.toContain(gone);
+    for (const r of open.kpis.rentByType) expect(html, r.type).not.toContain(usd(r.avg));
     // Nor do their figures leak through a tooltip or a name.
     expect(html).not.toContain(waltCard(open.kpis.walt));
     expect(html).not.toContain(open.kpis.walt.toFixed(4));
@@ -190,8 +205,41 @@ describe('KpiStrip', () => {
 
   it('names each figure for the action it stands for, so focus and the checks can find it', () => {
     const { html } = render(TODAY);
-    expect([...html.matchAll(/data-kpi="([^"]+)"/g)].map((m) => m[1])).toEqual(['status', 'deals', 'find', 'find-largest', 'expiry-worklist', 'timeline']);
-    expect([...render(TODAY, true).html.matchAll(/data-kpi="([^"]+)"/g)].length).toBe(3);
+    expect([...html.matchAll(/data-kpi="([^"]+)"/g)].map((m) => m[1])).toEqual(['status', 'rent', 'expiry', 'deals', 'find', 'find-largest', 'timeline']);
+    expect([...render(TODAY, true).html.matchAll(/data-kpi="([^"]+)"/g)].length).toBe(4);
+  });
+});
+
+describe('Rent card', () => {
+  it("shows the largest lease type's in-place average, every other type in its detail, and switches to the Rent lens", () => {
+    const { html, kpis } = render(TODAY);
+    const top = kpis.rentByType[0];
+    const el = kpiOf(html, 'rent');
+    expect(el).toContain(`<span class="sp-kpi__figure">${usd(top.avg)}<span class="sp-kpi__unit"> <!-- -->/SF/yr</span></span>`);
+    expect(noteOf(el)).toBe(`${top.type} · in place`);
+    expect(attr(el, 'title')).toContain('never blended across types. Click to color the plan by rent.');
+    expect(el).toMatch(/^<button type="button" class="sp-kpi sp-kpi--lens" data-kpi="rent"/);
+  });
+
+  it('prospect-safe: stays a switch and shows the asking range of the space on offer, no in-place figure', () => {
+    const { html, kpis } = render(TODAY, true);
+    const top = kpis.askingByType[0];
+    const el = kpiOf(html, 'rent');
+    expect(el).toMatch(/^<button type="button" class="sp-kpi sp-kpi--lens" data-kpi="rent"[^>]*aria-pressed="false"/);
+    expect(el).toContain(`<span class="sp-kpi__figure">${dollars(top.low)}–${dollars(top.high)}<span class="sp-kpi__unit"> <!-- -->/SF/yr</span></span>`);
+    // A rate always carries its lease type (format.ts), the asking one too.
+    expect(noteOf(el)).toBe(`${top.type} · asking`);
+    expect(attr(el, 'title')).toContain(`${top.type} ${dollars(top.low)}–${dollars(top.high)}/SF/yr on ${num(top.sf)} SF`);
+    expect(attr(el, 'title')).toContain('Asking rent on the space on offer. Click to color the plan by rent.');
+  });
+
+  it('with no rent on record, and with nothing on offer, says so instead of a figure (no NaN)', () => {
+    const bare = render(TODAY, false, '', { rentByType: [] });
+    expect(kpiOf(bare.html, 'rent')).toContain('<span class="sp-kpi__figure">No rent on record</span>');
+    expect(kpiOf(bare.html, 'rent')).toMatch(/^<button/);
+    const empty = render(TODAY, true, '', { askingByType: [] });
+    expect(kpiOf(empty.html, 'rent')).toContain('<span class="sp-kpi__figure">No asking rents</span>');
+    expect(bare.html + empty.html).not.toContain('NaN');
   });
 });
 
@@ -199,7 +247,7 @@ describe('KpiStrip on the Map (round 25)', () => {
   it('reads there: the Color-by switches are not buttons, and no detail promises to light the plan', () => {
     const { html } = render(TODAY, false, '?view=map');
     expect(html).not.toContain('<button');
-    expect(html).toMatch(/<div class="sp-kpi sp-kpi--lens sp-kpi--still" data-kpi="status"/);
+    for (const id of ['status', 'rent', 'expiry', 'deals']) expect(html).toMatch(new RegExp(`<div class="sp-kpi sp-kpi--lens sp-kpi--still" data-kpi="${id}"`));
     expect(html).not.toMatch(/Point at it to see it on the plan/);
     // Off the map the switches are buttons again.
     expect(render(TODAY, false, '?view=stack').html).toMatch(/<button type="button" class="sp-kpi sp-kpi--lens/);

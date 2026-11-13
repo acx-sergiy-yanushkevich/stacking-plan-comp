@@ -2,15 +2,14 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import type { QueryIntent } from '../../domain/query';
 import { findFromQuery } from '../stack/FilterBar';
 import { computedStyle, sizeObserver } from '../../lib/host';
-import { LENSES, type LensId } from '../../domain/lenses';
-import { canShowIssues, canShowLeaseTerm, canUseLens } from '../../domain/safe';
+import { canShowIssues, canShowLeaseTerm } from '../../domain/safe';
 import { shownView, type PlanState, type View } from '../../state/planState';
-import { Button, Segmented, SelectField, TextField } from '../ui';
+import { Button, Segmented, TextField } from '../ui';
 import { rememberTrigger } from '../../state/focusStore';
 import { floorKept, openArea } from '../plan/actions';
 import { useIsPhone, useMedia } from '../../lib/useMedia';
 import { measure } from '../../lib/textFit';
-import { SEARCH_HINTS, hintThatFits, prospectFirst } from './toolbarRules';
+import { SEARCH_HINTS, hintThatFits } from './toolbarRules';
 
 export interface ToolbarProps {
   state: PlanState;
@@ -27,9 +26,6 @@ const VIEWS: Array<{ id: View; label: string; icon: 'building' | 'stack' | 'time
   { id: 'timeline', label: 'Timeline', icon: 'timeline' },
   { id: 'map', label: 'Map', icon: 'map' },
 ];
-
-/** The lenses in the toolbar's order: those a prospect is also offered first, so they stay put when the others go. */
-const TOOLBAR_LENSES = prospectFirst(LENSES);
 
 const WORKLIST_LABEL = 'Worklist';
 const ISSUES_LABEL = 'Data issues';
@@ -70,12 +66,8 @@ export function Toolbar({ state, patch, issueCount, queryFind }: ToolbarProps) {
   // as "Issues" (its accessible name stays "Data issues"), so the word and its count fit the button.
   const narrow = useMedia('(max-width: 420px)');
   const view: View = state.view === 'floor' ? 'stack' : shownView(state.view, phone);
-  // A phone has no room for the model, and its tabs are words alone: without their icons the lens picker fits beside them.
+  // A phone has no room for the model, and its tabs are words alone, so they fit beside the search.
   const views = phone ? VIEWS.filter((v) => v.id !== 'building').map(({ id, label }) => ({ id, label })) : VIEWS;
-  // Prospect-safe offers no lens that colours by something withheld: Deals (deal stage) and Expiration
-  // (months to lease end, which could only repeat the Status lens). A link that names one draws Status.
-  const lenses = TOOLBAR_LENSES.filter((l) => canUseLens(l.id, state.safe));
-  const lens: LensId = canUseLens(state.lens, state.safe) ? state.lens : 'status';
   const toggleMode = (mode: 'find' | 'worklist' | 'issues') => {
     if (state.mode === mode) patch({ mode: 'building', req: null, max: null, by: null, inquiry: null, window: null });
     else {
@@ -83,32 +75,15 @@ export function Toolbar({ state, patch, issueCount, queryFind }: ToolbarProps) {
       patch({ mode, select: null, floor: floorKept(state.view, state.floor), window: mode === 'worklist' ? state.window ?? '12' : null });
     }
   };
-  // While the brief has the page, the plan is put away: a change of view, lens or search narrows the brief
+  // While the brief has the page, the plan is put away: a change of view or search narrows the brief
   // back to the Area panel, so the change is seen (round 18: the tabs changed the URL and nothing else).
+  // The lens is chosen in the KPI strip above (its Color-by switches), not here (team review, Nov 12).
   const toPlan = (p: Partial<PlanState>) => patch(state.mode === 'brief' ? { ...p, mode: 'area' } : p);
   const [searchRef, hintFit] = useHintRoom();
   const hint = hintThatFits(state.safe ? SEARCH_HINTS.safe : SEARCH_HINTS.owner, hintFit ? hintFit.room : null, (text) => measure(text, hintFit?.font ?? ''));
   return (
     <section className="sp-card sp-toolbar sp-no-print" aria-label="Views and filters">
       <Segmented aria-label="View" size="lg" options={views} value={view} onChange={(v) => toPlan({ view: v, floor: v === 'stack' ? null : state.floor })} />
-      {/* The Map shows the building's surroundings, not its floors: nothing there is colored by a lens. */}
-      {view !== 'map' && (
-        <>
-          <div className="sp-toolbar__group sp-toolbar__lens">
-            <span className="sp-toolbar__label">Color by</span>
-            <Segmented aria-label="Color lens" options={lenses.map((l) => ({ id: l.id, label: l.label, title: l.hint }))} value={lens} onChange={(next) => toPlan({ lens: next })} />
-          </div>
-          <div className="sp-toolbar__lens-select">
-            <SelectField label="Color by" hideLabel value={lens} onChange={(e) => toPlan({ lens: e.target.value as LensId })}>
-              {lenses.map((l) => (
-                <option key={l.id} value={l.id}>
-                  Color by {l.label}
-                </option>
-              ))}
-            </SelectField>
-          </div>
-        </>
-      )}
       {/* Search and its tool buttons travel together: on one row they sit at the right; when the toolbar
           wraps they take the second row whole, the search filling it from the left edge. */}
       <div className="sp-toolbar__find">
