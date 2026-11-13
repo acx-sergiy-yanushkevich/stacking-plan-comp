@@ -64,8 +64,8 @@ describe('prospect-safe helpers', () => {
     expect(rentVisible({ confidential: true }, true)).toBe(false);
   });
   it('has distinct titles', () => {
-    expect(TITLE).toBe('Stacking plan');
-    expect(SAFE_TITLE).toBe('Stacking plan (prospect-safe)');
+    expect(TITLE).toBe('Stax by Ascendix');
+    expect(SAFE_TITLE).toBe('Stax by Ascendix (prospect-safe)');
   });
 });
 

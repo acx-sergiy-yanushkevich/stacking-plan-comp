@@ -34,10 +34,12 @@ export function usePlanState(today: ISODate): [PlanState, (patch: Partial<PlanSt
   return [state, patch];
 }
 
-/** The tab title must never leak the mode: prospect-safe gets its own title. */
-export function useDocumentTitle(safe: boolean, propertyName?: string): void {
+/**
+ * The tab reads the product name, not the building's (Clara, Nov 13), and must never leak the mode:
+ * prospect-safe gets its own title.
+ */
+export function useDocumentTitle(safe: boolean): void {
   useEffect(() => {
-    const base = safe ? SAFE_TITLE : TITLE;
-    setTitle(propertyName ? `${propertyName} · ${base}` : base);
-  }, [safe, propertyName]);
+    setTitle(safe ? SAFE_TITLE : TITLE);
+  }, [safe]);
 }
