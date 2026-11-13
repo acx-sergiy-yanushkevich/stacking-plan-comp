@@ -1,11 +1,11 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { QueryIntent } from '../../domain/query';
 import { findFromQuery } from '../stack/FilterBar';
 import { computedStyle, sizeObserver } from '../../lib/host';
 import { LENSES, type LensId } from '../../domain/lenses';
 import { canShowIssues, canShowLeaseTerm, canUseLens } from '../../domain/safe';
 import { shownView, type PlanState, type View } from '../../state/planState';
-import { Button, Icon, Segmented, SelectField, TextField } from '../ui';
+import { Button, Segmented, SelectField, TextField } from '../ui';
 import { rememberTrigger } from '../../state/focusStore';
 import { floorKept, openArea } from '../plan/actions';
 import { useIsPhone, useMedia } from '../../lib/useMedia';
@@ -64,21 +64,6 @@ function useHintRoom(): [React.RefObject<HTMLDivElement | null>, { room: number;
   return [ref, fit];
 }
 
-/**
- * The place of a button prospect-safe withholds: a box with the button's own metrics (laid out around the
- * same icon, word and count, which CSS supplies so that no word is in the page), invisible and inert. The
- * search field and the buttons before it stand where they do with the mode off, at every width.
- */
-function Slot({ icon, label, count }: { icon: 'clock' | 'warning'; label: string; count?: number }) {
-  return (
-    <span className="sp-btn sp-btn--neutral sp-toolbar__slot" aria-hidden="true" style={{ '--sp-slot-label': JSON.stringify(label) } as CSSProperties}>
-      <Icon name={icon} size={16} />
-      <span className="sp-toolbar__slot-label" />
-      {count !== undefined && count > 0 && <span className="sp-btn__count sp-toolbar__slot-label" style={{ '--sp-slot-label': JSON.stringify(String(count)) } as CSSProperties} />}
-    </span>
-  );
-}
-
 export function Toolbar({ state, patch, issueCount, queryFind }: ToolbarProps) {
   const phone = useIsPhone();
   // A phone of 420 px or less shares one row between the four tool buttons: there "Data issues" is drawn
@@ -132,7 +117,7 @@ export function Toolbar({ state, patch, issueCount, queryFind }: ToolbarProps) {
           <TextField label={state.safe ? SEARCH_HINTS.safe[0] : SEARCH_HINTS.owner[0]} hideLabel kind="search" placeholder={hint} value={state.q} onChange={(e) => toPlan({ q: e.target.value })} onClear={() => toPlan({ q: '' })} onKeyDown={(e) => e.key === 'Enter' && queryFind && !queryFind.badBy && toPlan({ ...findFromQuery(queryFind), ...(view === 'map' ? { view: 'building' as const } : {}) })} />
         </div>
         {/* Every view has Find space and Area (the area around the building was too hidden as a Map-only
-            button); the one prospect-safe withholds (Worklist) comes last, so its empty place moves nothing. */}
+            button); the ones prospect-safe withholds (Worklist, Data issues) come last, so taking them away moves nothing. */}
         <div className="sp-toolbar__group">
           <Button icon="filter" active={state.mode === 'find'} onClick={() => toggleMode('find')} title="Find contiguous space by size and date">
             Find space
@@ -151,19 +136,17 @@ export function Toolbar({ state, patch, issueCount, queryFind }: ToolbarProps) {
           >
             Area
           </Button>
-          {/* The renewal worklist lists leases by their term: not offered in prospect-safe mode. Its place
-              is kept, empty: a box the size of the button, with nothing in it to read, focus or press, so
-              the search field and the buttons before it stand where they do with the mode off. */}
-          {canShowLeaseTerm(state.safe) ? (
+          {/* The renewal worklist lists leases by their term: not offered in prospect-safe mode. It leaves no
+              empty place behind: Find space and Area close up to the right edge and the search grows into the
+              room (team review, Nov 13: a kept, invisible place read as a gap). */}
+          {canShowLeaseTerm(state.safe) && (
             <Button icon="clock" active={state.mode === 'worklist'} onClick={() => toggleMode('worklist')} title="Renewal sweep: leases ending in a window">
               {WORKLIST_LABEL}
             </Button>
-          ) : (
-            <Slot icon="clock" label={WORKLIST_LABEL} />
           )}
           {/* Data issues, in every view and at every width (round 19: with the header button gone, a tablet or
-              phone had no way to it). Withheld from a prospect like the worklist, its place kept the same way. */}
-          {canShowIssues(state.safe) ? (
+              phone had no way to it). Withheld from a prospect like the worklist. */}
+          {canShowIssues(state.safe) && (
             <Button
               icon="warning"
               active={state.mode === 'issues'}
@@ -175,8 +158,6 @@ export function Toolbar({ state, patch, issueCount, queryFind }: ToolbarProps) {
             >
               {narrow ? 'Issues' : ISSUES_LABEL}
             </Button>
-          ) : (
-            <Slot icon="warning" label={narrow ? 'Issues' : ISSUES_LABEL} count={issueCount} />
           )}
         </div>
       </div>

@@ -197,12 +197,6 @@
    every case, so the group is one width whatever the lens and the mode. (At 304 px the toolbar wrapped
    with the mode off and not with it on, at a window 1176 px wide.) */
 @media (min-width: 761px) { .sp-toolbar__lens { min-width: 306px; } }
-/* Prospect-safe withholds the Worklist button and keeps its place: an empty box with the button's own
-   metrics (it is laid out as one, around the same icon and the same word, which CSS supplies so that the
-   word is not in the page), invisible and inert. The search field and Find space stand where they do
-   with the mode off, at every width. */
-.sp-toolbar__slot { visibility: hidden; pointer-events: none; cursor: default; }
-.sp-toolbar__slot-label::after { content: var(--sp-slot-label); }
 .sp-toolbar__lens-select { display: none; }
 @media (max-width: 760px) {
   .sp-toolbar { gap: 6px; padding: 6px 8px; }
