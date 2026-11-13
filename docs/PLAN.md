@@ -196,6 +196,7 @@ The requirements say what the product must do, whatever it runs on: they hold fo
 | NFR-8 | **Words.** American English in everything a user, judge or voter reads. One name for each thing on screen, in the PDF and in the CSV ("Signed, not yet in", "No lease or listing", "Lease drafted" for the CRM's Lease Out stage). | Review in each judging round |
 | NFR-9 | **Data.** Only mock data written for the prototype and public data (OpenStreetMap, US Census), with the assumptions stated in the README. Nothing is shown that AscendixRE does not store, such as lease options or notice dates. No personal names in the app, the README or the documents. | Review |
 | NFR-10 | **Browser.** Desktop Chrome is the reference browser; every browser check runs in it. Video recording needs Chrome or Edge. | `npm run verify` |
+| NFR-11 | **Motion.** Changes of lens, date, palette and filter crossfade; views arrive with a short entrance; the chosen option's mark slides. Nothing longer than 450 ms (the two loops aside), no figure ever animates, entrances run only on the live page, the PNG export and the PDF are drawn at rest, a font reload resumes an entrance instead of replaying it, and reduced motion turns all of it off (DESIGN.md §3.5). | `styles/motion.test.ts`, `lib/enterClock.test.ts`, `lib/exportPng.test.ts`, `components/ui/slideMark.test.ts`, `components/stack/entrance.test.tsx`, `components/map/mapStyle.test.ts`, `npm run exportcheck` |
 
 ### 3.4 Not yet checked automatically
 
