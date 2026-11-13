@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EXPORT_PLAN_WIDTH, imageSize, localUrls, referencedIds } from './exportPng';
+import { EXPORT_PLAN_WIDTH, finishMotion, imageSize, localUrls, referencedIds } from './exportPng';
 import { PATTERN_IDS } from '../components/plan/Patterns';
 
 /**
@@ -58,5 +58,30 @@ describe('PNG export: the size of the image', () => {
 
   it('the plan drawn for an export when none is on screen has a fixed width, whatever the screen', () => {
     expect(EXPORT_PLAN_WIDTH).toBe(1200);
+  });
+});
+
+describe('PNG export: motion in progress', () => {
+  it('finishes running animations before the plan is copied, and skips a loop it cannot finish', () => {
+    let finished = 0;
+    let asked: unknown = null;
+    const root = {
+      getAnimations: (o?: { subtree?: boolean }) => {
+        asked = o;
+        return [
+          { finish: () => void finished++ },
+          {
+            finish: () => {
+              throw new Error('InvalidStateError: an infinite animation cannot finish');
+            },
+          },
+        ];
+      },
+    };
+    expect(() => finishMotion(root)).not.toThrow();
+    expect(finished).toBe(1);
+    expect(asked).toEqual({ subtree: true });
+    // Where the browser has no animations to list, nothing happens.
+    expect(() => finishMotion({})).not.toThrow();
   });
 });

@@ -119,8 +119,24 @@ function inlineDefinitions(clone: SVGSVGElement, doc: Document): string[] {
   return copied;
 }
 
+/**
+ * Bring every animation running in `root` to its end. The copy is made from computed styles, so a suite
+ * still crossfading to its new colour (an export right after a lens change), or one still fading in,
+ * would be copied part-way. A loop cannot be finished and is left as it is.
+ */
+export function finishMotion(root: { getAnimations?: (options?: { subtree?: boolean }) => Array<{ finish(): void }> }): void {
+  for (const a of root.getAnimations?.({ subtree: true }) ?? []) {
+    try {
+      a.finish();
+    } catch {
+      // An infinite animation: nothing in the plan loops, so nothing of the plan is lost.
+    }
+  }
+}
+
 /** The markup of `svg` as a file of its own (see the header), with the size the image is drawn at. */
 export function standaloneSvg(svg: SVGSVGElement): { xml: string; w: number; h: number; definitions: string[] } {
+  finishMotion(svg);
   const size = imageSize(svg.getBoundingClientRect(), { width: svg.getAttribute('width'), height: svg.getAttribute('height'), viewBox: svg.getAttribute('viewBox') });
   if (!size) throw new Error('The plan has no size to export: it is not drawn on this screen.');
   const clone = svg.cloneNode(true) as SVGSVGElement;

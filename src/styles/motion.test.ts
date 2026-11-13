@@ -105,7 +105,8 @@ describe('motion', () => {
   it('runs entrances only on the live page', () => {
     const LIVE = /\.sp-stage|\.sp-kpis|\.sp-inspector|\.sp-sheet/;
     const loose = all
-      .filter((r) => declarations(r.body, /^animation(-name)?$/).some((d) => /\bsp-enter-/.test(d.value)))
+      // A keyframes name, not a token such as `--sp-enter-curve`.
+      .filter((r) => declarations(r.body, /^animation(-name)?$/).some((d) => /(?<![\w-])sp-enter-/.test(d.value)))
       .flatMap((r) => r.selector.split(/,(?![^(]*\))/).map((s) => s.trim()).filter((s) => !LIVE.test(s)).map((s) => `${r.file} ${s}`));
     expect(loose).toEqual([]);
   });

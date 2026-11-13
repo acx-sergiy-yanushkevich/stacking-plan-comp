@@ -1,12 +1,20 @@
 /* Shared visual language for anything that draws a segment: a block in the stack,
    a bar in the timeline, a slice in the floor plate. Tone colours come from tokens. */
-.sp-seg { cursor: pointer; }
+/* Motion (DESIGN.md §3.5): a new lens, date or palette crossfades each suite's fill and edge instead of
+   repainting it at once, and a filter or a lit KPI dims and undims the others as one opacity. Patterns are
+   images and cannot blend, so a pattern that appears fades in (on the stage only: an export or the print
+   copy is drawn at rest). The figures written on a suite change at once. */
+.sp-seg { cursor: pointer; transition: opacity var(--sp-ease-move); }
 .sp-seg__ring { fill: none; stroke: none; }
 .sp-seg__gloss { display: none; }
-.sp-seg__rect { stroke-width: 1; transition: filter var(--sp-ease), opacity var(--sp-ease); }
+.sp-seg__rect { stroke-width: 1; transition: fill var(--sp-ease-move), stroke var(--sp-ease-move), filter var(--sp-ease), opacity var(--sp-ease); }
+.sp-seg__backing, .sp-seg__accent { transition: fill var(--sp-ease-move); }
+.sp-stage .sp-seg__pattern, .sp-stage .sp-seg__overlay { animation: sp-enter-fade var(--sp-ease-move) backwards; }
 .sp-seg:hover .sp-seg__rect { filter: brightness(0.96); }
 .sp-seg.is-selected .sp-seg__rect { stroke: var(--sp-color-brand); stroke-width: 2; }
-.sp-seg.is-selected .sp-seg__ring { stroke: var(--sp-color-brand); stroke-opacity: 0.25; stroke-width: 6; fill: none; }
+/* The selection ring draws in from the suite's edge. */
+.sp-seg.is-selected .sp-seg__ring { stroke: var(--sp-color-brand); stroke-opacity: 0.25; stroke-width: 6; fill: none; animation: sp-ring-in 200ms var(--sp-enter-curve); }
+@keyframes sp-ring-in { from { stroke-width: 0; stroke-opacity: 0; } }
 .sp-seg.is-related .sp-seg__rect { stroke: var(--sp-color-brand); stroke-width: 2; stroke-dasharray: 5 3; }
 .sp-seg.is-dim { opacity: 0.35; }
 /* Finder near misses: a washed fill with a dashed edge and readable dark text. */
@@ -48,6 +56,8 @@
    on a second row at 1440 px (round 23). The Map's legend sets its own gap (map.css). */
 @media (min-width: 1280px) { .sp-legend { column-gap: 8px; } }
 .sp-legend__item { position: relative; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; border-radius: 3px; }
+/* A new lens brings its own entries (keyed by tone), and they fade in with the plan's crossfade. */
+.sp-stage .sp-legend__item { animation: sp-enter-fade 200ms ease backwards; }
 .sp-legend__item[tabindex]:focus-visible { outline: 2px solid var(--sp-color-focus, var(--sp-color-brand)); outline-offset: 2px; }
 /* An entry's figures, on hover or focus: under it, from its left edge, so a first entry's tip stays in the card. */
 .sp-legend .sp-legend__tip { left: 0; transform: none; white-space: normal; width: max-content; max-width: min(320px, calc(100vw - 32px)); }

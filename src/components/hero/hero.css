@@ -3,7 +3,9 @@
 .sp-hero svg { display: block; width: 100%; height: auto; overflow: visible; }
 .sp-hero__ground { fill: #0b1020; fill-opacity: 0.16; filter: blur(7px); transform: translate(5px, 9px); }
 .sp-hero__floor { cursor: pointer; transition: transform var(--sp-ease-slow), opacity var(--sp-ease-slow), filter var(--sp-ease); }
-.sp-hero__face { stroke: var(--sp-color-card); stroke-width: 0.6; stroke-linejoin: round; stroke-opacity: 0.85; }
+/* The model crossfades with the plan when the lens or the date changes (DESIGN.md §3.5). */
+.sp-hero__face { stroke: var(--sp-color-card); stroke-width: 0.6; stroke-linejoin: round; stroke-opacity: 0.85; transition: fill var(--sp-ease-move); }
+.sp-hero__slice { transition: opacity var(--sp-ease-move); }
 .sp-hero__shade { fill: #0b1020; pointer-events: none; }
 /* A palette by day (Ascendix, Vice City): the slabs are pale, like the legend's swatches. Each face is
    outlined in its tone's edge colour (the swatch's own border) instead of the card's white, so the building
