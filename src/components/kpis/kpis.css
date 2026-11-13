@@ -25,11 +25,13 @@
   .sp-kpis--safe .sp-kpis__group--lens { grid-template-columns: minmax(0, 1fr); }
   .sp-kpis--safe .sp-kpis__group--open { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-/* The card's name, set on its top edge like a fieldset legend, in the page's color so it cuts the border. */
+/* The card's name, set on its top edge like a fieldset legend, in the page's color so it cuts the border.
+   The size and colour of the labels inside the card (`.sp-label`): at 9.5 px in the faint colour the two
+   names read as hairline marks, not headings (team review, Nov 13). */
 .sp-kpis__caption {
-  position: absolute; top: -6px; left: 10px; padding: 0 5px; pointer-events: none;
-  font-size: 9.5px; font-weight: 700; line-height: 11px; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--sp-color-text-faint); background: var(--sp-color-page); border-radius: 3px;
+  position: absolute; top: -7px; left: 10px; padding: 0 6px; pointer-events: none;
+  font-size: var(--sp-text-11); font-weight: 700; line-height: 13px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--sp-color-text-weak); background: var(--sp-color-page); border-radius: 3px;
 }
 
 /* A switch: a small ring before its label that fills when the lens is on (with the underline below). */
