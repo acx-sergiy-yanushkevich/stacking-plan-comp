@@ -118,7 +118,8 @@ const measure = (page) =>
       height: frame.height,
       source: onScreen ? 'the plan on screen' : 'the plan drawn off-screen',
       sublease: clear(svg.querySelector('[data-key="L14-U2"]')),
-      committed: clear(named(/Signed, not in/)),
+      // The state's plain name since 0314ab4 ("Committed" before): the check matches on labels and drifted with it.
+      committed: clear(named(/Signed, not yet in/)),
       // The widest ordinary lease: Floor 10, one tenant across the floor.
       leased: clear(named(/Ste 1000\b/)),
     };
@@ -205,7 +206,7 @@ for (const [label, viewport, qs, safe] of cases) {
       check(tenants.size >= 10 && tenants.has('Cirrus Energy'), `${label}: CSV names the tenants (${tenants.size})`);
       check(/\b\d{4}-\d{2}-\d{2}\b/.test(text), `${label}: CSV holds the lease dates`);
     }
-    check(rows.slice(1).some((r) => /,Sublease,/.test(r)) && rows.slice(1).some((r) => /,Committed,/.test(r)), `${label}: CSV has the sublease and the signed lease`);
+    check(rows.slice(1).some((r) => /,Sublease,/.test(r)) && rows.slice(1).some((r) => /,"Signed, not yet in",/.test(r)), `${label}: CSV has the sublease and the signed lease`);
   }
   check(errors.length === 0, `${label}: no console errors${errors.length ? `: ${errors.join(' | ')}` : ''}`);
   await context.close();
