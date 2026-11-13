@@ -161,3 +161,8 @@
 
 /* Prospect-safe: the rollover periods are figures, not buttons. */
 .sp-tl-roll__col--static { cursor: default; }
+
+/* Entrance (DESIGN.md §3.5): the leases unroll along time from the left, floor names first; the axis fades
+   in. The wipe ends unclipped and leaves nothing behind (`backwards`). The as-of cursor never moves. */
+.sp-stage .sp-tl-rows { animation: sp-enter-wipe 420ms var(--sp-enter-curve) backwards; animation-delay: var(--sp-enter-shift, 0ms); }
+.sp-stage .sp-tl-axis { animation: sp-enter-fade 240ms ease backwards; animation-delay: var(--sp-enter-shift, 0ms); }

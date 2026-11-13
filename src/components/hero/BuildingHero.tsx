@@ -310,6 +310,8 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
                 className={cls}
                 aria-hidden="true"
                 transform={above ? `translate(0 ${-LIFT})` : undefined}
+                // On the stage the floors drop into place from the ground floor up as the view arrives (building.css).
+                style={stage ? ({ '--i': f.level } as CSSProperties) : undefined}
                 onPointerEnter={() => setHoverFloor(f.id)}
                 onPointerLeave={() => setHoverFloor(null)}
                 onClick={() => {

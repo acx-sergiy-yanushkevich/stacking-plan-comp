@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import type { FloorView, Segment } from '../../domain/derive';
@@ -48,13 +49,13 @@ export function PhoneStack({ model, state, patch, title, legendNote, textFor, hi
         </details>
       </div>
       {model.filterLabel && <FilterBar label={model.filterLabel} alternatives={!!model.partial && model.partial.size > 0} find={model.queryFind} patch={patch} />}
-      <ol className="sp-pstack__floors" aria-label={`${floors.length} floors, top floor first`}>
-        {floors.map((f) => {
+      <ol className="sp-pstack__floors" aria-label={`${floors.length} floors, top floor first`} style={{ '--n': floors.length } as CSSProperties}>
+        {floors.map((f, fi) => {
           const leasedPct = f.leasable ? f.leased / f.leasable : 0;
           const floorNum = f.floor.name.replace(/^Floor\s+/i, '');
           const texts = f.segments.map((seg) => ({ seg, text: textFor(seg, f) }));
           return (
-            <li key={f.floor.id} className={`sp-pfloor ${state.floor === f.floor.id ? 'is-open' : ''}`}>
+            <li key={f.floor.id} className={`sp-pfloor ${state.floor === f.floor.id ? 'is-open' : ''}`} style={{ '--i': fi } as CSSProperties}>
               <button type="button" className="sp-pfloor__head" data-floor={f.floor.id} onClick={() => openFloor(patch, f.floor.id)}>
                 <span className="sp-pfloor__num">
                   <span className="sp-sr-only">Floor </span>
