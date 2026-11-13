@@ -104,14 +104,14 @@
     /* Tones by day. The white glass pane of glass.css disappears on this pale card (1.07:1), so leased is a
        cool slate tint with a clear edge, and every pale fill gets an opaque edge of at least 3:1 against the
        card (measured #fff5fa; #e6f5f7 and #e8e4ec at its darkest). Fills and text otherwise stay as in tokens.css. */
-    --tone-leased-fill: #dfe3f0; --tone-leased-text: #111827; --tone-leased-edge: #677097;
-    --tone-neutral-fill: #dfe3f0; --tone-neutral-text: #111827; --tone-neutral-edge: #677097;
-    --tone-muted-fill: #efedf4; --tone-muted-text: #4b5470; --tone-muted-edge: #7f7b98;
+    --tone-leased-fill: #dbe0ee; --tone-leased-text: #111827; --tone-leased-edge: #677097;
+    --tone-neutral-fill: #dbe0ee; --tone-neutral-text: #111827; --tone-neutral-edge: #677097;
+    --tone-muted-fill: #dbd7e7; --tone-muted-text: #3e4660; --tone-muted-edge: #726d8c;
     /* Opaque equivalents for the building model and the 3D map. The model draws them as they are, beside
        the legend, the stack and the plate, so each is its fill a step stronger: the same hue, within 10 L*
        of it, and recognisably the legend's swatch. The map deepens them toward the tone's edge itself
        (MapView), which keeps a leased floor well apart from a light-grey basemap building (#cfd4da). */
-    --tone-leased-solid: #c6cee6; --tone-neutral-solid: #c6cee6; --tone-muted-solid: #d6d1e8;
+    --tone-leased-solid: #bdc6e0; --tone-neutral-solid: #bdc6e0; --tone-muted-solid: #c3bcdb;
     --tone-empty-edge: #787f92; --tone-deal-none-edge: #787f92;
     --tone-confidential-edge: #757a86;
     /* Daytime expiration lens: lightness ordered (soonest is darkest) and stepping in hue as the night ramp

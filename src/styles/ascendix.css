@@ -137,10 +137,10 @@
        at least 3:1 against the card (measured #fdfdfd; #f5f9fb at its most tinted). */
     --tone-leased-fill: #dfe4f0; --tone-leased-text: #292d3b; --tone-leased-edge: #66769f;
     --tone-neutral-fill: #dfe4f0; --tone-neutral-text: #292d3b; --tone-neutral-edge: #66769f;
-    --tone-muted-fill: #eff1f5; --tone-muted-text: #4d5566; --tone-muted-edge: #727d8d;
+    --tone-muted-fill: #e2e7ed; --tone-muted-text: #3f4756; --tone-muted-edge: #6b7686;
     /* The building model draws these as they are, beside the legend: each is its fill a step stronger.
        The 3D map deepens them toward the tone's edge (MapView). */
-    --tone-leased-solid: #cdd5e8; --tone-neutral-solid: #cdd5e8; --tone-muted-solid: #d9dee7;
+    --tone-leased-solid: #cdd5e8; --tone-neutral-solid: #cdd5e8; --tone-muted-solid: #c9d1db;
     --tone-expiring-fill: #f7941d; --tone-expiring-text: #2a1500; --tone-expiring-edge: #b35c00;
     --tone-risk-fill: #fbd5dd; --tone-risk-text: #292d3b; --tone-risk-edge: #b3113e;
     --tone-available-fill: #128052; --tone-available-text: #ffffff; --tone-available-edge: #0d5c3b;

@@ -350,6 +350,15 @@ export function describePalette(p: LoadedPalette): void {
       expect(day.get('--tone-neutral-solid')).toBe(day.get('--tone-leased-solid'));
     });
 
+    // By day the slab is darker than the pale card it sits on: the same 14 L* lift as at night, the other way
+    // (team review, Nov 13: a muted floor 9 L* from the card still read as the background).
+    it("lifts the model's leased and muted slabs off the card they are drawn on: 14 L* or more below it", () => {
+      for (const tone of ['leased', 'muted']) {
+        const solid = day.get(`--tone-${tone}-solid`)!;
+        expect(lightness(p.dayCards[0]) - lightness(solid), `${tone} solid ${solid} on ${p.dayCards[0]}`).toBeGreaterThanOrEqual(14);
+      }
+    });
+
     it('keeps a leased floor on the map apart from a light-grey basemap building', () => {
       for (const tone of ['leased', 'neutral', 'muted']) {
         const wall = mix(day.get(`--tone-${tone}-solid`)!, day.get(`--tone-${tone}-edge`)!, MAP_DEEPEN);
