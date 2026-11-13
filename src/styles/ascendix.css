@@ -39,9 +39,9 @@
        least 3:1 against the card (measured #21364b; #1d3043 at its darkest, #203b54 in the brightest glow). */
     --tone-leased-fill: #3d4c78; --tone-leased-text: #f3f7fb; --tone-leased-edge: #9aa9d6;
     --tone-neutral-fill: #3d4c78; --tone-neutral-text: #f3f7fb; --tone-neutral-edge: #9aa9d6;
-    --tone-muted-fill: #2b4158; --tone-muted-text: #bfccda; --tone-muted-edge: #8fa2b6;
+    --tone-muted-fill: #3a5572; --tone-muted-text: #d3dde7; --tone-muted-edge: #9fb2c6;
     /* Opaque equivalents for the building model and the 3D map. */
-    --tone-leased-solid: #4a5b8c; --tone-neutral-solid: #4a5b8c; --tone-muted-solid: #2f475f;
+    --tone-leased-solid: #4a5b8c; --tone-neutral-solid: #4a5b8c; --tone-muted-solid: #405c7a;
     --tone-expiring-fill: #70450a; --tone-expiring-text: #ffeccb; --tone-expiring-edge: #ff9c00;
     --tone-risk-fill: #5c1a2b; --tone-risk-text: #ffdde4; --tone-risk-edge: #ff6b81;
     --tone-available-fill: #1fa36b; --tone-available-text: #04261a; --tone-available-edge: #8ce6bd;

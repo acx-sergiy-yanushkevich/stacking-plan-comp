@@ -26,8 +26,8 @@
        at least 3:1 against the card (measured #1f1041, up to #392c57 in the brightest glow). */
     --tone-leased-fill: #443a7a; --tone-leased-text: #f6f2ff; --tone-leased-edge: #857bbd;
     --tone-neutral-fill: #443a7a; --tone-neutral-text: #f6f2ff; --tone-neutral-edge: #857bbd;
-    --tone-muted-fill: #2b2050; --tone-muted-text: #b4abcf; --tone-muted-edge: #8177ad;
-    --tone-leased-solid: #554a90; --tone-neutral-solid: #554a90; --tone-muted-solid: #30265a;
+    --tone-muted-fill: #3c306e; --tone-muted-text: #cdc5e3; --tone-muted-edge: #9289bd;
+    --tone-leased-solid: #554a90; --tone-neutral-solid: #554a90; --tone-muted-solid: #43377a;
     --tone-expiring-fill: #6e3a12; --tone-expiring-text: #ffeacc; --tone-expiring-edge: #ffb347;
     --tone-risk-fill: #531c24; --tone-risk-text: #ffdad6; --tone-risk-edge: #ff6259;
     --tone-available-fill: #1bcbb3; --tone-available-text: #04231e; --tone-available-edge: #86f3e2;

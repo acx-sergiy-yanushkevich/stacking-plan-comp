@@ -301,6 +301,16 @@ export function describePalette(p: LoadedPalette): void {
       expect(lightness(fill('rent-0')) - lightness(p.nightCards[0]), `rent-0 ${fill('rent-0')} on ${p.nightCards[0]}`).toBeGreaterThanOrEqual(8);
     });
 
+    // The building model paints a leased floor with no deal (Pipeline), no rent on record (Rent) or occupied
+    // (a prospect's plan) in the muted solid, by colour alone, on the card. In the Ascendix night palette it
+    // was 7 L* from the card and the floors read as the background (team review, Nov 13).
+    it('lifts the model\'s leased and muted slabs off the card they are drawn on: 14 L* or more above it', () => {
+      for (const tone of ['leased', 'muted']) {
+        const solid = night.get(`--tone-${tone}-solid`) ?? night.get(`--tone-${tone}-fill`)!;
+        expect(lightness(solid) - lightness(p.nightCards[0]), `${tone} solid ${solid} on ${p.nightCards[0]}`).toBeGreaterThanOrEqual(14);
+      }
+    });
+
     if ((p.nightExpiry ?? 'brightest') === 'brightest')
       it('orders the expiration ramp from soonest (brightest) to latest', () => {
         const steps = [0, 1, 2, 3, 4, 5].map((i) => lightness(fill(`exp-${i}`)));
