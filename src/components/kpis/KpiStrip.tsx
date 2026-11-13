@@ -1,4 +1,4 @@
-import type { PointerEvent } from 'react';
+import { useRef, type PointerEvent } from 'react';
 import type { PlanModel } from '../../model/usePlanModel';
 import type { PlanState } from '../../state/planState';
 import { fmtMonthYearShort } from '../../domain/dates';
@@ -9,6 +9,7 @@ import { waltCard, waltTitle } from './walt';
 import { canShowInPlaceRent, canShowRollover, canShowWalt, canUseLens } from '../../domain/safe';
 import { setHoverKeys } from '../../state/hoverStore';
 import { prospectFirst } from '../shell/toolbarRules';
+import { useSlideMark } from '../ui/slideMark';
 
 /** What a KPI click does: a Color-by switch sets its lens; the Details figures are read-only (team review, Nov 12). */
 export type KpiAction = LensId;
@@ -312,7 +313,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
   // The caption sits on the card's top edge, outside it, so the card can clip its corners.
   const group = (kind: 'lens' | 'open', name: string, caption: string, items: Kpi[]) => (
     <div className={`sp-kpis__wrap sp-kpis__wrap--${kind}`}>
-      <div role="group" className={`sp-card sp-kpis__group sp-kpis__group--${kind}`} aria-label={name}>
+      <div ref={kind === 'lens' ? lensGroup : undefined} role="group" className={`sp-card sp-kpis__group sp-kpis__group--${kind}`} aria-label={name}>
         {items.map((c) => kpi(c, kind))}
         {/* Prospect-safe on a phone: the figures it leaves out would have taken a second row. One quiet line
             says what is not shown, in its place, so the bar is the same height with the mode on and off. */}
@@ -321,6 +322,9 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
       <span className="sp-kpis__caption" aria-hidden="true">{caption}</span>
     </div>
   );
+  // The underline of the lens in use (its ::after) slides over from the lens used before.
+  const lensGroup = useRef<HTMLDivElement | null>(null);
+  useSlideMark(lensGroup, '.sp-kpi.is-active', onMap ? null : (lenses.find((c) => c.active)?.id ?? null), '::after');
   return (
     <section className={safe ? 'sp-kpis sp-no-print sp-kpis--safe' : 'sp-kpis sp-no-print'} aria-label="Key figures">
       {group('lens', 'Color the plan by', 'Color by', lenses)}

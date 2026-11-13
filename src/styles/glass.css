@@ -160,7 +160,7 @@
   :root[data-skin='glass'] .sp-btn--brand, :root[data-skin='glass'] .sp-btn--brand:hover { background: var(--sp-brand-grad); border-color: transparent; box-shadow: var(--sp-brand-glow); }
   :root[data-skin='glass'] .sp-segmented { border-radius: 999px; padding: 3px; background: var(--sp-glass-control); border-color: var(--sp-color-border); }
   :root[data-skin='glass'] .sp-segmented__opt { border-radius: 999px; }
-  :root[data-skin='glass'] .sp-segmented__opt[aria-checked='true'] { background: var(--sp-glass-control-on); box-shadow: 0 2px 8px rgba(40, 54, 120, 0.18); }
+  :root[data-skin='glass'] .sp-segmented__opt[aria-checked='true']::before { background: var(--sp-glass-control-on); box-shadow: 0 2px 8px rgba(40, 54, 120, 0.18); }
   :root[data-skin='glass'] .sp-filterbar { background: var(--sp-color-brand-soft); }
 
   /* ── The plan: tenants are clear panes, states are tinted glass ── */
