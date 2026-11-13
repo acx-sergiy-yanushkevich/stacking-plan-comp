@@ -22,6 +22,7 @@ import { floorHeading, floorLabel, floorLabelParts, floorSentence, lensDetail } 
 import { FloorLabels, type FloorLabelRow } from './FloorLabels';
 import { clearFrom, cubicBezier, type Box, type Glide } from './glide';
 import { openFloorOf } from './openFloor';
+import { nearestTurn, turnAngle } from './turn';
 import '../floor/floor.css';
 import './building.css';
 
@@ -31,8 +32,6 @@ export interface BuildingViewProps {
   patch: (p: Partial<PlanState>) => void;
 }
 
-/** How far the building is turned while it stands alone; it turns to face front (0) as a floor opens. */
-const ALONE_ANGLE = -34;
 const DOCK_MS = 760;
 /** The glide's easing, as the animation's curve and as the same curve to reckon with (glide.ts). */
 const DOCK_CURVE = [0.22, 0.8, 0.2, 1] as const;
@@ -94,6 +93,11 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
 
   const { floor, pinned } = openFloorOf(model);
   const docked = !!floor;
+  // The model stands at the chosen quarter turn (turn.ts) while it stands alone, and faces front for an
+  // open floor's plate. The angle it is given is kept unwrapped, so each change turns it the short way.
+  const wanted = docked ? 0 : turnAngle(state.turn);
+  const [angle, setAngle] = useState(wanted);
+  if (nearestTurn(angle, wanted) !== angle) setAngle(nearestTurn(angle, wanted));
   const openId = floor?.floor.id ?? null;
   const hovered = hoverId ? (floors.find((f) => f.floor.id === hoverId) ?? null) : null;
   // One row per floor, top floor first: what its label prints, its accessible name and its tooltip.
@@ -359,14 +363,22 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
               patch={patch}
               size="stage"
               onPick={pick}
-              angle={docked ? 0 : ALONE_ANGLE}
+              angle={angle}
               openId={openId}
               floorTitle={(id) => `${rowOf(id)?.title ?? ''}${id === openId ? '' : docked ? ' · click to open this floor instead' : ' · click to open its plan'}`}
               // One list of floors at a time: the compact picker beside the docked model, the labels beside the model alone.
               beside={docked ? <MiniStack floors={floors} currentId={openId ?? ''} hotId={hoverId} onPick={pick} onPreview={setHoverFloor} describe={(f) => rowOf(f.floor.id)?.name ?? f.floor.name} /> : undefined}
-              after={docked ? undefined : <FloorLabels rows={rows} hotId={hoverId} onPick={pick} onPreview={setHoverFloor} />}
+              after={docked ? undefined : <FloorLabels rows={rows} hotId={hoverId} onPick={pick} onPreview={setHoverFloor} turn={state.turn} />}
             />
           </div>
+          {/* Turning the model a quarter at a time, while it stands alone (turn.ts). The turn is in the address.
+              Drawn at the top right, after the floors in the tab order. */}
+          {!docked && (
+            <div className="sp-bview__turn" role="group" aria-label="Turn the building">
+              <Button variant="ghost" size="sm" iconOnly icon="turn-left" aria-label="Turn the building left" title="Turn the building left" onClick={() => patch({ turn: (state.turn + 3) % 4 })} />
+              <Button variant="ghost" size="sm" iconOnly icon="turn-right" aria-label="Turn the building right" title="Turn the building right" onClick={() => patch({ turn: (state.turn + 1) % 4 })} />
+            </div>
+          )}
         </div>
 
         {floor && (

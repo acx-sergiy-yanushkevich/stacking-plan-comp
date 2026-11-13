@@ -220,3 +220,11 @@
   animation: sp-enter-fade 240ms ease backwards;
   animation-delay: calc(var(--sp-enter-shift, 0ms) + 200ms);
 }
+
+/* Turning the model (turn.ts): two quiet buttons at the end of the caption line, while it stands alone. While
+   it turns, the leaders from the labels are hidden (they point at where it will stand) and come back when it
+   has settled. */
+.sp-bview__grid.is-alone .sp-bview__model { position: relative; }
+.sp-bview__turn { position: absolute; top: 0; right: 0; display: flex; gap: 2px; z-index: 1; }
+.sp-hero.is-turning .sp-fleaders { opacity: 0; transition: none; }
+
