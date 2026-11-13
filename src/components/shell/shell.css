@@ -190,12 +190,6 @@
 .sp-toolbar__search .sp-field { width: 100%; }
 /* Wide enough that the toolbar is always one row: the search stops growing and sits beside its buttons. */
 @media (min-width: 1280px) { .sp-toolbar__search { max-width: 420px; } }
-/* Prospect-safe withholds the Worklist button and keeps its place: an empty box with the button's own
-   metrics (it is laid out as one, around the same icon and the same word, which CSS supplies so that the
-   word is not in the page), invisible and inert. The search field and Find space stand where they do
-   with the mode off, at every width. */
-.sp-toolbar__slot { visibility: hidden; pointer-events: none; cursor: default; }
-.sp-toolbar__slot-label::after { content: var(--sp-slot-label); }
 @media (max-width: 760px) {
   .sp-toolbar { gap: 6px; padding: 6px 8px; }
   .sp-toolbar .sp-segmented--lg .sp-segmented__opt { padding: 0 8px; }

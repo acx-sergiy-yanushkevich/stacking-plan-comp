@@ -19,7 +19,7 @@ Design principles, in order:
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
 │ [▣] Stacking plan · Preston Park Financial Center        [As of Nov 9, 2026 ▾]       │
-│     Class A Office · 4965 Preston Park Blvd, Plano TX    [Prospect-safe ○] [⚠ 6] [Export ▾] │
+│     4965 Preston Park Blvd, Plano TX · Class A Office    [Prospect-safe ○] [⚠ 6] [Export ▾] │
 │     242,800 RSF leasable · 12 floors · ● Verified Nov 6                              │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │ LEASED 87.0% │ AVAILABLE 33,200 │ LARGEST BLOCK 9,300 │ EXPIRING 12 MO 35,300 │ WALT 3.0 yr │ PIPELINE 9 │

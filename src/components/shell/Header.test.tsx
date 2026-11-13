@@ -47,6 +47,17 @@ describe('Header sale listing', () => {
     expect(html.slice(html.indexOf('class="sp-header__title"'), html.indexOf('class="sp-header__facts"'))).not.toContain(usd0(listing.price));
   });
 
+  it('leads the facts with the address, then the class (team review, Nov 13)', () => {
+    const { html } = render('');
+    // renderToString marks text boundaries with "<!-- -->": strip them so the address reads whole.
+    const facts = html.slice(html.indexOf('class="sp-header__facts"')).replace(/<!-- -->/g, '');
+    const address = facts.indexOf(`${property.street}, ${property.city}, ${property.state}`);
+    const klass = facts.indexOf(property.propertyClass);
+    expect(address).toBeGreaterThan(-1);
+    expect(klass).toBeGreaterThan(-1);
+    expect(address).toBeLessThan(klass);
+  });
+
   it('shows only "Listed for sale" in prospect-safe mode: no price, $/RSF, cap rate or broker', () => {
     const { html, sale, kpis } = render('?safe=1');
     expect(words(sale)).toBe('Listed for sale');
