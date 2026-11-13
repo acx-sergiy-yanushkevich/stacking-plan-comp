@@ -79,8 +79,8 @@ import type { Availability, Deal, ISODate, Lease, Property } from './types';
  * `safe=1` has nothing to bring back.
  */
 
-export const TITLE = 'Stacking plan';
-export const SAFE_TITLE = 'Stacking plan (prospect-safe)';
+export const TITLE = 'Stax by Ascendix';
+export const SAFE_TITLE = 'Stax by Ascendix (prospect-safe)';
 
 export const tenantLabel = (lease: Pick<Lease, 'tenant'>, safe: boolean): string => (safe ? 'Tenant' : lease.tenant);
 

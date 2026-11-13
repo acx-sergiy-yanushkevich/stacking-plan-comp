@@ -132,7 +132,7 @@ function Shell() {
   const narrow = useIsNarrow();
   const phone = useIsPhone();
   const reduceMotion = usePrefersReducedMotion();
-  useDocumentTitle(state.safe, state.skin === 'classic' ? undefined : property.name);
+  useDocumentTitle(state.safe);
   const mode = deriveMode(state);
   // The live region's text is dropped in the render in which prospect-safe changes, so a sentence written
   // for the broker ("Opened Cirrus Energy…") never outlives the moment the mode is turned on.
