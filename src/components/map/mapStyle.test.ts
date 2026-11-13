@@ -4,7 +4,7 @@ import { deriveFloors } from '../../domain/derive';
 import { toneFor, toneLabel, type LensId } from '../../domain/lenses';
 import { safeFloors } from '../../domain/safe';
 import { askingSegments, expirySpan, floorLabelParts, lensFact } from '../building/floorFact';
-import { dominantTone, floorAlso, floorColorExpression, guardedFilter, inflatePolygon, mixHex, normalizeHex, resolveToneHex, swatchTones, toneColorExpression } from './mapStyle';
+import { dominantTone, floorAlso, floorColorExpression, guardedFilter, inflatePolygon, mixHex, normalizeHex, resolveToneHex, riseAt, riseExpr, swatchTones, toneColorExpression } from './mapStyle';
 
 describe('dominantTone', () => {
   const floors = deriveFloors(property, TODAY, TODAY);
@@ -224,5 +224,21 @@ describe('guardedFilter: a basemap filter that compares a property some features
     const legacy = ['==', 'class', 'park'];
     expect(guardedFilter(legacy)).toBe(legacy);
     expect(guardedFilter(undefined)).toBeUndefined();
+  });
+});
+
+describe('the building rises as the map tilts into 3D', () => {
+  it('scales the floors by the rise, and draws them as recorded once it is over', () => {
+    expect(riseExpr('height', 1)).toEqual(['get', 'height']);
+    expect(riseExpr('base', 0.5)).toEqual(['*', ['get', 'base'], 0.5]);
+    expect(riseExpr('height', 0)).toEqual(['*', ['get', 'height'], 0]);
+  });
+
+  it('eases out over the rise and stops at its end', () => {
+    expect(riseAt(0)).toBe(0);
+    expect(riseAt(0.5)).toBe(0.875);
+    expect(riseAt(1)).toBe(1);
+    expect(riseAt(2)).toBe(1);
+    expect(riseAt(-1)).toBe(0);
   });
 });
