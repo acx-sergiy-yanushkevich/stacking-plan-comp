@@ -144,7 +144,7 @@
 
   /* ── The few rules a token cannot reach ───────────────── */
   /* The property name carries the sunset, like the challenge title. */
-  :root[data-skin='glass'][data-palette='vice'] .sp-header__title h1 {
+  :root[data-skin='glass'][data-palette='vice'] .sp-header__title h1, :root[data-skin='glass'][data-palette='vice'] .sp-header__title .sp-switcher__name {
     background: var(--sp-title-grad); -webkit-background-clip: text; background-clip: text;
     -webkit-text-fill-color: transparent; color: transparent;
   }
@@ -166,7 +166,7 @@
       --sp-color-border: #35285a; --sp-glass-edge: #463770;
     }
     :root[data-skin='glass'][data-palette='vice'][data-theme='light'] { --sp-aurora: none; }
-    :root[data-skin='glass'][data-palette='vice'] .sp-header__title h1 {
+    :root[data-skin='glass'][data-palette='vice'] .sp-header__title h1, :root[data-skin='glass'][data-palette='vice'] .sp-header__title .sp-switcher__name {
       background: none; -webkit-text-fill-color: currentColor; color: var(--sp-color-text);
     }
   }

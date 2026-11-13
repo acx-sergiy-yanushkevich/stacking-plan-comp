@@ -18,7 +18,7 @@
 .sp-header__icon { width: 40px; height: 40px; border-radius: 8px; background: var(--sp-color-brand); color: #fff; display: grid; place-items: center; flex: none; }
 .sp-header__text { flex: 1; min-width: 0; }
 .sp-header__title { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.sp-header__title h1 { font-size: var(--sp-text-18); font-weight: 700; letter-spacing: -0.01em; }
+.sp-header__title h1, .sp-header__title .sp-switcher__name { font-size: var(--sp-text-18); font-weight: 700; letter-spacing: -0.01em; }
 .sp-header__property { font-size: var(--sp-text-15); color: var(--sp-color-text-weak); font-weight: 500; }
 .sp-header__property a { color: inherit; }
 /* Separators are left borders; the container is shifted 1 px and clipped, so the first item on every wrapped line shows none. */
@@ -34,7 +34,6 @@
 .sp-header__verified { display: inline-flex; align-items: center; gap: 4px; color: var(--sp-color-success); font-weight: 500; }
 /* The sale listing is one more fact: same size and colour as its neighbours, so it never competes with the title. */
 .sp-header__sale { display: inline-flex; align-items: center; gap: 4px; }
-.sp-header__sale .sp-icon, .sp-header__sale svg { color: var(--tone-forsale-edge); flex: none; }
 .sp-header__sale-label { font-weight: 500; }
 .sp-header__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .sp-header__asof .sp-btn { font-variant-numeric: tabular-nums; }
@@ -67,17 +66,14 @@
 /* How the plan looks (palette, theme): a group of its own, apart from the controls of what it shows. */
 .sp-header__look { display: flex; align-items: center; gap: 8px; flex: none; }
 
-/* The product bar: the lockup, a divider, the building switcher, then the controls pushed to the right.
+/* The product bar: the lockup, then the controls pushed to the right (the building is named in the card).
    Its menus (building, export, colors) open over the cards under it, so it stacks above them. */
 .sp-topbar { position: relative; z-index: 31; display: flex; align-items: center; gap: var(--sp-space-3); padding: 8px var(--sp-space-4); flex-wrap: wrap; }
-.sp-topbar__divider { width: 1px; height: 30px; background: var(--sp-color-border-strong); flex: none; }
 .sp-topbar__controls { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; min-width: 0; }
-/* From 1024 px the bar is one row: the switcher gives way first (its name ends in an ellipsis), then
-   the gaps are tighter up to 1180 px, which is what keeps a 1024 px tablet on one row. */
+/* From 1024 px the bar is one row; the gaps are tighter up to 1180 px. */
 @media (min-width: 1024px) {
   .sp-topbar { flex-wrap: nowrap; }
   .sp-topbar .sp-header__actions { flex-wrap: nowrap; }
-  .sp-topbar .sp-pop:has(> .sp-switcher), .sp-topbar .sp-switcher { min-width: 0; flex: 0 1 auto; }
 }
 /* A narrow tablet (761–1023 px): the controls are a row of their own under the lockup, all together. */
 @media (min-width: 761px) and (max-width: 1023px) {
@@ -89,7 +85,6 @@
   .sp-topbar .sp-btn { padding-left: 10px; padding-right: 10px; }
 }
 @media (max-width: 760px) { .sp-topbar__controls { display: contents; } }
-.sp-switcher { max-width: 100%; }
 /* The bar's buttons are quiet: text in the text colour on the control surface, a small caret where a
    button opens something. The brand colour is kept for what is on: a pressed Prospect-safe, an open menu. */
 .sp-topbar .sp-btn--neutral { color: var(--sp-color-text); font-weight: 500; }
@@ -99,7 +94,20 @@
    is one width on and off and the bar does not move. */
 .sp-topbar .sp-safe[aria-checked='true'] { background: var(--sp-color-brand-soft); border-color: var(--sp-color-brand); color: var(--sp-color-brand-strong); }
 .sp-safe .sp-icon { color: currentColor; }
-.sp-switcher { gap: 8px; padding-left: 6px; }
+/* The card's title is the building switcher: the name in title type with a small caret, no button box. A soft
+   fill on hover and when open says it is a control; the menu opens under it. */
+/* The name is never cut while there is room: the facts beside it give way first (they wrap under it). */
+.sp-header:not(.sp-header--classic) .sp-header__title { flex: none; max-width: 100%; }
+.sp-header__title .sp-pop { min-width: 0; max-width: calc(100% + 8px); margin: -3px 0 -3px -8px; }
+.sp-switcher {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 3px 8px;
+  border: 0; border-radius: 8px; background: transparent; color: var(--sp-color-text); font: inherit; cursor: pointer;
+  transition: background var(--sp-ease);
+}
+.sp-switcher:hover, .sp-switcher[aria-expanded='true'] { background: var(--sp-color-card-2); }
+.sp-switcher:focus-visible { outline-offset: 0; }
+.sp-switcher > .sp-icon, .sp-switcher > svg { flex: none; color: var(--sp-color-text-weak); }
+.sp-switcher:hover > svg, .sp-switcher[aria-expanded='true'] > svg { color: var(--sp-color-text); }
 /* A building's mini stack: the bars carry their own colours; the tile follows the theme. */
 .sp-ministack { flex: none; display: block; }
 .sp-ministack__tile { fill: var(--sp-color-card-2); stroke: var(--sp-color-border-strong); stroke-width: 1; }
@@ -117,11 +125,11 @@
 .sp-pop:has(> .sp-switcher) .sp-menu__item[aria-checked='true'] .sp-menu__hint { color: var(--sp-color-text); font-weight: 500; }
 .sp-pop:has(> .sp-switcher) .sp-menu__item[aria-checked='true'] .sp-menu__check { margin-left: 8px; }
 .sp-pop:has(> .sp-switcher) .sp-menu__heading:last-child { text-transform: none; letter-spacing: 0; font-weight: 500; padding-bottom: 6px; }
-.sp-switcher__name { font-weight: 600; color: var(--sp-color-text); max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-switcher__name { min-width: 0; font-weight: 700; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* The building card: the icon, the name and the facts. In the embedded skin it also keeps the controls. */
 .sp-header { align-items: center; gap: var(--sp-space-4); padding: var(--sp-space-4) 20px; }
-.sp-header:not(.sp-header--classic) .sp-header__title h1 { font-size: var(--sp-text-22); }
+.sp-header:not(.sp-header--classic) .sp-header__title h1, .sp-header:not(.sp-header--classic) .sp-header__title .sp-switcher__name { font-size: var(--sp-text-22); }
 /* The facts start flush with the title: the first fact's padding (there for the separators) is pulled back. */
 .sp-header:not(.sp-header--classic) .sp-header__facts { margin-left: -10px; }
 .sp-header--classic { align-items: flex-start; gap: var(--sp-space-3); padding: var(--sp-space-3) var(--sp-space-4); }
@@ -145,7 +153,7 @@
 }
 @media (max-width: 760px) {
   .sp-header__facts { display: none; }
-  .sp-header__title h1, .sp-header:not(.sp-header--classic) .sp-header__title h1 { font-size: var(--sp-text-15); }
+  .sp-header__title h1, .sp-header__title .sp-switcher__name, .sp-header:not(.sp-header--classic) .sp-header__title h1, .sp-header:not(.sp-header--classic) .sp-header__title .sp-switcher__name { font-size: var(--sp-text-15); }
   .sp-header__property { font-size: var(--sp-text-13); }
   .sp-header__actions { gap: 6px; }
   .sp-header__actions .sp-btn { height: 28px; font-size: var(--sp-text-12); }
@@ -153,8 +161,6 @@
   .sp-header__icon { width: 32px; height: 32px; }
   .sp-header__actions { width: 100%; justify-content: flex-start; }
   .sp-topbar { padding: 8px var(--sp-space-3); gap: 8px; }
-  .sp-topbar__divider { display: none; }
-  .sp-switcher__name { display: none; }
   .sp-lockup__by { display: none; }
 }
 
@@ -230,9 +236,9 @@
 @media (max-width: 760px) {
   .sp-app { padding: 4px var(--sp-space-2) var(--sp-space-2); gap: 5px; }
   :root[data-skin] .sp-header { padding: 6px 10px 8px; gap: 6px; }
-  .sp-header__icon { display: none; }
+  .sp-header__icon, .sp-header > .sp-ministack { display: none; }
   .sp-header__text { max-width: none; }
-  :root[data-skin] .sp-header__title h1 { font-size: 16px; }
+  :root[data-skin] .sp-header__title h1, :root[data-skin] .sp-header__title .sp-switcher__name { font-size: 16px; }
   :root[data-skin] .sp-header__property { font-size: var(--sp-text-11); }
   .sp-header__title { gap: 2px 6px; }
   /* The controls flow as the header's own items, on the row under the title (two rows from 421 to 760 px). */
@@ -255,11 +261,10 @@
 }
 @media (max-width: 420px) { .sp-toolbar__find .sp-toolbar__group .sp-btn > .sp-icon { display: none; } .sp-toolbar__find .sp-toolbar__group { gap: 5px; } }
 @media (max-width: 379px) { .sp-safe__word { display: none; } .sp-topbar .sp-safe { padding: 0 9px; } }
-/* A 320 px phone: tighter still, and the switcher is its building's icon alone (its name is still read). */
+/* A 320 px phone: tighter still. */
 @media (max-width: 359px) {
   .sp-topbar { gap: 4px; padding-left: 8px; padding-right: 8px; }
   .sp-topbar .sp-btn { padding: 0 6px; }
-  .sp-switcher > .sp-icon { display: none; }
 }
 @media (max-width: 420px) {
   .sp-header .sp-btn, .sp-topbar .sp-btn { padding: 0 8px; }
@@ -280,18 +285,12 @@
 
 /* ── Brand ──────────────────────────────────────────────── */
 /* The Stax mark and lockup are drawn in the brand's own colours, as literal hex: the same under every
-   palette and both themes. The bars sit on a navy square, so they stay cyan on a light page too; only
-   the square's shade and the byline's colour follow the theme. */
-.sp-mark { display: inline-grid; place-items: center; border-radius: 28%; background: #1e2d3c; flex: none; }
+   palette and both themes. The mark is its bars alone, on no tile and with no border (Clara, Nov 12), at the
+   size of the building card's icon; only the byline's colour follows the theme. */
+.sp-mark { display: inline-grid; place-items: center; flex: none; }
 .sp-mark svg { display: block; }
 .sp-mark__bar { fill: #00aff0; }
 .sp-mark__bar--open { fill: #ff9c00; }
-/* Dark: the square is a deeper navy with a faint ring, so it separates from the page. Keyed the way
-   tokens.css keys the theme: an explicit data-theme wins; without one, the OS preference decides. */
-:root[data-theme='dark'] .sp-mark { background: #15212d; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .sp-mark { background: #15212d; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1); }
-}
 .sp-lockup { display: inline-flex; align-items: center; gap: 10px; }
 .sp-lockup__text { display: inline-flex; align-items: baseline; gap: 9px; }
 .sp-lockup__name { font-weight: 800; font-size: 21px; line-height: 1; letter-spacing: -0.02em; color: #00aff0; }

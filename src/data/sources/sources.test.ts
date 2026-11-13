@@ -175,3 +175,17 @@ describe('createDataSource', () => {
     expect((await ds.getArea(property)).sample).toBe(true);
   });
 });
+
+describe('stop names and order (round 26)', () => {
+  const c = { lat: 33.0235, lng: -96.7936 };
+  const at = (id: number, mi: number, tags: Record<string, string>): OverpassElement => ({ type: 'node', id, lat: c.lat + mi / 69.05, lon: c.lng, tags });
+  it('treats a stop named only by a number as unnamed', () => {
+    const n = toNearby([at(1, 0.05, { highway: 'bus_stop', name: '3' }), at(2, 0.2, { amenity: 'cafe', name: ' 12 ' })], c)!;
+    expect(n.transit[0].name).toBe('Bus stop');
+    expect(n.places![0].name).toBe('Café');
+  });
+  it('sorts stops at the same distance consistently: rail first, then as they came', () => {
+    const n = toNearby([at(1, 0.2, { highway: 'bus_stop', name: 'A' }), at(2, 0.2, { highway: 'bus_stop', name: 'B' }), at(3, 0.2, { railway: 'station', name: 'R' })], c)!;
+    expect(n.transit.map((t) => t.name)).toEqual(['R', 'A', 'B']);
+  });
+});

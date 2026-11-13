@@ -148,6 +148,13 @@ const isRailStop = (tags: Record<string, string>) =>
   ['station', 'halt', 'tram_stop'].includes(tags.railway ?? '') ||
   ((tags.public_transport === 'station' || tags.public_transport === 'platform' || tags.railway === 'platform') && RAIL_MODES.some((m) => tags[m] === 'yes'));
 
+/** A name that names: a stop tagged only "1" or "2" (a stop's number in its pole order) is treated as unnamed (round 26). */
+const named = (name: string | undefined) => (name && !/^\s*\d+\s*$/.test(name) ? name : undefined);
+
+/** Nearest first; at the same distance rail before bus, and stops of one kind as they came (a valid order: round 26). */
+const nearestFirst = (a: { distanceMi: number; type: string }, b: { distanceMi: number; type: string }) =>
+  a.distanceMi - b.distanceMi || (a.type === b.type ? 0 : a.type === 'Rail' ? -1 : 1);
+
 /** What live mode lays over the figures: the stops and places, and the copy's date when they are a copy. */
 type Nearby = Pick<Area, 'transit' | 'amenities' | 'places' | 'placesRecordedAt'>;
 
@@ -169,20 +176,20 @@ export function toNearby(elements: OverpassElement[], center: { lat: number; lng
     const isRail = isRailStop(tags);
     const isBus = !isRail && (tags.highway === 'bus_stop' || tags.public_transport === 'station');
     if ((isRail || isBus) && lat !== undefined && lng !== undefined) {
-      transit.push({ name: tags.name ?? (isRail ? 'Station' : 'Bus stop'), type: isRail ? 'Rail' : 'Bus', distanceMi: miles(lat, lng), lat, lng });
+      transit.push({ name: named(tags.name) ?? (isRail ? 'Station' : 'Bus stop'), type: isRail ? 'Rail' : 'Bus', distanceMi: miles(lat, lng), lat, lng });
       continue;
     }
     const cat = AMENITY_LABEL[tags.amenity ?? ''] ?? (tags.tourism === 'hotel' ? AMENITY_LABEL.hotel : null);
     if (!cat) continue;
     counts.set(cat, (counts.get(cat) ?? 0) + 1);
-    if (lat !== undefined && lng !== undefined) places.push({ name: tags.name ?? oneOf(cat), category: cat, distanceMi: miles(lat, lng), lat, lng });
+    if (lat !== undefined && lng !== undefined) places.push({ name: named(tags.name) ?? oneOf(cat), category: cat, distanceMi: miles(lat, lng), lat, lng });
   }
   if (transit.length === 0 && counts.size === 0) return null;
   const seen = new Set<string>();
   const dedup = transit
-    .sort((a, b) => a.distanceMi - b.distanceMi || (a.type === 'Rail' ? -1 : 1))
+    .sort(nearestFirst)
     .filter((t) => (seen.has(t.name) ? false : (seen.add(t.name), true)));
-  const nearest = [...dedup.filter((t) => t.type === 'Bus').slice(0, BUS_STOPS), ...dedup.filter((t) => t.type === 'Rail').slice(0, RAIL_STOPS)].sort((a, b) => a.distanceMi - b.distanceMi);
+  const nearest = [...dedup.filter((t) => t.type === 'Bus').slice(0, BUS_STOPS), ...dedup.filter((t) => t.type === 'Rail').slice(0, RAIL_STOPS)].sort(nearestFirst);
   return { transit: nearest, amenities: [...counts].map(([category, count]) => ({ category, count })).sort((a, b) => b.count - a.count), places: places.sort((a, b) => a.distanceMi - b.distanceMi) };
 }
 

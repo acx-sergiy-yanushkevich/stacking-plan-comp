@@ -55,6 +55,8 @@
   color: var(--sp-color-text);
   transition: background var(--sp-ease), color var(--sp-ease);
 }
+/* On touch the map's buttons are full-size targets, as every other button is (round 26: 32 px on a phone). */
+@media (pointer: coarse) { .sp-map-ctl { width: 44px; height: 44px; min-width: 44px; min-height: 44px; } }
 .sp-map-ctl + .sp-map-ctl { border-top: 1px solid var(--sp-color-border); }
 .sp-map-ctl:hover { background: var(--sp-color-card-2); }
 .sp-map-ctl[aria-pressed='true'] { background: var(--sp-color-brand-soft); color: var(--sp-color-brand-strong); }
@@ -207,6 +209,8 @@
 }
 .sp-pin:hover::after { opacity: 1; }
 .sp-pin.is-lit::after { transform: translateX(-50%) scale(0.715); transform-origin: bottom center; }
+/* The pin asked for says its name without a hover: the one tapped, or a stop lit alone (round 26). */
+.sp-pin.is-named::after { opacity: 1; }
 /* The rings' names and the building's, on the map. */
 .sp-map-label {
   display: inline-block; margin-bottom: 4px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; pointer-events: none;

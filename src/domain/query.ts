@@ -12,7 +12,7 @@ import type { ISODate } from './types';
  * to space a tenant could take on the plan's date, as the Available KPI counts it (not space available later).
  */
 export type QueryIntent =
-  | { kind: 'size'; size: number; max: number | null; fit: FitType; by: ISODate | null }
+  | { kind: 'size'; size: number; max: number | null; fit: FitType; by: ISODate | null; badBy?: string }
   | { kind: 'state'; label: string; kinds: ReadonlySet<Segment['kind']>; tenantRisk: boolean; floor: string | null; now: boolean };
 
 const NUM = String.raw`(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)`;
@@ -61,12 +61,18 @@ const endOfMonth = (y: number, m: number): ISODate => `${y}-${pad(m)}-${pad(last
  * or year named (needed by June = in by the end of June), or the date itself. A month or quarter without a
  * year is the next one on or after `asOf`. Null when the words are not a date.
  */
+/** A date the calendar has: "2027-02-30" is shaped like one and is not (round 26). */
+const realDay = (iso: string) => {
+  const t = new Date(`${iso}T00:00:00Z`);
+  return !Number.isNaN(t.getTime()) && t.toISOString().slice(0, 10) === iso;
+};
+
 export function readBy(words: string, asOf: ISODate): ISODate | null {
   const w = words.trim().toLowerCase().replace(/,/g, ' ').replace(/\s+/g, ' ').replace(/\.$/, '');
   const asY = Number(asOf.slice(0, 4));
   const asM = Number(asOf.slice(5, 7));
   const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(w);
-  if (iso) return w as ISODate;
+  if (iso) return realDay(w) ? (w as ISODate) : null;
   const year = /^(\d{4})$/.exec(w);
   if (year) return `${year[1]}-12-31`;
   const q = /^q([1-4])(?:\s+(\d{4}))?$/.exec(w);
@@ -93,12 +99,18 @@ export function readBy(words: string, asOf: ISODate): ISODate | null {
  * and "12k direct"). Only the date and the word before it are cut. A bare year counts only after a word
  * ("in 2027", not "2027", which may be a suite), and so does a bare "may" (a word before it in English too).
  */
-export function cutDate(text: string, asOf: ISODate): { by: ISODate | null; rest: string } {
+export function cutDate(text: string, asOf: ISODate): { by: ISODate | null; rest: string; bad?: string } {
   for (const m of text.matchAll(DATE_AT)) {
     const word = m[1]?.toLowerCase().replace(/\s+/g, ' ');
     const date = m[2].toLowerCase();
     if (!word && (/^\d{4}$/.test(date) || /^may\.?$/.test(date))) continue;
     let by = readBy(date, asOf);
+    // A date shaped like one that the calendar has not ("by 2027-02-30") is cut and named, never dropped quietly
+    // (round 26: the search offered "Feb 30, 2027", then ran with no needed-by date at all).
+    if (!by && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      const at = m.index ?? 0;
+      return { by: null, bad: date, rest: `${text.slice(0, at)} ${text.slice(at + m[0].length)}`.replace(/\s+/g, ' ').trim() };
+    }
     if (!by) continue;
     // "Before 2027" is by the end of 2026; before a month or a quarter is read as by it, as it always was.
     if (word === 'before' && /^\d{4}$/.test(date)) by = `${Number(date) - 1}-12-31`;
@@ -169,13 +181,13 @@ export function readQuery(q: string, asOf: ISODate): QueryIntent | null {
   const text = q.trim().toLowerCase();
   if (!text) return null;
 
-  const { by, rest } = cutDate(text, asOf);
+  const { by, rest, bad } = cutDate(text, asOf);
   const size = readSize(rest);
   if (size) {
     let fit: FitType = 'any';
     if (/\bdirect\b/.test(rest)) fit = 'direct';
     else if (/\bsub(?:lease|let)s?\b/.test(rest)) fit = 'sublease';
-    return { kind: 'size', size: size.size, max: size.max, fit, by };
+    return { kind: 'size', size: size.size, max: size.max, fit, by, ...(bad ? { badBy: bad } : {}) };
   }
   return readState(text);
 }

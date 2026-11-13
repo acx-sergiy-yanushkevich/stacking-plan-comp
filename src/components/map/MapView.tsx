@@ -42,11 +42,13 @@ const INFLATE = 1.015;
 /** A transit kind's key: the key's Bus or Rail item lights every stop of that kind. */
 export const kindKey = (group: string) => `kind:${group}`;
 /**
- * The half mile's radius on screen below which the places fold away: their pins would sit on top of one another and
- * on the building's name (round 25: 81 of 83 overlapped at five miles, and a phone's one-mile map buried the name).
- * Folded, the half-mile label counts them, and a kind of place lit from the key or the Area panel still shows.
+ * The half mile's radius on screen below which the places fold away: their pins would sit on top of one another
+ * (round 25: 81 of 83 overlapped at five miles). Folded, the half-mile label counts them, and a kind of place lit
+ * from the key or the Area panel still shows. 60 px folds the 3- and 5-mile maps and never the 1-mile one, on a
+ * laptop or a phone (team review: at 120 px a 1366 x 768 laptop opened the map with its places folded away, which
+ * read as data not loaded); the labels sit over the pins, so the building's name still reads.
  */
-const FOLD_PX = 120;
+const FOLD_PX = 60;
 const SOURCE_RINGS = 'sp-rings';
 const LAYER_RING_FILL = 'sp-rings-fill';
 const LAYER_RING_LINE = 'sp-rings-line';
@@ -291,6 +293,9 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
   // They are not tab stops (there may be dozens): the Area panel's rows are the keyboard way to the same places.
   const [pinned, setPinned] = useState<Pinned[]>([]);
   const [labels, setLabels] = useState<{ el: HTMLElement; kind: 'walk' | 'ring' | 'building' }[]>([]);
+  const walkMarker = useRef<Marker | null>(null);
+  // The pin last tapped or clicked: lit, it says its name, as hovering does (round 26: a tap lit it silently).
+  const [tapped, setTapped] = useState<string | null>(null);
   useEffect(() => {
     if (!map) return;
     const made: Marker[] = [];
@@ -311,17 +316,41 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
     setPinned(places.map((place) => ({ place, el: mk(place.lng, place.lat, 'center') })));
     const walk = offset(center, WALK_MI, 0);
     const outer = offset(center, miles, 0);
+    const walkEl = mk(walk.lng, walk.lat, 'bottom', true);
+    walkMarker.current = made[made.length - 1];
     setLabels([
-      { el: mk(walk.lng, walk.lat, 'bottom', true), kind: 'walk' },
+      { el: walkEl, kind: 'walk' },
       { el: mk(outer.lng, outer.lat, 'bottom', true), kind: 'ring' },
       { el: mk(center.lng, center.lat, 'bottom', true), kind: 'building' },
     ]);
     return () => {
       made.forEach((m) => m.remove());
+      walkMarker.current = null;
       setPinned([]);
       setLabels([]);
     };
   }, [map, places, center, miles]);
+  // The half-mile label stays clear of the building's name: when the half mile is shorter on screen than the name
+  // stands above the building, the label is lifted over it (round 26: at 5 miles on a phone the name covered it).
+  useEffect(() => {
+    if (!map) return;
+    const edge = offset(center, WALK_MI, 0);
+    const lift = () => {
+      const name = labels.find((l) => l.kind === 'building')?.el.firstElementChild as HTMLElement | null | undefined;
+      const a = map.project([center.lng, center.lat]);
+      const b = map.project([edge.lng, edge.lat]);
+      // The name sits 12 px above the building; the half-mile label 4 px above its rim; 4 px apart.
+      const nameTop = 12 + (name?.offsetHeight || 24);
+      walkMarker.current?.setOffset([0, -Math.max(0, nameTop + 4 - Math.hypot(b.x - a.x, b.y - a.y))]);
+    };
+    lift();
+    map.on('move', lift);
+    map.on('resize', lift);
+    return () => {
+      map.off('move', lift);
+      map.off('resize', lift);
+    };
+  }, [map, center, labels]);
   // Whether the places fold away: measured from the half mile's radius on screen after every move and resize.
   const [folded, setFolded] = useState(false);
   useEffect(() => {
@@ -348,6 +377,7 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
     building: property.name,
   };
   const lit = usePlaceHighlight();
+  const litCount = lit ? places.filter((p) => p.key === lit || kindKey(p.group) === lit).length : 0;
   useEffect(() => () => placeHighlight.set(null), []);
   const keyGroups = useMemo(() => {
     const out: { group: string; kind: Place['kind'] }[] = [];
@@ -502,12 +532,17 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
       {pinned.map(({ place, el }) => {
         const look = placeLook(place.group);
         const on = lit === place.key || lit === kindKey(place.group);
+        // A lit pin says its name when it is the one asked for: the one tapped, or a stop lit alone from its row.
+        const named = on && (tapped === place.id || litCount === 1);
         return createPortal(
           <span
-            className={`sp-pin sp-pin--${look.cls} ${place.kind === 'transit' ? 'sp-pin--stop' : 'sp-pin--place'} ${on ? 'is-lit' : ''}`.replace(/ +/g, ' ').trim()}
+            className={`sp-pin sp-pin--${look.cls} ${place.kind === 'transit' ? 'sp-pin--stop' : 'sp-pin--place'} ${on ? 'is-lit' : ''} ${named ? 'is-named' : ''}`.replace(/ +/g, ' ').trim()}
             data-label={`${place.name} · ${mi(place.distanceMi)}`}
             aria-hidden="true"
-            onClick={() => placeHighlight.set(on ? null : place.key)}
+            onClick={() => {
+              setTapped(on ? null : place.id);
+              placeHighlight.set(on ? null : place.key);
+            }}
           >
             {look.icon ? <Icon name={look.icon} size={11} /> : look.letter}
           </span>,

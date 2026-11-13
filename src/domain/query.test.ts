@@ -95,3 +95,13 @@ describe('readBy: the last day of the month or quarter named', () => {
     expect(readBy('soon', AS_OF)).toBeNull();
   });
 });
+
+describe('a needed-by date the calendar has not (round 26)', () => {
+  it('is cut and named, never dropped quietly; a real leap day is read', () => {
+    const bad = readQuery('12k by 2027-02-30', '2026-11-09');
+    expect(bad).toMatchObject({ kind: 'size', size: 12000, by: null, badBy: '2027-02-30' });
+    expect(readQuery('12k by 2027-02-29', '2026-11-09')).toMatchObject({ by: null, badBy: '2027-02-29' });
+    expect(readQuery('12k by 2028-02-29', '2026-11-09')).toMatchObject({ by: '2028-02-29' });
+    expect(readQuery('12k by 2028-02-29', '2026-11-09')).not.toHaveProperty('badBy');
+  });
+});

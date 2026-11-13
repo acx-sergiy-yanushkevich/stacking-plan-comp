@@ -70,7 +70,7 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
   const byProblem =
     entered.problem === 'before'
       ? `${fmtDate(entered.value)} is before the as-of date, ${fmtDate(asOf)}, so it is not applied. Enter ${asOfName} or a later date. ${by ? `The search still uses ${fmtDate(by)}.` : 'The search has no needed-by date.'}`
-      : entered.problem === 'incomplete' && left
+      : entered.problem === 'incomplete' && (left || draft === null)
         ? `That is not a complete date, so it is not applied. ${by ? `The search still uses ${fmtDate(by)}.` : 'The search has no needed-by date.'}`
         : null;
 
