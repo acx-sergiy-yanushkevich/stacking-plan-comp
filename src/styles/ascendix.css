@@ -30,22 +30,25 @@
     --sp-color-success: #6fdca6; --sp-color-success-soft: #173d2e; --sp-color-dim: rgba(30, 45, 60, 0.72);
     --sp-shadow-pop: 0 20px 56px rgba(8, 16, 26, 0.62), 0 2px 6px rgba(8, 16, 26, 0.42);
 
-    /* Status lens: green is space you can lease (well away from the blue selection ring), orange is
-       leaving soon, red is at risk. Leased is most of the building: a calm slate from Secondary Blue 2,
-       under 2:1 on the card, with the 1 px edge carrying the boundary. Every edge here is opaque and at
+    /* Status lens, after the reference Clara chose (Nov 12): a slate navy for leased, solid green for
+       available (well away from the blue selection ring), sky blue for signed, the orange for leaving soon,
+       purple for sale and a raspberry for at risk. By night those four are a deep tint with a bright edge,
+       a glow rather than a slab (Clara: "like water"); only available is solid, the space to lease. Leased is most of the building: the slate navy, under
+       2:1 on the card, with the 1 px edge carrying the boundary. At risk stays deep by night: it sits beside the
+       expiration ramp in that lens and must stay 12 L* from its red-orange and mauve steps. Every edge here is opaque and at
        least 3:1 against the card (measured #21364b; #1d3043 at its darkest, #203b54 in the brightest glow). */
-    --tone-leased-fill: #36516d; --tone-leased-text: #f3f7fb; --tone-leased-edge: #93aac1;
-    --tone-neutral-fill: #36516d; --tone-neutral-text: #f3f7fb; --tone-neutral-edge: #93aac1;
+    --tone-leased-fill: #3d4c78; --tone-leased-text: #f3f7fb; --tone-leased-edge: #9aa9d6;
+    --tone-neutral-fill: #3d4c78; --tone-neutral-text: #f3f7fb; --tone-neutral-edge: #9aa9d6;
     --tone-muted-fill: #2b4158; --tone-muted-text: #bfccda; --tone-muted-edge: #8fa2b6;
     /* Opaque equivalents for the building model and the 3D map. */
-    --tone-leased-solid: #41627f; --tone-neutral-solid: #41627f; --tone-muted-solid: #2f475f;
+    --tone-leased-solid: #4a5b8c; --tone-neutral-solid: #4a5b8c; --tone-muted-solid: #2f475f;
     --tone-expiring-fill: #70450a; --tone-expiring-text: #ffeccb; --tone-expiring-edge: #ff9c00;
-    --tone-risk-fill: #5a1f24; --tone-risk-text: #ffdcd8; --tone-risk-edge: #ff6b61;
-    --tone-available-fill: #34c684; --tone-available-text: #04261a; --tone-available-edge: #a2f2cd;
+    --tone-risk-fill: #5c1a2b; --tone-risk-text: #ffdde4; --tone-risk-edge: #ff6b81;
+    --tone-available-fill: #1fa36b; --tone-available-text: #04261a; --tone-available-edge: #8ce6bd;
     --tone-available-later-fill: #17412f; --tone-available-later-text: #aef0d0; --tone-available-later-edge: #3fcf8f;
     --tone-sublease-fill: #1c4d36; --tone-sublease-text: #b9f3d9; --tone-sublease-edge: #3fcf8f;
-    --tone-committed-fill: #21407d; --tone-committed-text: #d6e2ff; --tone-committed-edge: #86abff;
-    --tone-forsale-fill: #453a82; --tone-forsale-text: #e6e0fd; --tone-forsale-edge: #ab9ef6;
+    --tone-committed-fill: #17435c; --tone-committed-text: #d4efff; --tone-committed-edge: #45b0e2;
+    --tone-forsale-fill: #382d60; --tone-forsale-text: #e8e0ff; --tone-forsale-edge: #a98ee0;
     --tone-empty-fill: transparent; --tone-empty-text: #bfccda; --tone-empty-edge: #93a6ba;
     --tone-projected-fill: #173a2a; --tone-projected-text: #aef0d0; --tone-projected-edge: #3fcf8f;
     --tone-confidential-fill: #3b4756; --tone-confidential-text: #d7dfe8; --tone-confidential-edge: #94a1b0;
@@ -69,11 +72,13 @@
        1 and 2 (Secondary Blue 1 carries dark text). The lowest step is a blue in its own right, 9 L* or
        more above the card wherever the glow puts it and far more saturated than the confidential grey: a
        $27 lease is a rent, not a blank. */
-    --tone-rent-0-fill: #1b5182; --tone-rent-0-text: #e3eff9; --tone-rent-0-edge: #86a8cc;
-    --tone-rent-1-fill: #1f70af; --tone-rent-1-text: #ffffff; --tone-rent-1-edge: #8cbde3;
-    --tone-rent-2-fill: #2491dd; --tone-rent-2-text: #04182a; --tone-rent-2-edge: #86c6f2;
-    --tone-rent-3-fill: #5cc3f2; --tone-rent-3-text: #04202e; --tone-rent-3-edge: #b0e2f9;
-    --tone-rent-4-fill: #bdebff; --tone-rent-4-text: #04202e; --tone-rent-4-edge: #e6f7ff;
+    /* Rent lens (Clara, Nov 12): the Leasing view's own colours, from its slate navy for the cheapest rents
+       through teal to its sky blue for the dearest, 13 L* or more apart, instead of five saturated blues. */
+    --tone-rent-0-fill: #3f4e8f; --tone-rent-0-text: #eef1fb; --tone-rent-0-edge: #9aa9d6;
+    --tone-rent-1-fill: #5c6fa5; --tone-rent-1-text: #ffffff; --tone-rent-1-edge: #b1bde3;
+    --tone-rent-2-fill: #1fa3b8; --tone-rent-2-text: #03191d; --tone-rent-2-edge: #8fd6e2;
+    --tone-rent-3-fill: #62c6ee; --tone-rent-3-text: #04202e; --tone-rent-3-edge: #b5e2f6;
+    --tone-rent-4-fill: #c4ebfa; --tone-rent-4-text: #04202e; --tone-rent-4-edge: #eef9fe;
     --tone-rent-net-fill: #2d3c4c; --tone-rent-net-text: #e8eef4; --tone-rent-net-edge: #5cc3f2;
 
     /* Deals lens: the further a deal has gone, the hotter the orange. */
@@ -125,21 +130,24 @@
     --sp-color-success: #1e6b39; --sp-color-success-soft: #e7f4ea; --sp-color-dim: rgba(255, 255, 255, 0.65);
     --sp-shadow-pop: 0 18px 50px rgba(30, 45, 60, 0.2), 0 2px 6px rgba(30, 45, 60, 0.12);
 
-    /* Tones by day. Leased is a pale blue-grey with a clear edge; every pale fill gets an opaque edge of
+    /* Tones by day, after the same reference: solid green, sky blue, orange and purple for the states to act on.
+       Leased stays a pale tint of the slate navy (a solid navy would hide the blue selection ring and drown
+       the states that need attention), and at risk a pale pink: by day the expiration ramp leaves it no
+       mid-tone 12 L* clear of its red-orange steps. Leased is a pale tint with a clear edge; every pale fill gets an opaque edge of
        at least 3:1 against the card (measured #fdfdfd; #f5f9fb at its most tinted). */
-    --tone-leased-fill: #e1e8f0; --tone-leased-text: #292d3b; --tone-leased-edge: #647a92;
-    --tone-neutral-fill: #e1e8f0; --tone-neutral-text: #292d3b; --tone-neutral-edge: #647a92;
+    --tone-leased-fill: #dfe4f0; --tone-leased-text: #292d3b; --tone-leased-edge: #66769f;
+    --tone-neutral-fill: #dfe4f0; --tone-neutral-text: #292d3b; --tone-neutral-edge: #66769f;
     --tone-muted-fill: #eff1f5; --tone-muted-text: #4d5566; --tone-muted-edge: #727d8d;
     /* The building model draws these as they are, beside the legend: each is its fill a step stronger.
        The 3D map deepens them toward the tone's edge (MapView). */
-    --tone-leased-solid: #c9d5e3; --tone-neutral-solid: #c9d5e3; --tone-muted-solid: #d9dee7;
-    --tone-expiring-fill: #ffe1ad; --tone-expiring-text: #292d3b; --tone-expiring-edge: #b35c00;
-    --tone-risk-fill: #f8d9e0; --tone-risk-text: #292d3b; --tone-risk-edge: #b3113e;
-    --tone-available-fill: #1a7f4f; --tone-available-text: #ffffff; --tone-available-edge: #115a37;
+    --tone-leased-solid: #cdd5e8; --tone-neutral-solid: #cdd5e8; --tone-muted-solid: #d9dee7;
+    --tone-expiring-fill: #f7941d; --tone-expiring-text: #2a1500; --tone-expiring-edge: #b35c00;
+    --tone-risk-fill: #fbd5dd; --tone-risk-text: #292d3b; --tone-risk-edge: #b3113e;
+    --tone-available-fill: #128052; --tone-available-text: #ffffff; --tone-available-edge: #0d5c3b;
     --tone-available-later-fill: #dbf1e5; --tone-available-later-text: #14573a; --tone-available-later-edge: #1a7f4f;
     --tone-sublease-fill: #cfeadb; --tone-sublease-text: #14573a; --tone-sublease-edge: #1a7f4f;
-    --tone-committed-fill: #dbe6fb; --tone-committed-text: #1b3b7a; --tone-committed-edge: #3a63c2;
-    --tone-forsale-fill: #e6e2f8; --tone-forsale-text: #3b2f80; --tone-forsale-edge: #6a58c4;
+    --tone-committed-fill: #45b0e2; --tone-committed-text: #06202d; --tone-committed-edge: #1c6f9c;
+    --tone-forsale-fill: #755aa8; --tone-forsale-text: #ffffff; --tone-forsale-edge: #563d86;
     --tone-empty-fill: transparent; --tone-empty-text: #4d5566; --tone-empty-edge: #767f8f;
     --tone-projected-fill: #e8f5ee; --tone-projected-text: #14573a; --tone-projected-edge: #1a7f4f;
     --tone-confidential-fill: #e4e6ea; --tone-confidential-text: #3b3f46; --tone-confidential-edge: #757a86;
@@ -168,11 +176,12 @@
     /* Rent lens by day: the same company blues, lightest to darkest. The lowest step is a blue a reader
        can see on the white card (it was #e6f5fd, 5 ΔE from the card where the glow tints it, the same
        fault as the old 5+ yr step), and the step after it keeps 8 L* below it. */
-    --tone-rent-0-fill: #d1eefe; --tone-rent-0-text: #292d3b; --tone-rent-0-edge: #5a89a8;
-    --tone-rent-1-fill: #a1daf7; --tone-rent-1-text: #292d3b; --tone-rent-1-edge: #4a84ab;
-    --tone-rent-2-fill: #5cc3f2; --tone-rent-2-text: #04202e; --tone-rent-2-edge: #2a79a8;
-    --tone-rent-3-fill: #2491dd; --tone-rent-3-text: #04182a; --tone-rent-3-edge: #17629c;
-    --tone-rent-4-fill: #284058; --tone-rent-4-text: #ffffff; --tone-rent-4-edge: #16293c;
+    /* Rent by day: the same colours the other way up, pale sky for the cheapest rents to slate navy for the dearest. */
+    --tone-rent-0-fill: #c6e5f5; --tone-rent-0-text: #292d3b; --tone-rent-0-edge: #5a89a8;
+    --tone-rent-1-fill: #93cfec; --tone-rent-1-text: #292d3b; --tone-rent-1-edge: #3f87ab;
+    --tone-rent-2-fill: #45b0e2; --tone-rent-2-text: #06202d; --tone-rent-2-edge: #1c6f9c;
+    --tone-rent-3-fill: #1b7f92; --tone-rent-3-text: #ffffff; --tone-rent-3-edge: #145e6c;
+    --tone-rent-4-fill: #3d4c78; --tone-rent-4-text: #ffffff; --tone-rent-4-edge: #26304f;
     --tone-rent-net-fill: #eef1f5; --tone-rent-net-text: #292d3b; --tone-rent-net-edge: #1c78bd;
 
     /* Deals lens by day: pale to hot. */
@@ -235,7 +244,7 @@
       --sp-color-card: #ffffff; --sp-color-card-2: #f2f4f7; --sp-glass-float: #ffffff; --sp-glass-control: #f2f4f7; --sp-glass-control-on: #ffffff;
       --sp-color-border: #d6dae1; --sp-glass-edge: #c2c8d2;
     }
-    :root[data-skin='glass'][data-palette='ascendix'] .sp-header__title h1 {
+    :root[data-skin='glass'][data-palette='ascendix'] .sp-header__title h1, :root[data-skin='glass'][data-palette='ascendix'] .sp-header__title .sp-switcher__name {
       background: none; -webkit-text-fill-color: currentColor; color: var(--sp-color-text);
     }
   }

@@ -17,9 +17,9 @@ export interface OpenBuilding {
  */
 export const BUILDINGS: ReadonlyArray<OpenBuilding> = [
   { property: prestonPark, stack: LIVE_STACK },
-  { property: legacyWest, stack: { floors: [[0.5, 0.5], [1], [0.7, 0.3], [1]], open: [0, 1], tone: '#6366f1' } },
-  { property: cedarSprings, stack: { floors: [[1], [0.45, 0.55], [1], [0.65, 0.35]], open: [3, 1], tone: '#0ea5e9' } },
-  { property: bluebonnet, stack: { floors: [[1], [0.5, 0.5], [0.5, 0.5], [1]], open: [1, 0], tone: '#3b82f6' } },
+  { property: legacyWest, stack: { floors: [[0.5, 0.5], [1], [0.7, 0.3], [1]], open: [0, 1], tone: '#4b5d8e' } },
+  { property: cedarSprings, stack: { floors: [[1], [0.45, 0.55], [1], [0.65, 0.35]], open: [3, 1], tone: '#1fa36b' } },
+  { property: bluebonnet, stack: { floors: [[1], [0.5, 0.5], [0.5, 0.5], [1]], open: [1, 0], tone: '#8d6bb0' } },
 ];
 
 export const DEFAULT_BUILDING_ID = BUILDINGS[0].property.id;

@@ -160,7 +160,6 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
             className="sp-header__sale"
             title={state.safe ? `${listing.label}; pricing is withheld in prospect-safe mode` : `Listed for sale by ${property.saleListing!.broker} · ${property.saleListing!.status}`}
           >
-            <Icon name="dollar" size={12} />
             <span className="sp-header__sale-label">{listing.label}</span>
             {listing.text.slice(listing.label.length)}
           </span>
@@ -194,35 +193,34 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
 
   return (
     <>
-      {/* The product bar: who made this, which building is open (and that there are others), and the controls. */}
+      {/* The product bar: who made this, and the controls. The building is named once, in the card under it. */}
       {/* An expanded bottom sheet stops under the bar, so its controls are never cut in half (ui/Sheet.tsx). */}
       <section className="sp-card sp-topbar sp-no-print" data-sheet-keep-clear="" aria-label="Product bar">
-        <StaxLockup />
-        <span className="sp-topbar__divider" aria-hidden="true" />
-        <Menu
-          label="Building"
-          align="start"
-          trigger={(p) => (
-            <Button {...p} iconRight="caret-down" aria-label={`Switch building: ${property.name}`} title="Switch building" className="sp-switcher">
-              <MiniStack drawing={buildingById(property.id).stack} />
-              <span className="sp-switcher__name">{property.name}</span>
-            </Button>
-          )}
-          items={switcherItems(property, (id) => patch(switchBuilding(state, id)))}
-        />
+        {/* The logo a little bigger than the building's icon in the card under it (32 and 28 px). */}
+        <StaxLockup size={32} />
         {/* The controls and the look as one group at the right: they wrap together, never one button alone. */}
         <div className="sp-topbar__controls">
           {actions}
           {look}
         </div>
       </section>
+      {/* The building card: its own mini stack, and its name, which is also the switcher (Clara, Nov 12: one name,
+          not one in the bar and one here). The heading is a role, not an <h1>: the menu's wrapper is a <div>. */}
       <header className="sp-card sp-header sp-no-print">
-        <div className="sp-header__icon" aria-hidden="true">
-          <Icon name="building" size={22} />
-        </div>
+        <MiniStack drawing={buildingById(property.id).stack} size={28} />
         <div className="sp-header__text">
-          <div className="sp-header__title">
-            <h1>{property.name}</h1>
+          <div className="sp-header__title" role="heading" aria-level={1}>
+            <Menu
+              label="Building"
+              align="start"
+              trigger={(p) => (
+                <button {...p} type="button" aria-label={`Switch building: ${property.name}`} title="Switch building" className="sp-switcher">
+                  <span className="sp-switcher__name">{property.name}</span>
+                  <Icon name="caret-down" size={16} />
+                </button>
+              )}
+              items={switcherItems(property, (id) => patch(switchBuilding(state, id)))}
+            />
           </div>
           {facts}
         </div>

@@ -42,6 +42,8 @@ describe('Header sale listing', () => {
     // It is one of the facts, not part of the title.
     const facts = html.slice(html.indexOf('class="sp-header__facts"'));
     expect(facts).toContain('class="sp-header__sale"');
+    // Plain words like its neighbours: no $ icon in front of it (Clara, Nov 12).
+    expect(/<span class="sp-header__sale"[^>]*>(.*?)<span class="sp-header__verified/.exec(html)?.[1] ?? '').not.toContain('<svg');
     expect(html.slice(html.indexOf('class="sp-header__title"'), html.indexOf('class="sp-header__facts"'))).not.toContain(usd0(listing.price));
   });
 
@@ -228,29 +230,37 @@ describe('Header product bar and building card', () => {
   const bar = (query: string) => /<section class="sp-card sp-topbar sp-no-print"[^>]*>(.*?)<\/section><header/.exec(render(query).html)?.[1] ?? null;
   const strip = (html: string) => html.replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
-  it('standalone: the bar carries the lockup, the switcher, the controls and the look, in that order', () => {
+  it('standalone: the bar carries the lockup, then the controls and the look; the building is named once, in the card', () => {
     const b = bar('')!;
-    for (const [a, c] of [['sp-lockup', 'sp-switcher__name'], ['sp-switcher__name', 'sp-header__actions'], ['sp-header__actions', 'sp-header__look']])
+    for (const [a, c] of [['sp-lockup', 'sp-header__actions'], ['sp-header__actions', 'sp-header__look']])
       expect(b.indexOf(a), `${a} before ${c}`).toBeLessThan(b.indexOf(c));
-    expect(strip(b)).toMatch(/^Stax by Ascendix Preston Park Financial Center/);
-    // The accessible name keeps the visible text (WCAG 2.5.3): a screen reader hears which building is open.
-    expect(b).toMatch(/<button(?=[^>]*aria-label="Switch building: Preston Park Financial Center")(?=[^>]*aria-haspopup="menu")/);
-    // The switcher is the building's mini stack, the building's name and a caret: no photo.
-    expect(b).not.toContain('<img');
-    const sw = /<button[^>]*aria-label="Switch building: [^"]*"[^>]*>(.*?)<\/button>/.exec(b)![1];
-    expect(sw.indexOf('class="sp-ministack"')).toBeLessThan(sw.indexOf('sp-switcher__name'));
-    expect(sw.lastIndexOf('<svg')).toBeGreaterThan(sw.indexOf('sp-switcher__name'));
+    expect(strip(b)).toMatch(/^Stax by Ascendix /);
+    // No switcher, no divider, no building name in the bar (Clara, Nov 12: the name twice and three icons in a corner).
+    for (const s of ['Preston Park', 'Switch building', 'sp-switcher', 'sp-topbar__divider', 'sp-ministack']) expect(b, s).not.toContain(s);
     // The controls and the look are one group, so they wrap together.
     expect(b.indexOf('sp-topbar__controls')).toBeLessThan(b.indexOf('sp-header__actions'));
   });
 
-  it('standalone: the card is the icon, the name and the facts; the controls are not in it', () => {
+  it('standalone: the card is the building\'s mini stack, its name as the switcher, and the facts; the controls are not in it', () => {
     const { html } = render('');
     const card = html.slice(html.indexOf('<header'));
-    expect(card).toContain('class="sp-header__icon"');
+    // The logo is a little bigger than the building's icon: 32 px against 28 (Clara, Nov 12: both were too big at 40).
+    expect(html).toMatch(/<span class="sp-mark" style="width:32px;height:32px"[^>]*><svg width="32" height="32"/);
+    expect(card).toMatch(/<svg class="sp-ministack" width="28" height="28"/);
+    // The building's own mini stack stands where the blue icon box was.
+    expect(card).not.toContain('class="sp-header__icon"');
+    expect(card.indexOf('class="sp-ministack"')).toBeGreaterThan(-1);
+    expect(card.indexOf('class="sp-ministack"')).toBeLessThan(card.indexOf('sp-header__title'));
     expect(card).not.toContain('<img');
     expect(card).not.toContain('sp-header__actions');
-    expect(strip(card.slice(card.indexOf('<div class="sp-header__title"'), card.indexOf('<div class="sp-header__facts"')).replace(/<div class="sp-header__aside">.*?<\/div>/, ''))).toBe('Preston Park Financial Center');
+    // The title is the page's one heading, and the name in it is the switcher: a button that opens the building menu.
+    expect(card).toMatch(/<div class="sp-header__title" role="heading" aria-level="1">/);
+    expect(card).toMatch(/<button(?=[^>]*aria-label="Switch building: Preston Park Financial Center")(?=[^>]*aria-haspopup="menu")(?=[^>]*class="[^"]*sp-switcher)/);
+    const sw = /<button[^>]*aria-label="Switch building: [^"]*"[^>]*>(.*?)<\/button>/.exec(card)![1];
+    expect(strip(sw)).toBe('Preston Park Financial Center');
+    // A caret after the name says it opens.
+    expect(sw.lastIndexOf('<svg')).toBeGreaterThan(sw.indexOf('sp-switcher__name'));
+    expect(strip(card.slice(card.indexOf('<div class="sp-header__title"'), card.indexOf('<div class="sp-header__facts"')))).toBe('Preston Park Financial Center');
   });
 
   it('aurora gets the bar too; the embedded skin gets none of it', () => {
@@ -296,7 +306,12 @@ describe('Header at 420 px and under: the title and one row of controls (round 1
       setHost(before);
     }
   };
-  const actions = (html: string) => html.slice(html.indexOf('class="sp-header__actions"'));
+  // The controls, up to the end of the bar: the building switcher in the card under it is not one of them.
+  const actions = (html: string) => {
+    const from = html.indexOf('class="sp-header__actions"');
+    const end = html.indexOf('</section>', from);
+    return html.slice(from, end < 0 ? undefined : end);
+  };
   const drawn = (html: string) => html.replace(/<span class="sp-sr-only">.*?<\/span>/g, '').replace(/<span[^>]*aria-hidden="true"[^>]*>[^<]*<\/span>/g, '').replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, '');
   const read = (html: string) => html.replace(/<span[^>]*aria-hidden="true"[^>]*>.*?<\/span><\/span>/g, '').replace(/<svg.*?<\/svg>/g, '').replace(/<[^>]+>/g, '');
   const asOf = (html: string) => /<div class="sp-header__asof[^"]*">.*?(<button.*?<\/button>)/.exec(actions(html))![1];

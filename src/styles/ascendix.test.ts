@@ -41,7 +41,6 @@ describe('Ascendix palette, the company colours', () => {
     expect(night.get('--sp-color-focus')).toBe(BRAND.primaryOrange);
     expect(night.get('--tone-expiring-edge')).toBe(BRAND.primaryOrange);
     expect(fillOf(night, 'exp-1')).toBe(BRAND.primaryOrange);
-    expect(fillOf(night, 'rent-2')).toBe(BRAND.secondaryBlue1);
   });
 
   it('day: Background Grey page, Primary Text, and an accent that is Secondary Blue 1 darkened to 4.5:1', () => {
@@ -271,7 +270,7 @@ describe.each([
       for (const card of cards) expect(contrast('#1b3a5c', card)).toBeLessThan(1.4);
     });
 
-  it('rent lens: five company blues, 12 L* or more between neighbours, the text flipping where the fill needs it', () => {
+  it('rent lens: the Leasing palette from slate navy to teal to sky blue, 12 L* or more between neighbours, the text flipping where the fill needs it', () => {
     const steps = [0, 1, 2, 3, 4].map((i) => fill(`rent-${i}`));
     const ls = steps.map(lightness);
     for (let i = 1; i < ls.length; i += 1) expect(Math.abs(ls[i] - ls[i - 1]), `rent-${i - 1} to rent-${i}`).toBeGreaterThanOrEqual(theme === 'night' ? 12 : 8);
@@ -279,8 +278,15 @@ describe.each([
     const dir = Math.sign(ls[4] - ls[0]);
     expect(dir).toBe(theme === 'night' ? 1 : -1);
     for (let i = 1; i < ls.length; i += 1) expect(Math.sign(ls[i] - ls[i - 1])).toBe(dir);
-    for (const step of steps) expect(hue(step) >= 195 && hue(step) <= 215, `${step} is a company blue (hue ${hue(step).toFixed(0)})`).toBe(true);
-    expect(steps).toContain(BRAND.secondaryBlue1);
+    // The Leasing view's colours (Clara, Nov 12: the five saturated company blues turned the whole building electric
+    // blue by night): the darkest step is its slate navy, the lightest its sky blue, teal in the middle. At night the
+    // cheapest rent is the darkest step; by day the dearest is.
+    const byDark = [...steps].sort((a, b) => lightness(a) - lightness(b));
+    const [slate, , , , sky] = byDark;
+    expect(hue(slate) >= 218 && hue(slate) <= 232, `darkest ${slate} is the slate navy (hue ${hue(slate).toFixed(0)})`).toBe(true);
+    expect(steps.some((st) => hue(st) >= 180 && hue(st) <= 195), 'a teal step between them').toBe(true);
+    expect(hue(sky) >= 192 && hue(sky) <= 205, `lightest ${sky} is sky blue (hue ${hue(sky).toFixed(0)})`).toBe(true);
+    expect(steps[0]).toBe(theme === 'night' ? '#3f4e8f' : '#c6e5f5');
     // Light text on the dark steps, dark text on the light ones.
     steps.forEach((step, i) => expect(lum(t.get(`--tone-rent-${i}-text`)!) > 0.5, `rent-${i} text`).toBe(lum(step) < 0.18));
   });

@@ -37,3 +37,18 @@ describe('building icons in the switcher', () => {
       for (let j = i + 1; j < all.length; j++) expect(sameFloors(all[i].floors, all[j].floors) && all[i].open.join() === all[j].open.join(), `${i} vs ${j}`).toBe(false);
   });
 });
+
+describe('building icon colours', () => {
+  // The icons wear the plan's palette (Clara, Nov 12: the reference she chose): pink-red, slate navy, green,
+  // purple, teal and sky blue. Never the orange, which is each icon's open suite, nor the mark's own cyan.
+  const PALETTE = ['#ef4b6c', '#4b5d8e', '#1fa36b', '#8d6bb0', '#1f97ab', '#45b0e2'];
+  it('draws every building icon in a colour of the plan palette', () => {
+    for (const d of [...BUILDINGS.map((b) => b.stack), ...PORTFOLIO]) expect(PALETTE, d.tone).toContain(d.tone);
+  });
+  it('gives the four buildings that open four different colours', () => {
+    expect(new Set(BUILDINGS.map((b) => b.stack.tone)).size).toBe(BUILDINGS.length);
+  });
+  it('never uses the open suite\'s orange or the Stax cyan', () => {
+    for (const d of [...BUILDINGS.map((b) => b.stack), ...PORTFOLIO]) for (const c of ['#ff9c00', '#00aff0']) expect(d.tone).not.toBe(c);
+  });
+});
