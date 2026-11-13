@@ -141,11 +141,12 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
 
   const facts = (
     <div className="sp-header__facts">
-      <span>{property.propertyClass}</span>
-      <span className="sp-dot">·</span>
+      {/* Where it is comes first, then what it is (team review, Nov 13). */}
       <span>
         {property.street}, {property.city}, {property.state}
       </span>
+      <span className="sp-dot">·</span>
+      <span>{property.propertyClass}</span>
       <span className="sp-dot">·</span>
       <span>{num(kpis.leasable)} RSF leasable</span>
       <span className="sp-dot">·</span>
