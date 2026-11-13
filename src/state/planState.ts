@@ -42,6 +42,11 @@ export interface PlanState {
    * US. In the address, so a reload or a copied link keeps it (round 25: it lived in memory and was lost).
    */
   ring: RingMiles;
+  /**
+   * Quarter turns of the building model in the Building view (0–3), from its usual corner view. In the
+   * address like every view setting, so a turned model can be linked to and photographed.
+   */
+  turn: number;
   live: boolean;
   census: string | null;
   theme: Theme | null;
@@ -92,6 +97,7 @@ export const DEFAULT_STATE: PlanState = {
   q: '',
   mode: 'building',
   ring: 1,
+  turn: 0,
   live: false,
   census: null,
   theme: null,
@@ -122,6 +128,12 @@ function positive(v: string | null): number | null {
 }
 
 /** Non-negative integer (rollover bucket 0 is "< 12 mo"), else null. */
+/** A quarter turn, 0 to 3; anything else is the usual view (0). */
+function turnOf(v: string | null): number {
+  const n = nonNegativeInt(v);
+  return n !== null && n <= 3 ? n : 0;
+}
+
 function nonNegativeInt(v: string | null): number | null {
   if (v === null || v.trim() === '') return null;
   const n = Number(v);
@@ -309,6 +321,7 @@ export function parseState(search: string, today: ISODate): PlanState {
     // one chosen; the selection waits for the plan (round 25: a Map link with a suite opened its inspector).
     mode: oneOf(MODES, p.get('mode'), modeDefault(oneOf(VIEWS, p.get('view'), d.view))),
     ring: ringOf(p.get('ring')),
+    turn: turnOf(p.get('turn')),
     live: p.get('live') === '1',
     census: text(p.get('census')),
     theme: oneOfOrNull(THEMES, p.get('theme')),
@@ -339,6 +352,7 @@ export function serializeState(s: PlanState, today: ISODate): string {
   if (s.q) p.set('q', s.q);
   if (s.mode !== modeDefault(s.view)) p.set('mode', s.mode);
   if (s.ring !== DEFAULT_STATE.ring) p.set('ring', String(s.ring));
+  if (s.turn !== DEFAULT_STATE.turn) p.set('turn', String(s.turn));
   if (s.live) p.set('live', '1');
   if (s.census) p.set('census', s.census);
   if (s.theme) p.set('theme', s.theme);

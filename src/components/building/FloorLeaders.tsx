@@ -6,6 +6,8 @@ export interface FloorLeadersProps {
   ids: string[];
   /** The floor pointed at or focused: its leader is drawn in the accent colour. */
   hotId: string | null;
+  /** The model's quarter turn: a turn moves the floors' points without resizing anything, so it is measured again. */
+  turn?: number;
 }
 
 interface Leader {
@@ -44,7 +46,7 @@ const STUB = 6;
  * technology and take no pointer events. Positions are read from the layout, so a model that is still
  * gliding into place does not skew them, and again whenever the model or the list changes size.
  */
-export function FloorLeaders({ ids, hotId }: FloorLeadersProps) {
+export function FloorLeaders({ ids, hotId, turn = 0 }: FloorLeadersProps) {
   const ref = useRef<SVGSVGElement | null>(null);
   const [leaders, setLeaders] = useState<Leader[]>([]);
   const key = ids.join(' ');
@@ -82,7 +84,7 @@ export function FloorLeaders({ ids, hotId }: FloorLeadersProps) {
     const list = root.querySelector('.sp-flabels__list');
     if (list) ro.observe(list);
     return () => ro.disconnect();
-  }, [key]);
+  }, [key, turn]);
   return (
     <svg ref={ref} className="sp-fleaders" aria-hidden="true" focusable="false">
       {leaders.map((l) => (

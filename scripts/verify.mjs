@@ -106,6 +106,30 @@ await page.waitForTimeout(150);
 check(new URL(page.url()).search === before, `Prospect-safe off restores the date, the lens and the worklist (${new URL(page.url()).search})`);
 check((await page.locator('.sp-header__asof--projected').count()) === 1 && (await page.locator('.sp-kpi__delta').count()) >= 3, 'the restored plan is drawn for the restored date');
 
+// Turning the building model: a quarter turn each way, in the address, with every leader drawn to the turned model.
+await page.goto(base + '?view=building', { waitUntil: 'networkidle' });
+await page.waitForTimeout(300);
+const floorsShown = await page.locator('.sp-flabel').count();
+const anchorsAt = () => page.locator('[data-anchor]').evaluateAll((els) => els.map((e) => e.getAttribute('style')).join('|'));
+const anchorsBefore = await anchorsAt();
+await page.getByRole('button', { name: 'Turn the building right' }).click();
+await page.waitForTimeout(200);
+// Building is the default view, so the address names only the turn.
+const turnIn = () => new URL(page.url()).searchParams.get('turn');
+check(turnIn() === '1', `Turn the building right is a quarter turn, in the address (${new URL(page.url()).search})`);
+check((await anchorsAt()) !== anchorsBefore, 'the turned model puts its floors\' points somewhere new');
+check(floorsShown > 0 && (await page.locator('.sp-fleader').count()) === floorsShown, `every label keeps a leader to the turned model (${await page.locator('.sp-fleader').count()} of ${floorsShown})`);
+await page.getByRole('button', { name: 'Turn the building left' }).click();
+await page.waitForTimeout(200);
+check(turnIn() === null, `Turn the building left turns it back (${new URL(page.url()).search || 'no turn'})`);
+check((await anchorsAt()) === anchorsBefore, 'turned back, the floors\' points are where they were');
+await page.getByRole('button', { name: 'Turn the building left' }).click();
+await page.waitForTimeout(200);
+check(turnIn() === '3', `a left turn from the usual view is the last quarter (${new URL(page.url()).search})`);
+await page.locator('.sp-flabel').first().click();
+await page.waitForTimeout(200);
+check((await page.getByRole('button', { name: /Turn the building/ }).count()) === 0, 'with a floor open the model faces front and the turn buttons are gone');
+
 await browser.close();
 check(errors.length === 0, `no console errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
 if (fails.length) {

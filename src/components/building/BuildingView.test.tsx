@@ -318,3 +318,13 @@ describe('BuildingView', () => {
       expect(render(`?lens=${lens}`), lens).toMatch(new RegExp(`<div class="sp-stack__title"><h2>${name}</h2>`));
   });
 });
+
+describe('the turn buttons', () => {
+  const names = (html: string) => [...html.matchAll(/<button[^>]*aria-label="(Turn the building [^"]+)"/g)].map((m) => m[1]);
+  it('turn the model left and right while it stands alone', () => {
+    expect(names(render('?view=building'))).toEqual(['Turn the building left', 'Turn the building right']);
+  });
+  it('are not there while a floor is open: the model faces front for its plate', () => {
+    expect(names(render('?view=building&floor=F8'))).toEqual([]);
+  });
+});

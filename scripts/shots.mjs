@@ -8,6 +8,7 @@ mkdirSync(out, { recursive: true });
 
 export const STATES = [
   ['33-building', '?view=building'],
+  ['33b-building-turned', '?view=building&turn=1'],
   ['34-building-pinned', '?view=building&floor=F8'],
   ['35-building-find', '?view=building&req=12000'],
   ['38-building-suite', '?view=building&select=A02'],

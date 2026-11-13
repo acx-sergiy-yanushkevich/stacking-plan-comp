@@ -74,6 +74,7 @@ describe('serializeState', () => {
       q: 'suite 600 & more',
       mode: 'area',
       ring: 5,
+      turn: 2,
       live: true,
       census: 'income',
       theme: 'dark',
@@ -87,6 +88,21 @@ describe('serializeState', () => {
     const qs = serializeState(s, TODAY);
     expect(qs).toContain('safe=1');
     expect(parseState(qs, TODAY)).toEqual(s);
+  });
+});
+
+describe("the building model's turn", () => {
+  it('reads a quarter turn from the address', () => {
+    expect(parseState('?turn=2', TODAY).turn).toBe(2);
+    expect(parseState('?turn=3', TODAY).turn).toBe(3);
+  });
+  it('reads anything else as the usual corner view', () => {
+    for (const v of ['7', '4', '-1', 'x', '1.5', '']) expect(parseState(`?turn=${v}`, TODAY).turn, v).toBe(0);
+    expect(parseState('', TODAY).turn).toBe(0);
+  });
+  it('writes a turn and leaves out the default', () => {
+    expect(serializeState({ ...defaultState(TODAY), turn: 3 }, TODAY)).toContain('turn=3');
+    expect(serializeState(defaultState(TODAY), TODAY)).not.toContain('turn');
   });
 });
 

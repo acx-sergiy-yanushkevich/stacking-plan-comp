@@ -21,6 +21,8 @@ export interface FloorLabelsProps {
   rows: FloorLabelRow[];
   /** The floor under the pointer elsewhere (on the model): its label is lit. */
   hotId: string | null;
+  /** The model's quarter turn: its floors' right-hand points move with it, and the leaders are drawn to them again. */
+  turn?: number;
   onPick: (floorId: string) => void;
   /** Pointing at or focusing a label lights that floor; null when it ends. It never opens the floor. */
   onPreview: (floorId: string | null) => void;
@@ -40,11 +42,11 @@ export interface FloorLabelsProps {
  * The words are `FloorLabelText`, the component the Map view's floor list prints too, on the same grid
  * (floorLabel.css): the percentages line up on their decimals and the facts start on one edge.
  */
-export function FloorLabels({ rows, hotId, onPick, onPreview }: FloorLabelsProps) {
+export function FloorLabels({ rows, hotId, onPick, onPreview, turn = 0 }: FloorLabelsProps) {
   const roving = useFloorRoving(rows.map((r) => r.id), '');
   return (
     <nav className="sp-flabels" aria-label="Floors">
-      <FloorLeaders ids={rows.map((r) => r.id)} hotId={hotId} />
+      <FloorLeaders ids={rows.map((r) => r.id)} hotId={hotId} turn={turn} />
       <ol className="sp-floorlist sp-flabels__list">
         {rows.map((r, i) => (
           <li key={r.id}>
