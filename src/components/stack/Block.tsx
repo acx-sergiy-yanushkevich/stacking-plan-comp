@@ -4,7 +4,7 @@ import { textTier } from '../../domain/layout';
 import { NO_RECORD, NOT_ON_MARKET } from '../../domain/lenses';
 import { fitParts, wrapWords, wrapWordsVar, fits, measure } from '../../lib/textFit';
 import { PATTERN_IDS } from '../plan/Patterns';
-import type { SegmentText } from '../plan/segmentText';
+import { badgeLabel, type SegmentText } from '../plan/segmentText';
 
 export const FONT_NAME = "600 13px Inter, 'Salesforce Sans', system-ui, sans-serif";
 export const FONT_SUB = "400 12px Inter, 'Salesforce Sans', system-ui, sans-serif";
@@ -73,6 +73,13 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   const other = others[0];
   const second = others[1];
   const showDeal = !!deal && w >= 64 && !compact;
+  // A wide block says what its count counts ("2 live deals", the phone row's words): a bare "2" in a circle
+  // was only explained by its tooltip. Narrower blocks, and paper (whose layouts are fitted around the
+  // circle), keep the circle; the words are still in the accessible name.
+  const dealWords = showDeal && w >= 280 && !keepSuite ? badgeLabel(deal) : null;
+  const dealW = dealWords ? Math.ceil(measure(dealWords, FONT_BADGE)) + 12 : 16;
+  /** The room the deal pill takes in the top-right corner, with its gap. */
+  const dealRoom = dealW + 6;
   const showOther = !!other && w >= 150 && h >= 40;
   const showSecond = !!second && w >= 300 && h >= 40;
   const badgeW = other ? Math.ceil(measure(other.text, FONT_BADGE)) + 12 : 0;
@@ -121,7 +128,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
       return open >= 14 ? { top: PAD + 11, pitch: open } : { top: 6 + 11, pitch: CP };
     };
     // Text on the first line must clear the badges in the top-right corner.
-    const reserved = (showOther && place === 'corner' ? badgeW + 6 : 0) + (showSecond ? badge2W + 6 : 0) + (showDeal && !pillBottom ? 22 : 0);
+    const reserved = (showOther && place === 'corner' ? badgeW + 6 : 0) + (showSecond ? badge2W + 6 : 0) + (showDeal && !pillBottom ? dealRoom : 0);
     const inner = w - PAD * 2 - reserved;
     // Lines below the first run the full width (the corner badges only occupy the first line); the
     // bottom-right deal pill reserves its corner on the last line instead.
@@ -166,7 +173,13 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
         return alt && fits(alt, r, FONT_SUB) && (isRate || alt.length >= 4) ? { t: alt, cls: 'sp-seg__meta', font: FONT_SUB } : null;
       };
       // Short rows: SF and the lens fact share one line rather than repeat a date on two.
-      const oneLine = (cls: string): Line[] => (unitLens && fits(unitLens, room(n, FONT_SUB, compact), FONT_SUB) ? [{ t: unitLens, cls, font: FONT_SUB }] : NONE);
+      // A block with the room keeps its suite number on that line ("Ste 1200 · 9,300 SF · Jun '28"): a row
+      // fitted to the window has two lines, and the suite is what a broker quotes. Where the lens has no
+      // short fact the whole one follows instead ("Ste 1250 · 9,300 SF · $38–$40/SF/yr FSG", "… · Month-to-month").
+      const tail = text.lensShort || text.meta;
+      const subLens = tail && !suite ? `${text.sub} · ${tail}` : null;
+      const oneLine = (cls: string): Line[] =>
+        subLens && fits(subLens, room(n, FONT_SUB, compact), FONT_SUB) ? [{ t: subLens, cls, font: FONT_SUB }] : unitLens && fits(unitLens, room(n, FONT_SUB, compact), FONT_SUB) ? [{ t: unitLens, cls, font: FONT_SUB }] : NONE;
       if (tier === 0) {
         const first: Line = subLine() ?? { t: sfUnit, cls: 'sp-seg__sub', font: FONT_SUB };
         const m = metaLine(room(n + 1, FONT_SUB, compact));
@@ -218,7 +231,9 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
     else {
       const two = wrapWordsVar(text.name, (i) => (i === 0 ? inner : innerBody), FONT_NAME, 2);
       if (two.length && two.join(' ') === text.name) nameSets.push(two.map(lineText).map(nameLine));
-      const tiny = h >= 48 ? wrapWordsVar(text.name, (i) => room(i, FONT_TINY, true), FONT_TINY, 3) : [];
+      // A row fitted to the window (under 48 px) has one line for a name: it is set at 11 px on that line
+      // before the block goes without its name.
+      const tiny = wrapWordsVar(text.name, (i) => room(i, FONT_TINY, true), FONT_TINY, h >= 48 ? 3 : 1);
       if (tiny.length && tiny.join(' ') === text.name) smallSets.push(tiny.map((t) => ({ t: lineText(t), cls: 'sp-seg__tiny', font: FONT_TINY })));
       // Narrow tiles: the whole name at 10 px before giving it up.
       const micro = (tier >= 2 || suite) && h >= 48 && seg.kind !== 'unmarketed' ? wrapWords(text.name, room(0, FONT_MICRO, true), FONT_MICRO, 2) : [];
@@ -438,7 +453,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
         </text>
       ))}
       {showSecond && second && (
-        <g className={`sp-badge sp-badge--${second.kind}`} transform={`translate(${w - badgeW - 6 - (showDeal && !pillDown ? 22 : 0) - badge2W - 6} 6)`}>
+        <g className={`sp-badge sp-badge--${second.kind}`} transform={`translate(${w - badgeW - 6 - (showDeal && !pillDown ? dealRoom : 0) - badge2W - 6} 6)`}>
           <title>{second.title ?? second.text}</title>
           <rect width={badge2W} height={16} rx={8} />
           <text x={badge2W / 2} y={11.5} textAnchor="middle">
@@ -447,7 +462,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
         </g>
       )}
       {drawOther && other && (
-        <g className={`sp-badge sp-badge--${other.kind}`} transform={ownRow ? `translate(${PAD + accentPad} ${h - PAD - 16})` : `translate(${w - badgeW - 6 - (showDeal && !pillDown ? 22 : 0)} 6)`}>
+        <g className={`sp-badge sp-badge--${other.kind}`} transform={ownRow ? `translate(${PAD + accentPad} ${h - PAD - 16})` : `translate(${w - badgeW - 6 - (showDeal && !pillDown ? dealRoom : 0)} 6)`}>
           <title>{other.title ?? other.text}</title>
           <rect width={badgeW} height={16} rx={8} />
           <text x={badgeW / 2} y={11.5} textAnchor="middle">
@@ -456,11 +471,11 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
         </g>
       )}
       {showDeal && deal && (
-        <g className="sp-badge sp-badge--deal" transform={`translate(${w - 22} ${pillDown ? h - 22 : 6})`}>
+        <g className="sp-badge sp-badge--deal" transform={`translate(${w - dealW - 6} ${pillDown ? h - 22 : 6})`}>
           <title>{deal.title}</title>
-          <rect width={16} height={16} rx={8} />
-          <text x={8} y={11.5} textAnchor="middle">
-            {`${deal.text} `}
+          <rect width={dealW} height={16} rx={8} />
+          <text x={dealW / 2} y={11.5} textAnchor="middle">
+            {`${dealWords ?? deal.text} `}
           </text>
         </g>
       )}

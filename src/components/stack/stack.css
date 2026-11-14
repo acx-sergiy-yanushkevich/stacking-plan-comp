@@ -43,8 +43,6 @@
 /* Left / top accent bars */
 .sp-seg__accent { pointer-events: none; }
 
-/* Footer */
-.sp-stack__foot { display: flex; justify-content: space-between; gap: 12px; padding: 0 16px 12px; font-size: var(--sp-text-11); color: var(--sp-color-text-faint); flex-wrap: wrap; }
 
 @media (max-width: 760px) {
   .sp-stack__head { padding: 8px 12px; }
@@ -58,7 +56,6 @@
   .sp-stack__head .sp-legend__num { font-size: 10px; }
   .sp-stack__head .sp-legend__note { grid-column: 1 / -1; white-space: normal; font-size: 10px; }
   .sp-stack__title .sp-weak { display: none; }
-  .sp-stack__foot span:last-child { display: none; }
 }
 
 

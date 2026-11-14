@@ -32,6 +32,13 @@ describe('No activity badge', () => {
   });
 });
 
+describe('last-touch badge', () => {
+  it('says the touch is in the past ("Call 40 d ago"), as the worklist does: "Call 40 d" read as due in 40 days', () => {
+    const touch = segmentText(byTenant('Cirrus Energy'), opts).badges.find((b) => /^(Call|Email|Meeting|Tour) /.test(b.text));
+    expect(touch?.text).toMatch(/^Call \d+ d ago$/);
+  });
+});
+
 describe('quiet listing on an occupied suite', () => {
   const cirrus = index.get('L13-U1')!; // Ste 600: leased, marketed quietly from Apr 2027
   const published = { ...cirrus, marketed: { ...cirrus.marketed!, published: true } };
