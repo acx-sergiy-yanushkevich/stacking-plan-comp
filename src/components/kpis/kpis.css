@@ -141,3 +141,6 @@ button.sp-kpi:hover { background: var(--sp-color-card-2); }
    not cards: the lens cards are rebuilt as read-only cards on the Map, and would rise again there. */
 .sp-kpis .sp-kpis__wrap { animation: sp-enter-rise var(--sp-enter-ms) var(--sp-enter-curve) backwards; }
 .sp-kpis .sp-kpis__wrap--open { animation-delay: 80ms; }
+
+/* Round 29: on the Map the lens cards only read; a circle that cannot be pressed looks like a broken switch. */
+.sp-kpi--still .sp-kpi__dot { display: none; }

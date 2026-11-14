@@ -130,6 +130,22 @@ await page.locator('.sp-flabel').first().click();
 await page.waitForTimeout(200);
 check((await page.getByRole('button', { name: /Turn the building/ }).count()) === 0, 'with a floor open the model faces front and the turn buttons are gone');
 
+// Round 29, NFR-12: a row fitted to the window keeps its tenant's name, in every lens, owner and prospect-safe, at
+// the laptop sizes (round 28: the café on Floor 1 lost its name at 1470 x 830 and 1366 x 768). The unit tests
+// measure text without a canvas; only the browser knows what Chrome fits.
+for (const [w, h] of [[1470, 830], [1440, 1000], [1366, 768]]) {
+  const fit = await browser.newPage({ viewport: { width: w, height: h }, locale: 'en-US', reducedMotion: 'reduce' });
+  const nameless = [];
+  for (const lens of ['status', 'rent', 'expiry', 'deals'])
+    for (const safe of ['', '&safe=1']) {
+      await fit.goto(`${base}?view=stack&lens=${lens}${safe}`, { waitUntil: 'networkidle' });
+      await fit.waitForTimeout(250);
+      const cells = await fit.$$eval('.sp-stage [role="gridcell"]', (els) => els.map((e) => ({ name: (e.querySelector('title')?.textContent ?? '').split('\n')[0].split(' · ')[0], text: [...e.querySelectorAll('text')].map((x) => x.textContent).join(' ') })));
+      for (const c of cells) if (c.name && !c.text.includes(c.name.slice(0, 8))) nameless.push(`${c.name} (${lens}${safe})`);
+    }
+  check(nameless.length === 0, `${w}x${h}: every fitted block keeps its name${nameless.length ? ` (lost: ${[...new Set(nameless)].join(', ')})` : ''}`);
+  await fit.close();
+}
 await browser.close();
 check(errors.length === 0, `no console errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
 if (fails.length) {

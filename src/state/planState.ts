@@ -120,6 +120,15 @@ function isoOrNull(v: string | null): ISODate | null {
   return v !== null && ISO.test(v) ? v : null;
 }
 
+/** Round 29: a date the calendar has. "2027-02-30" is shaped like one and is not, so it is no as-of date. (A needed-by
+    date keeps its shape-only reading: the Find panel names a bad one, round 26.) */
+function realDayOrNull(v: string | null): ISODate | null {
+  const iso = isoOrNull(v);
+  if (iso === null) return null;
+  const t = new Date(`${iso}T00:00:00Z`);
+  return !Number.isNaN(t.getTime()) && t.toISOString().slice(0, 10) === iso ? iso : null;
+}
+
 /** Positive finite number, else null. */
 function positive(v: string | null): number | null {
   if (v === null || v.trim() === '') return null;
@@ -305,7 +314,7 @@ export function parseState(search: string, today: ISODate): PlanState {
     building: text(p.get('building')),
     view: oneOf(VIEWS, p.get('view'), d.view),
     lens: oneOf(LENSES, p.get('lens'), d.lens),
-    asOf: isoOrNull(p.get('asOf')) ?? today,
+    asOf: realDayOrNull(p.get('asOf')) ?? today,
     select: text(p.get('select')),
     floor: text(p.get('floor')),
     safe: p.get('safe') === '1',

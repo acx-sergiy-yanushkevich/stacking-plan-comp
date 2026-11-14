@@ -105,3 +105,19 @@ describe('a needed-by date the calendar has not (round 26)', () => {
     expect(readQuery('12k by 2028-02-29', '2026-11-09')).not.toHaveProperty('badBy');
   });
 });
+
+describe('a month with a day in the search (round 29)', () => {
+  it('reads the day and its year, never the end of the month of the wrong year', () => {
+    expect(readQuery('12k by February 15, 2028', '2026-11-09')).toMatchObject({ by: '2028-02-15' });
+    expect(readQuery('12k by Jun 3rd 2027', '2026-11-09')).toMatchObject({ by: '2027-06-03' });
+    // Without a year it is the next such day on or after the as-of month, as a bare month is.
+    expect(readQuery('12k by Mar 5', '2026-11-09')).toMatchObject({ by: '2027-03-05' });
+  });
+  it('names a day the calendar has not and runs nothing', () => {
+    expect(readQuery('12k by February 30, 2027', '2026-11-09')).toMatchObject({ by: null, badBy: 'february 30, 2027' });
+  });
+  it('still reads a month and year, and leaves a size after a month alone', () => {
+    expect(readQuery('12k by Jun 2027', '2026-11-09')).toMatchObject({ by: '2027-06-30' });
+    expect(readQuery('may 20000 sf', '2026-11-09')).toMatchObject({ size: 20000 });
+  });
+});

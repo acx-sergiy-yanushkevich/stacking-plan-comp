@@ -283,7 +283,14 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
     // the focus half of lightOn could never run). The Map has no suites to light, so there it only reads.
     if (kind === 'open')
       return (
-        <div key={c.id} className="sp-kpi sp-kpi--detail" data-kpi={c.id} title={`${c.detail}. ${onMap ? c.title.replace(' Point at it to see it on the plan.', '') : c.title}`} {...(!onMap && c.lights?.length ? { tabIndex: 0, ...lightOn(c.lights) } : null)}>
+        <div
+          key={c.id}
+          className="sp-kpi sp-kpi--detail"
+          data-kpi={c.id}
+          title={`${c.detail}. ${onMap ? c.title.replace(' Point at it to see it on the plan.', '') : c.title}`}
+          // Round 29: a tab stop that is not a control still says what it is and what focus does.
+          {...(!onMap && c.lights?.length ? { tabIndex: 0, role: 'group', 'aria-description': 'Focus lights its suites on the plan.', ...lightOn(c.lights) } : null)}
+        >
           {body}
         </div>
       );
@@ -327,7 +334,7 @@ export function KpiStrip({ model, state, onAction }: KpiStripProps) {
   useSlideMark(lensGroup, '.sp-kpi.is-active', onMap ? null : (lenses.find((c) => c.active)?.id ?? null), '::after');
   return (
     <section className={safe ? 'sp-kpis sp-no-print sp-kpis--safe' : 'sp-kpis sp-no-print'} aria-label="Key figures">
-      {group('lens', 'Color the plan by', 'Color by', lenses)}
+      {group('lens', onMap ? 'Plan colors, read only: Color by applies to the Building, Stack and Timeline views' : 'Color the plan by', onMap ? 'Plan views' : 'Color by', lenses)}
       {group('open', 'Details', 'Details', openFigures)}
     </section>
   );

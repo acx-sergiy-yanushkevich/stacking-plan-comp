@@ -28,7 +28,7 @@ const MONTH = String.raw`(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may
  * Group 1 is the word ("by", "before", "in", "for", "needed by"), group 2 the date.
  */
 const DATE_AT = new RegExp(
-  String.raw`(?<![\w/-])(?:(needed\s+by|by|before|in|for)\s+)?(q[1-4](?:\s*,?\s*\d{4})?|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{4}|${MONTH}(?:\s*,?\s*\d{4})?|20\d{2})(?![\w/-])`,
+  String.raw`(?<![\w/-])(?:(needed\s+by|by|before|in|for)\s+)?(q[1-4](?:\s*,?\s*\d{4})?|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{4}|${MONTH}(?:\s+\d{1,2}(?:st|nd|rd|th)?(?!\d))?(?:\s*,?\s*\d{4})?|20\d{2})(?![\w/-])`,
   'gi',
 );
 
@@ -83,12 +83,17 @@ export function readBy(words: string, asOf: ISODate): ISODate | null {
   }
   const slash = /^(\d{1,2})\/(\d{4})$/.exec(w);
   if (slash && Number(slash[1]) >= 1 && Number(slash[1]) <= 12) return endOfMonth(Number(slash[2]), Number(slash[1]));
-  const named = /^([a-z]+)\.?(?:\s+(\d{4}))?$/.exec(w);
+  // A month, with a day (round 29: "February 15, 2028" was read as the end of February 2027) and a year.
+  const named = /^([a-z]+)\.?(?:\s+(\d{1,2})(?:st|nd|rd|th)?(?!\d))?(?:\s+(\d{4}))?$/.exec(w);
   if (named) {
     const i = named[1].length >= 3 ? MONTHS.findIndex((m) => m.startsWith(named[1])) : -1;
     if (i < 0) return null;
     const m = i + 1;
-    const y = named[2] ? Number(named[2]) : m >= asM ? asY : asY + 1;
+    const y = named[3] ? Number(named[3]) : m >= asM ? asY : asY + 1;
+    if (named[2]) {
+      const day = `${y}-${String(m).padStart(2, '0')}-${named[2].padStart(2, '0')}`;
+      return realDay(day) ? (day as ISODate) : null;
+    }
     return endOfMonth(y, m);
   }
   return null;
@@ -107,7 +112,7 @@ export function cutDate(text: string, asOf: ISODate): { by: ISODate | null; rest
     let by = readBy(date, asOf);
     // A date shaped like one that the calendar has not ("by 2027-02-30") is cut and named, never dropped quietly
     // (round 26: the search offered "Feb 30, 2027", then ran with no needed-by date at all).
-    if (!by && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    if (!by && (/^\d{4}-\d{2}-\d{2}$/.test(date) || /^[a-z]+\.?\s+\d{1,2}(?:st|nd|rd|th)?\b/.test(date.replace(/,/g, ' ')))) {
       const at = m.index ?? 0;
       return { by: null, bad: date, rest: `${text.slice(0, at)} ${text.slice(at + m[0].length)}`.replace(/\s+/g, ' ').trim() };
     }

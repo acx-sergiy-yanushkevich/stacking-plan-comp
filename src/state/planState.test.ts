@@ -15,6 +15,10 @@ describe('parseState', () => {
     expect(s.q).toBe('');
     expect(s.mode).toBe('building');
   });
+  it('takes today for an as-of date the calendar has not (round 29)', () => {
+    expect(parseState('?asOf=2027-02-30', TODAY).asOf).toBe(TODAY);
+    expect(parseState('?asOf=2028-02-29', TODAY).asOf).toBe('2028-02-29');
+  });
   it('falls back to defaults for unknown enum values and malformed dates', () => {
     const s = parseState('?lens=bogus&asOf=nope&view=globe&window=7&mode=xyz&theme=sepia', TODAY);
     expect(s.lens).toBe('status');

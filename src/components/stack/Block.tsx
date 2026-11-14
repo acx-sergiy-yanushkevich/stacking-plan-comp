@@ -85,7 +85,9 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   const badgeW = other ? Math.ceil(measure(other.text, FONT_BADGE)) + 12 : 0;
   const badge2W = second ? Math.ceil(measure(second.text, FONT_BADGE)) + 12 : 0;
   // On narrow blocks the deal pill moves to the bottom-right so the tenant name keeps the full width.
-  const pillBottom = tier >= 2;
+  // Round 29: so does a row fitted to the window (under 48 px) on a block under 200 px: its one line of name
+  // would otherwise share the top line with the circle and give the name up (the café on Floor 1 at 1470 x 830).
+  const pillBottom = tier >= 2 || (!!deal && h < 48 && w < 200);
   // A badge wider than half a narrow block would force the name to wrap ("Available / now" beside
   // "1 inquiry fits"): it can take a row of its own under the text instead.
   const rowBadge = showOther && !showSecond && w < 200 && h >= 64 && badgeW + 6 > (w - PAD * 2) / 2;
@@ -178,8 +180,22 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
       // short fact the whole one follows instead ("Ste 1250 · 9,300 SF · $38–$40/SF/yr FSG", "… · Month-to-month").
       const tail = text.lensShort || text.meta;
       const subLens = tail && !suite ? `${text.sub} · ${tail}` : null;
-      const oneLine = (cls: string): Line[] =>
-        subLens && fits(subLens, room(n, FONT_SUB, compact), FONT_SUB) ? [{ t: subLens, cls, font: FONT_SUB }] : unitLens && fits(unitLens, room(n, FONT_SUB, compact), FONT_SUB) ? [{ t: unitLens, cls, font: FONT_SUB }] : NONE;
+      // Round 29: a rate is what the Rent lens, and an asking row, exist to show; when the suite makes the line
+      // too long the suite goes first ("4,200 SF · $31–$33/SF/yr FSG"), not the rate. The suite stays in the
+      // tooltip, the accessible name and the inspector.
+      const rateTail = text.lensShort || (text.meta.includes('$') ? text.meta.replace(/^Asking /, '') : '');
+      const unitRate = rateTail && !suite ? `${sfUnit} · ${rateTail}` : null;
+      const oneLine = (cls: string): Line[] => {
+        if (subLens && fits(subLens, room(n, FONT_SUB, compact), FONT_SUB)) return [{ t: subLens, cls, font: FONT_SUB }];
+        if (unitLens && fits(unitLens, room(n, FONT_SUB, compact), FONT_SUB)) return [{ t: unitLens, cls, font: FONT_SUB }];
+        if (!unitRate) return NONE;
+        const ur = sized(unitRate, n, cls, compact);
+        if (ur) return [ur];
+        // A wider block steps the line down to 11 or 10 px before it gives up the rate.
+        if (!compact) return NONE;
+        if (fits(unitRate, room(n, FONT_TINY, true), FONT_TINY)) return [{ t: unitRate, cls: 'sp-seg__tiny', font: FONT_TINY }];
+        return fits(unitRate, room(n, FONT_MICRO, true), FONT_MICRO) ? [{ t: unitRate, cls: 'sp-seg__micro', font: FONT_MICRO }] : NONE;
+      };
       if (tier === 0) {
         const first: Line = subLine() ?? { t: sfUnit, cls: 'sp-seg__sub', font: FONT_SUB };
         const m = metaLine(room(n + 1, FONT_SUB, compact));
@@ -235,8 +251,9 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
       // before the block goes without its name.
       const tiny = wrapWordsVar(text.name, (i) => room(i, FONT_TINY, true), FONT_TINY, h >= 48 ? 3 : 1);
       if (tiny.length && tiny.join(' ') === text.name) smallSets.push(tiny.map((t) => ({ t: lineText(t), cls: 'sp-seg__tiny', font: FONT_TINY })));
-      // Narrow tiles: the whole name at 10 px before giving it up.
-      const micro = (tier >= 2 || suite) && h >= 48 && seg.kind !== 'unmarketed' ? wrapWords(text.name, room(0, FONT_MICRO, true), FONT_MICRO, 2) : [];
+      // Narrow tiles: the whole name at 10 px before giving it up. A row fitted to the window (under 48 px)
+      // has one line for it (round 29: the café on Floor 1 lost its name at 1470 x 830 and 1366 x 768).
+      const micro = (tier >= 2 || suite) && seg.kind !== 'unmarketed' ? wrapWords(text.name, room(0, FONT_MICRO, true), FONT_MICRO, h >= 48 ? 2 : 1) : [];
       // With the suite kept, the 10 px name is offered as well as the 11 px one: on one line it leaves room for the suite and the lens fact.
       if (micro.length && micro.join(' ') === text.name && (suite || !(tiny.length && tiny.join(' ') === text.name))) smallSets.push(micro.map((t) => ({ t: lineText(t), cls: 'sp-seg__micro', font: FONT_MICRO })));
     }
@@ -299,8 +316,8 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   const onScale = (r: Solved) => !!r.picked?.named && !r.picked.lines.some(isSmall);
   const corner = solve('corner');
   const row = rowBadge ? solve('row') : null;
-  const bare = showOther && !showSecond && other.kind === 'info' && tier <= 1 && !onScale(corner) && !(row && onScale(row)) ? solve('none') : null;
-  const place: 'corner' | 'row' | 'none' = row && onScale(row) ? 'row' : onScale(corner) ? 'corner' : bare && onScale(bare) ? 'none' : row?.picked?.named ? 'row' : 'corner';
+  const bare = showOther && !showSecond && other.kind === 'info' && !onScale(corner) && !(row && onScale(row)) ? solve('none') : null;
+  const place: 'corner' | 'row' | 'none' = row && onScale(row) ? 'row' : onScale(corner) ? 'corner' : bare && onScale(bare) ? 'none' : row?.picked?.named ? 'row' : bare?.picked?.named && !corner.picked?.named ? 'none' : 'corner';
   const ownRow = place === 'row';
   const drawOther = showOther && place !== 'none';
   const plain = place === 'row' && row ? row : place === 'none' && bare ? bare : corner;
