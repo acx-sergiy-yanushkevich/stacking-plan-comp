@@ -1,12 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ISODate } from '../domain/types';
 import { SAFE_TITLE, TITLE } from '../domain/safe';
 import { onPopState, readUrl, setTitle, writeUrl } from '../lib/host';
 import { openSession, serializeState, stepSession, type PlanSession, type PlanState } from './planState';
 
+/** The fields whose change is a move to somewhere else, not an edit of where the user already is. */
+const navigates = (a: PlanState, b: PlanState): boolean =>
+  a.view !== b.view || a.building !== b.building || a.floor !== b.floor || a.safe !== b.safe || a.ring !== b.ring || a.turn !== b.turn;
+
 /**
  * One state object for the whole plan, mirrored into the address (`lib/host`: in a browser,
- * `history.replaceState`) so any screen is a shareable link and the back/forward buttons restore it.
+ * `history.replaceState`, or `pushState` for a move to another view, building or floor) so any screen is a shareable link and the back/forward buttons restore it.
  */
 export function usePlanState(today: ISODate): [PlanState, (patch: Partial<PlanState>) => void] {
   // The session is the state plus what the Prospect-safe switch withheld. Only the state leaves this hook.
@@ -23,9 +27,14 @@ export function usePlanState(today: ISODate): [PlanState, (patch: Partial<PlanSt
     [today],
   );
 
-  // Write every change to the address (also normalises an initial address with invalid params).
+  // Write every change to the address (also normalises an initial address with invalid params). A move to
+  // another view, building, floor, ring, turn or the Prospect-safe mode is a history entry, so Back returns to
+  // where the user was (round 29: every change replaced the entry and Back left the app); everything else,
+  // such as typing a search or choosing a suite, replaces it.
+  const last = useRef<PlanState | null>(null);
   useEffect(() => {
-    writeUrl(serializeState(state, today));
+    writeUrl(serializeState(state, today), last.current !== null && navigates(last.current, state));
+    last.current = state;
   }, [state, today]);
 
   // Back or Forward to another address is a link opened afresh: nothing withheld is carried into it.
@@ -35,7 +44,7 @@ export function usePlanState(today: ISODate): [PlanState, (patch: Partial<PlanSt
 }
 
 /**
- * The tab reads the product name, not the building's (Clara, Nov 13), and must never leak the mode:
+ * The tab reads the product name, not the building's (review, Nov 13), and must never leak the mode:
  * prospect-safe gets its own title.
  */
 export function useDocumentTitle(safe: boolean): void {

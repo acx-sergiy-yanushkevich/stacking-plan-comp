@@ -121,11 +121,13 @@ describe('KpiStrip', () => {
       // The name is the content: the whole note is read, the short one on screen is not read twice.
       expect(el).toContain('<span class="sp-kpi__context" aria-hidden="true">');
       expect(spoken(el).endsWith(` ${detail.replace(/\s+/g, ' ')}`)).toBe(true);
-      expect(el).not.toContain('aria-label');
+      // A detail that lights suites is a named group (round 30: Chrome named it from its tooltip); the rest take their name from their content.
+      if (id === 'find' || id === 'find-largest') expect(el).toMatch(/aria-label="(Available|Largest block), /);
+      else expect(el).not.toContain('aria-label');
     }
     // The tooltips say what the figure is; a detail promises no click.
-    expect(attr(kpiOf(html, 'find'), 'title')).toContain('Space a tenant could take on the as-of date. Point at it to see it on the plan.');
-    expect(attr(kpiOf(html, 'find-largest'), 'title')).toContain('Largest run of adjacent direct availabilities. Point at it to see it on the plan.');
+    expect(attr(kpiOf(html, 'find'), 'title')).toContain('Space a tenant could take on the as-of date. Point at it, or tab to it, to see it on the plan.');
+    expect(attr(kpiOf(html, 'find-largest'), 'title')).toContain('Largest run of adjacent direct availabilities. Point at it, or tab to it, to see it on the plan.');
     for (const id of ['find', 'find-largest', 'timeline']) expect(attr(kpiOf(html, id), 'title'), id).not.toMatch(/click/i);
     for (const id of ['status', 'rent', 'expiry', 'deals']) expect(attr(kpiOf(html, id), 'title'), id).toMatch(/Click to color the plan by/);
     expect(attr(kpiOf(html, 'timeline'), 'title')).toContain(`${kpis.walt.toFixed(4)} years`);
@@ -248,7 +250,7 @@ describe('KpiStrip on the Map (round 25)', () => {
     const { html } = render(TODAY, false, '?view=map');
     expect(html).not.toContain('<button');
     for (const id of ['status', 'rent', 'expiry', 'deals']) expect(html).toMatch(new RegExp(`<div class="sp-kpi sp-kpi--lens sp-kpi--still" data-kpi="${id}"`));
-    expect(html).not.toMatch(/Point at it to see it on the plan/);
+    expect(html).not.toMatch(/Point at it, or tab to it, to see it on the plan/);
     // Off the map the switches are buttons again.
     expect(render(TODAY, false, '?view=stack').html).toMatch(/<button type="button" class="sp-kpi sp-kpi--lens/);
   });

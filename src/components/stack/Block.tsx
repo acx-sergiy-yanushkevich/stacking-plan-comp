@@ -191,8 +191,8 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
         if (!unitRate) return NONE;
         const ur = sized(unitRate, n, cls, compact);
         if (ur) return [ur];
-        // A wider block steps the line down to 11 or 10 px before it gives up the rate.
-        if (!compact) return NONE;
+        // A wider block steps the line down to 11 or 10 px before it gives up the rate. (Round 30: this stopped
+        // at `!compact`, so on the 50 px rows the window draws the rate was dropped and only a 43 px test kept it.)
         if (fits(unitRate, room(n, FONT_TINY, true), FONT_TINY)) return [{ t: unitRate, cls: 'sp-seg__tiny', font: FONT_TINY }];
         return fits(unitRate, room(n, FONT_MICRO, true), FONT_MICRO) ? [{ t: unitRate, cls: 'sp-seg__micro', font: FONT_MICRO }] : NONE;
       };
@@ -216,6 +216,11 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
         const up = sfL && text.lensShort && !l ? sized(text.lensShort, n, 'sp-seg__meta', compact) : null;
         const sfDown = up ? sized(unit, n + 1, 'sp-seg__sf', compact) : null;
         full.push(sfL && l ? [sfL, l] : up && sfDown ? [up, sfDown] : NONE);
+        // Round 30: a row with one line under the name gives that line to a rate in the Rent lens, and to an
+        // asking row, before the SF: the rate is what those blocks are read for, the SF is the block's own
+        // width, and both stay in the tooltip, the accessible name and the inspector.
+        const rateOnly = rateTail && !suite ? sized(rateTail, n, 'sp-seg__meta', compact) ?? (compact ? (fits(rateTail, room(n, FONT_TINY, true), FONT_TINY) ? { t: rateTail, cls: 'sp-seg__tiny', font: FONT_TINY } : fits(rateTail, room(n, FONT_MICRO, true), FONT_MICRO) ? { t: rateTail, cls: 'sp-seg__micro', font: FONT_MICRO } : null) : null) : null;
+        sfOnly.push(rateOnly ? [rateOnly] : NONE);
         // Last resort for a rate that is too long for one line at 12 px. A rent is one fact with its unit and
         // its lease type ("$31–$33/SF/yr FSG"): it is never broken inside, so "FSG" never stands alone on a
         // line. The break goes before the rate, which then takes its own line at 11 px, or at 10 px; a

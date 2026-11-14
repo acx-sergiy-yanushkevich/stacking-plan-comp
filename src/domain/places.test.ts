@@ -75,3 +75,16 @@ describe('live places with sample figures (no Census key): the positions are rea
     expect(samplePositions(area(true))).toBe(true);
   });
 });
+
+describe('stops that share a name (round 30)', () => {
+  it('each has its own id and key, so a row lights its own pin', () => {
+    const a: Area = { ...area(false), transit: [
+      { name: 'Bus stop', type: 'Bus', distanceMi: 0.05, lat: 33.04, lng: -96.806 },
+      { name: 'Bus stop', type: 'Bus', distanceMi: 0.2, lat: 33.042, lng: -96.808 },
+    ] };
+    const stops = placesAround('P001', center, a).filter((p) => p.kind === 'transit');
+    expect(new Set(stops.map((s) => s.id)).size).toBe(2);
+    expect(new Set(stops.map((s) => s.key)).size).toBe(2);
+    expect(stops[0].key).toBe(stopKey('Bus stop', 33.04, -96.806));
+  });
+});

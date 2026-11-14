@@ -190,8 +190,8 @@ export function AreaPanel({ model, area, expanded, onMap, ring: chosen = 1, onRi
               .map((t) => (
                 <li
                   key={`${t.name}-${t.distanceMi}`}
-                  className={`${onMap ? 'sp-area__place' : ''} ${lit === stopKey(t.name) ? 'is-lit' : ''}`.trim() || undefined}
-                  {...linkProps(stopKey(t.name), onMap, `${t.name}, ${t.type === 'Rail' ? 'rail' : 'bus'}, ${inMiles(t.distanceMi)}, pinned on the map`)}
+                  className={`${onMap ? 'sp-area__place' : ''} ${lit === stopKey(t.name, t.lat, t.lng) ? 'is-lit' : ''}`.trim() || undefined}
+                  {...linkProps(stopKey(t.name, t.lat, t.lng), onMap, `${t.name}, ${t.type === 'Rail' ? 'rail' : 'bus'}, ${inMiles(t.distanceMi)}, pinned on the map`)}
                 >
                   {/* The kind of stop is a word as well as an icon: bus and rail are not told apart by the drawing alone. */}
               <Icon name={t.type === 'Rail' ? 'train' : 'bus'} size={14} />

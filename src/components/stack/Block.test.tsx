@@ -346,4 +346,10 @@ describe('Block text, rows fitted to the window (round 29)', () => {
     const { lines } = draw(text({ name: 'First Plano Bank', sub: 'Ste 110 · 5,600 SF', sfShort: '5,600', meta: '$42/SF/yr NNN', lensShort: '$42/SF/yr NNN' }), 150, 43);
     expect(lines.map((l) => l.t).join(' ')).toContain('$42/SF/yr NNN');
   });
+
+  it('keeps the asking rate on a 50 px row, the height the window draws (round 30)', () => {
+    // 138 px: "3,200 SF · $31–$33/SF/yr FSG" cannot fit one line even at 10 px, so the rate takes the line.
+    const { lines } = draw(text({ name: 'Available now', sub: 'Ste 860 · 3,200 SF', sfShort: '3,200', meta: 'Asking $31–$33/SF/yr FSG', lensShort: '' }), 138, 50, seg('available'));
+    expect(lines.map((l) => l.t).join(' ')).toContain('$31–$33/SF/yr FSG');
+  });
 });

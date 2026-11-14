@@ -39,7 +39,7 @@ describe('building icons in the switcher', () => {
 });
 
 describe('building icon colours', () => {
-  // The icons wear the plan's palette (Clara, Nov 12: the reference she chose): pink-red, slate navy, green,
+  // The icons wear the plan's palette (review, Nov 12: the reference chosen in review): pink-red, slate navy, green,
   // purple, teal and sky blue. Never the orange, which is each icon's open suite, nor the mark's own cyan.
   const PALETTE = ['#ef4b6c', '#4b5d8e', '#1fa36b', '#8d6bb0', '#1f97ab', '#45b0e2'];
   it('draws every building icon in a colour of the plan palette', () => {

@@ -114,10 +114,31 @@ describe('a month with a day in the search (round 29)', () => {
     expect(readQuery('12k by Mar 5', '2026-11-09')).toMatchObject({ by: '2027-03-05' });
   });
   it('names a day the calendar has not and runs nothing', () => {
-    expect(readQuery('12k by February 30, 2027', '2026-11-09')).toMatchObject({ by: null, badBy: 'february 30, 2027' });
+    expect(readQuery('12k by February 30, 2027', '2026-11-09')).toMatchObject({ by: null, badBy: 'February 30, 2027' });
   });
   it('still reads a month and year, and leaves a size after a month alone', () => {
     expect(readQuery('12k by Jun 2027', '2026-11-09')).toMatchObject({ by: '2027-06-30' });
     expect(readQuery('may 20000 sf', '2026-11-09')).toMatchObject({ size: 20000 });
+  });
+});
+
+describe('more ways to write a day (round 30)', () => {
+  it('reads M/D/YYYY, day first, and a year-less day after the as-of date', () => {
+    expect(readQuery('12k by 06/01/2027', '2026-11-09')).toMatchObject({ by: '2027-06-01' });
+    expect(readQuery('5k by 3/15/2027', '2026-11-09')).toMatchObject({ by: '2027-03-15' });
+    expect(readQuery('12k by 15 Jan 2027', '2026-11-09')).toMatchObject({ by: '2027-01-15' });
+    expect(readQuery('12k by 3rd March 2027', '2026-11-09')).toMatchObject({ by: '2027-03-03' });
+    // Nov 5 is behind an as-of date of Nov 9: the next one is next year's. Nov 9 itself is today.
+    expect(readQuery('12k by Nov 5', '2026-11-09')).toMatchObject({ by: '2027-11-05' });
+    expect(readQuery('12k by Nov 9', '2026-11-09')).toMatchObject({ by: '2026-11-09' });
+    expect(readQuery('12k by Nov 20', '2026-11-09')).toMatchObject({ by: '2026-11-20' });
+  });
+  it('names a US or day-first date the calendar has not', () => {
+    expect(readQuery('12k by 2/30/2027', '2026-11-09')).toMatchObject({ by: null, badBy: '2/30/2027' });
+    expect(readQuery('12k by 31 Feb 2027', '2026-11-09')).toMatchObject({ by: null, badBy: '31 feb 2027' });
+  });
+  it('does not take a size for a date', () => {
+    expect(readQuery('12000 sf', '2026-11-09')).toMatchObject({ size: 12000 });
+    expect(readQuery('5 may 20000 sf', '2026-11-09')?.kind).toBe('size');
   });
 });

@@ -271,7 +271,7 @@
 
 /* ── Brand ──────────────────────────────────────────────── */
 /* The Stax mark and lockup are drawn in the brand's own colours, as literal hex: the same under every
-   palette and both themes. The mark is its bars alone, on no tile and with no border (Clara, Nov 12), at the
+   palette and both themes. The mark is its bars alone, on no tile and with no border (review, Nov 12), at the
    size of the building card's icon; only the byline's colour follows the theme. */
 .sp-mark { display: inline-grid; place-items: center; flex: none; }
 .sp-mark svg { display: block; }

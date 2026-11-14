@@ -37,7 +37,7 @@ describe('brand CSS', () => {
     // The bars are cyan in both themes: no theme repaints them.
     expect(brand).not.toMatch(/\[data-theme=[^\]]*\][^{]*\.sp-mark__bar/);
   });
-  it('draws the mark with no tile and no border: the bars stand on the page, in either theme (Clara, Nov 12)', () => {
+  it('draws the mark with no tile and no border: the bars stand on the page, in either theme (review, Nov 12)', () => {
     const rules = [...brand.matchAll(/([^{}]*\.sp-mark(?![_\w-])[^{}]*)\{([^}]*)\}/g)].map((m) => m[2]);
     expect(rules.length).toBeGreaterThan(0);
     for (const body of rules) expect(body).not.toMatch(/background|box-shadow|border|outline:/);

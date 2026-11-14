@@ -130,21 +130,48 @@ await page.locator('.sp-flabel').first().click();
 await page.waitForTimeout(200);
 check((await page.getByRole('button', { name: /Turn the building/ }).count()) === 0, 'with a floor open the model faces front and the turn buttons are gone');
 
-// Round 29, NFR-12: a row fitted to the window keeps its tenant's name, in every lens, owner and prospect-safe, at
-// the laptop sizes (round 28: the café on Floor 1 lost its name at 1470 x 830 and 1366 x 768). The unit tests
-// measure text without a canvas; only the browser knows what Chrome fits.
+// NFR-12 (rounds 29 and 30): a row fitted to the window keeps its tenant's whole name, and the Rent lens and the
+// asking rows keep their rate, in every lens, owner and prospect-safe, in all four buildings, at the laptop sizes.
+// Blocks too small to hold the text at its smallest size are left out: under 140 px wide and 48 px tall for a name,
+// under 130 px wide for a rate (a 43 px row of the 22-floor tower at 99 px). The unit tests measure text without a
+// canvas; only the browser knows what Chrome fits.
 for (const [w, h] of [[1470, 830], [1440, 1000], [1366, 768]]) {
   const fit = await browser.newPage({ viewport: { width: w, height: h }, locale: 'en-US', reducedMotion: 'reduce' });
-  const nameless = [];
-  for (const lens of ['status', 'rent', 'expiry', 'deals'])
-    for (const safe of ['', '&safe=1']) {
-      await fit.goto(`${base}?view=stack&lens=${lens}${safe}`, { waitUntil: 'networkidle' });
-      await fit.waitForTimeout(250);
-      const cells = await fit.$$eval('.sp-stage [role="gridcell"]', (els) => els.map((e) => ({ name: (e.querySelector('title')?.textContent ?? '').split('\n')[0].split(' · ')[0], text: [...e.querySelectorAll('text')].map((x) => x.textContent).join(' ') })));
-      for (const c of cells) if (c.name && !c.text.includes(c.name.slice(0, 8))) nameless.push(`${c.name} (${lens}${safe})`);
-    }
-  check(nameless.length === 0, `${w}x${h}: every fitted block keeps its name${nameless.length ? ` (lost: ${[...new Set(nameless)].join(', ')})` : ''}`);
+  const lost = [];
+  for (const bd of ['', '&building=P002', '&building=P005', '&building=P007'])
+    for (const lens of ['status', 'rent', 'expiry', 'deals'])
+      for (const safe of ['', '&safe=1']) {
+        await fit.goto(`${base}?view=stack&lens=${lens}${safe}${bd}`, { waitUntil: 'networkidle' });
+        await fit.waitForTimeout(200);
+        const cells = await fit.$$eval('.sp-stage [role="gridcell"]', (els) =>
+          els.map((e) => {
+            const r = e.querySelector('.sp-seg__rect');
+            return { title: e.querySelector('title')?.textContent ?? '', text: [...e.querySelectorAll('text')].map((x) => x.textContent).join(' '), w: Number(r?.getAttribute('width')), h: Number(r?.getAttribute('height')) };
+          }),
+        );
+        const flat = (t) => t.replace(/\s+/g, ' ');
+        for (const c of cells) {
+          const name = c.title.split('\n')[0].split(' · ')[0];
+          const at = `${name} ${c.w}x${c.h} (${bd || 'P001'} ${lens}${safe})`;
+          if (c.h >= 40 && (c.w >= 140 || c.h >= 48) && name && !flat(c.text).includes(flat(name))) lost.push(`name: ${at}`);
+          if (lens === 'rent' && c.h >= 40 && c.w >= 130 && name !== 'For sale' && /\$\d/.test(c.title.split('\n').slice(0, 3).join(' ')) && !/\$\d/.test(c.text)) lost.push(`rate: ${at}`);
+        }
+      }
+  check(lost.length === 0, `${w}x${h}: every fitted block keeps its whole name, and the Rent lens its rate${lost.length ? ` (lost: ${[...new Set(lost)].slice(0, 8).join('; ')})` : ''}`);
   await fit.close();
+}
+// Round 30: a move to another view is a history entry, so Back returns to the view it left (rounds 28 and 29: every
+// change replaced the entry and Back left the app).
+{
+  const nav = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+  await nav.goto(`${base}?view=stack`, { waitUntil: 'networkidle' });
+  await nav.getByRole('radio', { name: /Timeline/ }).click();
+  await nav.waitForTimeout(200);
+  const onTimeline = new URL(nav.url()).searchParams.get('view') === 'timeline';
+  await nav.goBack();
+  await nav.waitForTimeout(300);
+  check(onTimeline && new URL(nav.url()).searchParams.get('view') === 'stack', `Back from the Timeline returns to the Stack (${nav.url().replace(base, '')})`);
+  await nav.close();
 }
 await browser.close();
 check(errors.length === 0, `no console errors${errors.length ? ': ' + errors.join(' | ') : ''}`);

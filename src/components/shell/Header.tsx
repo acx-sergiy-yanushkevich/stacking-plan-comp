@@ -205,7 +205,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
           {look}
         </div>
       </section>
-      {/* The building card: its own mini stack, and its name, which is also the switcher (Clara, Nov 12: one name,
+      {/* The building card: its own mini stack, and its name, which is also the switcher (review, Nov 12: one name,
           not one in the bar and one here). The heading is a role, not an <h1>: the menu's wrapper is a <div>. */}
       <header className="sp-card sp-header sp-no-print">
         <MiniStack drawing={buildingById(property.id).stack} size={28} />

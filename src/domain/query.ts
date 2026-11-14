@@ -28,7 +28,7 @@ const MONTH = String.raw`(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may
  * Group 1 is the word ("by", "before", "in", "for", "needed by"), group 2 the date.
  */
 const DATE_AT = new RegExp(
-  String.raw`(?<![\w/-])(?:(needed\s+by|by|before|in|for)\s+)?(q[1-4](?:\s*,?\s*\d{4})?|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{4}|${MONTH}(?:\s+\d{1,2}(?:st|nd|rd|th)?(?!\d))?(?:\s*,?\s*\d{4})?|20\d{2})(?![\w/-])`,
+  String.raw`(?<![\w/-])(?:(needed\s+by|by|before|in|for)\s+)?(q[1-4](?:\s*,?\s*\d{4})?|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4}|\d{1,2}\/\d{4}|\d{1,2}(?:st|nd|rd|th)?\s+${MONTH}(?:\s*,?\s*\d{4})?|${MONTH}(?:\s+\d{1,2}(?:st|nd|rd|th)?(?!\d))?(?:\s*,?\s*\d{4})?|20\d{2})(?![\w/-])`,
   'gi',
 );
 
@@ -81,6 +81,15 @@ export function readBy(words: string, asOf: ISODate): ISODate | null {
     const y = q[2] ? Number(q[2]) : m >= asM ? asY : asY + 1;
     return endOfMonth(y, m);
   }
+  // M/D/YYYY, the way a US broker writes a date (round 30: "by 6/1/2027" was dropped without a word).
+  const us = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(w);
+  if (us) {
+    const day = `${us[3]}-${us[1].padStart(2, '0')}-${us[2].padStart(2, '0')}`;
+    return realDay(day) ? (day as ISODate) : null;
+  }
+  // Day first: "15 Jan 2027", "3rd March".
+  const dayFirst = /^(\d{1,2})(?:st|nd|rd|th)?\s+([a-z]+)\.?(?:\s+(\d{4}))?$/.exec(w);
+  if (dayFirst) return readBy(`${dayFirst[2]} ${dayFirst[1]}${dayFirst[3] ? ` ${dayFirst[3]}` : ''}`, asOf);
   const slash = /^(\d{1,2})\/(\d{4})$/.exec(w);
   if (slash && Number(slash[1]) >= 1 && Number(slash[1]) <= 12) return endOfMonth(Number(slash[2]), Number(slash[1]));
   // A month, with a day (round 29: "February 15, 2028" was read as the end of February 2027) and a year.
@@ -89,7 +98,10 @@ export function readBy(words: string, asOf: ISODate): ISODate | null {
     const i = named[1].length >= 3 ? MONTHS.findIndex((m) => m.startsWith(named[1])) : -1;
     if (i < 0) return null;
     const m = i + 1;
-    const y = named[3] ? Number(named[3]) : m >= asM ? asY : asY + 1;
+    // A day without a year is the next such day on or after the as-of date (round 30: "Nov 5" with an as-of date of
+    // Nov 9 read Nov 5 of this year, four days past).
+    const asD = Number(asOf.slice(8, 10));
+    const y = named[3] ? Number(named[3]) : named[2] ? (m > asM || (m === asM && Number(named[2]) >= asD) ? asY : asY + 1) : m >= asM ? asY : asY + 1;
     if (named[2]) {
       const day = `${y}-${String(m).padStart(2, '0')}-${named[2].padStart(2, '0')}`;
       return realDay(day) ? (day as ISODate) : null;
@@ -112,9 +124,9 @@ export function cutDate(text: string, asOf: ISODate): { by: ISODate | null; rest
     let by = readBy(date, asOf);
     // A date shaped like one that the calendar has not ("by 2027-02-30") is cut and named, never dropped quietly
     // (round 26: the search offered "Feb 30, 2027", then ran with no needed-by date at all).
-    if (!by && (/^\d{4}-\d{2}-\d{2}$/.test(date) || /^[a-z]+\.?\s+\d{1,2}(?:st|nd|rd|th)?\b/.test(date.replace(/,/g, ' ')))) {
+    if (!by && (/^\d{4}-\d{2}-\d{2}$/.test(date) || /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(date) || /^\d{1,2}(?:st|nd|rd|th)?\s+[a-z]/.test(date) || /^[a-z]+\.?\s+\d{1,2}(?:st|nd|rd|th)?\b/.test(date.replace(/,/g, ' ')))) {
       const at = m.index ?? 0;
-      return { by: null, bad: date, rest: `${text.slice(0, at)} ${text.slice(at + m[0].length)}`.replace(/\s+/g, ' ').trim() };
+      return { by: null, bad: date.charAt(0).toUpperCase() + date.slice(1), rest: `${text.slice(0, at)} ${text.slice(at + m[0].length)}`.replace(/\s+/g, ' ').trim() };
     }
     if (!by) continue;
     // "Before 2027" is by the end of 2026; before a month or a quarter is read as by it, as it always was.
