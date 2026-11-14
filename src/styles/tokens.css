@@ -11,6 +11,9 @@
      arrives over `--sp-enter-ms`, its parts staggered so the last starts by 180 ms. Nothing runs past 450 ms. */
   --sp-ease-move: 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
   --sp-enter-ms: 280ms; --sp-enter-curve: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* What is dismissed (a popover, a tooltip, a toast) leaves faster than it came. `lib/motion.ts` holds the
+     same numbers for script; `styles/motion.test.ts` keeps the two equal. */
+  --sp-exit-ms: 110ms;
 
   --sp-color-page: #f3f3f3;
   --sp-color-card: #ffffff;

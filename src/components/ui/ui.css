@@ -3,7 +3,7 @@
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   height: 32px; padding: 0 12px; border-radius: var(--sp-radius-block);
   font-size: var(--sp-text-13); font-weight: 500; line-height: 1; white-space: nowrap;
-  border: 1px solid transparent; transition: background var(--sp-ease), border-color var(--sp-ease), color var(--sp-ease);
+  border: 1px solid transparent; transition: background var(--sp-ease), border-color var(--sp-ease), color var(--sp-ease), scale var(--sp-ease);
   cursor: pointer; user-select: none;
 }
 .sp-btn--sm { height: 28px; padding: 0 10px; font-size: var(--sp-text-12); }
@@ -19,6 +19,9 @@
 .sp-btn--danger:hover { background: var(--sp-color-error-soft); }
 .sp-btn[aria-pressed='true'], .sp-btn.is-active { background: var(--sp-color-brand-soft); color: var(--sp-color-brand-strong); border-color: var(--sp-color-brand); }
 .sp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+/* Pressed (DESIGN.md §3.5): a control gives a little under the pointer, so a click is answered before its
+   result is drawn. `scale`, not `transform`: nothing a control already does with its transform is lost. */
+.sp-btn:active:not(:disabled, [aria-disabled='true']) { scale: 0.97; }
 .sp-btn__count {
   min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; font-size: var(--sp-text-11); font-weight: 600;
   display: inline-flex; align-items: center; justify-content: center; background: var(--sp-color-warn); color: #fff;
@@ -36,7 +39,8 @@
 .sp-chip--error { background: var(--sp-color-error-soft); color: var(--sp-color-error); border-color: transparent; }
 .sp-chip--success { background: var(--sp-color-success-soft); color: var(--sp-color-success); border-color: transparent; }
 .sp-chip--neutral { }
-button.sp-chip { cursor: pointer; height: 28px; padding: 0 10px; transition: background var(--sp-ease), border-color var(--sp-ease); }
+button.sp-chip { cursor: pointer; height: 28px; padding: 0 10px; transition: background var(--sp-ease), border-color var(--sp-ease), scale var(--sp-ease); }
+button.sp-chip:active { scale: 0.97; }
 button.sp-chip:hover { border-color: var(--sp-color-border-strong); }
 button.sp-chip[aria-pressed='true'] { background: var(--sp-color-brand-strong); color: var(--sp-color-on-brand); border-color: var(--sp-color-brand-strong); }
 .sp-chip__count { font-weight: 600; opacity: 0.8; }
@@ -48,8 +52,9 @@ button.sp-chip[aria-pressed='true'] { background: var(--sp-color-brand-strong); 
   position: relative; z-index: 0;
   display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 4px;
   font-size: var(--sp-text-12); font-weight: 500; color: var(--sp-color-text-weak); white-space: nowrap;
-  transition: color var(--sp-ease);
+  transition: color var(--sp-ease), scale var(--sp-ease);
 }
+.sp-segmented__opt:active { scale: 0.97; }
 /* The chosen option's pill is its ::before, under the label, so it can slide from the option chosen before
    (useSlideMark) while the labels stay put. It appears and leaves at once: the slide is the motion. */
 .sp-segmented__opt::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; }
@@ -103,20 +108,24 @@ button.sp-chip[aria-pressed='true'] { background: var(--sp-color-brand-strong); 
   position: absolute; top: calc(100% + 6px); z-index: 40; min-width: 220px;
   background: var(--sp-color-card); border: 1px solid var(--sp-color-border); border-radius: var(--sp-radius-card);
   box-shadow: var(--sp-shadow-pop); padding: var(--sp-space-3);
-  animation: sp-pop-in 140ms ease;
+  animation: sp-pop-in var(--sp-ease);
 }
+/* Closed, it leaves the way it came, faster (useLeaving keeps it in the page that long). */
+.sp-pop__panel.is-leaving { animation: sp-pop-out var(--sp-exit-ms) ease-in forwards; pointer-events: none; }
 .sp-pop__panel--start { left: 0; }
 .sp-pop__panel--end { right: 0; }
 @keyframes sp-pop-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes sp-pop-out { to { opacity: 0; transform: translateY(-4px); } }
 .sp-menu { list-style: none; margin: 0; padding: 4px; min-width: 290px; }
 .sp-menu__item {
   display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border-radius: 4px; text-align: left;
   font-size: var(--sp-text-13); color: var(--sp-color-text);
 }
 .sp-menu__item:hover, .sp-menu__item:focus-visible { background: var(--sp-color-card-2); outline: none; }
+.sp-menu__item:active { background: var(--sp-color-border); }
 .sp-menu__item[aria-disabled='true'] { opacity: 0.5; cursor: not-allowed; }
 /* A disabled entry does not light up under the pointer: nothing would happen. */
-.sp-menu__item[aria-disabled='true']:hover { background: transparent; }
+.sp-menu__item[aria-disabled='true']:is(:hover, :active) { background: transparent; }
 .sp-menu__item .sp-icon { color: var(--sp-color-text-weak); flex: none; }
 .sp-menu__hint { margin-left: auto; font-size: var(--sp-text-11); color: var(--sp-color-text-faint); }
 /* The chosen one of a choice (a radio item): a tick at the end of its row, and its name in semibold, so it is not told by colour. */
@@ -133,7 +142,12 @@ button.sp-chip[aria-pressed='true'] { background: var(--sp-color-brand-strong); 
   background: var(--sp-color-text); color: var(--sp-color-page); padding: 6px 8px; border-radius: 4px;
   font-size: var(--sp-text-12); line-height: 1.35; white-space: nowrap; pointer-events: none;
   box-shadow: var(--sp-shadow-pop); max-width: 320px; white-space: normal; width: max-content;
+  animation: sp-tip-in var(--sp-ease);
 }
+/* Opacity only: the tooltip is centred on its control by its transform. */
+.sp-tip.is-leaving { animation: sp-tip-out var(--sp-exit-ms) ease-in forwards; }
+@keyframes sp-tip-in { from { opacity: 0; } }
+@keyframes sp-tip-out { to { opacity: 0; } }
 .sp-tip--bottom { bottom: auto; top: calc(100% + 6px); }
 
 /* ── Toast ──────────────────────────────────────────────── */
@@ -141,12 +155,14 @@ button.sp-chip[aria-pressed='true'] { background: var(--sp-color-brand-strong); 
 .sp-toast {
   pointer-events: auto; display: flex; align-items: center; gap: 12px; max-width: min(560px, calc(100vw - 32px));
   background: var(--sp-color-text); color: var(--sp-color-page); padding: 10px 14px; border-radius: 8px;
-  box-shadow: var(--sp-shadow-pop); font-size: var(--sp-text-13); animation: sp-toast-in 180ms ease;
+  box-shadow: var(--sp-shadow-pop); font-size: var(--sp-text-13); animation: sp-toast-in var(--sp-ease-slow);
 }
+.sp-toast.is-leaving { animation: sp-toast-out var(--sp-exit-ms) ease-in forwards; pointer-events: none; }
 .sp-toast .sp-icon { flex: none; }
 .sp-toast__action { color: #8ec0ff; font-weight: 600; white-space: nowrap; }
 .sp-toast__close { color: inherit; opacity: .7; display: inline-flex; }
 @keyframes sp-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes sp-toast-out { to { opacity: 0; transform: translateY(4px); } }
 
 /* ── Sheet (mobile bottom sheet) ────────────────────────── */
 /* Half the window, or expanded. The expanded height is set by Sheet.tsx: the content's height, capped at

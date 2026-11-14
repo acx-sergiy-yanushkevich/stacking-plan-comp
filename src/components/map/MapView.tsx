@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { Marker, type GeoJSONSource, type Map as MapLibreMap, type MapLayerMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -156,7 +156,12 @@ const streetView = (lat: number, lng: number) => `https://www.google.com/maps/@?
 interface Pinned {
   place: Place;
   el: HTMLElement;
+  /** Its set of places has just arrived: the pin pops in. */
+  fresh: boolean;
 }
+
+/** How long after a set of places arrives its pins still count as arriving (the entrance and its longest delay), ms. */
+const PIN_ENTER_MS = 460;
 
 /**
  * Map view (DESIGN.md §2.6): where the building is and what is around it. A top-down map framed on the half-mile
@@ -315,6 +320,7 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
   const [pinned, setPinned] = useState<Pinned[]>([]);
   const [labels, setLabels] = useState<{ el: HTMLElement; kind: 'walk' | 'ring' | 'building' }[]>([]);
   const walkMarker = useRef<Marker | null>(null);
+  const pinsFor = useRef<{ places: unknown; at: number }>({ places: null, at: 0 });
   // The pin last tapped or clicked: lit, it says its name, as hovering does (round 26: a tap lit it silently).
   const [tapped, setTapped] = useState<string | null>(null);
   useEffect(() => {
@@ -334,7 +340,12 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
       node.setAttribute('aria-hidden', 'true');
       return node;
     };
-    setPinned(places.map((place) => ({ place, el: mk(place.lng, place.lat, 'center') })));
+    // The pins arrive once for a set of places (map.css): the markers are rebuilt when the ring changes too,
+    // and a pin that only moved to a new marker must not pop in again.
+    const now = performance.now();
+    if (pinsFor.current.places !== places) pinsFor.current = { places, at: now };
+    const fresh = now - pinsFor.current.at < PIN_ENTER_MS;
+    setPinned(places.map((place) => ({ place, el: mk(place.lng, place.lat, 'center'), fresh })));
     const walk = offset(center, WALK_MI, 0);
     const outer = offset(center, miles, 0);
     const walkEl = mk(walk.lng, walk.lat, 'bottom', true);
@@ -550,14 +561,16 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
           </div>
         )}
       </div>
-      {pinned.map(({ place, el }) => {
+      {pinned.map(({ place, el, fresh }) => {
         const look = placeLook(place.group);
         const on = lit === place.key || lit === kindKey(place.group);
         // A lit pin says its name when it is the one asked for: the one tapped, or a stop lit alone from its row.
         const named = on && (tapped === place.id || litCount === 1);
         return createPortal(
           <span
-            className={`sp-pin sp-pin--${look.cls} ${place.kind === 'transit' ? 'sp-pin--stop' : 'sp-pin--place'} ${on ? 'is-lit' : ''} ${named ? 'is-named' : ''}`.replace(/ +/g, ' ').trim()}
+            className={`sp-pin sp-pin--${look.cls} ${place.kind === 'transit' ? 'sp-pin--stop' : 'sp-pin--place'} ${on ? 'is-lit' : ''} ${named ? 'is-named' : ''} ${fresh ? 'is-fresh' : ''}`.replace(/ +/g, ' ').trim()}
+            // The entrance ripples out from the building: a pin's delay is its share of the ring's radius.
+            style={fresh ? ({ '--d': Math.min(1, place.distanceMi / miles).toFixed(2) } as CSSProperties) : undefined}
             data-label={`${place.name} · ${mi(place.distanceMi)}`}
             aria-hidden="true"
             onClick={() => {

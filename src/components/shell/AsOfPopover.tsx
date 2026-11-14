@@ -1,6 +1,8 @@
 import { useId, useState, type ReactNode } from 'react';
 import type { ISODate } from '../../domain/types';
 import { addMonths, fmtDate, monthsBetween, fmtMonths } from '../../domain/dates';
+import { PLAY_END_MONTHS, PLAY_STEP_MONTHS } from '../../domain/playback';
+import type { Playback } from '../../state/usePlayback';
 import { Button, Chip, Popover, TextField } from '../ui';
 
 export interface AsOfPopoverProps {
@@ -28,6 +30,11 @@ export interface AsOfPopoverProps {
    * calendar before them; `compact` still draws the icon and the date.
    */
   plain?: boolean;
+  /**
+   * Play through time (state/usePlayback.ts): a button in the panel steps the date forward by itself. The
+   * panel may be closed while it plays; the control then shows that it is playing, and opening it offers Pause.
+   */
+  playback?: Playback;
 }
 
 /** Why the as-of control is locked, for the tooltip and for a screen reader. */
@@ -46,7 +53,9 @@ const PRESETS: Array<{ label: string; months: number }> = [
   { label: '+5 yr', months: 60 },
 ];
 
-export function AsOfPopover({ asOf, today, onChange, miniTimeline, locked = false, compact = false, plain = false }: AsOfPopoverProps) {
+const PLAY_YEARS = PLAY_END_MONTHS / 12;
+
+export function AsOfPopover({ asOf, today, onChange, miniTimeline, locked = false, compact = false, plain = false, playback }: AsOfPopoverProps) {
   const [open, setOpen] = useState(false);
   const noteId = useId();
   const projected = asOf !== today;
@@ -66,14 +75,14 @@ export function AsOfPopover({ asOf, today, onChange, miniTimeline, locked = fals
     );
   }
   return (
-    <div className={`sp-header__asof ${projected ? 'sp-header__asof--projected' : ''}`}>
+    <div className={`sp-header__asof ${projected ? 'sp-header__asof--projected' : ''} ${playback?.playing ? 'is-playing' : ''}`.replace(/ +/g, ' ').trim()}>
       <Popover
         open={open}
         onOpenChange={setOpen}
         align="end"
         label="As-of date"
         trigger={(p) => (
-          <Button {...p} icon={plain && !compact ? undefined : 'calendar'} iconRight={compact ? undefined : plain ? 'caret-down' : 'chevron-down'} title={projected ? `Projected ${fmtMonths(ahead)} ahead` : 'Plan as of today'}>
+          <Button {...p} icon={plain && !compact ? undefined : 'calendar'} iconRight={compact ? undefined : plain ? 'caret-down' : 'chevron-down'} title={playback?.playing ? 'Playing through time. Open to pause.' : projected ? `Projected ${fmtMonths(ahead)} ahead` : 'Plan as of today'}>
             <Lead compact={compact}>{projected ? 'Projected · ' : 'As of '}</Lead>
             {fmtDate(asOf)}
           </Button>
@@ -99,6 +108,16 @@ export function AsOfPopover({ asOf, today, onChange, miniTimeline, locked = fals
             )}
           </div>
           {miniTimeline && <div className="sp-asof__mini">{miniTimeline}</div>}
+          {playback && (
+            <div className="sp-asof__play">
+              <Button size="sm" icon={playback.playing ? 'pause' : playback.stepOnly ? 'chevron-right' : 'play'} onClick={playback.toggle}>
+                {playback.playing ? 'Pause' : playback.stepOnly ? `Step ${PLAY_STEP_MONTHS} months` : `Play ${PLAY_YEARS} years`}
+              </Button>
+              <span className="sp-asof__note">
+                {playback.stepOnly ? `Moves the date ${PLAY_STEP_MONTHS} months ahead.` : `Steps the date ${PLAY_STEP_MONTHS} months at a time, to ${fmtDate(addMonths(today, PLAY_END_MONTHS))}.`}
+              </span>
+            </div>
+          )}
           <p className="sp-asof__note">
             {projected
               ? `Showing the building ${fmtMonths(ahead)} ahead. Leases ending before this date are drawn as projected vacancies; KPI cards show the change against today.`

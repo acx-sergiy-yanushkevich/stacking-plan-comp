@@ -10,6 +10,11 @@
 .sp-main--panel-wide > .sp-inspector { position: static; max-height: none; }
 .sp-main--panel-wide .sp-ins__body { overflow: visible; -webkit-mask-image: none; mask-image: none; padding-bottom: var(--sp-space-4); }
 .sp-inspector { position: sticky; top: var(--sp-space-3); max-height: calc(100vh - 2 * var(--sp-space-3)); display: flex; flex-direction: column; overflow: hidden; }
+/* Entrance (DESIGN.md §3.5): the side panel slides in from the edge it stands on when it joins the plan (a
+   suite or a tool opened from the Building or Floor view). The plan takes its new width at once: it is
+   fitted by measuring, and is never laid out part-way. */
+.sp-main > .sp-inspector { animation: sp-panel-in var(--sp-ease-move) backwards; }
+@keyframes sp-panel-in { from { opacity: 0; translate: 16px 0; } }
 @media (max-width: 1099px) { .sp-main { grid-template-columns: minmax(0, 1fr); } .sp-inspector { display: none; } }
 @media (max-width: 760px) { .sp-app { padding: var(--sp-space-2); gap: var(--sp-space-2); } .sp-app:not([data-mode='building']) { padding-bottom: 50vh; } }
 
@@ -171,6 +176,9 @@
 .sp-asof__note { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }
 .sp-asof__row { display: flex; gap: 8px; align-items: flex-end; }
 .sp-asof__row .sp-field { flex: 1; }
+/* Play through time: the button, then what it does, on one line. */
+.sp-asof__play { display: flex; align-items: center; gap: 10px; }
+.sp-asof__play .sp-btn { flex: none; }
 
 /* ── Toolbar ────────────────────────────────────────────── */
 .sp-toolbar { display: flex; align-items: center; gap: var(--sp-space-3); padding: 8px var(--sp-space-3); flex-wrap: wrap; }

@@ -259,6 +259,8 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
           aria-label={`Stacking plan, ${rows.length} floors, top floor first`}
           aria-describedby={bare ? undefined : 'sp-legend'}
           aria-rowcount={rows.length}
+          // Pointing at a KPI or a finder option lights its suites at once; a filter or a finder result sweeps up the floors (stack.css).
+          className={hoverKeys ? 'is-pointing' : undefined}
           // The entrance's stagger (stack.css): the floors count, and each row's place from the ground floor.
           style={{ '--n': rows.length } as CSSProperties}
         >

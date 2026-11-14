@@ -99,7 +99,7 @@ Plain CSS with no CSS-in-JS, so the Lightning port can reuse it. `styles/tokens.
 ## 10. Tests and checks
 
 - **Unit tests** (Vitest) sit beside the code as `*.test.ts(x)` and run in Node, without a DOM. Components render to a string with `react-dom/server`, and `components/inspector/testModel.ts` builds a `PlanModel` without the hook. Without a canvas, text is measured with an estimate of 0.55 × the font size per character, and tests choose their widths against it.
-- **Browser checks** (`scripts/*.mjs`, Playwright driving Google Chrome) run against the preview build on port 4180: `verify` (smoke and keyboard), `a11y` (axe-core, desktop and phone), `leakcheck` (prospect-safe), `exportcheck` (PNG and CSV) and `pdfcheck` (the printed report), plus `shots` and `pdf` for each judging round. The commands are in the README's "Run it" section.
+- **Browser checks** (`scripts/*.mjs`, Playwright driving Google Chrome) run against the preview build on port 4180: `verify` (smoke and keyboard), `motioncheck` (motion, the one check that runs with motion on), `a11y` (axe-core, desktop and phone), `leakcheck` (prospect-safe), `exportcheck` (PNG and CSV) and `pdfcheck` (the printed report), plus `shots` and `pdf` for each judging round. The commands are in the README's "Run it" section.
 
 ## 11. Where a change goes
 
