@@ -12,7 +12,14 @@ Prospect-safe by design: asking rents and asking prices on availabilities (inclu
 
 Also read `docs/CHALLENGE_RULES.md` and the two Best UX judge personas, `docs/personas/wes.md` and `docs/personas/todd.md`. Score with the rubric in BRIEF.md, but test the product the way they would: Wes demos it live to a broker and hands a screen to a prospective tenant; Todd checks that the facts add up and that finding space is fast and deterministic.
 
-New in round 29 (judge these as part of the product; everything from earlier rounds, listed after, is still in scope):
+New in round 30 (judge these as part of the product; everything from earlier rounds, listed after, is still in scope):
+- **Back returns to the view it left.** A move to another view, building, floor, ring, turn or Prospect-safe adds a history entry; typing and choosing a suite replace it.
+- **A fitted row keeps its whole name and, in the Rent lens, its rate** at 1470 x 830, 1440 x 1000 and 1366 x 768 in all four buildings (`npm run verify`). A narrow row gives its second line to the rate before the SF. Blocks too small for the text at 10 px (under 140 px wide and 48 px tall for a name; under 130 px wide for a rate) still drop it; the plan scrolls on a 13-inch laptop; a stale-touch risk badge stays by design.
+- **The focusable KPI details** (Available, Largest block) have a label ("Available, 33,200 SF") and a description.
+- **Dates in the search box:** "by 6/1/2027", "by 15 Jan 2027", "by Nov 5" (next year when the day has passed), and a bad date named with a capital ("February 30, 2027").
+- **Stops that share a name** each light their own Area row and pin.
+
+Round 29 (still in scope, except where round 30 changed it):
 - **A row fitted to the window keeps its tenant's name** at 1470 x 830, 1440 x 1000 and 1366 x 768, in every lens, owner and prospect-safe (a deal circle on a short row moves to the bottom corner; an informational badge gives way to the name; `npm run verify` checks it). A rate stays before the suite number when the line cannot hold both. A stale-touch risk badge still stays by design; a 12-floor plan taller than the window (a 13-inch laptop) scrolls rather than shrink rows further (NFR-12).
 - **The KPI Details figures** that light suites (Available, Largest block) are named groups with a description that focus lights them. On the Map the Color-by strip reads as read-only ("Plan views"), with no circles.
 - **Dates are calendar-true.** `asOf=2027-02-30` falls back to today; the search reads "by February 15, 2028" as that day and names "February 30, 2027" as not a date on the calendar.
