@@ -197,11 +197,12 @@ export function segmentText(seg: Segment, o: SegmentTextOptions): SegmentText {
   if (deals > 0) badges.push({ kind: 'deal', text: String(deals), title: `${deals} live deal${deals === 1 ? '' : 's'}` });
   if (o.matches) badges.push({ kind: 'match', text: o.matchLabel ?? (o.matches === 1 ? '1 inquiry fits' : `${o.matches} inquiries fit`), title: o.matchLabel ? 'This space satisfies the inquiry being matched' : 'Open inquiries this space could satisfy' });
   // CRM on the canvas: how recently the tenant relationship was touched, for leases inside the renewal window.
+  // "Call 40 d ago", the worklist's words: "Call 40 d" read as a call due in 40 days as easily as one made 40 days back.
   const projected = !!o.today && o.today !== o.asOf;
   const touchable = canShowActivity(safe) && !projected && !!lease && (kind === 'leased' || kind === 'holdover' || kind === 'mtm');
   if (touchable && lease.lastTouch && (seg.monthsToExpiry === null || seg.monthsToExpiry <= 24)) {
     const days = Math.max(0, Math.round((Date.parse(o.today ?? o.asOf) - Date.parse(lease.lastTouch.date)) / 86_400_000));
-    badges.push({ kind: days <= 30 ? 'info' : days <= 90 ? 'warn' : 'risk', text: `${lease.lastTouch.type} ${days} d`, title: `Last touch: ${lease.lastTouch.type} ${days} days ago by ${lease.lastTouch.by}` });
+    badges.push({ kind: days <= 30 ? 'info' : days <= 90 ? 'warn' : 'risk', text: `${lease.lastTouch.type} ${days} d ago`, title: `Last touch: ${lease.lastTouch.type} ${days} days ago by ${lease.lastTouch.by}` });
   } else if (touchable && !lease.lastTouch && seg.monthsToExpiry !== null && seg.monthsToExpiry <= 12) {
     // Silence is the norm 1–2 years out; flag it only inside the year, where a renewal should be under way.
     badges.push({ kind: 'info', text: 'No activity', title: 'No activity logged on this tenant' });

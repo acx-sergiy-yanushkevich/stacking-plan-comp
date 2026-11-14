@@ -28,8 +28,8 @@ Design principles, in order:
 ├───────────────────────────────────────────────────────────┬─────────────────────────┤
 │ legend: ■ Available ▨ Sublease ▤ Committed ■ Leased …     │ INSPECTOR               │
 │ 12 │ 50% ▰▰▱▱ │ ████████████████ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓      │ Building (default)      │
-│ 11 │100% ▰▰▰▰ │ ████████████████ ████████████████████      │  Rollover 8 buckets     │
-│ …                                                         │  At risk · Coming supply│
+│ 11 │100% ▰▰▰▰ │ ████████████████ ████████████████████      │  At risk                │
+│ …                                                         │  Rollover · Coming supply│
 │  1 │ 67% ▰▰▰▱ │ ██ ████ ░░░░░░ lobby ░░░░░░ ▓▓▓▓            │  Pipeline by stage      │
 │                                                           │  Data issues · Changes  │
 └───────────────────────────────────────────────────────────┴─────────────────────────┘
@@ -65,10 +65,10 @@ View tabs (Building, Stack, Timeline, Map), search field ("Find tenant, suite or
 ### 2.4 Stack view (default)
 - SVG. One row per floor, top floor first. Left gutter: floor name (15 px semibold), leased % with a 4-step mini bar, leasable RSF. The floor name is a button: opens Floor mode in the inspector; the inspector offers "Open floor plate".
 - Row width is proportional to leasable RSF relative to the widest floor (floor of 60 %). Rows left-align so the building's taper reads on the right edge.
-- Suite widths are proportional to RSF with a 56 px minimum; when a minimum applies the other suites on that floor shrink proportionally and a footnote under the legend says so.
-- Row height 72 px desktop, 56 px mobile. Blocks have 2 px gaps, 4 px radius, 1 px border in the tone's border colour.
+- Suite widths are proportional to RSF with a 56 px minimum; when a minimum applies the other suites on that floor shrink proportionally and the info mark beside the title says so. The same mark holds what the drawing means (floor width follows gross floor area, suite width follows RSF) and the keyboard's keys; nothing is printed under the plan.
+- Row height on a desktop is fitted to the window so the whole building is seen at once: 72 px where the window has the room, shrinking to no less than 44 px (two lines: the name, then suite, SF and the lens fact on one line), after which the plan scrolls (`stack/fitRows.ts`). The side panel is as tall as the view beside it and adds no height to the page. 56 px on a phone, 48 px on paper. Blocks have 2 px gaps, 4 px radius, 1 px border in the tone's border colour.
 - **Text tiers by block width:** ≥ 200 px: tenant · "Ste 600 · 21,400 SF" · expiry line. 120–200 px: tenant (wraps to two lines) · SF. 64–120 px: SF, plus the tenant's first word when it fits. < 64 px: no text. Every block has a native tooltip and an accessible name with the full facts.
-- Badges (top right): live-deal count pill; "Holdover", "MTM", "Avail Apr '27", "For sale", lock for confidential, inquiry-match count when Find space is active.
+- Badges (top right): live-deal count pill, in words on a block of 280 px or more ("2 live deals"); the last touch on a lease inside two years of its end ("Call 40 d ago"); "Holdover", "MTM", "Avail Apr '27", "For sale", lock for confidential, inquiry-match count when Find space is active.
 - Selection: 2 px brand outline plus a soft outer ring; dimming: non-matching blocks drop to 35 % and lose their text when a filter (search, find space, worklist window, rollover bucket) is active; a filter summary bar above the plan names the filter with a Clear button.
 - Legend lives in the plan card header. Each legend item shows the tone, pattern and the SF and share it currently covers ("Available 26,200 · 10.8 %").
 
@@ -96,7 +96,7 @@ View tabs (Building, Stack, Timeline, Map), search field ("Find tenant, suite or
 ### 2.8 Inspector (right, 360 px, reflow)
 Modes, each with a title row and a Close that returns to Building:
 
-- **Building** (default): "Around the building" first (1-mile population, median household income and the nearest transit stop, with "See area details" opening Area), then the rollover chart (8 rolling buckets from as-of plus "8+ yr"; click a bucket to highlight those leases in the plan), At risk (holdover and MTM SF), Coming supply (occupied but marketed), Pipeline by stage, Data issues summary with a link, Recent changes (30-day change log from record history).
+- **Building** (default): "Around the building" first (1-mile population, median household income and the nearest transit stop, with "See area details" opening Area), then At risk (holdover and MTM SF, each opening the worklist), the rollover chart (8 rolling buckets from as-of plus "8+ yr"; click a bucket to highlight those leases in the plan; left out beside the Timeline, whose band over the bars is the same chart), Coming supply (occupied but marketed), Pipeline by stage, Data issues summary with a link, Recent changes (30-day change log from record history).
 - **Block**: tenant or availability detail. Lease: term, remaining, rent with unit and type (hidden when confidential), contact, broker owner, last touch, other floors, open renewal deals, marketed-for-later notice. Availability: type (direct, sublease, for sale), available from, asking rent or price, divisible, inquiries that fit, live deals by stage. Footer actions as toast stubs: Open record, New deal, Log call, Create availability, Start renewal.
 - **Floor**: floor KPIs, suites list, "Open floor plate".
 - **Find space**: Need SF (min, max), by date, direct / sublease / any, match an open Inquiry (pre-fills). Results ranked: on time first, sooner, closest size; each shows floors, SF, type, from date, inquiry fits and live deals; selecting a result highlights its blocks. Shows "Largest block now" and suggests two-floor combinations.

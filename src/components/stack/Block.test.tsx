@@ -297,3 +297,40 @@ describe('Block text in print: a narrow lease keeps its term (round 17: the Caf�
     expect(draw(text({ term: '' }), 128, 48, seg(), true).lines.map((l) => l.t)).toEqual(draw(text(), 128, 48, seg(), true).lines.map((l) => l.t));
   });
 });
+
+describe('a row fitted to the window (44 px, two lines)', () => {
+  const kinetic = text({ name: 'Kinetic Ventures', aria: 'Floor 12, Kinetic Ventures', sub: 'Ste 1200 · 9,300 SF', meta: 'Exp Jun 2028 · 1 yr 7 mo', lensShort: "Jun '28" });
+
+  it('a wide block keeps its suite number with the SF and the lens fact on one line', () => {
+    expect(draw(kinetic, 360, 44).lines.map((l) => l.t)).toEqual(['Kinetic Ventures', "Ste 1200 · 9,300 SF · Jun '28"]);
+  });
+
+  it('where the lens has no short fact the whole one follows: the asking rent stays on the plan', () => {
+    const open = text({ tone: 'available', name: 'Available now', aria: 'Floor 12, Available now', sub: 'Ste 1250 · 9,300 SF', meta: '$38–$40/SF/yr FSG', lensShort: '' });
+    expect(draw(open, 360, 44, seg('available')).lines.map((l) => l.t)).toEqual(['Available now', 'Ste 1250 · 9,300 SF · $38–$40/SF/yr FSG']);
+  });
+
+  it('a name too long for 13 px is set whole on one line at 11 px before the block goes without it', () => {
+    const { lines } = draw(text({ name: 'Conner CPA Group', aria: 'Floor 7, Conner CPA Group', lensShort: "Apr '28", meta: 'Exp Apr 2028' }), 120, 44);
+    expect(lines[0]).toMatchObject({ cls: 'tiny', t: 'Conner CPA Group' });
+    expect(lines.at(-1)!.t).toContain('2,400 SF');
+  });
+});
+
+describe('the deal count', () => {
+  const two: Badge[] = [{ kind: 'deal', text: '2', title: '2 live deals' }];
+  const pill = (html: string) => /<g class="sp-badge sp-badge--deal"[^>]*>.*?<text[^>]*>([^<]*)</.exec(html)?.[1].trim();
+
+  it('says what it counts where the block has the room (round 27 review: a bare "2" was explained only by its tooltip)', () => {
+    const { html, label } = draw(text({ name: 'Cirrus Energy', aria: 'Floor 6, Cirrus Energy', badges: two }), 400);
+    expect(pill(html)).toBe('2 live deals');
+    expect(label.match(/2 live deals/g)).toHaveLength(1);
+  });
+
+  it('stays a count in a circle on a narrower block and on paper, with the words in the accessible name', () => {
+    const narrow = draw(text({ name: 'Cirrus Energy', aria: 'Floor 6, Cirrus Energy', badges: two }), 200);
+    expect(pill(narrow.html)).toBe('2');
+    expect(narrow.label).toContain('2 live deals');
+    expect(pill(draw(text({ name: 'Cirrus Energy', aria: 'Floor 6, Cirrus Energy', badges: two }), 400, 48, seg(), true).html)).toBe('2');
+  });
+});

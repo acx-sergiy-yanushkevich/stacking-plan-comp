@@ -84,44 +84,15 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
     return { stage, count: deals.length, sf: sfByStage.get(stage) ?? 0 };
   });
 
+  const onTimeline = state.view === 'timeline';
   const activeBucket = state.bucket;
   const tail = roll.buckets.at(-1);
   const bucketNote = activeBucket !== null ? roll.buckets.find((b) => b.key === activeBucket) : null;
 
   return (
     <>
-      {/* Rollover by period can be matched to suites by their RSF: a prospect sees none of it (domain/safe.ts, rule 2). */}
-      {canShowRollover(safe) && tail ? (
-        <Section
-          title="Rollover"
-          aside={
-            bucketNote ? (
-              <Chip tone="brand" selected onClick={() => toggleBucket(patch, state.bucket, activeBucket!)} aria-label={`Clear the ${bucketNote.label} filter`} icon="close">
-                {bucketNote.label}
-              </Chip>
-            ) : undefined
-          }
-        >
-          <RolloverChart
-            buckets={roll.buckets}
-            atRisk={roll.atRisk}
-            atRiskLeases={holdover.leases + mtm.leases}
-            activeBucket={activeBucket}
-            onBucket={(key) => key !== null && toggleBucket(patch, state.bucket, key)}
-            onAtRisk={openRisk}
-            showRisk={canShowTenantRisk(safe)}
-          />
-          <p className="sp-ins__note">
-            Lease SF ending in rolling 12-month periods from {wholeDates(fmtDate(asOf))}; “{tail.label}” collects everything later. Click a bar to highlight those leases in the plan.
-          </p>
-          {roll.overAllocated.length > 0 && canShowIssues(safe) && (
-            <p className="sp-ins__note sp-ins__warn">
-              {roll.overAllocated.map((o) => `${o.floor} is over-allocated by ${sf(o.sf)}`).join('; ')}: periods use recorded SF, so they can exceed the leasable area; leased is capped at {num(model.kpis.leased)} SF.
-            </p>
-          )}
-        </Section>
-      ) : null}
-
+      {/* What needs a call first comes first: the leases at risk, then when the rest roll. (The panel opened on
+          the rollover chart, which the "Expiration" figure in the KPI bar already sums up.) */}
       {!canShowTenantRisk(safe) ? (
         <Section title="Lease terms">
           <p className="sp-ins__explain">Lease dates, rollover by period and tenant risk are withheld in prospect-safe mode.</p>
@@ -155,6 +126,40 @@ export function BuildingPanel({ model, state, patch }: BuildingPanelProps) {
         </ul>
       </Section>
       )}
+
+      {/* The Timeline draws the same periods, with the same SF and the same click, as the band over its bars:
+          beside it the chart would say everything twice on one screen. */}
+      {/* Rollover by period can be matched to suites by their RSF: a prospect sees none of it (domain/safe.ts, rule 2). */}
+      {canShowRollover(safe) && tail && !onTimeline ? (
+        <Section
+          title="Rollover"
+          aside={
+            bucketNote ? (
+              <Chip tone="brand" selected onClick={() => toggleBucket(patch, state.bucket, activeBucket!)} aria-label={`Clear the ${bucketNote.label} filter`} icon="close">
+                {bucketNote.label}
+              </Chip>
+            ) : undefined
+          }
+        >
+          <RolloverChart
+            buckets={roll.buckets}
+            atRisk={roll.atRisk}
+            atRiskLeases={holdover.leases + mtm.leases}
+            activeBucket={activeBucket}
+            onBucket={(key) => key !== null && toggleBucket(patch, state.bucket, key)}
+            onAtRisk={openRisk}
+            showRisk={canShowTenantRisk(safe)}
+          />
+          <p className="sp-ins__note">
+            Rolling 12-month periods from {wholeDates(fmtDate(asOf))}. Click a bar to highlight its leases in the plan.
+          </p>
+          {roll.overAllocated.length > 0 && canShowIssues(safe) && (
+            <p className="sp-ins__note sp-ins__warn">
+              {roll.overAllocated.map((o) => `${o.floor} is over-allocated by ${sf(o.sf)}`).join('; ')}: periods use recorded SF, so they can exceed the leasable area; leased is capped at {num(model.kpis.leased)} SF.
+            </p>
+          )}
+        </Section>
+      ) : null}
 
       <Section title="Coming supply">
         <ul className="sp-ins__list">

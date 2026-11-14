@@ -7,7 +7,7 @@ import { num, pct } from '../../domain/format';
 import { fmtDate } from '../../domain/dates';
 import { matchingInquiries } from '../../domain/finder';
 import { useIsPhone } from '../../lib/useMedia';
-import { requestFrame, scrollBy } from '../../lib/host';
+import { find, on, requestFrame, scrollBy, viewport } from '../../lib/host';
 import { useHoverKeys, usePinnedKeys, setHoverFloor, useHoverFloor } from '../../state/hoverStore';
 import type { FloorView, Segment } from '../../domain/derive';
 import { PhoneStack } from './PhoneStack';
@@ -20,6 +20,7 @@ import { segmentText } from '../plan/segmentText';
 import { availabilityFact } from '../floor/floorData';
 import { spaceOf } from '../building/floorFact';
 import { Block } from './Block';
+import { ROW_GAP, ROW_H, fitRowHeight, rowGapFor } from './fitRows';
 import { rampNote } from './rampNote';
 import { FilterBar } from './FilterBar';
 import '../plan/plan.css';
@@ -35,7 +36,30 @@ export interface StackViewProps {
   rowHeight?: number;
 }
 
-const ROW_GAP = 6;
+/** What stays under the plan's last row: the body's own padding (8 + 14 px) and the page's. */
+const FIT_FOOT = 48;
+
+/**
+ * The fitted row height (fitRows.ts) for this window. Measured from the top of the page, not of the window,
+ * so scrolling changes nothing; measured again when the window or the plan's place in the page changes.
+ */
+function useFitRowHeight(body: React.RefObject<HTMLElement | null>, floors: number, enabled: boolean, width: number, banner: boolean): number {
+  const [h, setH] = useState(ROW_H);
+  useLayoutEffect(() => {
+    if (!enabled) return;
+    const fit = () => {
+      const el = body.current;
+      const page = find('.sp-app');
+      const win = viewport().height;
+      if (!el || !page || !win || !floors) return;
+      const top = el.getBoundingClientRect().top - page.getBoundingClientRect().top;
+      setH(fitRowHeight(win - top - FIT_FOOT, floors));
+    };
+    fit();
+    return on('resize', fit);
+  }, [body, floors, enabled, width, banner]);
+  return enabled ? h : ROW_H;
+}
 const MIN_BLOCK = 56;
 const MIN_BLOCK_PHONE = 64;
 /**
@@ -56,7 +80,11 @@ const segIndexLease = (idx: Map<string, { lease?: { id: string } }>, key: string
 export default function StackView({ model, state, patch, bare, rowHeight }: StackViewProps) {
   const phone = useIsPhone();
   const [ref, width] = useWidth<HTMLDivElement>(1040);
-  const rowH = rowHeight ?? (phone ? 56 : 72);
+  // On a desktop the rows are as tall as lets the whole building stand in the window (useFitRowHeight).
+  const fitted = !bare && !phone && rowHeight === undefined;
+  const fitH = useFitRowHeight(ref, model.floors.length, fitted, width, !!model.filterLabel);
+  const rowH = rowHeight ?? (phone ? 56 : fitH);
+  const rowGap = fitted ? rowGapFor(rowH) : ROW_GAP;
   const selectedLease = state.select ? segIndexLease(model.segIndex, state.select) : null;
   const gutter = phone ? 44 : 124;
   const planPx = Math.max(240, width - gutter - 8);
@@ -93,10 +121,10 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
       const leasablePx = fw - nonLeasablePx - (nonLeasablePx ? 2 : 0);
       const boxes = blockLayout(f.segments, leasablePx, minBlock, 2);
       const row = { f, y, h, focused, w: fw, boxes, nonLeasablePx, leasablePx };
-      y += h + ROW_GAP;
+      y += h + rowGap;
       return row;
     });
-  }, [floors, planPx, rowH, phone, focusId, extrasFor]);
+  }, [floors, planPx, rowH, rowGap, phone, focusId, extrasFor]);
   const anyEnlarged = rows.some((r) => r.boxes.some((b) => b.enlarged));
   const lastRow = rows[rows.length - 1];
   const height = lastRow ? lastRow.y + lastRow.h + 2 : 0;
@@ -227,6 +255,9 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
   ]
     .filter(Boolean)
     .join(' ') || null;
+  // What the plan's drawing means and how the keyboard moves on it: behind the title's info mark with the
+  // legend's own notes, not two lines of small print under the plan (they cost the last floor its place in the window).
+  const about = ['Floor width follows gross floor area; suite width follows RSF. Click a floor number or a suite to focus that floor.', legendNote ?? '', 'Keys: ← → suites · ↑ ↓ floors · ← from the first suite reaches the floor label · Enter opens · Esc closes.'].filter(Boolean).join(' ');
   const totalLeasable = model.kpis.leasable;
   const title = lensName(state.lens);
 
@@ -241,7 +272,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
             <h2>{title}</h2>
             <span className="sp-weak">
               as of {fmtDate(model.asOf)} · {num(totalLeasable)} RSF leasable
-              {legendNote && <> <LegendInfo note={legendNote} /></>}
+              {' '}<LegendInfo note={about} />
             </span>
           </div>
           <Legend items={model.legend} compact id="sp-legend" note={legendNote} infoElsewhere />
@@ -393,14 +424,6 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
           })}
         </svg>
       </div>
-      {!bare && (
-        <div className="sp-stack__foot">
-          <span>Floor width is proportional to gross floor area; suite width to its RSF. Click a floor number or a suite to focus that floor.</span>
-          <span>
-            Keys: ← → suites · ↑ ↓ floors · ← from the first suite reaches the floor label · Enter opens · Esc closes
-          </span>
-        </div>
-      )}
     </section>
   );
 }
