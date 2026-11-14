@@ -12,7 +12,14 @@ Prospect-safe by design: asking rents and asking prices on availabilities (inclu
 
 Also read `docs/CHALLENGE_RULES.md` and the two Best UX judge personas, `docs/personas/wes.md` and `docs/personas/todd.md`. Score with the rubric in BRIEF.md, but test the product the way they would: Wes demos it live to a broker and hands a screen to a prospective tenant; Todd checks that the facts add up and that finding space is fast and deterministic.
 
-New in round 27 (judge these as part of the product; everything from earlier rounds, listed after, is still in scope):
+New in round 28 (judge these as part of the product; everything from earlier rounds, listed after, is still in scope):
+- **The KPI strip is the one "Color by".** Seven cards, each a switch for a lens (the toolbar's Color by is gone); the Rent lens has the Leasing palette (slate navy to teal to sky blue); the header's title is the building switcher.
+- **Prospect-safe toolbar** keeps no empty place for Worklist and Data issues: Find space and Area sit at the right.
+- **Motion** (DESIGN.md §3.5, NFR-11): views arrive (floors stack up, rows rise, bars unroll), lens/date/filter changes crossfade, the View switch pill and Color by underline slide, the building rises as the map tilts into 3D; exports finish any motion first.
+- **The building model turns a quarter at a time**, and the turn is in the address.
+- **The stack fits the window**; short rows keep their facts; clearer chips. The tab reads "Stax by Ascendix" with the Stax mark as favicon.
+
+Round 27 (still in scope, except where round 28 changed it):
 - **The 1-mile map always shows its places.** They used to fold away whenever the half mile was under 120 px across on screen, which a 13-inch laptop (about 1470 x 830), 1366 x 768, 1280 x 720 and a phone all were at 1 mile, so the map opened with no pins and read as data not loaded. They now fold only under 60 px, which is the 3- and 5-mile maps; there the half-mile label counts them and a kind lit from the key or a row comes back.
 - **The half-mile label stays clear of the building's name** at 5 miles on a phone or tablet: it lifts above the name when the half mile is shorter on screen than the name stands (8 px clear at 390, 768, 1024 and 1440 px).
 - **A search date the calendar has not** ("12k by 2027-02-30") is named in the bar ("is not a date on the calendar"), which offers nothing to run; Enter does nothing. The Find panel names a bad date from a link at once, not only after a blur.
