@@ -32,7 +32,7 @@ One model of the building, shown four ways, with the answers to the questions ab
 - **Seven KPIs, always on top.** One quiet bar above every view, in two groups. "Color by" is the lens picker: a switch per lens with its figure (leased %, in-place rent, SF expiring in 12 months, pipeline). "Details" are read-only: available SF, largest block and WALT. Pointing at "Available" or "Largest block" lights those suites on the plan.
 - **Stack view.** The classic plan with an inspector beside it. Clicking a floor or suite expands it with the detail from every lens.
 - **Four color lenses.** Status, expiration, deal stage and rent. Every state also has a pattern or label, so color is never the only cue.
-- **Time travel.** Move the as-of date and the plan, KPIs and rollover chart recompute. Future vacancies and signed-but-not-commenced leases are drawn as what they are.
+- **Time travel.** Move the as-of date and the plan, KPIs and rollover chart recompute. "Play 5 years" steps the date a quarter at a time, so the building is seen emptying and filling. Future vacancies and signed-but-not-commenced leases are drawn as what they are.
 - **Space finder.** Enter a size, a date and direct or sublease; matching blocks light up, including pairs of adjacent floors and near misses. An open inquiry can be matched to space the same way.
 - **Renewal worklist.** Leases at risk or expiring within 90 days, 180 days, 12 or 24 months, with the last touch on each.
 - **Data issues.** Over-allocated floors, unaccounted area, leases without a floor, holdover and month-to-month leases and stale deals are listed and marked on the plan.
@@ -141,6 +141,7 @@ These drive the preview build with Playwright. They need Google Chrome installed
 | Command | What it checks or produces |
 |---|---|
 | `npm run verify` | Smoke checks: structure, keyboard navigation, time travel, no console errors |
+| `npm run motioncheck` | Motion, with motion on: views arrive and come to rest, menus fade out, the finder sweeps, play through time, and reduced motion turns it all off |
 | `npm run a11y` | Accessibility; fails on serious or critical violations |
 | `npm run leakcheck` | No tenant, contact or prospect name and no in-place rent in prospect-safe mode |
 | `npm run shots -- <outDir>` | A PNG of every reviewed state |

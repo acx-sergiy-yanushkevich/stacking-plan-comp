@@ -22,6 +22,7 @@ npm run lint                               # oxlint
 ```bash
 npx vite build --outDir dist-judge && npm run preview   # a preview may already hold 4180; it serves the rebuilt files
 npm run verify        # smoke checks, keyboard, time travel, no console errors
+npm run motioncheck   # motion, with motion on (every other check runs with reduced motion)
 npm run a11y          # axe-core on desktop and phone states
 npm run leakcheck     # nothing withheld leaks in prospect-safe mode
 npm run exportcheck   # the PNG and CSV exports

@@ -131,3 +131,10 @@
   animation: sp-enter-rise var(--sp-enter-ms) var(--sp-enter-curve) backwards;
   animation-delay: calc(var(--sp-enter-shift, 0ms) + var(--i, 0) * min(30ms, 180ms / var(--n, 1)));
 }
+
+/* The sweep (DESIGN.md §3.5): a finder result, a filter or a lit KPI dims and undims the other suites floor
+   by floor from the ground up, with the entrance's stagger, so the eye is led up the building to what is
+   left lit. Pointing (`is-pointing`: a highlight that follows the pointer) answers at once on every floor. */
+.sp-stage .sp-stack__body > svg:not(.is-pointing) .sp-stack__row .sp-seg {
+  transition: opacity var(--sp-ease-move) calc(var(--i, 0) * min(30ms, 180ms / var(--n, 1))), scale var(--sp-ease);
+}

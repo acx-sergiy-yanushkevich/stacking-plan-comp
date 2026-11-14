@@ -12,6 +12,7 @@ import { MiniStack, StaxLockup } from './Brand';
 import { buildingById } from '../../data/mock/buildings';
 import { canTimeTravel, planDate } from '../../domain/safe';
 import { AsOfPopover } from './AsOfPopover';
+import type { Playback } from '../../state/usePlayback';
 import { useIsPhone, useMedia, usePrefersDark } from '../../lib/useMedia';
 
 const SAFE_TITLE = 'Hide tenant names, contacts, rents, lease dates and prospects, and show the plan as of today';
@@ -24,9 +25,11 @@ export interface HeaderProps {
   patch: (p: Partial<PlanState>) => void;
   onExport: (kind: ExportKind) => void;
   miniTimeline?: ReactNode;
+  /** Play through time, driven by the shell so that it outlives the as-of panel. */
+  playback?: Playback;
 }
 
-export function Header({ model, state, patch, onExport, miniTimeline }: HeaderProps) {
+export function Header({ model, state, patch, onExport, miniTimeline, playback }: HeaderProps) {
   const { property, kpis, today } = model;
   const verifiedAt = [...property.leases.map((l) => l.verifiedAt), ...property.availabilities.map((a) => a.verifiedAt)].sort().at(-1) ?? property.dataUpdated;
   // Standalone app (glass skin): the product bar names the product and the building, and the app owns its
@@ -60,7 +63,7 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
   const actions = (
     <div className="sp-header__actions">
       {/* The date the plan is drawn for: in prospect-safe mode that is today, whatever was asked for. */}
-      <AsOfPopover asOf={planDate(state.asOf, today, state.safe)} today={today} onChange={(asOf) => patch({ asOf })} miniTimeline={miniTimeline} locked={!canTimeTravel(state.safe)} compact={compact} plain={standalone} />
+      <AsOfPopover asOf={planDate(state.asOf, today, state.safe)} today={today} onChange={(asOf) => patch({ asOf })} miniTimeline={miniTimeline} locked={!canTimeTravel(state.safe)} compact={compact} plain={standalone} playback={playback} />
       {/* Turning it on drops a search in progress, the worklist, a projected as-of date and any toast: the state layer (applyPatch) and useToastBoundary do it, not this handler. */}
       {standalone ? (
         // The product bar: a text button like its neighbours, still a switch to assistive technology. Pressed,

@@ -1,5 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { focused, on, viewport } from '../../lib/host';
+import { useLeaving } from './useLeaving';
 
 export interface PopoverTriggerProps {
   ref: RefObject<HTMLButtonElement | null>;
@@ -63,6 +64,9 @@ export function Popover({ open, onOpenChange, trigger, children, align = 'start'
   const wasOpen = useRef(false);
   /** Closed by Tab: focus has gone on from the trigger, and is not called back to it. */
   const tabbedOut = useRef(false);
+  // Closed, the panel fades out before it is taken from the page (useLeaving). Focus has already gone back
+  // to the trigger by then, and the leaving panel is inert.
+  const { shown, leaving } = useLeaving(open);
 
   useEffect(() => {
     if (open) {
@@ -124,14 +128,16 @@ export function Popover({ open, onOpenChange, trigger, children, align = 'start'
   return (
     <div className={`sp-pop ${className}`}>
       {trigger({ ref: triggerRef, onClick: () => onOpenChange(!open), 'aria-expanded': open, 'aria-haspopup': role, 'aria-controls': id })}
-      {open && (
+      {shown && (
         <div
           id={id}
           ref={panelRef}
           role={role}
           aria-label={label}
+          aria-hidden={leaving || undefined}
+          inert={leaving || undefined}
           tabIndex={-1}
-          className={`sp-pop__panel sp-pop__panel--${align} ${panelClassName}`}
+          className={`sp-pop__panel sp-pop__panel--${align} ${panelClassName} ${leaving ? 'is-leaving' : ''}`}
           onKeyDown={onKeyDown}
         >
           {children}

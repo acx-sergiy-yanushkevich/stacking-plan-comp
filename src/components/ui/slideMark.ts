@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, type RefObject } from 'react';
 import { computedStyle } from '../../lib/host';
+import { MOVE_CURVE, MOVE_MS } from '../../lib/motion';
 import { usePrefersReducedMotion } from '../../lib/useMedia';
 
 /** A mark's box along its row, in px from the row's start. */
@@ -49,7 +50,7 @@ export function useSlideMark(container: RefObject<HTMLElement | null>, selector:
     // The old choice is measured now, not when it was chosen: the row may have changed width since.
     const frames = markKeyframes(markBox(old, pseudoElement), markBox(el, pseudoElement));
     if (!frames) return;
-    const slide = el.animate(frames, { duration: 240, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', pseudoElement });
+    const slide = el.animate(frames, { duration: MOVE_MS, easing: MOVE_CURVE, pseudoElement });
     return () => slide.cancel();
     // `selector` and `pseudoElement` are fixed per call site.
     // eslint-disable-next-line react-hooks/exhaustive-deps

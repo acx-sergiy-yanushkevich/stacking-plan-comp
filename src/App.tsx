@@ -7,7 +7,8 @@ import { buildingById } from './data/mock/buildings';
 import { usePlanModel } from './model/usePlanModel';
 import { usePlanState, useDocumentTitle } from './state/usePlanState';
 import { useAnnouncement } from './state/useAnnouncement';
-import { canShowRollover, shownToProspect } from './domain/safe';
+import { canShowRollover, canTimeTravel, planDate, shownToProspect } from './domain/safe';
+import { usePlayback } from './state/usePlayback';
 import { copyText, find, focused, on, print, readUrl, setRootData, shareUrl } from './lib/host';
 import { deriveMode, paletteOf, shownView, type PlanState } from './state/planState';
 import { rentRollRows, toCsv } from './domain/exportCsv';
@@ -142,7 +143,12 @@ function Shell() {
   // The live region's text is dropped in the render in which prospect-safe changes, so a sentence written
   // for the broker ("Opened Cirrus Energy…") never outlives the moment the mode is turned on.
   const [announce, setAnnounce] = useAnnouncement(state.safe);
+  // Play through time: the date steps by itself, through `patch` like any control. Under reduced motion
+  // nothing moves by itself: the same button takes one step for each press.
+  const playback = usePlayback(planDate(state.asOf, TODAY, state.safe), TODAY, canTimeTravel(state.safe), reduceMotion, useCallback((asOf: string) => patch({ asOf }), [patch]));
   useEffect(() => {
+    // A play is not read out date by date: the date it stops on is announced, once.
+    if (playback.playing) return;
     const t = setTimeout(() => {
       const k = model.kpis;
       const d = model.deltas;
@@ -152,7 +158,7 @@ function Shell() {
     }, 400);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.asOf, property.id]);
+  }, [state.asOf, property.id, playback.playing]);
 
   // Selecting a block is announced: focus stays on the plan, so a screen-reader user would otherwise hear nothing.
   const announcedSelect = useRef(state.select);
@@ -320,7 +326,7 @@ function Shell() {
       <div className="sp-sr-only" role="status" aria-live="polite">
         {announce}
       </div>
-      <Header model={model} state={state} patch={patch} onExport={onExport} miniTimeline={<MiniTimeline model={model} asOf={state.asOf} onChange={(asOf) => patch({ asOf })} width={312} height={64} />} />
+      <Header model={model} state={state} patch={patch} onExport={onExport} miniTimeline={<MiniTimeline model={model} asOf={state.asOf} onChange={(asOf) => patch({ asOf })} width={312} height={64} />} playback={playback} />
       {/* The KPI bar: always here, above the toolbar, in every view and every state. Nothing shows, hides or
           resizes it, so the toolbar and the plan under it never move when the view or the selection changes. */}
       <KpiStrip model={model} state={state} onAction={onKpi} />
