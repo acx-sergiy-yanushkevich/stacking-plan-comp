@@ -169,7 +169,7 @@ export function search(floors: FloorView[], q: string, safe: boolean, intent: Qu
   // A broker's spellings of a suite read as the plan writes it: "Ste. 860" and "#860" are "ste 860" and "860" (round 37).
   const needle = q.trim().toLowerCase().replace(/\b(ste|suite)\.\s*/g, '$1 ').replace(/#\s*(?=\d)/g, '');
   const out = new Map<string, string>();
-  if (!needle || intent?.kind === 'size') return out;
+  if (!needle || intent?.kind === 'size' || intent?.kind === 'badDate') return out;
   // A state word lights that state ("sublease", "signed"), on one floor when the query names it ("subleases on
   // floor 7"); tenant risk ("holdover") says nothing to a prospect.
   if (intent?.kind === 'state') {
@@ -193,10 +193,10 @@ export function search(floors: FloorView[], q: string, safe: boolean, intent: Qu
   // wherever it stands, and what is left is the suite (round 36: only the first order was read).
   // "floor 8" is looked for first: in "ste 860 floor 8" the "860 floor" is not a floor.
   const floorPart = floorNo ? null : /(?:^|[\s,·])(?:floor|fl|level)\s*(\d{1,3})(?=$|[\s,·])/.exec(needle) ?? /(?:^|[\s,·])(\d{1,3})(?:st|nd|rd|th)\s*(?:floor|fl)(?=$|[\s,·])/.exec(needle);
-  const suitePart = floorPart ? needle.replace(floorPart[0], ' ').replace(/\b(?:ste|suite)\b|[,·-]/g, ' ').trim() : null;
+  const suitePart = floorPart ? needle.replace(floorPart[0], ' ').replace(/\b(?:ste|suite|on|at|of)\b|[,·-]/g, ' ').trim() : null;
   const floorSuiteOf = floorPart && suitePart && /^\w+$/.test(suitePart) ? { floor: String(Number(floorPart[1])), suite: suitePart } : null;
   // Two suite numbers with a dash ("1200-1250"), which the search box does not read as a size: both suites.
-  const suitePair = /^(?:(?:ste|suite)s?\s*)?(\d{3,5})\s*[-–—]\s*(\d{3,5})$/.exec(needle);
+  const suitePair = /^(?:(?:ste|suite)s?\s*)?(\d{3,5})\s*[-–—−]\s*(\d{3,5})$/.exec(needle);
   const hit = (v: string | undefined) => !!v && v.toLowerCase().includes(needle);
   for (const f of floors) {
     if (floorNo) {
@@ -331,7 +331,9 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
     // "floor 99" with no state word: the same plain line (round 36: it got the name-search message).
     const bare = /^(?:(\d{1,3})(?:st|nd|rd|th)?\s*(?:floor|fl)|(?:floor|fl|level)\s*(\d{1,3}))$/.exec(state.q.trim().toLowerCase());
     const missingFloor = stateIntent && stateIntent.floor !== null && !named ? stateIntent.floor : bare && !floors.some((f) => String(f.floor.sequence) === String(Number(bare[1] ?? bare[2]))) ? String(Number(bare[1] ?? bare[2])) : null;
-    filterLabel = missingFloor !== null
+    filterLabel = intent?.kind === 'badDate'
+      ? `${intent.badBy} is not a date on the calendar.`
+      : missingFloor !== null
       ? `There is no Floor ${missingFloor} here (Floors ${Math.min(...floors.map((f) => f.floor.sequence))}–${Math.max(...floors.map((f) => f.floor.sequence))}).`
       : stateIntent
       ? `${NONE_OF[stateIntent.label] ?? `No ${stateIntent.label.toLowerCase()} space`}${stateIntent.floor !== null ? ` on ${floors.find((f) => String(f.floor.sequence) === stateIntent.floor)?.floor.name ?? `Floor ${stateIntent.floor}`}` : ''}${stateIntent.now ? ' now' : ''}.`

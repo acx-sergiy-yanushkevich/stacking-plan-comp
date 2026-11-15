@@ -329,3 +329,18 @@ describe('round 37: two of a bound, more words', () => {
     expect(q('12k−15k')).toMatchObject({ size: 12000, max: 15000 });
   });
 });
+
+describe('round 38: negated greater/above, a bad date alone', () => {
+  const q = (s: string) => readQuery(s, '2026-11-09');
+  it('"not greater than 15k" and "not above 15k" are ceilings', () => {
+    for (const s of ['not greater than 15k', 'no greater than 15k', 'not above 15k']) {
+      expect(q(s), s).toMatchObject({ kind: 'size', size: 100, max: 15000 });
+      expect(q(s), s).not.toHaveProperty('unread');
+    }
+    expect(q('greater than 15k')).toMatchObject({ size: 15000, max: null });
+  });
+  it('a bad date with no size is named', () => {
+    expect(q('by 2/30')).toEqual({ kind: 'badDate', badBy: '2/30' });
+    expect(q('available by 31 feb 2027')).toEqual({ kind: 'badDate', badBy: '31 Feb 2027' });
+  });
+});

@@ -13,6 +13,7 @@ import type { ISODate } from './types';
  */
 export type QueryIntent =
   | { kind: 'size'; size: number; max: number | null; fit: FitType; by: ISODate | null; badBy?: string; pastBy?: ISODate; unread?: string[] }
+  | { kind: 'badDate'; badBy: string }
   | { kind: 'state'; label: string; kinds: ReadonlySet<Segment['kind']>; tenantRisk: boolean; floor: string | null; now: boolean };
 
 const NUM = String.raw`(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)`;
@@ -276,13 +277,13 @@ function readSize(text: string): { size: number; max: number | null; used: strin
 }
 
 /** Words that make the size after them a ceiling ("under 15k", "no more than 15k", "<15k"), never a price ("under $35"). */
-const CEIL_BEFORE = /(?:\b(?:under|below|max|maximum|up\s+to|at\s+most|(?:no|not)\s+(?:more|bigger|larger|over)(?:\s+than)?|(?:less|smaller|fewer)\s+than|not\s+exceeding)|<=?|≤)\s*$/;
+const CEIL_BEFORE = /(?:\b(?:under|below|max|maximum|up\s+to|at\s+most|(?:no|not)\s+(?:more|bigger|larger|greater|over|above)(?:\s+than)?|(?:less|smaller|fewer)\s+than|not\s+exceeding)|<=?|≤)\s*$/;
 /** And after it ("15k or less", "15k max"). */
 const CEIL_AFTER = /^\s*(?:or\s+(?:less|smaller|under|below|fewer)|max(?:imum)?\b|at\s+most\b|tops\b)/;
 /** A ceiling word with "no" or "not" before it is a floor ("no less than 12k", "not under 12k"). */
 const NEG_FLOOR_BEFORE = /\b(?:no|not)\s+(?:less|smaller|fewer|under|below)(?:\s+than)?\s*$/;
 /** A floor said in words ("at least 12k", "over 12k", "12k+"): read, not listed as unused. */
-const FLOOR_BEFORE = /(?:\b(?:over|above|at\s+least|(?:more|bigger|larger|greater)\s+than|min(?:imum)?)|>=?|≥)\s*$/;
+const FLOOR_BEFORE = /(?:\b(?<!\b(?:no|not)\s)(?:over|above|at\s+least|(?:more|bigger|larger|greater)\s+than|min(?:imum)?)|>=?|≥)\s*$/;
 const FLOOR_AFTER = /^\s*(?:\+|or\s+(?:more|larger|bigger)|min(?:imum)?\b|plus\b)/;
 
 /**
@@ -348,5 +349,8 @@ export function readQuery(q: string, asOf: ISODate): QueryIntent | null {
     const unread = unreadWords(said, size.size, size.max, size.read);
     return { kind: 'size', size: size.size, max: size.max, fit, by, ...(bad ? { badBy: bad } : {}), ...(past ? { pastBy: past } : {}), ...(unread.length ? { unread } : {}) };
   }
+  // A date the calendar lacks, with nothing else to search for ("by 2/30"), is named, as it is beside a size (round 38:
+  // it fell through to the name search, "No tenant, suite or prospect matches").
+  if (bad && !rest.replace(/\b(?:needed|need|by|before|in|for|space|available|the|a)\b/g, ' ').trim()) return { kind: 'badDate', badBy: bad };
   return readState(text);
 }

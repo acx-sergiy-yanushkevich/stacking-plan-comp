@@ -91,3 +91,11 @@ describe('round 37: a broker\'s suite spellings', () => {
     expect([...run(floors, 'ste 850-860', false).values()].sort()).toEqual(['Suite 850', 'Suite 860']);
   });
 });
+
+describe('round 38: suite spellings', () => {
+  it('"860 on floor 8" and "1200−1250" (minus sign)', () => {
+    const { floors } = plan(false);
+    expect([...run(floors, '860 on floor 8', false).values()]).toEqual(['Suite 860']);
+    expect([...run(floors, '1200−1250', false).values()].sort()).toEqual(['Suite 1200', 'Suite 1250']);
+  });
+});

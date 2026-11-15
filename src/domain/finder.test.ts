@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../data/mock/property';
 import { deriveFloors } from './derive';
+import { buildingById } from '../data/mock/buildings';
 import { alternativesListed, alternativesNote, checkNeededBy, chosenOption, filterFits, findFits, floorWindows, matchingInquiries, nearMisses, neededByDate, noFit, optionSuites, rangeProblem, searchSpace, splitWindow, stackName, suitesLabel, type FitOption, type Requirement } from './finder';
 import { legacyWest } from '../data/mock/buildings/legacyWest';
 import type { Availability, Floor, Lease, Property } from './types';
@@ -736,5 +737,18 @@ describe('splitWindow: adjacent suites that meet a range when an end suite is sp
   });
   it('a window too small for the minimum does not', () => {
     expect(splitWindow([seg('a', 2000), seg('b', 3000, true, 1000)], 7000, 8000)).toBeNull();
+  });
+});
+
+describe('a multi-floor stack is split only to a size it can be (round 38)', () => {
+  const fits = (id: string, req: number, max: number) => {
+    const b = buildingById(id).property;
+    return findFits(deriveFloors(b, TODAY, TODAY), req, null, max, b.inquiries, TODAY).options;
+  };
+  it('Legacy West Floors 18-19 are not offered for 10,000–12,000 SF (Ste 1900 is an indivisible 26,000 SF)', () => {
+    expect(fits('P002', 10000, 12000).some((o) => o.multiFloor && o.floorName.includes('18') && o.floorName.includes('19'))).toBe(false);
+  });
+  it('Bluebonnet Floors 2-3 are not offered for 4,000–6,000 SF (their smallest is 6,900 SF)', () => {
+    expect(fits('P007', 4000, 6000).some((o) => o.multiFloor && o.floorName.includes('2') && o.floorName.includes('3'))).toBe(false);
   });
 });

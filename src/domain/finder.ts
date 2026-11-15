@@ -332,12 +332,16 @@ function rankFits(
         } else options.splice(i, 1);
         continue;
       }
-      const canSplit = o.keys.some((k) => {
+      // The smallest size the option can really be: each indivisible suite whole, each divisible one at its smallest
+      // division. Kept only when that is within the maximum (round 37: one divisible suite kept a whole stack, so
+      // Floors 18-19 of Legacy West, with an indivisible 26,000 SF suite, read "52,000 SF split to 12,000").
+      const smallest = o.keys.reduce((t, k) => {
         const seg = segs.get(k);
         const a = seg?.availability ?? seg?.marketed;
-        return !!a?.divisible && (a.minDivisible ?? 0) <= maxSize;
-      });
-      if (canSplit) o.splitTo = maxSize;
+        const size = seg?.size ?? 0;
+        return t + (a?.divisible ? Math.min(size, a.minDivisible ?? size) : size);
+      }, 0);
+      if (smallest <= maxSize) o.splitTo = maxSize;
       else options.splice(i, 1);
     }
   }

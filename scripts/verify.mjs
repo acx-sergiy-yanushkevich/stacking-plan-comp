@@ -287,6 +287,7 @@ for (const w of [320, 360]) {
     ['stack', '', 'for sale on floor 5', 'Nothing for sale on Floor 5'],
     ['stack', '', 'floor 99', 'There is no Floor 99 here'],
     ['map', '', 'for sale on floor 5', 'Nothing for sale on Floor 5'],
+    ['stack', '', 'by 2/30', '2/30 is not a date on the calendar'],
   ]) {
     await e.goto(`${base}?view=${view}${safe}&q=${encodeURIComponent(q)}`, { waitUntil: 'networkidle' });
     await e.waitForTimeout(200);
