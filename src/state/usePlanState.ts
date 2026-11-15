@@ -1,12 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ISODate } from '../domain/types';
 import { SAFE_TITLE, TITLE } from '../domain/safe';
-import { onPopState, readUrl, setTitle, writeUrl } from '../lib/host';
+import { media, onPopState, readUrl, setTitle, writeUrl } from '../lib/host';
 import { openSession, serializeState, stepSession, type PlanSession, type PlanState } from './planState';
 
 /** The fields whose change is a move to somewhere else, not an edit of where the user already is. */
 const navigates = (a: PlanState, b: PlanState): boolean =>
-  a.view !== b.view || a.building !== b.building || a.floor !== b.floor || a.ring !== b.ring || a.turn !== b.turn;
+  a.view !== b.view || a.building !== b.building || a.floor !== b.floor || a.ring !== b.ring || a.turn !== b.turn || opensSheet(a, b);
+
+/**
+ * On a phone a suite opens a sheet over the plan, and the system Back is how a phone closes it (round 35: Back left the
+ * view instead). Opening one is a history entry there; on a desktop the suite opens in the side panel and is an edit.
+ */
+const opensSheet = (a: PlanState, b: PlanState): boolean => b.select !== null && a.select !== b.select && a.select === null && media('(max-width: 760px)').matches();
 
 /**
  * One state object for the whole plan, mirrored into the address (`lib/host`: in a browser,

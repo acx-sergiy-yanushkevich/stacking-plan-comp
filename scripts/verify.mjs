@@ -192,16 +192,32 @@ for (const [w, h] of [[1470, 830], [1440, 1000], [1366, 768], [1280, 720], [1366
 }
 // Round 34: on a phone the four Color-by switches stand in one row, and no label runs out of its switch (round 33:
 // "Expiration" ran 7 px into Pipeline at 320 px).
-for (const w of [320, 360, 390]) {
+// Round 35: Prospect-safe too, in all four buildings (its two switches sat in half the row and the asking range spilled).
+for (const [w, qs] of [320, 360, 390].flatMap((w) => ['', '&safe=1', '&safe=1&building=P002', '&safe=1&building=P005', '&safe=1&building=P007'].map((q) => [w, q]))) {
   const ph = await browser.newPage({ viewport: { width: w, height: 800 }, reducedMotion: 'reduce' });
-  await ph.goto(`${base}?view=stack`, { waitUntil: 'networkidle' });
+  await ph.goto(`${base}?view=stack${qs}`, { waitUntil: 'networkidle' });
+  const half = await ph.$$eval('.sp-kpis__group--lens', (gs) => gs.some((g) => { const r = g.getBoundingClientRect(); const cells = [...g.querySelectorAll('.sp-kpi')].map((c) => c.getBoundingClientRect()); return cells.length > 0 && Math.max(...cells.map((c) => c.right)) < r.right - r.width / 3; }));
+  check(!half, `${w} px${qs}: the Color-by switches fill their row`);
   const spill = await ph.$$eval('.sp-kpis__group--lens .sp-kpi', (els) =>
     els.flatMap((e) => {
       const box = e.getBoundingClientRect();
       return [...e.querySelectorAll('.sp-kpi__label, .sp-kpi__figure')].filter((t) => { const r = document.createRange(); r.selectNodeContents(t); return r.getBoundingClientRect().right > box.right + 0.5; }).map((t) => t.textContent.trim());
     }),
   );
-  check(spill.length === 0, `${w} px: every Color-by label and figure stays inside its switch${spill.length ? ` (${spill.join(', ')})` : ''}`);
+  check(spill.length === 0, `${w} px${qs}: every Color-by label and figure stays inside its switch${spill.length ? ` (${spill.join(', ')})` : ''}`);
+  await ph.close();
+}
+// Round 35: on a phone the system Back closes a suite's sheet and stays on the plan (it left the view).
+{
+  const ph = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', hasTouch: true, isMobile: true });
+  await ph.goto(`${base}?view=stack`, { waitUntil: 'networkidle' });
+  await ph.getByRole('button', { name: /Kinetic Ventures/ }).first().click();
+  await ph.waitForTimeout(400);
+  const opened = new URL(ph.url()).searchParams.get('select');
+  await ph.goBack();
+  await ph.waitForTimeout(400);
+  const after = new URL(ph.url()).searchParams;
+  check(!!opened && !after.get('select') && after.get('view') === 'stack', `phone: Back closes the suite's sheet and stays on the Stack (${opened} → ${ph.url().replace(base, '')})`);
   await ph.close();
 }
 await browser.close();

@@ -227,3 +227,32 @@ describe('ceilings, ranges from zero, both kinds, ordinals (round 33)', () => {
     expect(q('12k by 2/30')).toMatchObject({ by: null, badBy: '2/30' });
   });
 });
+
+describe('comparators beside their own size, negation and "between" (round 35)', () => {
+  const q = (s: string) => readQuery(s, '2026-11-09');
+  it('a ceiling applies to the size it stands beside, in any word order', () => {
+    for (const s of ['12k no more than 15k', '12k but under 15k', '12k under 15k by q3 direct', 'under 15k 12k', 'between 12k and 15k', 'from 12k to 15k', '12 to 15 thousand sf'])
+      expect(q(s), s).toMatchObject({ kind: 'size', size: 12000, max: 15000 });
+    for (const s of ['12k no more than 15k', '12k but under 15k', 'between 12k and 15k']) expect(q(s), s).not.toHaveProperty('unread');
+  });
+  it('reads "not more than", "smaller than" and the symbols as ceilings', () => {
+    for (const s of ['not more than 15k', 'smaller than 15k', 'less than 15k', '<15k', '≤15k', '<= 15k', 'no bigger than 15k', '15k max'])
+      expect(q(s), s).toMatchObject({ kind: 'size', size: 100, max: 15000 });
+  });
+  it('reads floors in words and symbols without listing them', () => {
+    for (const s of ['over 12k', 'more than 12k', 'at least 12k', '>12k', '≥ 12k', '12k+', '12k or more']) {
+      expect(q(s), s).toMatchObject({ kind: 'size', size: 12000, max: null });
+      expect(q(s), s).not.toHaveProperty('unread');
+    }
+  });
+  it('rules a kind of space out as well as in', () => {
+    expect(q('12k no sublease')).toMatchObject({ fit: 'direct' });
+    expect(q('12k without sublease')).toMatchObject({ fit: 'direct' });
+    expect(q('12k direct only')).toMatchObject({ fit: 'direct' });
+    expect(q('12k no direct')).toMatchObject({ fit: 'sublease' });
+    for (const s of ['12k no sublease', '12k direct only']) expect(q(s), s).not.toHaveProperty('unread');
+  });
+  it('a price after "under" is still unused, never a size', () => {
+    expect(q('15k nnn under $35')).toMatchObject({ size: 15000, max: null, unread: ['nnn', 'under', '$35'] });
+  });
+});

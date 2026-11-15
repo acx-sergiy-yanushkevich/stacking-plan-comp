@@ -74,6 +74,19 @@
 .sp-pstack__legend .sp-legend { display: grid; grid-template-columns: 1fr; gap: 3px 10px; }
 .sp-pstack__legend .sp-legend__item { display: grid; grid-template-columns: 14px 1fr auto; gap: 6px; align-items: center; white-space: nowrap; min-width: 0; }
 .sp-pstack__legend .sp-legend__note { white-space: normal; font-size: 11px; }
+/* The floor index: one row of floor numbers, sticky at the top of the screen while the list scrolls; it scrolls
+   sideways for a tall building. 40 px buttons with a touch area 2 px past each side (44 px). */
+.sp-pstack__jump { position: sticky; top: 0; z-index: 3; display: flex; gap: 3px; overflow-x: auto; padding: 4px 8px; background: var(--sp-color-page); background-image: linear-gradient(var(--sp-color-card), var(--sp-color-card)); border-bottom: 1px solid var(--sp-color-border); scrollbar-width: none; }
+/* Opaque (the page colour under the card's tint): the floor cards scroll under it, and a glass card would show them. */
+.sp-pstack__jump button { position: relative; flex: 1 0 26px; min-width: 26px; padding: 0; height: 40px; border: 1px solid var(--sp-color-border); border-radius: 8px; background: transparent; color: var(--sp-color-text); font: inherit; font-size: var(--sp-text-13); font-weight: 600; font-variant-numeric: tabular-nums; cursor: pointer; }
+.sp-pstack__jump button::after { content: ''; position: absolute; inset: -2px; }
+.sp-pstack__jump button:focus-visible { outline: 2px solid var(--sp-color-focus); outline-offset: 1px; }
+.sp-pfloor__head { scroll-margin-top: 56px; }
+/* A 320 px phone fits twelve floors in the row too; a taller building scrolls it sideways. */
+@media (max-width: 359px) {
+  .sp-pstack__jump { gap: 2px; padding-inline: 6px; }
+  .sp-pstack__jump button { flex-basis: 22px; min-width: 22px; font-size: var(--sp-text-12); }
+}
 .sp-pstack__floors { list-style: none; margin: 0; padding: 4px 8px 8px; display: flex; flex-direction: column; gap: 8px; }
 .sp-pfloor { border: 1px solid var(--sp-color-border); border-radius: 12px; background: var(--sp-color-card-2); overflow: hidden; }
 .sp-pfloor.is-open { border-color: var(--sp-color-brand); }

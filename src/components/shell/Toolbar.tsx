@@ -69,7 +69,7 @@ export function Toolbar({ state, patch, issueCount, queryFind }: ToolbarProps) {
   // A phone has no room for the model, and its tabs are words alone, so they fit beside the search.
   const views = phone ? VIEWS.filter((v) => v.id !== 'building').map(({ id, label }) => ({ id, label })) : VIEWS;
   const toggleMode = (mode: 'find' | 'worklist' | 'issues') => {
-    if (state.mode === mode) patch({ mode: 'building', req: null, max: null, by: null, inquiry: null, window: null });
+    if (state.mode === mode) patch({ mode: 'building', req: null, max: null, by: null, inquiry: null, fit: 'any', window: null });
     else {
       rememberTrigger();
       patch({ mode, select: null, floor: floorKept(state.view, state.floor), window: mode === 'worklist' ? state.window ?? '12' : null });

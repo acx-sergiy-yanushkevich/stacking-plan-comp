@@ -288,7 +288,13 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
   } else if (searchMatches && searchMatches.size === 0) {
     highlight = null;
     // Prospect-safe search skips tenants and prospects, and never repeats the query: it may be a tenant name.
-    filterLabel = safe
+    // A state it understood says so in its own words (round 35: "available on floor 4" read as an unknown name). It
+    // repeats only the state and the floor, never the query, so it is as safe for a prospect as the generic line.
+    // A tenant-risk word in Prospect-safe keeps the generic line: "No holdover space" would tell a prospect something false.
+    const stateIntent = intent?.kind === 'state' && !(intent.tenantRisk && safe) ? intent : null;
+    filterLabel = stateIntent
+      ? `No ${stateIntent.label.toLowerCase()} space${stateIntent.floor !== null ? ` on ${floors.find((f) => String(f.floor.sequence) === stateIntent.floor)?.floor.name ?? `Floor ${stateIntent.floor}`}` : ''}${stateIntent.now ? ' now' : ''}.`
+      : safe
       ? 'No suite or floor matches. Try a suite number (“350”), a floor (“Floor 8”) or a size (“12,000 SF”).'
       : `No tenant, suite or prospect matches “${state.q}”. Try a suite number (“350”), a floor (“Floor 8”) or a size (“12,000 SF”).`;
   } else if (searchMatches) {

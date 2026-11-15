@@ -40,7 +40,8 @@ export const backFromFloor = (patch: Patch, floorId: string | null) => {
 
 /** The state each tool panel's Close (and Escape) writes: the panel goes, and so do the filters it set. */
 export const TOOL_CLOSE = {
-  find: { mode: 'building', req: null, max: null, by: null, inquiry: null },
+  // `fit` goes with the rest of the requirement (round 35: a closed Find left fit=direct in the address and in the next Find).
+  find: { mode: 'building', req: null, max: null, by: null, inquiry: null, fit: 'any' },
   worklist: { mode: 'building', window: null },
   issues: { mode: 'building' },
   area: { mode: 'building' },

@@ -170,7 +170,7 @@ export function cutDate(text: string, asOf: ISODate): { by: ISODate | null; rest
 }
 
 /** Words in a requirement that mean something already read, or nothing at all ("need 12k SF of contiguous space"). */
-const SIZE_WORDS = new Set(['sf', 'rsf', 'sq', 'ft', 'sq.', 'ft.', 'square', 'feet', 'k', 'direct', 'sublease', 'subleases', 'sublet', 'sublets', 'contiguous', 'space', 'spaces', 'block', 'blocks', 'suite', 'suites', 'office', 'need', 'needs', 'needed', 'find', 'looking', 'for', 'a', 'an', 'the', 'of', 'to', 'by', 'in', 'before', 'at', 'with', 'and', 'or', 'about', 'around', 'on', 'least', 'min', 'minimum', 'more', 'approx', 'approximately', 'sf.', 'rsf.']);
+const SIZE_WORDS = new Set(['sf', 'rsf', 'sq', 'ft', 'sq.', 'ft.', 'square', 'feet', 'k', 'direct', 'sublease', 'subleases', 'sublet', 'sublets', 'contiguous', 'space', 'spaces', 'block', 'blocks', 'suite', 'suites', 'office', 'need', 'needs', 'needed', 'find', 'looking', 'for', 'a', 'an', 'the', 'of', 'to', 'by', 'in', 'before', 'at', 'with', 'and', 'or', 'about', 'around', 'on', 'but', 'approx', 'approximately', 'sf.', 'rsf.']);
 
 /**
  * What a requirement says that the search does not use (round 31: "15k nnn under $35" ran as "15k" with the rest
@@ -203,26 +203,54 @@ function sfOf(n: string, k: boolean): number {
  * one covers a bare first number too ("12-15k" is 12,000–15,000; "12,000-15k" and "12k to 15000 sf" are
  * too). A range given high to low is read low to high ("15k-12k").
  */
-function readSize(text: string): { size: number; max: number | null } | null {
+function readSize(text: string): { size: number; max: number | null; used: string[] } | null {
   for (const r of text.matchAll(RANGE)) {
     const [, n1, k1, n2, k2, unit] = r;
     const v1 = Number(n1.replace(/,/g, ''));
     const lo = sfOf(n1, !!k1 || (!!k2 && !n1.includes(',') && v1 < 1000));
     const hi = sfOf(n2, !!k2);
     const [a, b] = lo <= hi ? [lo, hi] : [hi, lo];
-    if (a >= 100 && (k1 || k2 || unit || /,/.test(n1 + n2) || b >= 10000)) return { size: a, max: b === a ? null : b };
+    if (a >= 100 && (k1 || k2 || unit || /,/.test(n1 + n2) || b >= 10000)) return { size: a, max: b === a ? null : b, used: [] };
     // "0-15k" is up to 15k: the smallest space the finder takes (100 SF) to the high end, not a minimum of 15k.
-    if (a < 100 && b >= 100 && (k2 || unit || /,/.test(n2) || b >= 10000)) return { size: 100, max: b };
+    if (a < 100 && b >= 100 && (k2 || unit || /,/.test(n2) || b >= 10000)) return { size: 100, max: b, used: [] };
   }
+  // Each size with the comparator beside it (round 35: a ceiling word was applied to the first size in the query,
+  // whichever it stood beside, so "12k no more than 15k" read as up to 12,000). A size under a ceiling is the
+  // range's top; any other is its floor.
+  let floor: number | null = null;
+  let ceil: number | null = null;
+  const used: string[] = [];
   for (const one of text.matchAll(SINGLE)) {
-    const [, n, k, unit] = one;
+    const [whole, n, k, unit] = one;
     const digits = n.replace(/[,.]/g, '').length;
     const isSize = !!k || !!unit || n.includes(',') || digits >= 5;
     const size = sfOf(n, !!k);
-    if (isSize && size >= 100) return { size, max: null };
+    if (!isSize || size < 100) continue;
+    const at = one.index ?? 0;
+    const before = CEIL_BEFORE.exec(text.slice(0, at));
+    const after = CEIL_AFTER.exec(text.slice(at + whole.length));
+    if (before || after) {
+      if (ceil === null) ceil = size;
+      used.push((before ?? after)![0]);
+      continue;
+    }
+    const minWord = FLOOR_BEFORE.exec(text.slice(0, at)) ?? FLOOR_AFTER.exec(text.slice(at + whole.length));
+    if (minWord) used.push(minWord[0]);
+    if (floor === null) floor = size;
   }
-  return null;
+  if (floor === null && ceil === null) return null;
+  if (floor === null) return { size: 100, max: ceil, used };
+  if (ceil === null || ceil <= floor) return { size: floor, max: null, used };
+  return { size: floor, max: ceil, used };
 }
+
+/** Words that make the size after them a ceiling ("under 15k", "no more than 15k", "<15k"), never a price ("under $35"). */
+const CEIL_BEFORE = /(?:\b(?:under|below|max|maximum|up\s+to|at\s+most|(?:no|not)\s+(?:more|bigger|larger|over)(?:\s+than)?|(?:less|smaller|fewer)\s+than|not\s+exceeding)|<=?|≤)\s*$/;
+/** And after it ("15k or less", "15k max"). */
+const CEIL_AFTER = /^\s*(?:or\s+(?:less|smaller|under|below|fewer)|max(?:imum)?\b)/;
+/** A floor said in words ("at least 12k", "over 12k", "12k+"): read, not listed as unused. */
+const FLOOR_BEFORE = /(?:\b(?:over|above|at\s+least|more\s+than|min(?:imum)?)|>=?|≥)\s*$/;
+const FLOOR_AFTER = /^\s*(?:\+|or\s+(?:more|larger|bigger)|min(?:imum)?\b|plus\b)/;
 
 /**
  * A state word in the query, alone or among words that do not change it ("available space", "subleases on
@@ -260,22 +288,26 @@ export function readQuery(q: string, asOf: ISODate): QueryIntent | null {
   // A needed-by date before the as-of date is named and left out, as Find space does (round 33: the bar offered "by Nov 8").
   const past = cut.by !== null && cut.by < asOf ? cut.by : null;
   const by = past ? null : cut.by;
-  let size = readSize(rest);
+  // "between 10k and 15k", "from 10k to 15k" and "12 to 15 thousand sf" are ranges (round 35).
+  const norm = rest
+    .replace(/(\d)\s*thousand\b/g, '$1k')
+    .replace(/\b(?:between|from)\s+([\d,.]+\s*k?)\s*(?:sf|rsf)?\s+(?:and|to|-|–)\s+([\d,.]+\s*k?)/g, '$1-$2');
+  const size = readSize(norm);
   if (size) {
+    // A kind of space can be asked for or ruled out: "no sublease", "without sublease" and "direct only" are direct;
+    // "no direct" is sublease; both words ask for either (round 35: "12k no sublease" read as sublease only).
+    const SUB = String.raw`sub(?:lease|let)s?`;
+    const notSub = new RegExp(String.raw`\b(?:no|not|without|non-?)\s*${SUB}\b|\bdirect\s+only\b|\bonly\s+direct\b`);
+    const notDirect = /\b(?:no|not|without|non-?)\s*direct\b/;
+    let said = norm;
     let fit: FitType = 'any';
-    // Both words ask for either.
-    if (/\bdirect\b/.test(rest) && !/\bsub(?:lease|let)s?\b/.test(rest)) fit = 'direct';
-    else if (/\bdirect\b/.test(rest)) fit = 'any';
-    else if (/\bsub(?:lease|let)s?\b/.test(rest)) fit = 'sublease';
-    // "under 15k", "max 15k", "up to 15k", "15k or less": a ceiling, so the range is the smallest space to 15k (round 33: it ran as a minimum).
-    let said = rest;
-    if (size.max === null) {
-      const ceiling = /\b(?:under|below|max|maximum|up\s+to|at\s+most|no\s+more\s+than|less\s+than)\b(?!\s*\$)|\bor\s+(?:less|smaller|under)\b/;
-      if (ceiling.test(rest)) {
-        size = { size: 100, max: size.size };
-        said = rest.replace(ceiling, ' ');
-      }
-    }
+    const neg = notSub.exec(norm) ?? notDirect.exec(norm);
+    if (neg) {
+      fit = notSub.test(norm) ? 'direct' : 'sublease';
+      said = said.replace(neg[0], ' ');
+    } else if (/\bdirect\b/.test(norm) && !new RegExp(String.raw`\b${SUB}\b`).test(norm)) fit = 'direct';
+    else if (new RegExp(String.raw`\b${SUB}\b`).test(norm)) fit = /\bdirect\b/.test(norm) ? 'any' : 'sublease';
+    for (const u of size.used) said = said.replace(u, ' ');
     const unread = unreadWords(said, size.size, size.max);
     return { kind: 'size', size: size.size, max: size.max, fit, by, ...(bad ? { badBy: bad } : {}), ...(past ? { pastBy: past } : {}), ...(unread.length ? { unread } : {}) };
   }
