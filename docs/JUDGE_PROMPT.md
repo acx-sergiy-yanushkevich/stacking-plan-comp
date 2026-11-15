@@ -12,7 +12,16 @@ Prospect-safe by design: asking rents and asking prices on availabilities (inclu
 
 Also read `docs/CHALLENGE_RULES.md` and the two Best UX judge personas, `docs/personas/wes.md` and `docs/personas/todd.md`. Score with the rubric in BRIEF.md, but test the product the way they would: Wes demos it live to a broker and hands a screen to a prospective tenant; Todd checks that the facts add up and that finding space is fast and deterministic.
 
-New in round 30 (judge these as part of the product; everything from earlier rounds, listed after, is still in scope):
+New in round 31 (judge these as part of the product; everything from earlier rounds, listed after, is still in scope):
+- **Back never turns Prospect-safe off.** The mode replaces its history entry; Back or Forward to an address without it is entered with the mode still on. `npm run leakcheck` presses Back twice after turning it on and finds no tenant names.
+- **Every fitted block keeps its whole name** at 1470 x 830, 1440 x 1000, 1366 x 768, 1280 x 720 and 1366 x 650 in all four buildings (`npm run verify`, with no size exemption). A 99 x 43 block sets the name at 10 px on two lines with its SF under it; a stale-touch badge drops its verb ("87 d ago") on rows under 72 px. A block with no tenant says its state.
+- **Search:** "largest block" / "biggest block" light the one biggest space available now; "12 floor", "12th floor" and "fl 12" light that floor; "1/6/27" is read as a date; a requirement lists the words it did not use ("Not used: nnn, under, $35"); a rejected date is capitalized ("31 Feb 2027").
+- **Stops that share a name** read "stop 2 of 4 by this name" to a keyboard or screen-reader user; the Area list's React keys are the stops' own ids.
+- **The text measure** corrects `$ % / · # & |` for tabular figures (the S&P rate overflowed its block by 5 px).
+- **Phone:** the toolbar tools are 44 px tall; the header buttons are 36 px with a touch area reaching 4 px past each side.
+- **Laptop windows 900 px tall or less** tighten the padding between the bands above the plan: the 12-floor plan fits a 900 px window and runs 59 px past an 830 px one (it still scrolls at 768 px, by design: rows stop at 44 px). The dark Expiration ramp's lightness still reverses on purpose.
+
+Round 30 (still in scope, except where round 31 changed it):
 - **Back returns to the view it left.** A move to another view, building, floor, ring, turn or Prospect-safe adds a history entry; typing and choosing a suite replace it.
 - **A fitted row keeps its whole name and, in the Rent lens, its rate** at 1470 x 830, 1440 x 1000 and 1366 x 768 in all four buildings (`npm run verify`). A narrow row gives its second line to the rate before the SF. Blocks too small for the text at 10 px (under 140 px wide and 48 px tall for a name; under 130 px wide for a rate) still drop it; the plan scrolls on a 13-inch laptop; a stale-touch risk badge stays by design.
 - **The focusable KPI details** (Available, Largest block) have a label ("Available, 33,200 SF") and a description.
