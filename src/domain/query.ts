@@ -28,7 +28,7 @@ const MONTH = String.raw`(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may
  * Group 1 is the word ("by", "before", "in", "for", "needed by"), group 2 the date.
  */
 const DATE_AT = new RegExp(
-  String.raw`(?<![\w/-])(?:(needed\s+by|by|before|in|for)\s+)?(q[1-4](?:\s*,?\s*\d{4})?|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/(?:\d{4}|\d{2})|\d{1,2}\/\d{4}|\d{1,2}(?:st|nd|rd|th)?\s+${MONTH}(?:\s*,?\s*\d{4})?|${MONTH}(?:\s+\d{1,2}(?:st|nd|rd|th)?(?!\d))?(?:\s*,?\s*\d{4})?|20\d{2})(?![\w/-])`,
+  String.raw`(?<![\w/-])(?:(needed\s+by|by|before|in|for)\s+)?(?:(?:the\s+)?end\s+of\s+)?(q[1-4](?:\s*,?\s*\d{4})?|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/(?:\d{4}|\d{2})|\d{1,2}\/\d{4}|\d{1,2}(?:st|nd|rd|th)?\s+${MONTH}(?:\s*,?\s*\d{4})?|${MONTH}(?:\s+\d{1,2}(?:st|nd|rd|th)?(?!\d))?(?:\s*,?\s*\d{4})?|20\d{2})(?![\w/-])`,
   'gi',
 );
 
@@ -67,6 +67,19 @@ const realDay = (iso: string) => {
   return !Number.isNaN(t.getTime()) && t.toISOString().slice(0, 10) === iso;
 };
 
+/** The last day before the period or day `date` names, given the end `by` it was read as. */
+function beforeBy(date: string, by: ISODate): ISODate {
+  if (/^\d{4}$/.test(date)) return `${Number(date) - 1}-12-31`;
+  const d = new Date(`${by}T00:00:00Z`);
+  const dayNamed = /^\d{4}-\d{2}-\d{2}$|^\d{1,2}\/\d{1,2}\/|^\d{1,2}(?:st|nd|rd|th)?\s+[a-z]|^[a-z]+\.?\s+\d{1,2}(?:st|nd|rd|th)?\b/.test(date.replace(/,/g, ' ').replace(/\s+/g, ' '));
+  if (dayNamed) {
+    d.setUTCDate(d.getUTCDate() - 1);
+    return d.toISOString().slice(0, 10) as ISODate;
+  }
+  const back = /^q[1-4]/.test(date) ? 3 : 1;
+  return endOfMonth(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - back + 1, 0)).getUTCFullYear(), new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - back + 1, 0)).getUTCMonth() + 1);
+}
+
 export function readBy(words: string, asOf: ISODate): ISODate | null {
   const w = words.trim().toLowerCase().replace(/,/g, ' ').replace(/\s+/g, ' ').replace(/\.$/, '');
   const asY = Number(asOf.slice(0, 4));
@@ -84,6 +97,8 @@ export function readBy(words: string, asOf: ISODate): ISODate | null {
   // M/D/YYYY, the way a US broker writes a date (round 30: "by 6/1/2027" was dropped without a word).
   const us = /^(\d{1,2})\/(\d{1,2})\/(\d{4}|\d{2})$/.exec(w);
   if (us) {
+    // "31/12/27": a month over 12 with a day that fits one is day first.
+    if (Number(us[1]) > 12 && Number(us[2]) <= 12) [us[1], us[2]] = [us[2], us[1]];
     const day = `${us[3].length === 2 ? `20${us[3]}` : us[3]}-${us[1].padStart(2, '0')}-${us[2].padStart(2, '0')}`;
     return realDay(day) ? (day as ISODate) : null;
   }
@@ -129,8 +144,10 @@ export function cutDate(text: string, asOf: ISODate): { by: ISODate | null; rest
       return { by: null, bad: date.replace(/\b[a-z]/g, (c) => c.toUpperCase()), rest: `${text.slice(0, at)} ${text.slice(at + m[0].length)}`.replace(/\s+/g, ' ').trim() };
     }
     if (!by) continue;
-    // "Before 2027" is by the end of 2026; before a month or a quarter is read as by it, as it always was.
-    if (word === 'before' && /^\d{4}$/.test(date)) by = `${Number(date) - 1}-12-31`;
+    // "Before" leaves the named day, month, quarter or year out (round 31: "before April 1, 2027" admitted space that
+    // opens on April 1): "before 2027" is by the end of 2026, "before Q2" by the end of Q1, "before June" by the
+    // end of May, "before April 1" by March 31.
+    if (word === 'before') by = beforeBy(date, by);
     const at = m.index ?? 0;
     return { by, rest: `${text.slice(0, at)} ${text.slice(at + m[0].length)}`.replace(/\s+/g, ' ').trim() };
   }
@@ -144,11 +161,17 @@ const SIZE_WORDS = new Set(['sf', 'rsf', 'sq', 'ft', 'sq.', 'ft.', 'square', 'fe
  * What a requirement says that the search does not use (round 31: "15k nnn under $35" ran as "15k" with the rest
  * dropped without a word): a word it does not know, or a price. Numbers, the size and its unit are read, not listed.
  */
-function unreadWords(rest: string): string[] {
+function unreadWords(rest: string, size: number, max: number | null): string[] {
   const out: string[] = [];
   for (const raw of rest.split(/\s+/)) {
     const t = raw.replace(/^[^\w$]+|[^\w$]+$/g, '');
-    if (!t || SIZE_WORDS.has(t) || /^[\d,.]+k?$/.test(t) || /^[\d,.]+(?:-|–|to)[\d,.]+k?$/.test(t)) continue;
+    if (!t || SIZE_WORDS.has(t) || /^[\d,.]+k?(?:-|–|to)[\d,.]+k?$/.test(t)) continue;
+    // A number is read when it is the size ("12k", "12,000", "1200" before "sf"); any other ("5" in "for 5 years") is listed.
+    const num = /^([\d,.]+)(k?)$/.exec(t);
+    if (num) {
+      const v = Number(num[1].replace(/,/g, '')) * (num[2] ? 1000 : 1);
+      if (v === size || v === max) continue;
+    }
     if (!out.includes(t)) out.push(t);
   }
   return out;
@@ -221,7 +244,7 @@ export function readQuery(q: string, asOf: ISODate): QueryIntent | null {
     let fit: FitType = 'any';
     if (/\bdirect\b/.test(rest)) fit = 'direct';
     else if (/\bsub(?:lease|let)s?\b/.test(rest)) fit = 'sublease';
-    const unread = unreadWords(rest);
+    const unread = unreadWords(rest, size.size, size.max);
     return { kind: 'size', size: size.size, max: size.max, fit, by, ...(bad ? { badBy: bad } : {}), ...(unread.length ? { unread } : {}) };
   }
   return readState(text);

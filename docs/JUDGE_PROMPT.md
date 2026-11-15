@@ -12,7 +12,13 @@ Prospect-safe by design: asking rents and asking prices on availabilities (inclu
 
 Also read `docs/CHALLENGE_RULES.md` and the two Best UX judge personas, `docs/personas/wes.md` and `docs/personas/todd.md`. Score with the rubric in BRIEF.md, but test the product the way they would: Wes demos it live to a broker and hands a screen to a prospective tenant; Todd checks that the facts add up and that finding space is fast and deterministic.
 
-New in round 31 (judge these as part of the product; everything from earlier rounds, listed after, is still in scope):
+New in round 32 (judge these as part of the product; everything from earlier rounds, listed after, is still in scope):
+- **Back and Forward with Prospect-safe on** move one entry each: the write after a Back replaces the entry instead of pushing a copy. `npm run leakcheck` presses Back once (Timeline to Stack, mode still on), Forward once (Timeline), and counts the entries.
+- **Names at every width:** the 10 px wrapped name is offered at every block width, not only the narrowest; `npm run verify` now also visits 1920 x 1080, 1536 x 864, 1600 x 900 and 1180 x 800 (nine sizes in all).
+- **Search:** "before" leaves its date out ("before April 1, 2027" is by March 31; "before Q2" by the end of Q1; "before June" by the end of May); "by end of 2027"; a day-first "31/12/27"; "12k-15k" is no longer listed as unused, and a stray number ("5" in "12k sf for 5 years") is; the one-match label names its floor once; "largest block" gives its size.
+- **Stops that share a name** show "2 of 4" on the row as well as in the accessible name. The phone header's touch areas no longer overlap.
+
+Round 31 (still in scope, except where round 32 changed it):
 - **Back never turns Prospect-safe off.** The mode replaces its history entry; Back or Forward to an address without it is entered with the mode still on. `npm run leakcheck` presses Back twice after turning it on and finds no tenant names.
 - **Every fitted block keeps its whole name** at 1470 x 830, 1440 x 1000, 1366 x 768, 1280 x 720 and 1366 x 650 in all four buildings (`npm run verify`, with no size exemption). A 99 x 43 block sets the name at 10 px on two lines with its SF under it; a stale-touch badge drops its verb ("87 d ago") on rows under 72 px. A block with no tenant says its state.
 - **Search:** "largest block" / "biggest block" light the one biggest space available now; "12 floor", "12th floor" and "fl 12" light that floor; "1/6/27" is read as a date; a requirement lists the words it did not use ("Not used: nnn, under, $35"); a rejected date is capitalized ("31 Feb 2027").

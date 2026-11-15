@@ -232,9 +232,9 @@
   /* The controls flow as the header's own items, on the row under the title (two rows from 421 to 760 px). */
   .sp-header__actions { display: contents; }
   /* Round 31: a finger's target is 44 px (round 30: 28 px). The header's buttons are 36 px tall with the touch area
-     reaching 4 px past each side, so the two rows of them do not push the plan down the screen. */
+     reaching 3 px past each side (the gap between them is 6 px), so the two rows of them do not push the plan down the screen. */
   .sp-header .sp-btn, .sp-topbar .sp-btn { height: 36px; font-size: var(--sp-text-12); padding: 0 9px; gap: 5px; position: relative; }
-  .sp-header .sp-btn::after, .sp-topbar .sp-btn::after { content: ''; position: absolute; inset: -4px; }
+  .sp-header .sp-btn::after, .sp-topbar .sp-btn::after { content: ''; position: absolute; inset: -3px; }
   .sp-header .sp-btn--icon, .sp-topbar .sp-btn--icon { padding: 0; }
   .sp-toolbar { padding: 5px 8px; gap: 5px 6px; }
   :root[data-skin] .sp-toolbar .sp-segmented { padding: 2px; }

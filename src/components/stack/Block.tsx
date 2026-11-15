@@ -264,7 +264,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
       if (tiny.length && tiny.join(' ') === text.name) smallSets.push(tiny.map((t) => ({ t: lineText(t), cls: 'sp-seg__tiny', font: FONT_TINY })));
       // Narrow tiles: the whole name at 10 px before giving it up. A row fitted to the window (under 48 px)
       // has one line for it (round 29: the café on Floor 1 lost its name at 1470 x 830 and 1366 x 768).
-      const micro = (tier >= 2 || suite) && seg.kind !== 'unmarketed' ? wrapWords(text.name, room(0, FONT_MICRO, true), FONT_MICRO, h >= 40 ? 2 : 1) : [];
+      const micro = seg.kind !== 'unmarketed' ? wrapWords(text.name, room(0, FONT_MICRO, true), FONT_MICRO, h >= 40 ? 2 : 1) : [];
       // With the suite kept, the 10 px name is offered as well as the 11 px one: on one line it leaves room for the suite and the lens fact.
       if (micro.length && micro.join(' ') === text.name && (suite || !(tiny.length && tiny.join(' ') === text.name))) smallSets.push(micro.map((t) => ({ t: lineText(t), cls: 'sp-seg__micro', font: FONT_MICRO })));
     }

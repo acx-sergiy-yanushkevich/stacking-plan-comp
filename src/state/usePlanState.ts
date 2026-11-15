@@ -32,8 +32,12 @@ export function usePlanState(today: ISODate): [PlanState, (patch: Partial<PlanSt
   // where the user was (round 29: every change replaced the entry and Back left the app); everything else,
   // such as typing a search or choosing a suite, replaces it.
   const last = useRef<PlanState | null>(null);
+  // Back and Forward already moved the history; the write that follows them replaces the entry (round 31: with the mode
+  // on it pushed a second copy of the restored view, so Back needed two presses and Forward was lost).
+  const popped = useRef(false);
   useEffect(() => {
-    writeUrl(serializeState(state, today), last.current !== null && navigates(last.current, state));
+    writeUrl(serializeState(state, today), !popped.current && last.current !== null && navigates(last.current, state));
+    popped.current = false;
     last.current = state;
   }, [state, today]);
 
@@ -43,12 +47,13 @@ export function usePlanState(today: ISODate): [PlanState, (patch: Partial<PlanSt
   // the mode still on; only the switch turns it off.
   useEffect(
     () =>
-      onPopState(() =>
+      onPopState(() => {
+        popped.current = true;
         setSession((prev) => {
           const next = openSession(readUrl(), today);
           return prev.state.safe && !next.state.safe ? stepSession(next, { safe: true }, today) : next;
-        }),
-      ),
+        });
+      }),
     [today],
   );
 

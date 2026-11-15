@@ -154,3 +154,21 @@ describe('words a requirement does not use (round 31)', () => {
     for (const q of ['12k', '12,000 sf direct', 'need 12k SF of contiguous space by Jun 2027', '12-15k sublease']) expect(readQuery(q, '2026-11-09'), q).not.toHaveProperty('unread');
   });
 });
+
+describe('"before" leaves its date out, and more forms (round 31)', () => {
+  const by = (q: string) => (readQuery(q, '2026-11-09') as { by: string | null }).by;
+  it('moves the deadline back past the named day, month, quarter or year', () => {
+    expect(by('12k before April 1, 2027')).toBe('2027-03-31');
+    expect(by('12k before Q2 2027')).toBe('2027-03-31');
+    expect(by('12k before June 2027')).toBe('2027-05-31');
+    expect(by('12k before 2027')).toBe('2026-12-31');
+    expect(by('12k by April 1, 2027')).toBe('2027-04-01');
+  });
+  it('reads "end of 2027" and a day-first 31/12/27, and lists a stray number', () => {
+    expect(by('12k by end of 2027')).toBe('2027-12-31');
+    expect(by('12k by 31/12/27')).toBe('2027-12-31');
+    expect(readQuery('12k-15k', '2026-11-09')).not.toHaveProperty('unread');
+    expect(readQuery('12k sf for 5 years', '2026-11-09')).toMatchObject({ unread: ['5', 'years'] });
+    expect(readQuery('1200 sf', '2026-11-09')).not.toHaveProperty('unread');
+  });
+});

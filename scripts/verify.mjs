@@ -137,7 +137,7 @@ check((await page.getByRole('button', { name: /Turn the building/ }).count()) ==
 // Round 31: no size exemption for a name (a 99 x 43 café and a stale-touch badge both lost theirs unseen), and the laptop
 // sizes of 1280 x 720 and 1366 x 650. A block with no tenant says its state, which is the name here.
 const STATE_NAMES = new Set(['No lease or listing', 'Not on the market', 'For sale']);
-for (const [w, h] of [[1470, 830], [1440, 1000], [1366, 768], [1280, 720], [1366, 650]]) {
+for (const [w, h] of [[1470, 830], [1440, 1000], [1366, 768], [1280, 720], [1366, 650], [1920, 1080], [1536, 864], [1600, 900], [1180, 800]]) {
   const fit = await browser.newPage({ viewport: { width: w, height: h }, locale: 'en-US', reducedMotion: 'reduce' });
   const lost = [];
   for (const bd of ['', '&building=P002', '&building=P005', '&building=P007'])

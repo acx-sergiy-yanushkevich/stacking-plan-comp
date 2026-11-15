@@ -204,7 +204,7 @@ export function AreaPanel({ model, area, expanded, onMap, ring: chosen = 1, onRi
                 >
                   {/* The kind of stop is a word as well as an icon: bus and rail are not told apart by the drawing alone. */}
               <Icon name={t.type === 'Rail' ? 'train' : 'bus'} size={14} />
-                  <span className="sp-area-transit__name">{t.name}</span>
+                  <span className="sp-area-transit__name">{t.name}{which && <span className="sp-weak"> · {nth} of {same(t.name)}</span>}</span>
               <span className="sp-transit-kind">{t.type === 'Rail' ? 'Rail' : 'Bus'}</span>
                   <span className="sp-num sp-weak">{mi(t.distanceMi)}</span>
                 </li>

@@ -166,7 +166,7 @@ export function search(floors: FloorView[], q: string, safe: boolean, intent: Qu
   if (/^(?:the\s+)?(?:largest|biggest)(?:\s+(?:available|direct|vacant))?(?:\s+(?:block|space|suite|vacancy))?$/.test(needle)) {
     let best: { key: string; size: number } | null = null;
     for (const f of floors) for (const s of f.segments) if ((s.kind === 'available' || s.kind === 'sublease') && !s.availableFrom && (!best || s.size > best.size)) best = { key: s.key, size: s.size };
-    if (best) out.set(best.key, 'Largest available block');
+    if (best) out.set(best.key, `Largest available block, ${best.size.toLocaleString('en-US')} SF`);
     return out;
   }
   // "12 floor", "12th floor", "floor 12" and "fl 12" are the floor, whichever way round (round 31: "12 floor" found nothing).
@@ -294,7 +294,9 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
   } else if (searchMatches) {
     highlight = searchMatches;
     const reasons = searchReasons ? [...searchReasons.entries()] : [];
-    const detail = reasons.length === 1 ? `: ${reasons[0][1] === 'Tenant' ? 'tenant name' : reasons[0][1]} on ${floors.find((f) => f.segments.some((s) => s.key === reasons[0][0]))?.floor.name ?? ''}${segIndex.get(reasons[0][0])?.suite ? ` Ste ${segIndex.get(reasons[0][0])!.suite}` : ''}` : '';
+    const onFloor = reasons.length === 1 ? (floors.find((f) => f.segments.some((s) => s.key === reasons[0][0]))?.floor.name ?? '') : '';
+    // A reason that already names the floor says it once (round 31: "Floor 6 on Floor 6 Ste 600").
+    const detail = reasons.length === 1 ? `: ${reasons[0][1] === 'Tenant' ? 'tenant name' : reasons[0][1]}${reasons[0][1].includes(onFloor) ? '' : ` on ${onFloor}`}${segIndex.get(reasons[0][0])?.suite ? ` Ste ${segIndex.get(reasons[0][0])!.suite}` : ''}` : '';
     filterLabel = `${safe ? 'Search' : `Search “${state.q}”`} · ${searchMatches.size} match${searchMatches.size === 1 ? '' : 'es'}${detail}`;
   } else if (activeWorklist && effectiveWindow) {
     highlight = new Set(activeWorklist.flatMap((r) => r.segKeys));

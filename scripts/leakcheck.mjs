@@ -732,12 +732,21 @@ for (const b of others) {
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
     const found = [];
-    for (let i = 0; i < 2; i++) {
-      await page.goBack();
-      await page.waitForTimeout(400);
-      if (!(await page.evaluate(() => new URLSearchParams(location.search).get('safe') === '1'))) found.push(`Back ${i + 1} left the mode off`);
-      found.push(...findLeaks(await grab()).map((f) => `${f} (after Back ${i + 1})`), ...(await findDomLeaks()));
-    }
+    const view = () => new URL(page.url()).searchParams.get('view');
+    const safeOn = () => page.evaluate(() => new URLSearchParams(location.search).get('safe') === '1');
+    const len = await page.evaluate(() => history.length);
+    // One Back leaves the Timeline for the Stack and stays prospect-safe; Forward returns to the Timeline, with the
+    // mode on and no entry added (round 31: the write after Back pushed a copy, so Back needed two presses).
+    await page.goBack();
+    await page.waitForTimeout(400);
+    if (view() !== 'stack') found.push(`one Back left ${view()}, not the Stack`);
+    if (!(await safeOn())) found.push('Back left the mode off');
+    found.push(...findLeaks(await grab()).map((f) => `${f} (after Back)`), ...(await findDomLeaks()));
+    await page.goForward();
+    await page.waitForTimeout(400);
+    if (view() !== 'timeline' || !(await safeOn())) found.push(`Forward did not return to the Timeline with the mode on (${page.url().replace(base, '')})`);
+    if ((await page.evaluate(() => history.length)) !== len) found.push('Back and Forward changed the number of history entries');
+    found.push(...findLeaks(await grab()).map((f) => `${f} (after Forward)`), ...(await findDomLeaks()));
     report(label, found);
   }
 }
