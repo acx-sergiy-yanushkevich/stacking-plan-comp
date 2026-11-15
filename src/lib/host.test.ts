@@ -35,6 +35,9 @@ function fakePage(search = '?view=stack') {
         page.location.search = url.slice('/plan/'.length).replace(/#.*$/, '');
         page.location.href = `https://example.test${url}`;
       },
+      back() {
+        log.push('back');
+      },
     },
     innerHeight: 800,
     navigator: { clipboard: { writeText: async (text) => void log.push(`copy ${text}`) } },

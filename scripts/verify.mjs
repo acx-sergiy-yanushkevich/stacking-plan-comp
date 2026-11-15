@@ -220,6 +220,29 @@ for (const [w, qs] of [320, 360, 390].flatMap((w) => ['', '&safe=1', '&safe=1&bu
   check(!!opened && !after.get('select') && after.get('view') === 'stack', `phone: Back closes the suite's sheet and stays on the Stack (${opened} → ${ph.url().replace(base, '')})`);
   await ph.close();
 }
+// Round 36: a sheet closed with its own Close button leaves no Back press that does nothing. Stack, Timeline, Stack, then a
+// sheet opened and closed twice: one Back lands on the Timeline, with no history entries added.
+{
+  const ph = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', hasTouch: true, isMobile: true });
+  await ph.goto(`${base}?view=stack`, { waitUntil: 'networkidle' });
+  await ph.getByRole('radio', { name: /Timeline/ }).click();
+  await ph.waitForTimeout(300);
+  await ph.getByRole('radio', { name: /Stack/ }).click();
+  await ph.waitForTimeout(300);
+  const len = await ph.evaluate(() => history.length);
+  for (let i = 0; i < 2; i++) {
+    await ph.getByRole('button', { name: /Kinetic Ventures/ }).first().click();
+    await ph.waitForTimeout(400);
+    await ph.locator('.sp-sheet').getByRole('button', { name: /^Close/ }).first().click();
+    await ph.waitForTimeout(500);
+  }
+  const lenAfter = await ph.evaluate(() => history.length);
+  await ph.goBack();
+  await ph.waitForTimeout(400);
+  const view = new URL(ph.url()).searchParams.get('view');
+  check(view === 'timeline' && lenAfter === len + 1, `phone: after two sheets closed with Close, one Back reaches the Timeline (${view}, ${len} → ${lenAfter} entries)`);
+  await ph.close();
+}
 await browser.close();
 check(errors.length === 0, `no console errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
 if (fails.length) {

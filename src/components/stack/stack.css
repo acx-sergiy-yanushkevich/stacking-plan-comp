@@ -82,8 +82,10 @@
 .sp-pstack__jump button::after { content: ''; position: absolute; inset: -2px; }
 .sp-pstack__jump button:focus-visible { outline: 2px solid var(--sp-color-focus); outline-offset: 1px; }
 .sp-pfloor__head { scroll-margin-top: 56px; }
-/* A 320 px phone fits twelve floors in the row too; a taller building scrolls it sideways. */
-@media (max-width: 359px) {
+/* More floors than the row holds (the 22-floor tower): the right edge fades, so the row reads as one that scrolls (round 36). */
+.sp-pstack__jump--long { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); padding-right: 28px; }
+/* A 360 px phone (and 320) fits twelve floors in the row too (round 36: "1" was cut at 360); a taller building scrolls it sideways. */
+@media (max-width: 374px) {
   .sp-pstack__jump { gap: 2px; padding-inline: 6px; }
   .sp-pstack__jump button { flex-basis: 22px; min-width: 22px; font-size: var(--sp-text-12); }
 }

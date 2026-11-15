@@ -185,7 +185,7 @@ function unreadWords(rest: string, size: number, max: number | null): string[] {
     const num = /^([\d,.]+)(k?)(?:sf|rsf)?$/.exec(t);
     if (num) {
       const v = Number(num[1].replace(/,/g, '')) * (num[2] ? 1000 : 1);
-      if (v === size || v === max) continue;
+      if (v === size || v === max || v * 1000 === size || v * 1000 === max) continue;
     }
     if (!out.includes(t)) out.push(t);
   }
@@ -210,7 +210,9 @@ function readSize(text: string): { size: number; max: number | null; used: strin
     const lo = sfOf(n1, !!k1 || (!!k2 && !n1.includes(',') && v1 < 1000));
     const hi = sfOf(n2, !!k2);
     const [a, b] = lo <= hi ? [lo, hi] : [hi, lo];
-    if (a >= 100 && (k1 || k2 || unit || /,/.test(n1 + n2) || b >= 10000)) return { size: a, max: b === a ? null : b, used: [] };
+    // A bare range of two 4-digit sizes far enough apart ("5000-8000") is a size; "1200-1250" stays two suites.
+    const bareSizes = a >= 1000 && b >= a * 1.2 && !/\./.test(n1 + n2);
+    if (a >= 100 && (k1 || k2 || unit || /,/.test(n1 + n2) || b >= 10000 || bareSizes)) return { size: a, max: b === a ? null : b, used: [] };
     // "0-15k" is up to 15k: the smallest space the finder takes (100 SF) to the high end, not a minimum of 15k.
     if (a < 100 && b >= 100 && (k2 || unit || /,/.test(n2) || b >= 10000)) return { size: 100, max: b, used: [] };
   }
@@ -220,6 +222,7 @@ function readSize(text: string): { size: number; max: number | null; used: strin
   let floor: number | null = null;
   let ceil: number | null = null;
   const used: string[] = [];
+  let from = 0;
   for (const one of text.matchAll(SINGLE)) {
     const [whole, n, k, unit] = one;
     const digits = n.replace(/[,.]/g, '').length;
@@ -227,15 +230,37 @@ function readSize(text: string): { size: number; max: number | null; used: strin
     const size = sfOf(n, !!k);
     if (!isSize || size < 100) continue;
     const at = one.index ?? 0;
-    const before = CEIL_BEFORE.exec(text.slice(0, at));
-    const after = CEIL_AFTER.exec(text.slice(at + whole.length));
+    const end = at + whole.length;
+    // A comparator binds to one size: the words before this one start where the last size and its word ended (round
+    // 36: "15k max 12k min" read the "max" after 15k again as a ceiling on 12k).
+    const head = text.slice(from, at);
+    const tail = text.slice(end);
+    // A negated ceiling is a floor: "no less than 12k", "not under 12k" (round 36: they ran as up to 12,000).
+    const negFloor = NEG_FLOOR_BEFORE.exec(head);
+    const before = negFloor ? null : CEIL_BEFORE.exec(head);
+    // The word in front of a size wins; a word after it counts only when no size follows it, since a word between two
+    // sizes belongs to the later one (round 36: "min 12k max 15k" and "12k max 15k" ran as up to 12,000).
+    const floorFirst = negFloor ?? FLOOR_BEFORE.exec(head);
+    // ...unless that later size has a word of its own after it ("15k max 12k min": "max" is 15k's).
+    const afterWord = (re: RegExp) => {
+      const m = re.exec(tail);
+      if (!m) return null;
+      const next = /^\s*[<>≤≥]?=?\s*[\d,.]+\s*k?\s*(?:sf|rsf|sq\.?\s*ft)?/.exec(tail.slice(m[0].length));
+      if (!next || !/^\s*[\d<>≤≥]/.test(next[0])) return m;
+      const beyond = tail.slice(m[0].length + next[0].length);
+      return CEIL_AFTER.test(beyond) || FLOOR_AFTER.test(beyond) ? m : null;
+    };
+    const after = before || floorFirst ? null : afterWord(CEIL_AFTER);
     if (before || after) {
       if (ceil === null) ceil = size;
       used.push((before ?? after)![0]);
+      from = after ? end + after[0].length : end;
       continue;
     }
-    const minWord = FLOOR_BEFORE.exec(text.slice(0, at)) ?? FLOOR_AFTER.exec(text.slice(at + whole.length));
-    if (minWord) used.push(minWord[0]);
+    const minBefore = floorFirst;
+    const minAfter = minBefore ? null : afterWord(FLOOR_AFTER);
+    if (minBefore ?? minAfter) used.push((minBefore ?? minAfter)![0]);
+    from = minAfter ? end + minAfter[0].length : end;
     if (floor === null) floor = size;
   }
   if (floor === null && ceil === null) return null;
@@ -249,7 +274,9 @@ function readSize(text: string): { size: number; max: number | null; used: strin
 /** Words that make the size after them a ceiling ("under 15k", "no more than 15k", "<15k"), never a price ("under $35"). */
 const CEIL_BEFORE = /(?:\b(?:under|below|max|maximum|up\s+to|at\s+most|(?:no|not)\s+(?:more|bigger|larger|over)(?:\s+than)?|(?:less|smaller|fewer)\s+than|not\s+exceeding)|<=?|≤)\s*$/;
 /** And after it ("15k or less", "15k max"). */
-const CEIL_AFTER = /^\s*(?:or\s+(?:less|smaller|under|below|fewer)|max(?:imum)?\b)/;
+const CEIL_AFTER = /^\s*(?:or\s+(?:less|smaller|under|below|fewer)|max(?:imum)?\b|at\s+most\b|tops\b)/;
+/** A ceiling word with "no" or "not" before it is a floor ("no less than 12k", "not under 12k"). */
+const NEG_FLOOR_BEFORE = /\b(?:no|not)\s+(?:less|smaller|fewer|under|below)(?:\s+than)?\s*$/;
 /** A floor said in words ("at least 12k", "over 12k", "12k+"): read, not listed as unused. */
 const FLOOR_BEFORE = /(?:\b(?:over|above|at\s+least|more\s+than|min(?:imum)?)|>=?|≥)\s*$/;
 const FLOOR_AFTER = /^\s*(?:\+|or\s+(?:more|larger|bigger)|min(?:imum)?\b|plus\b)/;
@@ -292,6 +319,7 @@ export function readQuery(q: string, asOf: ISODate): QueryIntent | null {
   const by = past ? null : cut.by;
   // "between 10k and 15k", "from 10k to 15k" and "12 to 15 thousand sf" are ranges (round 35).
   const norm = rest
+    .replace(/[—–]/g, '-')
     .replace(/(\d)\s*thousand\b/g, '$1k')
     .replace(/\b(?:between|from)\s+([\d,.]+\s*k?)\s*(?:sf|rsf)?\s+(?:and|to|-|–)\s+([\d,.]+\s*k?)/g, '$1-$2');
   const size = readSize(norm);
@@ -299,14 +327,17 @@ export function readQuery(q: string, asOf: ISODate): QueryIntent | null {
     // A kind of space can be asked for or ruled out: "no sublease", "without sublease" and "direct only" are direct;
     // "no direct" is sublease; both words ask for either (round 35: "12k no sublease" read as sublease only).
     const SUB = String.raw`sub(?:lease|let)s?`;
-    const notSub = new RegExp(String.raw`\b(?:no|not|without|non-?)\s*${SUB}\b|\bdirect\s+only\b|\bonly\s+direct\b`);
-    const notDirect = /\b(?:no|not|without|non-?)\s*direct\b/;
+    const notSub = new RegExp(String.raw`\b(?:no|not|without|non-?|exclud(?:e|ing)|except|minus)\s*(?:(?:a|an|any|the)\s+)?${SUB}\b|\bdirect\s+only\b|\bonly\s+direct\b`);
+    const notDirect = /\b(?:no|not|without|non-?)\s*(?:(?:a|an|any|the)\s+)?direct\b/;
     let said = norm;
     let fit: FitType = 'any';
     const neg = notSub.exec(norm) ?? notDirect.exec(norm);
     if (neg) {
       fit = notSub.test(norm) ? 'direct' : 'sublease';
       said = said.replace(neg[0], ' ');
+    } else if (new RegExp(String.raw`\b${SUB}\s+(?:ok|okay|fine|is\s+fine|too|also)\b`).test(norm)) {
+      fit = 'any';
+      said = said.replace(new RegExp(String.raw`\b(?:ok|okay|fine|is\s+fine|too|also)\b`), ' ');
     } else if (/\bdirect\b/.test(norm) && !new RegExp(String.raw`\b${SUB}\b`).test(norm)) fit = 'direct';
     else if (new RegExp(String.raw`\b${SUB}\b`).test(norm)) fit = /\bdirect\b/.test(norm) ? 'any' : 'sublease';
     for (const u of size.used) said = said.replace(u, ' ');

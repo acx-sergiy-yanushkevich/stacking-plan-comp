@@ -62,3 +62,13 @@ describe('floor and largest-block phrases (round 31)', () => {
     for (const q of ['largest block', 'biggest block', 'largest available space']) expect(run(floors, q, false).size, q).toBe(1);
   });
 });
+
+describe('the plan\'s own label, and a blank query (round 36)', () => {
+  it('"Floor 8 Ste 860" and "fl 8 860" find that suite', () => {
+    const { floors } = plan(false);
+    for (const q of ['Floor 8 Ste 860', 'fl 8 860', 'floor 8, suite 860']) {
+      const hits = [...run(floors, q, false).values()];
+      expect(hits, q).toEqual(['Suite 860']);
+    }
+  });
+});

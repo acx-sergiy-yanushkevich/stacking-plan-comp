@@ -136,9 +136,10 @@ button.sp-kpi:hover { background: var(--sp-color-card-2); }
   .sp-kpi__unit { font-size: var(--sp-text-11); }
   .sp-kpi__delta { padding: 0 4px; line-height: 15px; }
 }
-/* The Rent switch has no room for its unit under 380 px. */
+/* Under 380 px the Rent switch's unit takes a line of its own under the figure: a rate always carries its unit
+   (round 36: a bare "$30.71" at 320 px). */
 @media (max-width: 379px) {
-  .sp-kpis:not(.sp-kpis--safe) .sp-kpis__group--lens .sp-kpi:nth-child(2) .sp-kpi__unit { display: none; }
+  .sp-kpis:not(.sp-kpis--safe) .sp-kpis__group--lens .sp-kpi:nth-child(2) .sp-kpi__unit { display: block; line-height: 10px; }
 }
 /* A 320 px phone: "Expiration" stays inside its switch (round 33: it ran 7 px into Pipeline). */
 @media (max-width: 359px) {

@@ -85,7 +85,7 @@ export function FilterBar({ label, alternatives, find, planElsewhere, patch }: F
         <Button size="sm" variant="brand" iconRight="chevron-right" className="sp-filterbar__find" onClick={() => patch(TO_PLAN)}>
           Show on the plan
         </Button>
-        <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '', req: null, max: null, by: null, inquiry: null, window: null, bucket: null })}>
+        <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '', req: null, max: null, by: null, fit: 'any', inquiry: null, window: null, bucket: null })}>
           Clear
         </Button>
       </div>
@@ -109,7 +109,7 @@ export function FilterBar({ label, alternatives, find, planElsewhere, patch }: F
           </>
         )}
       </span>
-      <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '', req: null, max: null, by: null, inquiry: null, window: null, bucket: null, mode: 'building' })}>
+      <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '', req: null, max: null, by: null, fit: 'any', inquiry: null, window: null, bucket: null, mode: 'building' })}>
         Clear
       </Button>
     </div>

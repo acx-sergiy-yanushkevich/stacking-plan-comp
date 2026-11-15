@@ -40,6 +40,8 @@ export interface Host {
   setTitle(title: string): void;
   /** Call `listener` when the user goes back or forward to another address. Returns the way to stop. */
   onPopState(listener: () => void): () => void;
+  /** Step back one history entry, as the Back button does (round 36: closing a phone sheet undoes the entry opening it added). */
+  historyBack(): void;
 
   // ── The element the plan is drawn in ───────────────────────────────────────────────────────────
   /** Set a `data-<name>` flag on the element the styles hang from; `null` removes it. */
@@ -137,7 +139,7 @@ interface Listens {
 /** The parts of `window` and `document` a browser host uses: small enough to fake in a test. */
 export interface BrowserPage extends Listens {
   location: { pathname: string; search: string; hash: string; href: string };
-  history: { state: unknown; replaceState(data: unknown, unused: string, url: string): void; pushState(data: unknown, unused: string, url: string): void };
+  history: { state: unknown; replaceState(data: unknown, unused: string, url: string): void; pushState(data: unknown, unused: string, url: string): void; back(): void };
   innerHeight: number;
   navigator: { clipboard?: { writeText(text: string): Promise<void> } };
   scrollBy(options: { top: number; behavior: 'smooth' | 'auto' }): void;
@@ -194,6 +196,7 @@ export function createBrowserHost(page: BrowserPage): Host {
     setTitle: (title) => {
       doc.title = title;
     },
+    historyBack: () => page.history.back(),
     onPopState: (listener) => {
       page.addEventListener('popstate', listener);
       return () => page.removeEventListener('popstate', listener);
@@ -298,6 +301,7 @@ export const NO_HOST: Host = {
   shareUrl: () => '',
   setTitle: () => {},
   onPopState: () => () => {},
+  historyBack: () => {},
   setRootData: () => {},
   setRootStyle: () => {},
   readRootStyle: () => '',
@@ -350,6 +354,7 @@ export const writeUrl = (search: string, push = false): void => current().writeU
 export const shareUrl = (): string => current().shareUrl();
 export const setTitle = (title: string): void => current().setTitle(title);
 export const onPopState = (listener: () => void): (() => void) => current().onPopState(listener);
+export const historyBack = (): void => current().historyBack();
 
 export const setRootData = (name: string, value: string | null): void => current().setRootData(name, value);
 export const setRootStyle = (name: string, value: string | null): void => current().setRootStyle(name, value);

@@ -147,6 +147,17 @@ export function buildWorklist(floors: FloorView[], window: WindowKey, asOf: ISOD
   });
 }
 
+/** What a state search says when it finds nothing, in plain words (round 36: "No for sale space", "No signed, not yet in space"). */
+const NONE_OF: Record<string, string> = {
+  Available: 'No available space',
+  Sublease: 'No sublease space',
+  Holdover: 'No holdover',
+  'Month-to-month': 'No month-to-month lease',
+  'Holdover / month-to-month': 'No holdover or month-to-month lease',
+  'For sale': 'Nothing for sale',
+  'Signed, not yet in': 'No lease signed and not yet in',
+};
+
 /** Search hits with the reason each block matched ("Prospect: Vantage Robotics (LOI)"). */
 export function search(floors: FloorView[], q: string, safe: boolean, intent: QueryIntent | null): Map<string, string> {
   const needle = q.trim().toLowerCase();
@@ -179,7 +190,9 @@ export function search(floors: FloorView[], q: string, safe: boolean, intent: Qu
     }
     for (const s of f.segments) {
       let reason: string | null = null;
-      if (s.suite && (hit(s.suite) || hit(`ste ${s.suite}`) || hit(`suite ${s.suite}`))) reason = `Suite ${s.suite}`;
+      // The plan's own label finds its suite too: "Floor 8 Ste 860", "fl 8 860" (round 36: it found nothing).
+      const floorSuite = s.suite ? new RegExp(String.raw`^(?:floor|fl|level)\s*${f.floor.sequence}\b[\s,·-]*(?:ste|suite)?\s*${s.suite}$`).test(needle) : false;
+      if (s.suite && (floorSuite || hit(s.suite) || hit(`ste ${s.suite}`) || hit(`suite ${s.suite}`))) reason = `Suite ${s.suite}`;
       else if (hit(f.floor.name)) reason = f.floor.name;
       else if (!safe) {
         const deals = [...(s.availability?.deals ?? []), ...(s.marketed?.deals ?? []), ...(s.lease?.deals ?? [])];
@@ -255,7 +268,7 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
 
   const intent = useMemo(() => readQuery(state.q, asOf), [state.q, asOf]);
   const queryFind = intent?.kind === 'size' ? intent : null;
-  const searchReasons = useMemo(() => (state.q ? search(floors, state.q, safe, intent) : null), [floors, state.q, safe, intent]);
+  const searchReasons = useMemo(() => (state.q.trim() ? search(floors, state.q, safe, intent) : null), [floors, state.q, safe, intent]);
   const searchMatches = useMemo(() => (searchReasons ? new Set(searchReasons.keys()) : null), [searchReasons]);
 
   const bucketKeys = useMemo(() => {
@@ -292,8 +305,12 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
     // repeats only the state and the floor, never the query, so it is as safe for a prospect as the generic line.
     // A tenant-risk word in Prospect-safe keeps the generic line: "No holdover space" would tell a prospect something false.
     const stateIntent = intent?.kind === 'state' && !(intent.tenantRisk && safe) ? intent : null;
-    filterLabel = stateIntent
-      ? `No ${stateIntent.label.toLowerCase()} space${stateIntent.floor !== null ? ` on ${floors.find((f) => String(f.floor.sequence) === stateIntent.floor)?.floor.name ?? `Floor ${stateIntent.floor}`}` : ''}${stateIntent.now ? ' now' : ''}.`
+    const named = stateIntent && stateIntent.floor !== null ? floors.find((f) => String(f.floor.sequence) === stateIntent.floor) : undefined;
+    // A floor the building does not have is said plainly (round 36: "No available space on Floor 99 now").
+    filterLabel = stateIntent && stateIntent.floor !== null && !named
+      ? `There is no Floor ${stateIntent.floor} here (Floors ${Math.min(...floors.map((f) => f.floor.sequence))}–${Math.max(...floors.map((f) => f.floor.sequence))}).`
+      : stateIntent
+      ? `${NONE_OF[stateIntent.label] ?? `No ${stateIntent.label.toLowerCase()} space`}${stateIntent.floor !== null ? ` on ${floors.find((f) => String(f.floor.sequence) === stateIntent.floor)?.floor.name ?? `Floor ${stateIntent.floor}`}` : ''}${stateIntent.now ? ' now' : ''}.`
       : safe
       ? 'No suite or floor matches. Try a suite number (“350”), a floor (“Floor 8”) or a size (“12,000 SF”).'
       : `No tenant, suite or prospect matches “${state.q}”. Try a suite number (“350”), a floor (“Floor 8”) or a size (“12,000 SF”).`;

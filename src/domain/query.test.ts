@@ -266,3 +266,46 @@ describe('a ceiling at or under the floor (round 36)', () => {
     expect(q('15k no more than 15k')).toMatchObject({ kind: 'size', size: 15000, max: 15000 });
   });
 });
+
+describe('negated comparators, one word per size, more kinds (round 36)', () => {
+  const q = (s: string) => readQuery(s, '2026-11-09');
+  it('a negated ceiling is a floor', () => {
+    for (const s of ['no less than 12k', 'not less than 12k', 'not under 12k', 'no fewer than 12k']) {
+      expect(q(s), s).toMatchObject({ kind: 'size', size: 12000, max: null });
+      expect(q(s), s).not.toHaveProperty('unread');
+    }
+  });
+  it('binds each comparator to one size', () => {
+    expect(q('15k max 12k min')).toMatchObject({ size: 12000, max: 15000 });
+    expect(q('15k max 12k min')).not.toHaveProperty('unread');
+    expect(q('12k at most')).toMatchObject({ size: 100, max: 12000 });
+  });
+  it('reads "12 to 15 thousand sf" without listing the 12', () => {
+    expect(q('12 to 15 thousand sf')).toMatchObject({ size: 12000, max: 15000 });
+    expect(q('12 to 15 thousand sf')).not.toHaveProperty('unread');
+  });
+  it('rules sublease out with "exclude", and in with "sublease ok"', () => {
+    expect(q('12k exclude sublease')).toMatchObject({ fit: 'direct' });
+    expect(q('12k excluding sublease')).toMatchObject({ fit: 'direct' });
+    expect(q('12k sublease ok')).toMatchObject({ fit: 'any' });
+  });
+});
+
+describe('a word between two sizes, articles, dashes (round 36, part 2)', () => {
+  const q = (s: string) => readQuery(s, '2026-11-09');
+  it('a word between two sizes belongs to the later one unless the later has its own', () => {
+    for (const s of ['min 12k max 15k', 'at least 12k max 15k', 'minimum 12k maximum 15k', '12k sf max 15k sf', '12k max 15k', '15k max 12k min']) {
+      expect(q(s), s).toMatchObject({ kind: 'size', size: 12000, max: 15000 });
+      expect(q(s), s).not.toHaveProperty('unread');
+    }
+  });
+  it('reads a kind of space with an article after the negation', () => {
+    expect(q('12k without a sublease')).toMatchObject({ fit: 'direct' });
+    expect(q('12k not a sublease')).toMatchObject({ fit: 'direct' });
+  });
+  it('reads an em dash and a bare 4-digit range; two close suite numbers stay suites', () => {
+    expect(q('12k—15k')).toMatchObject({ size: 12000, max: 15000 });
+    expect(q('5000-8000')).toMatchObject({ size: 5000, max: 8000 });
+    expect(q('1200-1250')).toBeNull();
+  });
+});

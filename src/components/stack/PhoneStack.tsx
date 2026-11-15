@@ -53,7 +53,7 @@ export function PhoneStack({ model, state, patch, title, legendNote, textFor, hi
       {/* Round 35: a phone's floor list runs several screens; the index stays at the top while it scrolls and takes the
           user to a floor's card, focused, in one tap (the desktop stack shows every floor at once). */}
       {floors.length > 3 && (
-        <nav className="sp-pstack__jump" aria-label="Jump to floor">
+        <nav className={`sp-pstack__jump ${floors.length > 12 ? "sp-pstack__jump--long" : ""}`.trim()} aria-label="Jump to floor">
           {floors.map((f) => {
             const n = f.floor.name.replace(/^Floor\s+/i, '');
             return (
