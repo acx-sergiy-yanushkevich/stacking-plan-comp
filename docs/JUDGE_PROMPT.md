@@ -12,7 +12,13 @@ Prospect-safe by design: asking rents and asking prices on availabilities (inclu
 
 Also read `docs/CHALLENGE_RULES.md` and the two Best UX judge personas, `docs/personas/wes.md` and `docs/personas/todd.md`. Score with the rubric in BRIEF.md, but test the product the way they would: Wes demos it live to a broker and hands a screen to a prospective tenant; Todd checks that the facts add up and that finding space is fast and deterministic.
 
-New in round 32 (judge these as part of the product; everything from earlier rounds, listed after, is still in scope):
+New in round 33 (judge these as part of the product; everything from earlier rounds, listed after, is still in scope):
+- **A phone's four Color-by switches stand in one row** (units and sub-lines are in each switch's name and the legend), so the plan starts 43 px higher (395 px to 352 px of controls before the first floor). The phone header's buttons are 40 px with a touch area reaching 2 px past each side (44 px in all, 6 px apart, no overlap down to 320 px). A prospect's two switches keep the same height; the withheld-figures line is gone from a phone.
+- **Search dates:** "before the end of 2027" is Dec 30, 2027 ("by end of 2027" is Dec 31); a needed-by date before the as-of date is named and left out in the bar ("Nov 8, 2026 is before the as-of date, so it is not applied"); "by 6/1" is the next June 1; "12,500sf" and "12 k" list nothing as unused; a suite match names its suite once; "largest block" uses the KPI's own `largestBlock` rule.
+- **Focus:** Escape from a worklist opened by the Building panel's Holdover row puts focus on the Worklist button (`verify` holds it).
+- Known, by design: rows still mix 10, 11 and 13 px names where a block is too narrow for 13 px; at 1100 x 800 two 65 px Floor 1 blocks of Legacy West give up their names; the dark Expiration ramp's lightness reverses on purpose.
+
+Round 32 (still in scope, except where round 33 changed it):
 - **Back and Forward with Prospect-safe on** move one entry each: the write after a Back replaces the entry instead of pushing a copy. `npm run leakcheck` presses Back once (Timeline to Stack, mode still on), Forward once (Timeline), and counts the entries.
 - **Names at every width:** the 10 px wrapped name is offered at every block width, not only the narrowest; `npm run verify` now also visits 1920 x 1080, 1536 x 864, 1600 x 900 and 1180 x 800 (nine sizes in all).
 - **Search:** "before" leaves its date out ("before April 1, 2027" is by March 31; "before Q2" by the end of Q1; "before June" by the end of May); "by end of 2027"; a day-first "31/12/27"; "12k-15k" is no longer listed as unused, and a stray number ("5" in "12k sf for 5 years") is; the one-match label names its floor once; "largest block" gives its size.

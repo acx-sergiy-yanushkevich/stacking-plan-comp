@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react';
 import type { Deal, ISODate, Property, Touch } from '../domain/types';
 import { canShowInquiries, canShowLeaseTerm, canShowTenantRisk, planDate, publishedFloors, safeFloors, safeKpis, safeRollover } from '../domain/safe';
 import { deriveFloors, isLeaseKind, segmentIndex, activeDeals, type FloorView, type Segment } from '../domain/derive';
-import { computeKpis, kpiDeltas, type Kpis } from '../domain/kpis';
+import { computeKpis, kpiDeltas, largestBlock, type Kpis } from '../domain/kpis';
 import { rollover, bucketOf, type RolloverBucket } from '../domain/rollover';
 import { legendFor, type LegendItem } from '../domain/lenses';
 import { checkNeededBy, rangeProblem, searchSpace, type ChosenOption, type FinderResult, type FitType, type Requirement } from '../domain/finder';
@@ -164,9 +164,9 @@ export function search(floors: FloorView[], q: string, safe: boolean, intent: Qu
   }
   // "Largest block" lights the biggest space a tenant could take now (round 31: it found nothing).
   if (/^(?:the\s+)?(?:largest|biggest)(?:\s+(?:available|direct|vacant))?(?:\s+(?:block|space|suite|vacancy))?$/.test(needle)) {
-    let best: { key: string; size: number } | null = null;
-    for (const f of floors) for (const s of f.segments) if ((s.kind === 'available' || s.kind === 'sublease') && !s.availableFrom && (!best || s.size > best.size)) best = { key: s.key, size: s.size };
-    if (best) out.set(best.key, `Largest available block, ${best.size.toLocaleString('en-US')} SF`);
+    // The KPI's own rule (domain/kpis.ts `largestBlock`), so the search, the KPI and the plan's tag cannot disagree.
+    const lb = largestBlock(floors);
+    for (const k of lb.keys) out.set(k, `Largest block, ${lb.size.toLocaleString('en-US')} SF on ${lb.floorName}`);
     return out;
   }
   // "12 floor", "12th floor", "floor 12" and "fl 12" are the floor, whichever way round (round 31: "12 floor" found nothing).

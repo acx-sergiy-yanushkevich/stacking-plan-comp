@@ -185,3 +185,18 @@ describe('"end of" with "before", and glued units (round 32)', () => {
     for (const q of ['12,500sf', '12 k']) expect(readQuery(q, '2026-11-09'), q).not.toHaveProperty('unread');
   });
 });
+
+describe('a needed-by date in the past (round 33)', () => {
+  it('is named and left out, not offered', () => {
+    expect(readQuery('12k before Nov 9', '2026-11-09')).toMatchObject({ by: null, pastBy: '2026-11-08' });
+    expect(readQuery('12k by Jun 2027', '2026-11-09')).not.toHaveProperty('pastBy');
+  });
+});
+
+describe('a month and day with no year (round 33)', () => {
+  it('"by 6/1" is the next June 1', () => {
+    expect((readQuery('12k by 6/1', '2026-11-09') as { by: string }).by).toBe('2027-06-01');
+    expect((readQuery('12k by 12/31', '2026-11-09') as { by: string }).by).toBe('2026-12-31');
+    expect(readQuery('12k 6/1', '2026-11-09')).toMatchObject({ by: null });
+  });
+});

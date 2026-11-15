@@ -12,7 +12,7 @@ import type { ISODate } from './types';
  * to space a tenant could take on the plan's date, as the Available KPI counts it (not space available later).
  */
 export type QueryIntent =
-  | { kind: 'size'; size: number; max: number | null; fit: FitType; by: ISODate | null; badBy?: string; unread?: string[] }
+  | { kind: 'size'; size: number; max: number | null; fit: FitType; by: ISODate | null; badBy?: string; pastBy?: ISODate; unread?: string[] }
   | { kind: 'state'; label: string; kinds: ReadonlySet<Segment['kind']>; tenantRisk: boolean; floor: string | null; now: boolean };
 
 const NUM = String.raw`(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)`;
@@ -28,7 +28,7 @@ const MONTH = String.raw`(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may
  * Group 1 is the word ("by", "before", "in", "for", "needed by"), group 2 the date.
  */
 const DATE_AT = new RegExp(
-  String.raw`(?<![\w/-])(?:(needed\s+by|by|before|in|for)\s+)?(?:(?:the\s+)?end\s+of\s+)?(q[1-4](?:\s*,?\s*\d{4})?|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/(?:\d{4}|\d{2})|\d{1,2}\/\d{4}|\d{1,2}(?:st|nd|rd|th)?\s+${MONTH}(?:\s*,?\s*\d{4})?|${MONTH}(?:\s+\d{1,2}(?:st|nd|rd|th)?(?!\d))?(?:\s*,?\s*\d{4})?|20\d{2})(?![\w/-])`,
+  String.raw`(?<![\w/-])(?:(needed\s+by|by|before|in|for)\s+)?(?:(?:the\s+)?end\s+of\s+)?(q[1-4](?:\s*,?\s*\d{4})?|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/(?:\d{4}|\d{2})|\d{1,2}\/\d{4}|\d{1,2}\/\d{1,2}(?!\d)|\d{1,2}(?:st|nd|rd|th)?\s+${MONTH}(?:\s*,?\s*\d{4})?|${MONTH}(?:\s+\d{1,2}(?:st|nd|rd|th)?(?!\d))?(?:\s*,?\s*\d{4})?|20\d{2})(?![\w/-])`,
   'gi',
 );
 
@@ -112,6 +112,9 @@ export function readBy(words: string, asOf: ISODate): ISODate | null {
   // Day first: "15 Jan 2027", "3rd March".
   const dayFirst = /^(\d{1,2})(?:st|nd|rd|th)?\s+([a-z]+)\.?(?:\s+(\d{4}))?$/.exec(w);
   if (dayFirst) return readBy(`${dayFirst[2]} ${dayFirst[1]}${dayFirst[3] ? ` ${dayFirst[3]}` : ''}`, asOf);
+  // "6/1" after a word: June 1, the next one on or after the as-of date (month first, as a US broker writes it).
+  const md = /^(\d{1,2})\/(\d{1,2})$/.exec(w);
+  if (md) return Number(md[1]) >= 1 && Number(md[1]) <= 12 ? readBy(`${MONTHS[Number(md[1]) - 1]} ${md[2]}`, asOf) : null;
   const slash = /^(\d{1,2})\/(\d{4})$/.exec(w);
   if (slash && Number(slash[1]) >= 1 && Number(slash[1]) <= 12) return endOfMonth(Number(slash[2]), Number(slash[1]));
   // A month, with a day (round 29: "February 15, 2028" was read as the end of February 2027) and a year.
@@ -142,7 +145,7 @@ export function cutDate(text: string, asOf: ISODate): { by: ISODate | null; rest
   for (const m of text.matchAll(DATE_AT)) {
     const word = m[1]?.toLowerCase().replace(/\s+/g, ' ');
     const date = m[2].toLowerCase();
-    if (!word && (/^\d{4}$/.test(date) || /^may\.?$/.test(date))) continue;
+    if (!word && (/^\d{4}$/.test(date) || /^\d{1,2}\/\d{1,2}$/.test(date) || /^may\.?$/.test(date))) continue;
     let by = readBy(date, asOf);
     // A date shaped like one that the calendar has not ("by 2027-02-30") is cut and named, never dropped quietly
     // (round 26: the search offered "Feb 30, 2027", then ran with no needed-by date at all).
@@ -246,14 +249,18 @@ export function readQuery(q: string, asOf: ISODate): QueryIntent | null {
   const text = q.trim().toLowerCase();
   if (!text) return null;
 
-  const { by, rest, bad } = cutDate(text, asOf);
+  const cut = cutDate(text, asOf);
+  const { rest, bad } = cut;
+  // A needed-by date before the as-of date is named and left out, as Find space does (round 33: the bar offered "by Nov 8").
+  const past = cut.by !== null && cut.by < asOf ? cut.by : null;
+  const by = past ? null : cut.by;
   const size = readSize(rest);
   if (size) {
     let fit: FitType = 'any';
     if (/\bdirect\b/.test(rest)) fit = 'direct';
     else if (/\bsub(?:lease|let)s?\b/.test(rest)) fit = 'sublease';
     const unread = unreadWords(rest, size.size, size.max);
-    return { kind: 'size', size: size.size, max: size.max, fit, by, ...(bad ? { badBy: bad } : {}), ...(unread.length ? { unread } : {}) };
+    return { kind: 'size', size: size.size, max: size.max, fit, by, ...(bad ? { badBy: bad } : {}), ...(past ? { pastBy: past } : {}), ...(unread.length ? { unread } : {}) };
   }
   return readState(text);
 }
