@@ -11,3 +11,15 @@ describe('FilterBar: a requirement with a date the calendar has not (round 26)',
     expect(html).toContain('Clear');
   });
 });
+
+describe('FilterBar: a contradictory requirement (round 36)', () => {
+  it('names it and offers nothing to run', async () => {
+    const { renderToString } = await import('react-dom/server');
+    const { FilterBar } = await import('./FilterBar');
+    const html = renderToString(<FilterBar label="Find 20,000–15,000 SF" find={{ kind: 'size', size: 20000, max: 15000, fit: 'any', by: null }} patch={() => undefined} />);
+    const text = html.replace(/<!-- -->/g, '');
+    expect(text).toContain('at least 20,000 SF and at most 15,000 SF, which no space can be');
+    expect(html).not.toContain('SF of space</button>');
+    expect(html).not.toContain('sp-filterbar__find');
+  });
+});

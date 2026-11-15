@@ -284,7 +284,7 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
   } else if (queryFind) {
     // A size is a requirement, not a name: the bar offers Find space with it (FilterBar).
     highlight = null;
-    filterLabel = `Find ${num(queryFind.size)}${queryFind.max ? `–${num(queryFind.max)}` : ''} SF${queryFind.fit === 'any' ? '' : ` ${queryFind.fit}`}${queryFind.by ? ` by ${fmtDate(queryFind.by)}` : ''}`;
+    filterLabel = `Find ${num(queryFind.size)}${queryFind.max && queryFind.max !== queryFind.size ? `–${num(queryFind.max)}` : ''} SF${queryFind.fit === 'any' ? '' : ` ${queryFind.fit}`}${queryFind.by ? ` by ${fmtDate(queryFind.by)}` : ''}`;
   } else if (searchMatches && searchMatches.size === 0) {
     highlight = null;
     // Prospect-safe search skips tenants and prospects, and never repeats the query: it may be a tenant name.

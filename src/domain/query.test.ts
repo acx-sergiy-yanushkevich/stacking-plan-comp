@@ -256,3 +256,13 @@ describe('comparators beside their own size, negation and "between" (round 35)',
     expect(q('15k nnn under $35')).toMatchObject({ size: 15000, max: null, unread: ['nnn', 'under', '$35'] });
   });
 });
+
+describe('a ceiling at or under the floor (round 36)', () => {
+  const q = (s: string) => readQuery(s, '2026-11-09');
+  it('keeps a contradiction as typed, for the bar to name', () => {
+    expect(q('20k under 15k')).toMatchObject({ kind: 'size', size: 20000, max: 15000 });
+  });
+  it('keeps equal bounds as that exact size', () => {
+    expect(q('15k no more than 15k')).toMatchObject({ kind: 'size', size: 15000, max: 15000 });
+  });
+});

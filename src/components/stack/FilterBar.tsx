@@ -2,6 +2,7 @@ import type { PlanState } from '../../state/planState';
 import type { QueryIntent } from '../../domain/query';
 import { num } from '../../domain/format';
 import { fmtDate } from '../../domain/dates';
+import { rangeProblem } from '../../domain/finder';
 import { Button, Icon } from '../ui';
 import { DotJoin } from '../hero/DotJoin';
 
@@ -35,7 +36,21 @@ export function FilterBar({ label, alternatives, find, planElsewhere, patch }: F
         <Icon name="warning" size={14} />
         <span>
           {find.badBy} is not a date on the calendar. Correct it to find {num(find.size)}
-          {find.max ? `–${num(find.max)}` : ''} SF of space by then.
+          {find.max && find.max !== find.size ? `–${num(find.max)}` : ''} SF of space by then.
+        </span>
+        <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '' })}>
+          Clear
+        </Button>
+      </div>
+    );
+  // A ceiling under the floor ("20k under 15k"): name it, as Find space does, and offer nothing to run (round 35).
+  const inverted = find ? rangeProblem(find.size, find.max) : null;
+  if (find && inverted)
+    return (
+      <div className="sp-filterbar sp-filterbar--offer" role="status">
+        <Icon name="warning" size={14} />
+        <span>
+          That asks for at least {num(find.size)} SF and at most {num(find.max ?? 0)} SF, which no space can be. {inverted}
         </span>
         <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '' })}>
           Clear
@@ -53,7 +68,7 @@ export function FilterBar({ label, alternatives, find, planElsewhere, patch }: F
         </span>
         <Button size="sm" variant="brand" iconRight="chevron-right" className="sp-filterbar__find" onClick={() => patch({ ...findFromQuery(find), ...(planElsewhere ? TO_PLAN : {}) })}>
           Find {num(find.size)}
-          {find.max ? `–${num(find.max)}` : ''} SF of space
+          {find.max && find.max !== find.size ? `–${num(find.max)}` : ''} SF of space
         </Button>
         <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '' })}>
           Clear

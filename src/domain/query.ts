@@ -240,7 +240,9 @@ function readSize(text: string): { size: number; max: number | null; used: strin
   }
   if (floor === null && ceil === null) return null;
   if (floor === null) return { size: 100, max: ceil, used };
-  if (ceil === null || ceil <= floor) return { size: floor, max: null, used };
+  // A ceiling under the floor is kept as typed, so the bar can name the contradiction rather than run something else
+  // (round 35: "20k under 15k" dropped the ceiling and ran a 20,000 SF minimum). Equal bounds are that exact size.
+  if (ceil === null) return { size: floor, max: null, used };
   return { size: floor, max: ceil, used };
 }
 
