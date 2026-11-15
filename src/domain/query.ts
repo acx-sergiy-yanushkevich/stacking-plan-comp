@@ -67,6 +67,13 @@ const realDay = (iso: string) => {
   return !Number.isNaN(t.getTime()) && t.toISOString().slice(0, 10) === iso;
 };
 
+/** The day before `by`. */
+function dayBefore(by: ISODate): ISODate {
+  const d = new Date(`${by}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10) as ISODate;
+}
+
 /** The last day before the period or day `date` names, given the end `by` it was read as. */
 function beforeBy(date: string, by: ISODate): ISODate {
   if (/^\d{4}$/.test(date)) return `${Number(date) - 1}-12-31`;
@@ -147,7 +154,8 @@ export function cutDate(text: string, asOf: ISODate): { by: ISODate | null; rest
     // "Before" leaves the named day, month, quarter or year out (round 31: "before April 1, 2027" admitted space that
     // opens on April 1): "before 2027" is by the end of 2026, "before Q2" by the end of Q1, "before June" by the
     // end of May, "before April 1" by March 31.
-    if (word === 'before') by = beforeBy(date, by);
+    // "Before the end of 2027" is the day before that end, not before the year (round 32: it read as the end of 2026).
+    if (word === 'before') by = /\bend\s+of\b/i.test(m[0]) ? dayBefore(by) : beforeBy(date, by);
     const at = m.index ?? 0;
     return { by, rest: `${text.slice(0, at)} ${text.slice(at + m[0].length)}`.replace(/\s+/g, ' ').trim() };
   }
@@ -155,7 +163,7 @@ export function cutDate(text: string, asOf: ISODate): { by: ISODate | null; rest
 }
 
 /** Words in a requirement that mean something already read, or nothing at all ("need 12k SF of contiguous space"). */
-const SIZE_WORDS = new Set(['sf', 'rsf', 'sq', 'ft', 'sq.', 'ft.', 'square', 'feet', 'k', 'direct', 'sublease', 'subleases', 'sublet', 'sublets', 'contiguous', 'space', 'spaces', 'block', 'blocks', 'suite', 'suites', 'office', 'need', 'needs', 'needed', 'find', 'looking', 'for', 'a', 'an', 'the', 'of', 'to', 'by', 'in', 'before', 'at', 'with', 'and', 'or', 'about', 'around', 'approx', 'approximately', 'sf.', 'rsf.']);
+const SIZE_WORDS = new Set(['sf', 'rsf', 'sq', 'ft', 'sq.', 'ft.', 'square', 'feet', 'k', 'direct', 'sublease', 'subleases', 'sublet', 'sublets', 'contiguous', 'space', 'spaces', 'block', 'blocks', 'suite', 'suites', 'office', 'need', 'needs', 'needed', 'find', 'looking', 'for', 'a', 'an', 'the', 'of', 'to', 'by', 'in', 'before', 'at', 'with', 'and', 'or', 'about', 'around', 'on', 'approx', 'approximately', 'sf.', 'rsf.']);
 
 /**
  * What a requirement says that the search does not use (round 31: "15k nnn under $35" ran as "15k" with the rest
@@ -163,11 +171,11 @@ const SIZE_WORDS = new Set(['sf', 'rsf', 'sq', 'ft', 'sq.', 'ft.', 'square', 'fe
  */
 function unreadWords(rest: string, size: number, max: number | null): string[] {
   const out: string[] = [];
-  for (const raw of rest.split(/\s+/)) {
+  for (const raw of rest.replace(/(\d)\s+k\b/g, '$1k').split(/\s+/)) {
     const t = raw.replace(/^[^\w$]+|[^\w$]+$/g, '');
     if (!t || SIZE_WORDS.has(t) || /^[\d,.]+k?(?:-|–|to)[\d,.]+k?$/.test(t)) continue;
     // A number is read when it is the size ("12k", "12,000", "1200" before "sf"); any other ("5" in "for 5 years") is listed.
-    const num = /^([\d,.]+)(k?)$/.exec(t);
+    const num = /^([\d,.]+)(k?)(?:sf|rsf)?$/.exec(t);
     if (num) {
       const v = Number(num[1].replace(/,/g, '')) * (num[2] ? 1000 : 1);
       if (v === size || v === max) continue;

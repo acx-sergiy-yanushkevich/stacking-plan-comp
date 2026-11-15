@@ -67,14 +67,14 @@ function headFor(mode: InspectorMode, model: PlanModel, state: PlanState, patch:
       return { title: f?.floor.name ?? 'Floor', subtitle: f ? `${sf(f.leasable)} leasable` : undefined, close: () => closeAndRefocus(patch, null, state.floor) };
     }
     case 'find':
-      return { title: 'Find space', subtitle: model.filterLabel ?? 'Rank every space that fits a requirement', close: () => { patch(TOOL_CLOSE.find); refocusTrigger(); } };
+      return { title: 'Find space', subtitle: model.filterLabel ?? 'Rank every space that fits a requirement', close: () => { patch(TOOL_CLOSE.find); refocusTrigger('Find space'); } };
     case 'worklist':
-      return { title: canShowTenantRisk(model.safe) ? 'Renewal worklist' : 'Lease expirations', subtitle: model.filterLabel ?? 'Leases ending in a window', close: () => { patch(TOOL_CLOSE.worklist); refocusTrigger(); } };
+      return { title: canShowTenantRisk(model.safe) ? 'Renewal worklist' : 'Lease expirations', subtitle: model.filterLabel ?? 'Leases ending in a window', close: () => { patch(TOOL_CLOSE.worklist); refocusTrigger('Worklist'); } };
     case 'issues':
-      return { title: 'Data issues', subtitle: canShowIssues(model.safe) ? `${model.counts.error} errors · ${model.counts.warning} warnings · ${model.counts.info} info` : undefined, close: () => { patch(TOOL_CLOSE.issues); refocusTrigger(); } };
+      return { title: 'Data issues', subtitle: canShowIssues(model.safe) ? `${model.counts.error} errors · ${model.counts.warning} warnings · ${model.counts.info} info` : undefined, close: () => { patch(TOOL_CLOSE.issues); refocusTrigger('Data issues'); } };
     case 'area':
     case 'brief':
-      return { title: 'Area', subtitle: `${model.property.city}, ${model.property.state}`, close: () => { patch(TOOL_CLOSE.area); refocusTrigger(); } };
+      return { title: 'Area', subtitle: `${model.property.city}, ${model.property.state}`, close: () => { patch(TOOL_CLOSE.area); refocusTrigger('Area'); } };
     case 'building':
     default:
       return { title: 'Building', subtitle: model.property.name };

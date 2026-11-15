@@ -172,3 +172,16 @@ describe('"before" leaves its date out, and more forms (round 31)', () => {
     expect(readQuery('1200 sf', '2026-11-09')).not.toHaveProperty('unread');
   });
 });
+
+describe('"end of" with "before", and glued units (round 32)', () => {
+  const by = (q: string) => (readQuery(q, '2026-11-09') as { by: string | null }).by;
+  it('"before the end of" is the day before that end', () => {
+    expect(by('12k before the end of 2027')).toBe('2027-12-30');
+    expect(by('12k before end of June 2027')).toBe('2027-06-29');
+    expect(by('12k before the end of Q2 2027')).toBe('2027-06-29');
+    expect(by('12k by end of 2027')).toBe('2027-12-31');
+  });
+  it('lists nothing for "12,500sf" or "12 k"', () => {
+    for (const q of ['12,500sf', '12 k']) expect(readQuery(q, '2026-11-09'), q).not.toHaveProperty('unread');
+  });
+});

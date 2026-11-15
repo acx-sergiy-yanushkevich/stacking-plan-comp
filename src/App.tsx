@@ -51,6 +51,9 @@ interface FocusMark {
 
 const nameOf = (el: Element) => el.getAttribute('aria-label') ?? el.textContent?.trim() ?? '';
 
+/** The toolbar button that opens each tool panel, where focus goes back when the control that opened it is gone. */
+const TOOL_LABEL: Record<string, string> = { worklist: 'Worklist', issues: 'Data issues', area: 'Area', find: 'Find space' };
+
 function focusMark(root: HTMLElement | null): FocusMark | null {
   const el = focused();
   if (!root || !el || !root.contains(el)) return null;
@@ -265,7 +268,7 @@ function Shell() {
         if (mode === 'brief') patch({ mode: 'area' });
         else {
           patch(TOOL_CLOSE[mode as keyof typeof TOOL_CLOSE]);
-          refocusTrigger();
+          refocusTrigger(TOOL_LABEL[mode as string]);
         }
         return;
       }

@@ -175,6 +175,21 @@ for (const [w, h] of [[1470, 830], [1440, 1000], [1366, 768], [1280, 720], [1366
   check(onTimeline && new URL(nav.url()).searchParams.get('view') === 'stack', `Back from the Timeline returns to the Stack (${nav.url().replace(base, '')})`);
   await nav.close();
 }
+// Round 33: Escape from a worklist opened by the Building panel's Holdover row (a control that is gone by then) puts
+// focus on the Worklist button, not on the page.
+{
+  const f = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+  await f.goto(`${base}?view=stack`, { waitUntil: 'networkidle' });
+  const row = f.locator('.sp-ins button', { hasText: 'Holdover' }).first();
+  await row.focus();
+  await f.keyboard.press('Enter');
+  await f.waitForTimeout(400);
+  await f.keyboard.press('Escape');
+  await f.waitForTimeout(400);
+  const on = await f.evaluate(() => (document.activeElement?.textContent ?? '').trim());
+  check(on === 'Worklist', `Escape from a worklist opened by the Holdover row returns focus to the Worklist button (${on})`);
+  await f.close();
+}
 await browser.close();
 check(errors.length === 0, `no console errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
 if (fails.length) {

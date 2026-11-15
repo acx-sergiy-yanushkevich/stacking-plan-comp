@@ -254,6 +254,8 @@
 @media (max-width: 359px) {
   .sp-topbar { gap: 4px; padding-left: 8px; padding-right: 8px; }
   .sp-topbar .sp-btn { padding: 0 6px; }
+  /* The touch area stays 2 px short of its neighbour at a 4 px gap (round 32: 2 px overlap at 320 px). */
+  .sp-header .sp-btn::after, .sp-topbar .sp-btn::after { inset: -2px; }
 }
 @media (max-width: 420px) {
   .sp-header .sp-btn, .sp-topbar .sp-btn { padding: 0 8px; }
