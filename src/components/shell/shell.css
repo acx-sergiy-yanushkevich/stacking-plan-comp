@@ -288,3 +288,16 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) .sp-lockup__by { color: #ffffff; }
 }
+
+/* ── A laptop, 1100 px and wider but 900 px tall or less ─────────────────────────────── */
+/* Round 31: a 12-floor building ran 130 px past a 13-inch window (830 px) even with its rows fitted, so the bands
+   above the plan give up air, not content: the gaps between them and the padding inside them. Nothing is hidden
+   and no control is smaller. The rows then fit (fitRows.ts) and the page does not scroll. */
+@media (min-width: 1100px) and (max-height: 900px) {
+  .sp-app { gap: 6px; padding-top: 6px; padding-bottom: var(--sp-space-3); }
+  :root[data-skin] .sp-header { padding: 6px 16px; }
+  :root[data-skin] .sp-topbar { padding-block: 4px; }
+  .sp-toolbar { padding-block: 4px; }
+  .sp-stack__head { padding-block: 6px; }
+  .sp-stack__body { padding-top: 6px; padding-bottom: 8px; }
+}

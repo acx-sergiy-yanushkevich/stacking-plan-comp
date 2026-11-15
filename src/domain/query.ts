@@ -12,7 +12,7 @@ import type { ISODate } from './types';
  * to space a tenant could take on the plan's date, as the Available KPI counts it (not space available later).
  */
 export type QueryIntent =
-  | { kind: 'size'; size: number; max: number | null; fit: FitType; by: ISODate | null; badBy?: string }
+  | { kind: 'size'; size: number; max: number | null; fit: FitType; by: ISODate | null; badBy?: string; unread?: string[] }
   | { kind: 'state'; label: string; kinds: ReadonlySet<Segment['kind']>; tenantRisk: boolean; floor: string | null; now: boolean };
 
 const NUM = String.raw`(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)`;
@@ -137,6 +137,23 @@ export function cutDate(text: string, asOf: ISODate): { by: ISODate | null; rest
   return { by: null, rest: text };
 }
 
+/** Words in a requirement that mean something already read, or nothing at all ("need 12k SF of contiguous space"). */
+const SIZE_WORDS = new Set(['sf', 'rsf', 'sq', 'ft', 'sq.', 'ft.', 'square', 'feet', 'k', 'direct', 'sublease', 'subleases', 'sublet', 'sublets', 'contiguous', 'space', 'spaces', 'block', 'blocks', 'suite', 'suites', 'office', 'need', 'needs', 'needed', 'find', 'looking', 'for', 'a', 'an', 'the', 'of', 'to', 'by', 'in', 'before', 'at', 'with', 'and', 'or', 'about', 'around', 'approx', 'approximately', 'sf.', 'rsf.']);
+
+/**
+ * What a requirement says that the search does not use (round 31: "15k nnn under $35" ran as "15k" with the rest
+ * dropped without a word): a word it does not know, or a price. Numbers, the size and its unit are read, not listed.
+ */
+function unreadWords(rest: string): string[] {
+  const out: string[] = [];
+  for (const raw of rest.split(/\s+/)) {
+    const t = raw.replace(/^[^\w$]+|[^\w$]+$/g, '');
+    if (!t || SIZE_WORDS.has(t) || /^[\d,.]+k?$/.test(t) || /^[\d,.]+(?:-|–|to)[\d,.]+k?$/.test(t)) continue;
+    if (!out.includes(t)) out.push(t);
+  }
+  return out;
+}
+
 /** The SF a number stands for: "12" with "k" is 12,000; "12,000" is 12,000. */
 function sfOf(n: string, k: boolean): number {
   const v = Number(n.replace(/,/g, ''));
@@ -204,7 +221,8 @@ export function readQuery(q: string, asOf: ISODate): QueryIntent | null {
     let fit: FitType = 'any';
     if (/\bdirect\b/.test(rest)) fit = 'direct';
     else if (/\bsub(?:lease|let)s?\b/.test(rest)) fit = 'sublease';
-    return { kind: 'size', size: size.size, max: size.max, fit, by, ...(bad ? { badBy: bad } : {}) };
+    const unread = unreadWords(rest);
+    return { kind: 'size', size: size.size, max: size.max, fit, by, ...(bad ? { badBy: bad } : {}), ...(unread.length ? { unread } : {}) };
   }
   return readState(text);
 }

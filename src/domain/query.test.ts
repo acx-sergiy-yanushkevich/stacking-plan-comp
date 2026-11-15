@@ -147,3 +147,10 @@ describe('more ways to write a day (round 30)', () => {
     expect(readQuery('12k by 2/30/27', '2026-11-09')).toMatchObject({ by: null, badBy: '2/30/27' });
   });
 });
+
+describe('words a requirement does not use (round 31)', () => {
+  it('names what it left out, and nothing for plain forms', () => {
+    expect(readQuery('15k nnn under $35', '2026-11-09')).toMatchObject({ kind: 'size', size: 15000, unread: ['nnn', 'under', '$35'] });
+    for (const q of ['12k', '12,000 sf direct', 'need 12k SF of contiguous space by Jun 2027', '12-15k sublease']) expect(readQuery(q, '2026-11-09'), q).not.toHaveProperty('unread');
+  });
+});

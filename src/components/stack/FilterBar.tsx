@@ -47,6 +47,7 @@ export function FilterBar({ label, alternatives, find, planElsewhere, patch }: F
         <Icon name="filter" size={14} />
         <span>
           That reads as a space requirement: <strong>{label.replace(/^Find /, '')}</strong>.
+          {find.unread?.length ? ` Not used: ${find.unread.join(', ')}.` : ''}
         </span>
         <Button size="sm" variant="brand" iconRight="chevron-right" className="sp-filterbar__find" onClick={() => patch({ ...findFromQuery(find), ...(planElsewhere ? TO_PLAN : {}) })}>
           Find {num(find.size)}
