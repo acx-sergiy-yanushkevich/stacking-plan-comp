@@ -99,6 +99,9 @@
 .sp-pfloor__facts > span { white-space: nowrap; }
 .sp-pfloor__pct { font-weight: 600; color: var(--sp-color-text); }
 .sp-pfloor__avail { color: var(--tone-available-later-text); font-weight: 600; }
+/* The availability line may wrap (between its words, never inside a figure): at 320 px "14,000 SF available (8,000
+   direct + 6,000 sublease)" ran past the card and was cut (round 37). */
+.sp-pfloor__facts > .sp-pfloor__avail { white-space: normal; min-width: 0; }
 .sp-pfloor__warn { color: var(--sp-color-warn); font-weight: 600; }
 .sp-pfloor__bar { display: flex; gap: 2px; height: 10px; margin: 0 10px 6px; }
 .sp-pbar { min-width: 4px; flex-basis: 0; border: 1px solid; border-radius: 3px; }

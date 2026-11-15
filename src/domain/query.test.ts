@@ -309,3 +309,23 @@ describe('a word between two sizes, articles, dashes (round 36, part 2)', () => 
     expect(q('1200-1250')).toBeNull();
   });
 });
+
+describe('round 37: two of a bound, more words', () => {
+  const q = (s: string) => readQuery(s, '2026-11-09');
+  it('two ceilings keep the tighter, two floors the higher, and neither is listed', () => {
+    expect(q('under 20k max 15k')).toMatchObject({ size: 100, max: 15000 });
+    expect(q('at least 12k min 15k')).toMatchObject({ size: 15000, max: null });
+    for (const s of ['under 20k max 15k', 'at least 12k min 15k']) expect(q(s), s).not.toHaveProperty('unread');
+  });
+  it('rules direct out with the words that rule sublease out', () => {
+    for (const s of ['12k excluding direct', '12k except direct', 'sublease-only 12k', '12k only sublease']) {
+      expect(q(s), s).toMatchObject({ fit: 'sublease' });
+      expect(q(s), s).not.toHaveProperty('unread');
+    }
+  });
+  it('reads "bigger than" as a floor and a minus sign as a range', () => {
+    expect(q('bigger than 12k')).toMatchObject({ size: 12000, max: null });
+    expect(q('bigger than 12k')).not.toHaveProperty('unread');
+    expect(q('12k−15k')).toMatchObject({ size: 12000, max: 15000 });
+  });
+});

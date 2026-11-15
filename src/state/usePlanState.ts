@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ISODate } from '../domain/types';
 import { SAFE_TITLE, TITLE } from '../domain/safe';
-import { historyBack, media, onPopState, readUrl, setTitle, writeUrl } from '../lib/host';
+import { historyBack, media, onPopState, readUrl, sheetEntry as onSheetEntry, setTitle, writeUrl } from '../lib/host';
 import { openSession, serializeState, stepSession, type PlanSession, type PlanState } from './planState';
 
 /** The fields whose change is a move to somewhere else, not an edit of where the user already is. */
@@ -52,7 +52,9 @@ export function usePlanState(today: ISODate): [PlanState, (patch: Partial<PlanSt
     last.current = state;
     if (popped.current) {
       popped.current = false;
-      sheetEntry.current = false;
+      // Back or Forward onto a sheet's own entry (marked when it was added): Close still steps back over it (round 37:
+      // Back, Forward, then Close left a Back press that did nothing).
+      sheetEntry.current = state.select !== null && onSheetEntry();
       writeUrl(serializeState(state, today), false);
       return;
     }
@@ -64,7 +66,7 @@ export function usePlanState(today: ISODate): [PlanState, (patch: Partial<PlanSt
     }
     const push = prev !== null && navigates(prev, state);
     if (push) sheetEntry.current = opensSheet(prev, state);
-    writeUrl(serializeState(state, today), push);
+    writeUrl(serializeState(state, today), push, push && sheetEntry.current);
   }, [state, today]);
 
   // Back or Forward to another address is a link opened afresh: nothing withheld is carried into it.

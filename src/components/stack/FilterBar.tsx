@@ -40,7 +40,7 @@ export function FilterBar({ label, empty = false, alternatives, find, planElsewh
           {find.badBy} is not a date on the calendar. Correct it to find {num(find.size)}
           {find.max && find.max !== find.size ? `–${num(find.max)}` : ''} SF of space by then.
         </span>
-        <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '' })}>
+        <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '', fit: 'any' })}>
           Clear
         </Button>
       </div>
@@ -54,7 +54,7 @@ export function FilterBar({ label, empty = false, alternatives, find, planElsewh
         <span>
           That asks for at least {num(find.size)} SF and at most {num(find.max ?? 0)} SF, which no space can be. {inverted}
         </span>
-        <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '' })}>
+        <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '', fit: 'any' })}>
           Clear
         </Button>
       </div>
@@ -72,7 +72,7 @@ export function FilterBar({ label, empty = false, alternatives, find, planElsewh
           Find {num(find.size)}
           {find.max && find.max !== find.size ? `–${num(find.max)}` : ''} SF of space
         </Button>
-        <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '' })}>
+        <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '', fit: 'any' })}>
           Clear
         </Button>
       </div>

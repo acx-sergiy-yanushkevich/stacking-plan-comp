@@ -166,7 +166,8 @@ const NONE_OF: Record<string, string> = {
 
 /** Search hits with the reason each block matched ("Prospect: Vantage Robotics (LOI)"). */
 export function search(floors: FloorView[], q: string, safe: boolean, intent: QueryIntent | null): Map<string, string> {
-  const needle = q.trim().toLowerCase();
+  // A broker's spellings of a suite read as the plan writes it: "Ste. 860" and "#860" are "ste 860" and "860" (round 37).
+  const needle = q.trim().toLowerCase().replace(/\b(ste|suite)\.\s*/g, '$1 ').replace(/#\s*(?=\d)/g, '');
   const out = new Map<string, string>();
   if (!needle || intent?.kind === 'size') return out;
   // A state word lights that state ("sublease", "signed"), on one floor when the query names it ("subleases on
@@ -195,7 +196,7 @@ export function search(floors: FloorView[], q: string, safe: boolean, intent: Qu
   const suitePart = floorPart ? needle.replace(floorPart[0], ' ').replace(/\b(?:ste|suite)\b|[,·-]/g, ' ').trim() : null;
   const floorSuiteOf = floorPart && suitePart && /^\w+$/.test(suitePart) ? { floor: String(Number(floorPart[1])), suite: suitePart } : null;
   // Two suite numbers with a dash ("1200-1250"), which the search box does not read as a size: both suites.
-  const suitePair = /^(\d{3,5})\s*-\s*(\d{3,5})$/.exec(needle);
+  const suitePair = /^(?:(?:ste|suite)s?\s*)?(\d{3,5})\s*[-–—]\s*(\d{3,5})$/.exec(needle);
   const hit = (v: string | undefined) => !!v && v.toLowerCase().includes(needle);
   for (const f of floors) {
     if (floorNo) {

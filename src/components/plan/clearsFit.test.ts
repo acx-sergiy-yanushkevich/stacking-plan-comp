@@ -18,7 +18,7 @@ describe('closing a requirement resets its kind of space (round 36)', () => {
     const missing: string[] = [];
     for (const f of files) {
       const text = readFileSync(f, 'utf8');
-      for (const m of text.matchAll(/patch\(\{[^}]*\breq: null[^}]*\}/g)) {
+      for (const m of text.matchAll(/patch\(\{[^}]*\breq: null[^}]*\}|patch\(\{ q: '' \}/g)) {
         const call = m[0];
         if (!/fit: 'any'/.test(call)) missing.push(`${f.slice(root.length + 1)}: ${call.slice(0, 80)}`);
       }

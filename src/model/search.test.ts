@@ -83,3 +83,11 @@ describe('a floor and a suite in either order, and a suite pair (round 36)', () 
     expect([...run(floors, '1200-1250', false).values()].sort()).toEqual(['Suite 1200', 'Suite 1250']);
   });
 });
+
+describe('round 37: a broker\'s suite spellings', () => {
+  it('"Ste. 860", "#860" and "8th floor ste 860" find Suite 860; "ste 850-860" lights both', () => {
+    const { floors } = plan(false);
+    for (const q of ['Ste. 860', '#860', 'suite #860', 'Floor 8 Ste. 860', '8th floor ste 860']) expect([...run(floors, q, false).values()], q).toEqual(['Suite 860']);
+    expect([...run(floors, 'ste 850-860', false).values()].sort()).toEqual(['Suite 850', 'Suite 860']);
+  });
+});

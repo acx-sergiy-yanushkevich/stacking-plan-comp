@@ -243,6 +243,40 @@ for (const [w, qs] of [320, 360, 390].flatMap((w) => ['', '&safe=1', '&safe=1&bu
   check(view === 'timeline' && lenAfter === len + 1, `phone: after two sheets closed with Close, one Back reaches the Timeline (${view}, ${len} → ${lenAfter} entries)`);
   await ph.close();
 }
+// Round 37: and after Back and Forward over a sheet: open it, Back (it closes), Forward (it opens), Close, then one Back
+// reaches the Timeline.
+{
+  const ph = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', hasTouch: true, isMobile: true });
+  await ph.goto(`${base}?view=stack`, { waitUntil: 'networkidle' });
+  await ph.getByRole('radio', { name: /Timeline/ }).click();
+  await ph.waitForTimeout(300);
+  await ph.getByRole('radio', { name: /Stack/ }).click();
+  await ph.waitForTimeout(300);
+  await ph.getByRole('button', { name: /Kinetic Ventures/ }).first().click();
+  await ph.waitForTimeout(400);
+  await ph.goBack();
+  await ph.waitForTimeout(400);
+  await ph.goForward();
+  await ph.waitForTimeout(400);
+  await ph.locator('.sp-sheet').getByRole('button', { name: /^Close/ }).first().click();
+  await ph.waitForTimeout(500);
+  await ph.goBack();
+  await ph.waitForTimeout(400);
+  const view = new URL(ph.url()).searchParams.get('view');
+  check(view === 'timeline', `phone: Back, Forward, then Close over a sheet leaves no Back that does nothing (${ph.url().replace(base, '')})`);
+  await ph.close();
+}
+// Round 37: no floor card's facts run past the card on a phone (Legacy West's Floor 16 cut "6,000 subleas…" at 320 px).
+for (const w of [320, 360]) {
+  const ph = await browser.newPage({ viewport: { width: w, height: 800 } });
+  const cut = [];
+  for (const bd of ['', '&building=P002', '&building=P005', '&building=P007']) {
+    await ph.goto(`${base}?view=stack${bd}`, { waitUntil: 'networkidle' });
+    cut.push(...(await ph.$$eval('.sp-pfloor', (cards) => cards.flatMap((c) => { const r = c.getBoundingClientRect(); return [...c.querySelectorAll('.sp-pfloor__facts > span')].filter((s) => s.getBoundingClientRect().right > r.right + 0.5).map((s) => s.textContent.trim().slice(0, 40)); }))).map((t) => `${bd || 'P001'}: ${t}`));
+  }
+  check(cut.length === 0, `${w} px: every phone floor card's facts stay inside the card${cut.length ? ` (${cut.slice(0, 3).join('; ')})` : ''}`);
+  await ph.close();
+}
 // Round 37: a search that finds nothing reads as a sentence, never as a filter in force ("Showing … Other space is
 // dimmed") and never with a way to the plan, in the Stack and on the Map, owner and Prospect-safe.
 {
