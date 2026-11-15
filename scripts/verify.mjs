@@ -132,10 +132,12 @@ check((await page.getByRole('button', { name: /Turn the building/ }).count()) ==
 
 // NFR-12 (rounds 29 and 30): a row fitted to the window keeps its tenant's whole name, and the Rent lens and the
 // asking rows keep their rate, in every lens, owner and prospect-safe, in all four buildings, at the laptop sizes.
-// Blocks too small to hold the text at its smallest size are left out: under 140 px wide and 48 px tall for a name,
-// under 130 px wide for a rate (a 43 px row of the 22-floor tower at 99 px). The unit tests measure text without a
+// Blocks too small to hold the text at its smallest size are left out for a rate: under 130 px wide (a 43 px row of the 22-floor tower at 99 px). The unit tests measure text without a
 // canvas; only the browser knows what Chrome fits.
-for (const [w, h] of [[1470, 830], [1440, 1000], [1366, 768]]) {
+// Round 31: no size exemption for a name (a 99 x 43 café and a stale-touch badge both lost theirs unseen), and the laptop
+// sizes of 1280 x 720 and 1366 x 650. A block with no tenant says its state, which is the name here.
+const STATE_NAMES = new Set(['No lease or listing', 'Not on the market', 'For sale']);
+for (const [w, h] of [[1470, 830], [1440, 1000], [1366, 768], [1280, 720], [1366, 650]]) {
   const fit = await browser.newPage({ viewport: { width: w, height: h }, locale: 'en-US', reducedMotion: 'reduce' });
   const lost = [];
   for (const bd of ['', '&building=P002', '&building=P005', '&building=P007'])
@@ -153,7 +155,7 @@ for (const [w, h] of [[1470, 830], [1440, 1000], [1366, 768]]) {
         for (const c of cells) {
           const name = c.title.split('\n')[0].split(' · ')[0];
           const at = `${name} ${c.w}x${c.h} (${bd || 'P001'} ${lens}${safe})`;
-          if (c.h >= 40 && (c.w >= 140 || c.h >= 48) && name && !flat(c.text).includes(flat(name))) lost.push(`name: ${at}`);
+          if (c.h >= 40 && name && !STATE_NAMES.has(name) && !flat(c.text).includes(flat(name))) lost.push(`name: ${at}`);
           if (lens === 'rent' && c.h >= 40 && c.w >= 130 && name !== 'For sale' && /\$\d/.test(c.title.split('\n').slice(0, 3).join(' ')) && !/\$\d/.test(c.text)) lost.push(`rate: ${at}`);
         }
       }

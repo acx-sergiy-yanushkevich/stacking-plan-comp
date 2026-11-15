@@ -48,3 +48,17 @@ describe('a state word in the search box (round 23)', () => {
     expect([...hits.values()][0]).toBe('Sublease on Floor 7');
   });
 });
+
+describe('floor and largest-block phrases (round 31)', () => {
+  it('"12 floor", "12th floor" and "floor 12" light the same floor', () => {
+    const { floors } = plan(false);
+    const a = [...run(floors, 'floor 7', false).keys()].sort();
+    expect(a.length).toBeGreaterThan(0);
+    for (const q of ['7 floor', '7th floor', 'fl 7']) expect([...run(floors, q, false).keys()].sort(), q).toEqual(a);
+  });
+
+  it('"largest block" lights the single biggest space available now', () => {
+    const { floors } = plan(false);
+    for (const q of ['largest block', 'biggest block', 'largest available space']) expect(run(floors, q, false).size, q).toBe(1);
+  });
+});

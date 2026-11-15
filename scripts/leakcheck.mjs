@@ -720,6 +720,28 @@ for (const b of others) {
   await checkTransition(`${b.name}: select ${first[2]} in the Stack`, `${at}view=stack`, async () => { await block(key).click(); }, first[2]);
 }
 
+// Round 31: Back never turns the mode off. A view opened, the mode turned on, then Back (and Back again): the plan stays
+// prospect-safe and no tenant name is drawn (round 30: Back returned to the owner plan with every name).
+{
+  const label = 'Back with the mode on';
+  if (wanted(label)) {
+    await open(page, `${base}?view=stack`, 250);
+    await page.getByRole('radio', { name: /Timeline/ }).click();
+    await page.waitForTimeout(200);
+    await safeSwitch().focus();
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+    const found = [];
+    for (let i = 0; i < 2; i++) {
+      await page.goBack();
+      await page.waitForTimeout(400);
+      if (!(await page.evaluate(() => new URLSearchParams(location.search).get('safe') === '1'))) found.push(`Back ${i + 1} left the mode off`);
+      found.push(...findLeaks(await grab()).map((f) => `${f} (after Back ${i + 1})`), ...(await findDomLeaks()));
+    }
+    report(label, found);
+  }
+}
+
 await browser.close();
 if (leaks) {
   console.error(`\n${leaks} leak(s)`);

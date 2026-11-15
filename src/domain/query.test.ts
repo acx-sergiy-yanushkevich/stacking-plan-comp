@@ -135,10 +135,15 @@ describe('more ways to write a day (round 30)', () => {
   });
   it('names a US or day-first date the calendar has not', () => {
     expect(readQuery('12k by 2/30/2027', '2026-11-09')).toMatchObject({ by: null, badBy: '2/30/2027' });
-    expect(readQuery('12k by 31 Feb 2027', '2026-11-09')).toMatchObject({ by: null, badBy: '31 feb 2027' });
+    expect(readQuery('12k by 31 Feb 2027', '2026-11-09')).toMatchObject({ by: null, badBy: '31 Feb 2027' });
   });
   it('does not take a size for a date', () => {
     expect(readQuery('12000 sf', '2026-11-09')).toMatchObject({ size: 12000 });
     expect(readQuery('5 may 20000 sf', '2026-11-09')?.kind).toBe('size');
+  });
+
+  it('reads a two-digit year and rejects a day the calendar lacks (round 31)', () => {
+    expect(readQuery('12k by 1/6/27', '2026-11-09')).toMatchObject({ by: '2027-01-06' });
+    expect(readQuery('12k by 2/30/27', '2026-11-09')).toMatchObject({ by: null, badBy: '2/30/27' });
   });
 });

@@ -70,7 +70,10 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   // Badges: deal count pill always (if room); first text badge when wide enough.
   const deal = text.badges.find((b) => b.kind === 'deal');
   const others = text.badges.filter((b) => b.kind !== 'deal');
-  const other = others[0];
+  // Round 31: on a row fitted to the window (under 72 px) the last-touch badge drops its verb ("87 d ago"), so a
+  // name keeps the line beside it; the tooltip and the accessible name still say who and how.
+  const first = others[0];
+  const other = first && h < 72 && first.title?.startsWith('Last touch') ? { ...first, text: first.text.replace(/^\w+ (?=\d+ d ago$)/, '') } : first;
   const second = others[1];
   const showDeal = !!deal && w >= 64 && !compact;
   // A wide block says what its count counts ("2 live deals", the phone row's words): a bare "2" in a circle
@@ -126,6 +129,8 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
         14 px or more: four lines in a 72 px row. Otherwise it is the compact setting: 6 px of padding, 12.5 px. */
     const geomFor = (n: number, tight: boolean) => {
       if (!tight) return { top: PAD + 11, pitch: LINE };
+      // Round 31: three 10 px lines (a name on two, and its SF) in a row fitted to 41-47 px, at an 11 px pitch.
+      if (n === 3 && textH >= 41 && textH < 48) return { top: 15, pitch: 11 };
       const open = tier <= 1 ? Math.min(LINE, Math.floor((textH - PAD - 11 - 9.5) / Math.max(1, n - 1))) : 0;
       return open >= 14 ? { top: PAD + 11, pitch: open } : { top: 6 + 11, pitch: CP };
     };
@@ -243,6 +248,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
     const fit = (ls: Line[], named: boolean) => {
       const small = ls.some(isSmall);
       const cap = small || ls.length > cap15 ? cap13 : cap15;
+      if (ls.length === 3 && textH >= 41 && textH < 48 && ls.slice(0, 2).every((l) => l.cls === 'sp-seg__micro')) return { lines: ls, compact: true, named };
       return ls.length > 0 && ls.length <= cap ? { lines: ls, compact: small || ls.length > cap15, named } : null;
     };
     // Names: at 13 px on one or two lines; the small sets are the last resort described in rule 4.
@@ -258,7 +264,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
       if (tiny.length && tiny.join(' ') === text.name) smallSets.push(tiny.map((t) => ({ t: lineText(t), cls: 'sp-seg__tiny', font: FONT_TINY })));
       // Narrow tiles: the whole name at 10 px before giving it up. A row fitted to the window (under 48 px)
       // has one line for it (round 29: the café on Floor 1 lost its name at 1470 x 830 and 1366 x 768).
-      const micro = (tier >= 2 || suite) && seg.kind !== 'unmarketed' ? wrapWords(text.name, room(0, FONT_MICRO, true), FONT_MICRO, h >= 48 ? 2 : 1) : [];
+      const micro = (tier >= 2 || suite) && seg.kind !== 'unmarketed' ? wrapWords(text.name, room(0, FONT_MICRO, true), FONT_MICRO, h >= 40 ? 2 : 1) : [];
       // With the suite kept, the 10 px name is offered as well as the 11 px one: on one line it leaves room for the suite and the lens fact.
       if (micro.length && micro.join(' ') === text.name && (suite || !(tiny.length && tiny.join(' ') === text.name))) smallSets.push(micro.map((t) => ({ t: lineText(t), cls: 'sp-seg__micro', font: FONT_MICRO })));
     }
@@ -321,7 +327,7 @@ export function Block({ seg, text, x, y, w, h, selected, dim, focusable, onSelec
   const onScale = (r: Solved) => !!r.picked?.named && !r.picked.lines.some(isSmall);
   const corner = solve('corner');
   const row = rowBadge ? solve('row') : null;
-  const bare = showOther && !showSecond && other.kind === 'info' && !onScale(corner) && !(row && onScale(row)) ? solve('none') : null;
+  const bare = showOther && !showSecond && (other.kind === 'info' || (h < 72 && !!other.title?.startsWith('Last touch'))) && !onScale(corner) && !(row && onScale(row)) ? solve('none') : null;
   const place: 'corner' | 'row' | 'none' = row && onScale(row) ? 'row' : onScale(corner) ? 'corner' : bare && onScale(bare) ? 'none' : row?.picked?.named ? 'row' : bare?.picked?.named && !corner.picked?.named ? 'none' : 'corner';
   const ownRow = place === 'row';
   const drawOther = showOther && place !== 'none';

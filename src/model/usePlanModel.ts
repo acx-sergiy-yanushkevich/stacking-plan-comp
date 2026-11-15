@@ -162,8 +162,21 @@ export function search(floors: FloorView[], q: string, safe: boolean, intent: Qu
     }
     return out;
   }
+  // "Largest block" lights the biggest space a tenant could take now (round 31: it found nothing).
+  if (/^(?:the\s+)?(?:largest|biggest)(?:\s+(?:available|direct|vacant))?(?:\s+(?:block|space|suite|vacancy))?$/.test(needle)) {
+    let best: { key: string; size: number } | null = null;
+    for (const f of floors) for (const s of f.segments) if ((s.kind === 'available' || s.kind === 'sublease') && !s.availableFrom && (!best || s.size > best.size)) best = { key: s.key, size: s.size };
+    if (best) out.set(best.key, 'Largest available block');
+    return out;
+  }
+  // "12 floor", "12th floor", "floor 12" and "fl 12" are the floor, whichever way round (round 31: "12 floor" found nothing).
+  const floorNo = /^(?:(\d{1,3})(?:st|nd|rd|th)?\s*(?:floor|fl)|(?:floor|fl|level)\s*(\d{1,3}))$/.exec(needle);
   const hit = (v: string | undefined) => !!v && v.toLowerCase().includes(needle);
   for (const f of floors) {
+    if (floorNo) {
+      if (String(f.floor.sequence) === String(Number(floorNo[1] ?? floorNo[2]))) for (const s of f.segments) out.set(s.key, f.floor.name);
+      continue;
+    }
     for (const s of f.segments) {
       let reason: string | null = null;
       if (s.suite && (hit(s.suite) || hit(`ste ${s.suite}`) || hit(`suite ${s.suite}`))) reason = `Suite ${s.suite}`;

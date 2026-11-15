@@ -160,7 +160,7 @@
   .sp-header__title h1, .sp-header__title .sp-switcher__name, .sp-header:not(.sp-header--classic) .sp-header__title h1, .sp-header:not(.sp-header--classic) .sp-header__title .sp-switcher__name { font-size: var(--sp-text-15); }
   .sp-header__property { font-size: var(--sp-text-13); }
   .sp-header__actions { gap: 6px; }
-  .sp-header__actions .sp-btn { height: 28px; font-size: var(--sp-text-12); }
+  .sp-header__actions .sp-btn { height: 36px; font-size: var(--sp-text-12); }
   .sp-header, .sp-header--classic { flex-wrap: wrap; padding: var(--sp-space-3); }
   .sp-header__icon { width: 32px; height: 32px; }
   .sp-header__actions { width: 100%; justify-content: flex-start; }
@@ -201,7 +201,7 @@
   .sp-toolbar__find { flex: 1 1 100%; flex-wrap: wrap; gap: 6px; }
   .sp-toolbar__search { flex: 1 1 100%; }
   .sp-toolbar__find .sp-toolbar__group { width: 100%; }
-  .sp-toolbar__find .sp-toolbar__group .sp-btn { flex: 1; height: 28px; padding: 0 8px; font-size: var(--sp-text-12); }
+  .sp-toolbar__find .sp-toolbar__group .sp-btn { flex: 1; height: 44px; padding: 0 8px; font-size: var(--sp-text-12); }
   /* Four tools on one row (Find space, Area, Worklist, Issues): the words carry them, so the icons go at 420 px and under. */
   .sp-toolbar__find .sp-toolbar__group .sp-btn { min-width: 0; }
 }
@@ -231,7 +231,10 @@
   .sp-header__title { gap: 2px 6px; }
   /* The controls flow as the header's own items, on the row under the title (two rows from 421 to 760 px). */
   .sp-header__actions { display: contents; }
-  .sp-header .sp-btn, .sp-topbar .sp-btn { height: 28px; font-size: var(--sp-text-12); padding: 0 9px; gap: 5px; }
+  /* Round 31: a finger's target is 44 px (round 30: 28 px). The header's buttons are 36 px tall with the touch area
+     reaching 4 px past each side, so the two rows of them do not push the plan down the screen. */
+  .sp-header .sp-btn, .sp-topbar .sp-btn { height: 36px; font-size: var(--sp-text-12); padding: 0 9px; gap: 5px; position: relative; }
+  .sp-header .sp-btn::after, .sp-topbar .sp-btn::after { content: ''; position: absolute; inset: -4px; }
   .sp-header .sp-btn--icon, .sp-topbar .sp-btn--icon { padding: 0; }
   .sp-toolbar { padding: 5px 8px; gap: 5px 6px; }
   :root[data-skin] .sp-toolbar .sp-segmented { padding: 2px; }
