@@ -25,7 +25,8 @@ function context(): CanvasRenderingContext2D | null {
  * difference between its tabular advance, read once per font from a hidden element, and its canvas
  * advance. No correction where there is no layout (tests, SSR).
  */
-const TABULAR = /[0-9()*+,\-.:;<=>[\]{}~]/g;
+// Round 31: `$ % / · # & |` too: the S&P rate was set 177 px wide in a block 172 px wide (each is read from the page, so a glyph that does not change costs nothing).
+const TABULAR = /[0-9()*+,\-.:;<=>[\]{}~$%/·#&|]/g;
 const deltas = new Map<string, Map<string, number>>();
 let probe: HTMLSpanElement | null | undefined;
 function tabularDelta(c: CanvasRenderingContext2D, font: string, ch: string): number {

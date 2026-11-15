@@ -720,6 +720,37 @@ for (const b of others) {
   await checkTransition(`${b.name}: select ${first[2]} in the Stack`, `${at}view=stack`, async () => { await block(key).click(); }, first[2]);
 }
 
+// Round 31: Back never turns the mode off. A view opened, the mode turned on, then Back (and Back again): the plan stays
+// prospect-safe and no tenant name is drawn (round 30: Back returned to the owner plan with every name).
+{
+  const label = 'Back with the mode on';
+  if (wanted(label)) {
+    await open(page, `${base}?view=stack`, 250);
+    await page.getByRole('radio', { name: /Timeline/ }).click();
+    await page.waitForTimeout(200);
+    await safeSwitch().focus();
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+    const found = [];
+    const view = () => new URL(page.url()).searchParams.get('view');
+    const safeOn = () => page.evaluate(() => new URLSearchParams(location.search).get('safe') === '1');
+    const len = await page.evaluate(() => history.length);
+    // One Back leaves the Timeline for the Stack and stays prospect-safe; Forward returns to the Timeline, with the
+    // mode on and no entry added (round 31: the write after Back pushed a copy, so Back needed two presses).
+    await page.goBack();
+    await page.waitForTimeout(400);
+    if (view() !== 'stack') found.push(`one Back left ${view()}, not the Stack`);
+    if (!(await safeOn())) found.push('Back left the mode off');
+    found.push(...findLeaks(await grab()).map((f) => `${f} (after Back)`), ...(await findDomLeaks()));
+    await page.goForward();
+    await page.waitForTimeout(400);
+    if (view() !== 'timeline' || !(await safeOn())) found.push(`Forward did not return to the Timeline with the mode on (${page.url().replace(base, '')})`);
+    if ((await page.evaluate(() => history.length)) !== len) found.push('Back and Forward changed the number of history entries');
+    found.push(...findLeaks(await grab()).map((f) => `${f} (after Forward)`), ...(await findDomLeaks()));
+    report(label, found);
+  }
+}
+
 await browser.close();
 if (leaks) {
   console.error(`\n${leaks} leak(s)`);

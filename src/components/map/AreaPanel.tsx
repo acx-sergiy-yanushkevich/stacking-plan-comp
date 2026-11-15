@@ -185,21 +185,32 @@ export function AreaPanel({ model, area, expanded, onMap, ring: chosen = 1, onRi
           <p className="sp-weak">No stops on record.</p>
         ) : (
           <ul className="sp-area-transit">
-            {[...area.transit]
-              .sort((a, b) => a.distanceMi - b.distanceMi)
-              .map((t) => (
+            {(() => {
+              const sorted = [...area.transit].sort((a, b) => a.distanceMi - b.distanceMi);
+              // Round 31: stops that share a name are told apart to a keyboard or screen-reader user by their order
+              // from the property ("Bluebonnet, stop 2 of 4"), not by the name alone.
+              const same = (n: string) => sorted.filter((x) => x.name === n).length;
+              const seen = new Map<string, number>();
+              return sorted.map((t) => {
+                const nth = (seen.get(t.name) ?? 0) + 1;
+                seen.set(t.name, nth);
+                const id = stopKey(t.name, t.lat, t.lng);
+                const which = same(t.name) > 1 ? `, stop ${nth} of ${same(t.name)} by this name` : '';
+                return (
                 <li
-                  key={`${t.name}-${t.distanceMi}`}
-                  className={`${onMap ? 'sp-area__place' : ''} ${lit === stopKey(t.name) ? 'is-lit' : ''}`.trim() || undefined}
-                  {...linkProps(stopKey(t.name), onMap, `${t.name}, ${t.type === 'Rail' ? 'rail' : 'bus'}, ${inMiles(t.distanceMi)}, pinned on the map`)}
+                  key={id}
+                  className={`${onMap ? 'sp-area__place' : ''} ${lit === id ? 'is-lit' : ''}`.trim() || undefined}
+                  {...linkProps(id, onMap, `${t.name}${which}, ${t.type === 'Rail' ? 'rail' : 'bus'}, ${inMiles(t.distanceMi)}, pinned on the map`)}
                 >
                   {/* The kind of stop is a word as well as an icon: bus and rail are not told apart by the drawing alone. */}
               <Icon name={t.type === 'Rail' ? 'train' : 'bus'} size={14} />
-                  <span className="sp-area-transit__name">{t.name}</span>
+                  <span className="sp-area-transit__name">{t.name}{which && <span className="sp-weak"> · {nth} of {same(t.name)}</span>}</span>
               <span className="sp-transit-kind">{t.type === 'Rail' ? 'Rail' : 'Bus'}</span>
                   <span className="sp-num sp-weak">{mi(t.distanceMi)}</span>
                 </li>
-              ))}
+                );
+              });
+            })()}
           </ul>
         )}
       </div>

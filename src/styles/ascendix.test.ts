@@ -278,7 +278,7 @@ describe.each([
     const dir = Math.sign(ls[4] - ls[0]);
     expect(dir).toBe(theme === 'night' ? 1 : -1);
     for (let i = 1; i < ls.length; i += 1) expect(Math.sign(ls[i] - ls[i - 1])).toBe(dir);
-    // The Leasing view's colours (Clara, Nov 12: the five saturated company blues turned the whole building electric
+    // The Leasing view's colours (review, Nov 12: the five saturated company blues turned the whole building electric
     // blue by night): the darkest step is its slate navy, the lightest its sky blue, teal in the middle. At night the
     // cheapest rent is the darkest step; by day the dearest is.
     const byDark = [...steps].sort((a, b) => lightness(a) - lightness(b));

@@ -32,7 +32,8 @@ export interface Host {
   /** The query string the plan's state is read from: `''` or `?view=stack&…`. */
   readUrl(): string;
   /** Put the plan's state in the address (`''` or `?view=stack&…`) without adding a step to Back. */
-  writeUrl(search: string): void;
+  /** `push` adds a history entry (a deliberate move: another view, building or floor); otherwise the entry is replaced. */
+  writeUrl(search: string, push?: boolean): void;
   /** The whole address of this view, for "Copy link". */
   shareUrl(): string;
   /** Name the tab. */
@@ -136,7 +137,7 @@ interface Listens {
 /** The parts of `window` and `document` a browser host uses: small enough to fake in a test. */
 export interface BrowserPage extends Listens {
   location: { pathname: string; search: string; hash: string; href: string };
-  history: { state: unknown; replaceState(data: unknown, unused: string, url: string): void };
+  history: { state: unknown; replaceState(data: unknown, unused: string, url: string): void; pushState(data: unknown, unused: string, url: string): void };
   innerHeight: number;
   navigator: { clipboard?: { writeText(text: string): Promise<void> } };
   scrollBy(options: { top: number; behavior: 'smooth' | 'auto' }): void;
@@ -180,11 +181,14 @@ export function createBrowserHost(page: BrowserPage): Host {
   const doc = page.document;
   return {
     readUrl: () => page.location.search,
-    writeUrl: (search) => {
+    writeUrl: (search, push = false) => {
       const { pathname, hash } = page.location;
       // Only a real change is written: the address is not touched when the state already matches it.
       if (search === page.location.search) return;
-      page.history.replaceState(page.history.state, '', `${pathname}${search}${hash}`);
+      // Round 30: a deliberate move is a history entry, so Back returns to the view it left; typing and
+      // normalizing replace the entry they are on.
+      if (push) page.history.pushState(page.history.state, '', `${pathname}${search}${hash}`);
+      else page.history.replaceState(page.history.state, '', `${pathname}${search}${hash}`);
     },
     shareUrl: () => page.location.href,
     setTitle: (title) => {
@@ -342,7 +346,7 @@ export function setHost(next: Host | null): Host | null {
 export const hasPage = (): boolean => current() !== NO_HOST;
 
 export const readUrl = (): string => current().readUrl();
-export const writeUrl = (search: string): void => current().writeUrl(search);
+export const writeUrl = (search: string, push = false): void => current().writeUrl(search, push);
 export const shareUrl = (): string => current().shareUrl();
 export const setTitle = (title: string): void => current().setTitle(title);
 export const onPopState = (listener: () => void): (() => void) => current().onPopState(listener);

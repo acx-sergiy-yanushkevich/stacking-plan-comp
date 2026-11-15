@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react';
 import type { Deal, ISODate, Property, Touch } from '../domain/types';
 import { canShowInquiries, canShowLeaseTerm, canShowTenantRisk, planDate, publishedFloors, safeFloors, safeKpis, safeRollover } from '../domain/safe';
 import { deriveFloors, isLeaseKind, segmentIndex, activeDeals, type FloorView, type Segment } from '../domain/derive';
-import { computeKpis, kpiDeltas, type Kpis } from '../domain/kpis';
+import { computeKpis, kpiDeltas, largestBlock, type Kpis } from '../domain/kpis';
 import { rollover, bucketOf, type RolloverBucket } from '../domain/rollover';
 import { legendFor, type LegendItem } from '../domain/lenses';
 import { checkNeededBy, rangeProblem, searchSpace, type ChosenOption, type FinderResult, type FitType, type Requirement } from '../domain/finder';
@@ -162,8 +162,21 @@ export function search(floors: FloorView[], q: string, safe: boolean, intent: Qu
     }
     return out;
   }
+  // "Largest block" lights the biggest space a tenant could take now (round 31: it found nothing).
+  if (/^(?:the\s+)?(?:largest|biggest)(?:\s+(?:available|direct|vacant|contiguous))*(?:\s+(?:block|space|suite|vacancy))?$/.test(needle)) {
+    // The KPI's own rule (domain/kpis.ts `largestBlock`), so the search, the KPI and the plan's tag cannot disagree.
+    const lb = largestBlock(floors);
+    for (const k of lb.keys) out.set(k, `Largest block, ${lb.size.toLocaleString('en-US')} SF on ${lb.floorName}`);
+    return out;
+  }
+  // "12 floor", "12th floor", "floor 12" and "fl 12" are the floor, whichever way round (round 31: "12 floor" found nothing).
+  const floorNo = /^(?:(\d{1,3})(?:st|nd|rd|th)?\s*(?:floor|fl)|(?:floor|fl|level)\s*(\d{1,3}))$/.exec(needle);
   const hit = (v: string | undefined) => !!v && v.toLowerCase().includes(needle);
   for (const f of floors) {
+    if (floorNo) {
+      if (String(f.floor.sequence) === String(Number(floorNo[1] ?? floorNo[2]))) for (const s of f.segments) out.set(s.key, f.floor.name);
+      continue;
+    }
     for (const s of f.segments) {
       let reason: string | null = null;
       if (s.suite && (hit(s.suite) || hit(`ste ${s.suite}`) || hit(`suite ${s.suite}`))) reason = `Suite ${s.suite}`;
@@ -281,7 +294,9 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
   } else if (searchMatches) {
     highlight = searchMatches;
     const reasons = searchReasons ? [...searchReasons.entries()] : [];
-    const detail = reasons.length === 1 ? `: ${reasons[0][1] === 'Tenant' ? 'tenant name' : reasons[0][1]} on ${floors.find((f) => f.segments.some((s) => s.key === reasons[0][0]))?.floor.name ?? ''}${segIndex.get(reasons[0][0])?.suite ? ` Ste ${segIndex.get(reasons[0][0])!.suite}` : ''}` : '';
+    const onFloor = reasons.length === 1 ? (floors.find((f) => f.segments.some((s) => s.key === reasons[0][0]))?.floor.name ?? '') : '';
+    // A reason that already names the floor says it once (round 31: "Floor 6 on Floor 6 Ste 600").
+    const detail = reasons.length === 1 ? `: ${reasons[0][1] === 'Tenant' ? (segIndex.get(reasons[0][0])?.lease?.tenant ?? 'tenant name') : reasons[0][1]}${reasons[0][1].includes(onFloor) ? '' : ` on ${onFloor}`}${segIndex.get(reasons[0][0])?.suite && !reasons[0][1].includes(segIndex.get(reasons[0][0])!.suite!) ? ` Ste ${segIndex.get(reasons[0][0])!.suite}` : ''}` : '';
     filterLabel = `${safe ? 'Search' : `Search “${state.q}”`} · ${searchMatches.size} match${searchMatches.size === 1 ? '' : 'es'}${detail}`;
   } else if (activeWorklist && effectiveWindow) {
     highlight = new Set(activeWorklist.flatMap((r) => r.segKeys));

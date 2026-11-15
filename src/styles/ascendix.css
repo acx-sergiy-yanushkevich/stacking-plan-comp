@@ -30,10 +30,10 @@
     --sp-color-success: #6fdca6; --sp-color-success-soft: #173d2e; --sp-color-dim: rgba(30, 45, 60, 0.72);
     --sp-shadow-pop: 0 20px 56px rgba(8, 16, 26, 0.62), 0 2px 6px rgba(8, 16, 26, 0.42);
 
-    /* Status lens, after the reference Clara chose (Nov 12): a slate navy for leased, solid green for
+    /* Status lens, after the reference chosen in review (Nov 12): a slate navy for leased, solid green for
        available (well away from the blue selection ring), sky blue for signed, the orange for leaving soon,
        purple for sale and a raspberry for at risk. By night those four are a deep tint with a bright edge,
-       a glow rather than a slab (Clara: "like water"); only available is solid, the space to lease. Leased is most of the building: the slate navy, under
+       a glow rather than a slab (review: "like water"); only available is solid, the space to lease. Leased is most of the building: the slate navy, under
        2:1 on the card, with the 1 px edge carrying the boundary. At risk stays deep by night: it sits beside the
        expiration ramp in that lens and must stay 12 L* from its red-orange and mauve steps. Every edge here is opaque and at
        least 3:1 against the card (measured #21364b; #1d3043 at its darkest, #203b54 in the brightest glow). */
@@ -72,7 +72,7 @@
        1 and 2 (Secondary Blue 1 carries dark text). The lowest step is a blue in its own right, 9 L* or
        more above the card wherever the glow puts it and far more saturated than the confidential grey: a
        $27 lease is a rent, not a blank. */
-    /* Rent lens (Clara, Nov 12): the Leasing view's own colours, from its slate navy for the cheapest rents
+    /* Rent lens (review, Nov 12): the Leasing view's own colours, from its slate navy for the cheapest rents
        through teal to its sky blue for the dearest, 13 L* or more apart, instead of five saturated blues. */
     --tone-rent-0-fill: #3f4e8f; --tone-rent-0-text: #eef1fb; --tone-rent-0-edge: #9aa9d6;
     --tone-rent-1-fill: #5c6fa5; --tone-rent-1-text: #ffffff; --tone-rent-1-edge: #b1bde3;

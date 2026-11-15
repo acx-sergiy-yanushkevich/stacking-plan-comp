@@ -16,7 +16,7 @@ const BARS: ReadonlyArray<{ x: number; y: number; w: number; h: number; open?: t
   { x: 12, y: 46, w: 40, h: 9 },
 ];
 
-/** The mark is the bars alone, on no tile (Clara, Nov 12): the frame is cut tight to them, so they fill the box. */
+/** The mark is the bars alone, on no tile (review, Nov 12): the frame is cut tight to them, so they fill the box. */
 export function StaxMark({ size = 40 }: { size?: number }) {
   return (
     <span className="sp-mark" style={{ width: size, height: size }} aria-hidden="true">

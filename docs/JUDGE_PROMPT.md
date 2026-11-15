@@ -12,7 +12,46 @@ Prospect-safe by design: asking rents and asking prices on availabilities (inclu
 
 Also read `docs/CHALLENGE_RULES.md` and the two Best UX judge personas, `docs/personas/wes.md` and `docs/personas/todd.md`. Score with the rubric in BRIEF.md, but test the product the way they would: Wes demos it live to a broker and hands a screen to a prospective tenant; Todd checks that the facts add up and that finding space is fast and deterministic.
 
-New in round 28 (judge these as part of the product; everything from earlier rounds, listed after, is still in scope):
+New in round 34 (judge these as part of the product; everything from earlier rounds, listed after, is still in scope):
+- **Search:** "before 6/15" is June 14 (the day before, as "before June 15, 2027" is); "under 15k", "max 15k", "up to 15k", "15k or less" and "0-15k" are up to 15,000 SF (the finder's 100 SF floor to 15,000), not a minimum, while "under $35" stays an unused price; "12k sublease direct" asks for either kind; "4th floor" and "by feb 29" (next leap day) are read; "by 2/30" is named as not a date; "largest contiguous block" finds the KPI's block; an owner's one-match label names the tenant.
+- **A phone's Color-by switches keep their units** in small type ("35,300 SF", "9 deals"); the Rent unit gives way under 380 px and all units under 360 px; no label or figure runs out of its switch at 320, 360 or 390 px (`verify` checks it).
+- Known, by design: phone Back leaves the view instead of closing a suite's sheet; rows mix 10, 11 and 13 px names where a block is narrow; Rent steps 0 and 1 are close; Floor 8 Ste 860 shows its rate without its SF at 1440 x 1000.
+
+Round 33 (still in scope, except where round 34 changed it):
+- **A phone's four Color-by switches stand in one row** (units and sub-lines are in each switch's name and the legend), so the plan starts 43 px higher (395 px to 352 px of controls before the first floor). The phone header's buttons are 40 px with a touch area reaching 2 px past each side (44 px in all, 6 px apart, no overlap down to 320 px). A prospect's two switches keep the same height; the withheld-figures line is gone from a phone.
+- **Search dates:** "before the end of 2027" is Dec 30, 2027 ("by end of 2027" is Dec 31); a needed-by date before the as-of date is named and left out in the bar ("Nov 8, 2026 is before the as-of date, so it is not applied"); "by 6/1" is the next June 1; "12,500sf" and "12 k" list nothing as unused; a suite match names its suite once; "largest block" uses the KPI's own `largestBlock` rule.
+- **Focus:** Escape from a worklist opened by the Building panel's Holdover row puts focus on the Worklist button (`verify` holds it).
+- Known, by design: rows still mix 10, 11 and 13 px names where a block is too narrow for 13 px; at 1100 x 800 two 65 px Floor 1 blocks of Legacy West give up their names; the dark Expiration ramp's lightness reverses on purpose.
+
+Round 32 (still in scope, except where round 33 changed it):
+- **Back and Forward with Prospect-safe on** move one entry each: the write after a Back replaces the entry instead of pushing a copy. `npm run leakcheck` presses Back once (Timeline to Stack, mode still on), Forward once (Timeline), and counts the entries.
+- **Names at every width:** the 10 px wrapped name is offered at every block width, not only the narrowest; `npm run verify` now also visits 1920 x 1080, 1536 x 864, 1600 x 900 and 1180 x 800 (nine sizes in all).
+- **Search:** "before" leaves its date out ("before April 1, 2027" is by March 31; "before Q2" by the end of Q1; "before June" by the end of May); "by end of 2027"; a day-first "31/12/27"; "12k-15k" is no longer listed as unused, and a stray number ("5" in "12k sf for 5 years") is; the one-match label names its floor once; "largest block" gives its size.
+- **Stops that share a name** show "2 of 4" on the row as well as in the accessible name. The phone header's touch areas no longer overlap.
+
+Round 31 (still in scope, except where round 32 changed it):
+- **Back never turns Prospect-safe off.** The mode replaces its history entry; Back or Forward to an address without it is entered with the mode still on. `npm run leakcheck` presses Back twice after turning it on and finds no tenant names.
+- **Every fitted block keeps its whole name** at 1470 x 830, 1440 x 1000, 1366 x 768, 1280 x 720 and 1366 x 650 in all four buildings (`npm run verify`, with no size exemption). A 99 x 43 block sets the name at 10 px on two lines with its SF under it; a stale-touch badge drops its verb ("87 d ago") on rows under 72 px. A block with no tenant says its state.
+- **Search:** "largest block" / "biggest block" light the one biggest space available now; "12 floor", "12th floor" and "fl 12" light that floor; "1/6/27" is read as a date; a requirement lists the words it did not use ("Not used: nnn, under, $35"); a rejected date is capitalized ("31 Feb 2027").
+- **Stops that share a name** read "stop 2 of 4 by this name" to a keyboard or screen-reader user; the Area list's React keys are the stops' own ids.
+- **The text measure** corrects `$ % / · # & |` for tabular figures (the S&P rate overflowed its block by 5 px).
+- **Phone:** the toolbar tools are 44 px tall; the header buttons are 36 px with a touch area reaching 4 px past each side.
+- **Laptop windows 900 px tall or less** tighten the padding between the bands above the plan: the 12-floor plan fits a 900 px window and runs 59 px past an 830 px one (it still scrolls at 768 px, by design: rows stop at 44 px). The dark Expiration ramp's lightness still reverses on purpose.
+
+Round 30 (still in scope, except where round 31 changed it):
+- **Back returns to the view it left.** A move to another view, building, floor, ring, turn or Prospect-safe adds a history entry; typing and choosing a suite replace it.
+- **A fitted row keeps its whole name and, in the Rent lens, its rate** at 1470 x 830, 1440 x 1000 and 1366 x 768 in all four buildings (`npm run verify`). A narrow row gives its second line to the rate before the SF. Blocks too small for the text at 10 px (under 140 px wide and 48 px tall for a name; under 130 px wide for a rate) still drop it; the plan scrolls on a 13-inch laptop; a stale-touch risk badge stays by design.
+- **The focusable KPI details** (Available, Largest block) have a label ("Available, 33,200 SF") and a description.
+- **Dates in the search box:** "by 6/1/2027", "by 15 Jan 2027", "by Nov 5" (next year when the day has passed), and a bad date named with a capital ("February 30, 2027").
+- **Stops that share a name** each light their own Area row and pin.
+
+Round 29 (still in scope, except where round 30 changed it):
+- **A row fitted to the window keeps its tenant's name** at 1470 x 830, 1440 x 1000 and 1366 x 768, in every lens, owner and prospect-safe (a deal circle on a short row moves to the bottom corner; an informational badge gives way to the name; `npm run verify` checks it). A rate stays before the suite number when the line cannot hold both. A stale-touch risk badge still stays by design; a 12-floor plan taller than the window (a 13-inch laptop) scrolls rather than shrink rows further (NFR-12).
+- **The KPI Details figures** that light suites (Available, Largest block) are named groups with a description that focus lights them. On the Map the Color-by strip reads as read-only ("Plan views"), with no circles.
+- **Dates are calendar-true.** `asOf=2027-02-30` falls back to today; the search reads "by February 15, 2028" as that day and names "February 30, 2027" as not a date on the calendar.
+- **Live data:** numbered OpenStreetMap stops stay apart instead of collapsing into one "Bus stop"; a lease with no rate on record says "Not on record" in the worklist.
+
+Round 28 (still in scope, except where round 29 changed it):
 - **The KPI strip is the one "Color by".** Seven cards, each a switch for a lens (the toolbar's Color by is gone); the Rent lens has the Leasing palette (slate navy to teal to sky blue); the header's title is the building switcher.
 - **Prospect-safe toolbar** keeps no empty place for Worklist and Data issues: Find space and Area sit at the right.
 - **Motion** (DESIGN.md §3.5, NFR-11): views arrive (floors stack up, rows rise, bars unroll), lens/date/filter changes crossfade, the View switch pill and Color by underline slide, the building rises as the map tilts into 3D; exports finish any motion first.

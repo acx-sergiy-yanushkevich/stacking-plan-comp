@@ -188,4 +188,8 @@ describe('stop names and order (round 26)', () => {
     const n = toNearby([at(1, 0.2, { highway: 'bus_stop', name: 'A' }), at(2, 0.2, { highway: 'bus_stop', name: 'B' }), at(3, 0.2, { railway: 'station', name: 'R' })], c)!;
     expect(n.transit.map((t) => t.name)).toEqual(['R', 'A', 'B']);
   });
+  it('keeps numbered stops apart (round 29) and still counts one named stop once', () => {
+    const n = toNearby([at(1, 0.1, { highway: 'bus_stop', name: '1' }), at(2, 0.3, { highway: 'bus_stop', name: '2' }), at(3, 0.5, { highway: 'bus_stop', name: 'Main & 1st' }), at(4, 0.5, { highway: 'bus_stop', name: 'Main & 1st' })], c)!;
+    expect(n.transit.map((t) => t.name)).toEqual(['Bus stop', 'Bus stop', 'Main & 1st']);
+  });
 });

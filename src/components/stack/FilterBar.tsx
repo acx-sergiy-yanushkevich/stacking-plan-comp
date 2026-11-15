@@ -1,6 +1,7 @@
 import type { PlanState } from '../../state/planState';
 import type { QueryIntent } from '../../domain/query';
 import { num } from '../../domain/format';
+import { fmtDate } from '../../domain/dates';
 import { Button, Icon } from '../ui';
 import { DotJoin } from '../hero/DotJoin';
 
@@ -47,6 +48,8 @@ export function FilterBar({ label, alternatives, find, planElsewhere, patch }: F
         <Icon name="filter" size={14} />
         <span>
           That reads as a space requirement: <strong>{label.replace(/^Find /, '')}</strong>.
+          {find.pastBy ? ` ${fmtDate(find.pastBy)} is before the as-of date, so it is not applied.` : ''}
+          {find.unread?.length ? ` Not used: ${find.unread.join(', ')}.` : ''}
         </span>
         <Button size="sm" variant="brand" iconRight="chevron-right" className="sp-filterbar__find" onClick={() => patch({ ...findFromQuery(find), ...(planElsewhere ? TO_PLAN : {}) })}>
           Find {num(find.size)}

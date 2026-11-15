@@ -27,7 +27,9 @@ export const WALK_MI = 0.5;
 const NEAREST_MI = 0.06;
 
 /** The row key of a transit stop and of an amenity category: one row in the Area panel each. */
-export const stopKey = (name: string) => `stop:${name}`;
+/** A stop's key. Round 30: with its position when it has one, so two stops with one name (a number reads "Bus stop")
+    light their own row and pin, not the first of them. */
+export const stopKey = (name: string, lat?: number, lng?: number) => (lat !== undefined && lng !== undefined ? `stop:${name}@${lat.toFixed(5)},${lng.toFixed(5)}` : `stop:${name}`);
 export const categoryKey = (category: string) => `category:${category}`;
 
 /** The point `miles` from `from` at a compass bearing (degrees, 0 = north). Flat-earth: exact enough over a few miles. */
@@ -100,7 +102,7 @@ export function placesAround(id: string, center: LatLng, area: Area): Place[] {
   const rnd = seeded(id);
   for (const t of area.transit) {
     const at = t.lat !== undefined && t.lng !== undefined ? { lat: t.lat, lng: t.lng } : samplePositions(area) ? offset(center, t.distanceMi, rnd() * 360) : null;
-    if (at) out.push({ id: `t-${t.name}`, kind: 'transit', group: t.type, key: stopKey(t.name), name: t.name, distanceMi: t.distanceMi, ...at });
+    if (at) out.push({ id: `t-${t.name}-${t.lat ?? ''}-${t.lng ?? ''}`, kind: 'transit', group: t.type, key: stopKey(t.name, t.lat, t.lng), name: t.name, distanceMi: t.distanceMi, ...at });
   }
   for (const p of area.places ?? []) {
     out.push({ id: `p-${p.category}-${p.name}-${p.lat}`, kind: 'amenity', group: p.category, key: categoryKey(p.category), name: p.name, distanceMi: p.distanceMi, lat: p.lat, lng: p.lng });

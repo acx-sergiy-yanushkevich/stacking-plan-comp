@@ -160,7 +160,7 @@
   .sp-header__title h1, .sp-header__title .sp-switcher__name, .sp-header:not(.sp-header--classic) .sp-header__title h1, .sp-header:not(.sp-header--classic) .sp-header__title .sp-switcher__name { font-size: var(--sp-text-15); }
   .sp-header__property { font-size: var(--sp-text-13); }
   .sp-header__actions { gap: 6px; }
-  .sp-header__actions .sp-btn { height: 28px; font-size: var(--sp-text-12); }
+  .sp-header__actions .sp-btn { height: 40px; font-size: var(--sp-text-12); }
   .sp-header, .sp-header--classic { flex-wrap: wrap; padding: var(--sp-space-3); }
   .sp-header__icon { width: 32px; height: 32px; }
   .sp-header__actions { width: 100%; justify-content: flex-start; }
@@ -201,7 +201,7 @@
   .sp-toolbar__find { flex: 1 1 100%; flex-wrap: wrap; gap: 6px; }
   .sp-toolbar__search { flex: 1 1 100%; }
   .sp-toolbar__find .sp-toolbar__group { width: 100%; }
-  .sp-toolbar__find .sp-toolbar__group .sp-btn { flex: 1; height: 28px; padding: 0 8px; font-size: var(--sp-text-12); }
+  .sp-toolbar__find .sp-toolbar__group .sp-btn { flex: 1; height: 44px; padding: 0 8px; font-size: var(--sp-text-12); }
   /* Four tools on one row (Find space, Area, Worklist, Issues): the words carry them, so the icons go at 420 px and under. */
   .sp-toolbar__find .sp-toolbar__group .sp-btn { min-width: 0; }
 }
@@ -231,7 +231,10 @@
   .sp-header__title { gap: 2px 6px; }
   /* The controls flow as the header's own items, on the row under the title (two rows from 421 to 760 px). */
   .sp-header__actions { display: contents; }
-  .sp-header .sp-btn, .sp-topbar .sp-btn { height: 28px; font-size: var(--sp-text-12); padding: 0 9px; gap: 5px; }
+  /* Round 31: a finger's target is 44 px (round 30: 28 px). The header's buttons are 40 px tall with the touch area
+     reaching 2 px past each side (44 px in all; the gap between them is 6 px), so the two rows of them do not push the plan down the screen. */
+  .sp-header .sp-btn, .sp-topbar .sp-btn { height: 40px; font-size: var(--sp-text-12); padding: 0 9px; gap: 5px; position: relative; }
+  .sp-header .sp-btn::after, .sp-topbar .sp-btn::after { content: ''; position: absolute; inset: -2px; }
   .sp-header .sp-btn--icon, .sp-topbar .sp-btn--icon { padding: 0; }
   .sp-toolbar { padding: 5px 8px; gap: 5px 6px; }
   :root[data-skin] .sp-toolbar .sp-segmented { padding: 2px; }
@@ -251,6 +254,8 @@
 @media (max-width: 359px) {
   .sp-topbar { gap: 4px; padding-left: 8px; padding-right: 8px; }
   .sp-topbar .sp-btn { padding: 0 6px; }
+  /* The touch area stays 2 px short of its neighbour at a 4 px gap (round 32: 2 px overlap at 320 px). */
+  .sp-header .sp-btn::after, .sp-topbar .sp-btn::after { inset: -2px; }
 }
 @media (max-width: 420px) {
   .sp-header .sp-btn, .sp-topbar .sp-btn { padding: 0 8px; }
@@ -271,7 +276,7 @@
 
 /* ── Brand ──────────────────────────────────────────────── */
 /* The Stax mark and lockup are drawn in the brand's own colours, as literal hex: the same under every
-   palette and both themes. The mark is its bars alone, on no tile and with no border (Clara, Nov 12), at the
+   palette and both themes. The mark is its bars alone, on no tile and with no border (review, Nov 12), at the
    size of the building card's icon; only the byline's colour follows the theme. */
 .sp-mark { display: inline-grid; place-items: center; flex: none; }
 .sp-mark svg { display: block; }
@@ -284,4 +289,17 @@
 :root[data-theme='dark'] .sp-lockup__by { color: #ffffff; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) .sp-lockup__by { color: #ffffff; }
+}
+
+/* ── A laptop, 1100 px and wider but 900 px tall or less ─────────────────────────────── */
+/* Round 31: a 12-floor building ran 130 px past a 13-inch window (830 px) even with its rows fitted, so the bands
+   above the plan give up air, not content: the gaps between them and the padding inside them. Nothing is hidden
+   and no control is smaller. The rows then fit (fitRows.ts) and the page does not scroll. */
+@media (min-width: 1100px) and (max-height: 900px) {
+  .sp-app { gap: 6px; padding-top: 6px; padding-bottom: var(--sp-space-3); }
+  :root[data-skin] .sp-header { padding: 6px 16px; }
+  :root[data-skin] .sp-topbar { padding-block: 4px; }
+  .sp-toolbar { padding-block: 4px; }
+  .sp-stack__head { padding-block: 6px; }
+  .sp-stack__body { padding-top: 6px; padding-bottom: 8px; }
 }
