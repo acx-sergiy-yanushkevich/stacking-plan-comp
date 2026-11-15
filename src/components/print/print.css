@@ -27,7 +27,9 @@
 .sp-print .sp-print__head .sp-mark__bar { fill: #00aff0; }
 .sp-print .sp-print__head .sp-mark__bar--open { fill: #ff9c00; }
 .sp-print .sp-print__head .sp-lockup__name { font-size: 16px; }
-.sp-print .sp-print__head .sp-lockup__by { color: #1e2d3c; font-size: 11px; }
+/* `:root` in front: the dark theme's byline rule (shell.css) is as specific as three classes and comes later, so
+   a report printed from the dark theme had "by Ascendix" in white on white paper. */
+:root .sp-print .sp-print__head .sp-lockup__by { color: #51606f; font-size: 11px; }
 .sp-print__eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #5c5c5c; font-weight: 600; }
 .sp-print__sub { color: #5c5c5c; font-size: 11px; }
 .sp-print__meta { text-align: right; color: #5c5c5c; font-size: 11px; line-height: 1.5; }

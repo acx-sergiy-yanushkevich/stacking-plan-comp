@@ -1,3 +1,10 @@
+/* Sora, the display face (SIL Open Font License: src/assets/fonts/SORA-OFL.txt). It is served by the app,
+   not by Google Fonts: the checks and the screenshots block web-font requests (scripts/loadPage.mjs), and the
+   wordmark must be the same in them, in the PDF and offline. One variable file, Latin, weights 600 to 800. */
+@font-face {
+  font-family: 'Sora'; font-style: normal; font-weight: 600 800; font-display: swap;
+  src: url('../assets/fonts/sora-latin.woff2') format('woff2');
+}
 *, *::before, *::after { box-sizing: border-box; }
 html { font-size: 13px; -webkit-text-size-adjust: 100%; }
 body {

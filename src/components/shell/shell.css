@@ -98,38 +98,48 @@
    is one width on and off and the bar does not move. */
 .sp-topbar .sp-safe[aria-checked='true'] { background: var(--sp-color-brand-soft); border-color: var(--sp-color-brand); color: var(--sp-color-brand-strong); }
 .sp-safe .sp-icon { color: currentColor; }
-/* The card's title is the building switcher: the name in title type with a small caret, no button box. A soft
-   fill on hover and when open says it is a control; the menu opens under it. */
+/* The card's title is the building switcher: the name in the display face, then two chevrons in a small
+   bordered box. The box is there at rest, so the name reads as a control before the pointer finds it; a soft
+   fill on hover and when open covers the whole of it, and the open box takes the brand ring like the bar's
+   buttons. The menu opens under it. */
 /* The name is never cut while there is room: the facts beside it give way first (they wrap under it). */
 .sp-header:not(.sp-header--classic) .sp-header__title { flex: none; max-width: 100%; }
-.sp-header__title .sp-pop { min-width: 0; max-width: calc(100% + 8px); margin: -3px 0 -3px -8px; }
+.sp-header__title .sp-pop { min-width: 0; max-width: calc(100% + 8px); margin: -4px 0 -4px -8px; }
 .sp-switcher {
-  display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 3px 8px;
-  border: 0; border-radius: 8px; background: transparent; color: var(--sp-color-text); font: inherit; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 4px 6px 4px 8px;
+  border: 0; border-radius: 10px; background: transparent; color: var(--sp-color-text); font: inherit; cursor: pointer;
   transition: background var(--sp-ease);
 }
 .sp-switcher:hover, .sp-switcher[aria-expanded='true'] { background: var(--sp-color-card-2); }
 .sp-switcher:focus-visible { outline-offset: 0; }
-.sp-switcher > .sp-icon, .sp-switcher > svg { flex: none; color: var(--sp-color-text-weak); }
-.sp-switcher:hover > svg, .sp-switcher[aria-expanded='true'] > svg { color: var(--sp-color-text); }
+.sp-switcher__name { min-width: 0; font-weight: 700; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-header:not(.sp-header--classic) .sp-switcher__name { font-family: var(--sp-font-display); }
+.sp-switcher__chev {
+  flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px;
+  border: 1px solid var(--sp-color-border-strong); background: var(--sp-glass-control, var(--sp-color-card-2)); color: var(--sp-color-text-weak);
+  transition: color var(--sp-ease), border-color var(--sp-ease), box-shadow var(--sp-ease);
+}
+.sp-switcher:hover .sp-switcher__chev { color: var(--sp-color-text); }
+.sp-switcher[aria-expanded='true'] .sp-switcher__chev { color: var(--sp-color-text); border-color: var(--sp-color-brand); box-shadow: 0 0 0 1px var(--sp-color-brand); }
 /* A building's mini stack: the bars carry their own colours; the tile follows the theme. */
 .sp-ministack { flex: none; display: block; }
 .sp-ministack__tile { fill: var(--sp-color-card-2); stroke: var(--sp-color-border-strong); stroke-width: 1; }
-/* The portfolio list is wide enough for a long building name and its city on one line each. */
-.sp-pop:has(> .sp-switcher) .sp-pop__panel { min-width: min(400px, calc(100vw - 16px)); }
-/* The switcher's list, after the mock: the icon, the name, the city at the right in the body size; the open
-   building is the highlighted row (and keeps its tick); the samples are quieter text with full-colour icons,
-   so the list reads as a portfolio rather than a page of disabled controls. Ten rows fit; more scroll. */
-.sp-pop:has(> .sp-switcher) .sp-menu { max-height: min(460px, calc(100vh - 120px)); overflow-y: auto; }
-.sp-pop:has(> .sp-switcher) .sp-menu__item { gap: 10px; min-height: 36px; }
-.sp-pop:has(> .sp-switcher) .sp-menu__item[aria-disabled='true'] { opacity: 1; color: var(--sp-color-text-weak); }
-.sp-pop:has(> .sp-switcher) .sp-menu__item[aria-disabled='true'] .sp-ministack { opacity: 0.85; }
+/* The switcher's list is two groups. The buildings that open are the tall rows: a 28 px icon, the name in
+   semibold and a line of facts under it (city, class, floors); the open building is the highlighted row and
+   keeps its tick. The sample entries follow under their own heading: one quiet line each, a smaller icon on
+   the same centre line as the ones above, the city at the right. Everything fits a laptop; a short window scrolls. */
+.sp-pop:has(> .sp-switcher) .sp-pop__panel { min-width: min(420px, calc(100vw - 16px)); border-radius: 12px; }
+.sp-pop:has(> .sp-switcher) .sp-menu { padding: 6px; max-height: min(560px, calc(100vh - 120px)); overflow-y: auto; }
+.sp-pop:has(> .sp-switcher) .sp-menu__heading { padding: 8px 10px 4px; }
+.sp-pop:has(> .sp-switcher) .sp-menu__sep { margin: 6px 10px 2px; }
+.sp-pop:has(> .sp-switcher) .sp-menu__item { gap: 12px; min-height: 34px; padding: 6px 10px; border-radius: 8px; }
+.sp-pop:has(> .sp-switcher) .sp-menu__item:has(.sp-menu__text) { min-height: 52px; padding: 8px 10px; }
+.sp-pop:has(> .sp-switcher) .sp-menu__label { font-size: 14px; font-weight: 600; }
 .sp-pop:has(> .sp-switcher) .sp-menu__item[aria-checked='true'] { background: var(--sp-color-brand-soft); color: var(--sp-color-text); }
-.sp-pop:has(> .sp-switcher) .sp-menu__hint { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); white-space: nowrap; padding-left: 12px; }
-.sp-pop:has(> .sp-switcher) .sp-menu__item[aria-checked='true'] .sp-menu__hint { color: var(--sp-color-text); font-weight: 500; }
-.sp-pop:has(> .sp-switcher) .sp-menu__item[aria-checked='true'] .sp-menu__check { margin-left: 8px; }
-.sp-pop:has(> .sp-switcher) .sp-menu__heading:last-child { text-transform: none; letter-spacing: 0; font-weight: 500; padding-bottom: 6px; }
-.sp-switcher__name { min-width: 0; font-weight: 700; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-pop:has(> .sp-switcher) .sp-menu__item[aria-checked='true'] .sp-menu__detail { color: var(--sp-color-text); }
+.sp-pop:has(> .sp-switcher) .sp-menu__item[aria-disabled='true'] { opacity: 1; color: var(--sp-color-text-weak); }
+.sp-pop:has(> .sp-switcher) .sp-menu__item[aria-disabled='true'] .sp-ministack { margin: 0 4px; opacity: 0.7; }
+.sp-pop:has(> .sp-switcher) .sp-menu__hint { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); white-space: nowrap; }
 
 /* The building card: the icon, the name and the facts. In the embedded skin it also keeps the controls. */
 .sp-header { align-items: center; gap: var(--sp-space-4); padding: var(--sp-space-4) 20px; }
@@ -277,11 +287,13 @@
 .sp-mark svg { display: block; }
 .sp-mark__bar { fill: #00aff0; }
 .sp-mark__bar--open { fill: #ff9c00; }
-.sp-lockup { display: inline-flex; align-items: center; gap: 10px; }
-.sp-lockup__text { display: inline-flex; align-items: baseline; gap: 9px; }
-.sp-lockup__name { font-weight: 800; font-size: 21px; line-height: 1; letter-spacing: -0.02em; color: #00aff0; }
-.sp-lockup__by { font-weight: 600; font-size: 13px; line-height: 1; color: #1e2d3c; white-space: nowrap; }
-:root[data-theme='dark'] .sp-lockup__by { color: #ffffff; }
+.sp-lockup { display: inline-flex; align-items: center; gap: 11px; }
+.sp-lockup__text { display: inline-flex; align-items: baseline; gap: 8px; }
+/* The wordmark: Sora at its heaviest, set tight. Its square letters and flat ends are the mark's bars again.
+   The byline stands back: medium weight, a quieter ink, so the lockup reads "Stax" first. */
+.sp-lockup__name { font-family: var(--sp-font-display); font-weight: 800; font-size: 24px; line-height: 1; letter-spacing: -0.04em; color: #00aff0; }
+.sp-lockup__by { font-weight: 500; font-size: 12px; line-height: 1; letter-spacing: 0.01em; color: #51606f; white-space: nowrap; }
+:root[data-theme='dark'] .sp-lockup__by { color: #b9c6d4; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .sp-lockup__by { color: #ffffff; }
+  :root:not([data-theme='light']) .sp-lockup__by { color: #b9c6d4; }
 }

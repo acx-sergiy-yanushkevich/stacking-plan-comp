@@ -269,7 +269,8 @@ describe('Header product bar and building card', () => {
     expect(card).toMatch(/<button(?=[^>]*aria-label="Switch building: Preston Park Financial Center")(?=[^>]*aria-haspopup="menu")(?=[^>]*class="[^"]*sp-switcher)/);
     const sw = /<button[^>]*aria-label="Switch building: [^"]*"[^>]*>(.*?)<\/button>/.exec(card)![1];
     expect(strip(sw)).toBe('Preston Park Financial Center');
-    // A caret after the name says it opens.
+    // Two chevrons in a box after the name say it is a switcher, at rest as well as under the pointer.
+    expect(sw).toMatch(/sp-switcher__name.*<span class="sp-switcher__chev"><svg/);
     expect(sw.lastIndexOf('<svg')).toBeGreaterThan(sw.indexOf('sp-switcher__name'));
     expect(strip(card.slice(card.indexOf('<div class="sp-header__title"'), card.indexOf('<div class="sp-header__facts"')))).toBe('Preston Park Financial Center');
   });
@@ -283,11 +284,11 @@ describe('Header product bar and building card', () => {
     expect(classic).toContain('sp-header__actions');
   });
 
-  it('the switcher menu lists the buildings with data, the open one checked, then every sample entry disabled, each with its own mini stack', () => {
+  it('the switcher menu lists the buildings with data, the open one checked, then under their own heading every sample entry disabled, each with its own mini stack', () => {
     // Menu renders its items only when open: test the items through the helper the header builds them with.
     const opened: string[] = [];
     const items = switcherItems(property, (id) => opened.push(id));
-    const rows = items.filter((i) => !('kind' in i) || i.kind === 'item') as Array<{ id: string; label: string; adornment?: unknown; disabled?: boolean; checked?: boolean; onSelect: () => void }>;
+    const rows = items.filter((i) => !('kind' in i) || i.kind === 'item') as Array<{ id: string; label: string; detail?: string; hint?: string; adornment?: unknown; disabled?: boolean; checked?: boolean; onSelect: () => void }>;
     expect(items[0]).toMatchObject({ kind: 'heading', label: 'Portfolio · 10 buildings' });
     expect(rows).toHaveLength(10);
     expect(rows[0]).toMatchObject({ label: 'Preston Park Financial Center', checked: true });
@@ -295,7 +296,20 @@ describe('Header product bar and building card', () => {
     for (const r of rows.slice(1, 4)) expect(r).toMatchObject({ checked: false });
     for (const r of rows.slice(4)) expect(r).toMatchObject({ disabled: true });
     for (const r of rows) expect(r.adornment, r.label).toBeTruthy();
-    expect(items.at(-1)).toMatchObject({ kind: 'heading', label: 'Sample entries · only the first 4 open' });
+    // A building that opens says where it is, what it is and how tall, on a second line: two in one city tell apart.
+    expect(rows.slice(0, 4).map((r) => r.detail)).toEqual([
+      'Plano, TX · Class A Office · 12 floors',
+      'Plano, TX · Class A Office · 22 floors',
+      'Dallas, TX · Class A Office · 8 floors',
+      'Richardson, TX · Class B Office · 4 floors',
+    ]);
+    // The samples are told to be samples before the first of them, not in a note after the last.
+    const note = items.findIndex((i) => i.kind === 'heading' && i.label === 'Sample entries · these do not open');
+    expect(items[note - 1]).toMatchObject({ kind: 'separator' });
+    expect(note).toBe(items.indexOf(rows[3] as never) + 2);
+    expect(items.at(-1)).toBe(rows.at(-1));
+    for (const r of rows.slice(4)) expect(r, r.label).toMatchObject({ hint: expect.stringMatching(/, TX$/) });
+    for (const r of rows.slice(4)) expect(r.detail, r.label).toBeUndefined();
     // Selecting another building with data opens it; the open one opens nothing.
     rows[0].onSelect();
     rows[2].onSelect();

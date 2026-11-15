@@ -2,6 +2,8 @@
    (e.g. --sp-color-brand → --slds-g-color-brand-base-50). */
 :root {
   --sp-font: 'Inter', 'Salesforce Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* The display face: the Stax wordmark and the building's name in the product skins, nothing else. */
+  --sp-font-display: 'Sora', 'Inter', 'Salesforce Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --sp-text-11: 11px; --sp-text-12: 12px; --sp-text-13: 13px; --sp-text-15: 15px; --sp-text-18: 18px; --sp-text-22: 22px;
   --sp-space-1: 4px; --sp-space-2: 8px; --sp-space-3: 12px; --sp-space-4: 16px; --sp-space-5: 24px; --sp-space-6: 32px;
   --sp-radius-card: 8px; --sp-radius-block: 4px; --sp-radius-pill: 999px;

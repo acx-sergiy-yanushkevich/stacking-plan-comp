@@ -12,6 +12,8 @@ export type MenuItem =
       /** Decoration drawn where the icon would be (a colour swatch). */
       adornment?: ReactNode;
       hint?: string;
+      /** A second, quieter line under the label: the facts that tell this entry from its neighbours. */
+      detail?: string;
       /** Read after the label by assistive technology (`aria-description`): why an entry is disabled, say. */
       description?: string;
       disabled?: boolean;
@@ -80,7 +82,14 @@ export function Menu({ label, items, trigger, align = 'end' }: MenuProps) {
               >
                 {it.icon && <Icon name={it.icon} size={16} />}
                 {it.adornment}
-                <span>{it.label}</span>
+                {it.detail ? (
+                  <span className="sp-menu__text">
+                    <span className="sp-menu__label">{it.label}</span>
+                    <span className="sp-menu__detail">{it.detail}</span>
+                  </span>
+                ) : (
+                  <span>{it.label}</span>
+                )}
                 {it.hint && <span className="sp-menu__hint">{it.hint}</span>}
                 {it.checked && <Icon name="check" size={16} className="sp-menu__check" />}
               </button>
