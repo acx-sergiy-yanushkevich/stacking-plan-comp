@@ -200,3 +200,30 @@ describe('a month and day with no year (round 33)', () => {
     expect(readQuery('12k 6/1', '2026-11-09')).toMatchObject({ by: null });
   });
 });
+
+describe('"before" with a month and day (round 33)', () => {
+  it('is the day before, as "before June 15, 2027" is', () => {
+    const by = (q: string) => (readQuery(q, '2026-11-09') as { by: string }).by;
+    expect(by('12k before 6/15')).toBe('2027-06-14');
+    expect(by('12k before 12/15')).toBe('2026-12-14');
+    expect(by('12k before June 15, 2027')).toBe('2027-06-14');
+  });
+});
+
+describe('ceilings, ranges from zero, both kinds, ordinals (round 33)', () => {
+  const q = (s: string) => readQuery(s, '2026-11-09');
+  it('"under 15k" and "0-15k" are up to 15k, not a minimum', () => {
+    for (const s of ['under 15k', 'max 15k', 'up to 15k', '15k or less', '0-15k']) expect(q(s), s).toMatchObject({ kind: 'size', size: 100, max: 15000 });
+    expect(q('15k nnn under $35')).toMatchObject({ size: 15000, unread: ['nnn', 'under', '$35'] });
+    expect(q('at least 12k')).toMatchObject({ size: 12000 });
+    expect(q('at least 12k')).not.toHaveProperty('unread');
+  });
+  it('"direct" with "sublease" asks for either', () => {
+    expect(q('12k sublease direct')).toMatchObject({ fit: 'any' });
+  });
+  it('reads "4th floor" and a leap day', () => {
+    expect(q('vacant 4th floor')).toMatchObject({ kind: 'state', floor: '4' });
+    expect((q('12k by feb 29') as { by: string }).by).toBe('2028-02-29');
+    expect(q('12k by 2/30')).toMatchObject({ by: null, badBy: '2/30' });
+  });
+});

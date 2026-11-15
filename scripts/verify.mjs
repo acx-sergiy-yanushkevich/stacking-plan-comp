@@ -190,6 +190,20 @@ for (const [w, h] of [[1470, 830], [1440, 1000], [1366, 768], [1280, 720], [1366
   check(on === 'Worklist', `Escape from a worklist opened by the Holdover row returns focus to the Worklist button (${on})`);
   await f.close();
 }
+// Round 34: on a phone the four Color-by switches stand in one row, and no label runs out of its switch (round 33:
+// "Expiration" ran 7 px into Pipeline at 320 px).
+for (const w of [320, 360, 390]) {
+  const ph = await browser.newPage({ viewport: { width: w, height: 800 }, reducedMotion: 'reduce' });
+  await ph.goto(`${base}?view=stack`, { waitUntil: 'networkidle' });
+  const spill = await ph.$$eval('.sp-kpis__group--lens .sp-kpi', (els) =>
+    els.flatMap((e) => {
+      const box = e.getBoundingClientRect();
+      return [...e.querySelectorAll('.sp-kpi__label, .sp-kpi__figure')].filter((t) => { const r = document.createRange(); r.selectNodeContents(t); return r.getBoundingClientRect().right > box.right + 0.5; }).map((t) => t.textContent.trim());
+    }),
+  );
+  check(spill.length === 0, `${w} px: every Color-by label and figure stays inside its switch${spill.length ? ` (${spill.join(', ')})` : ''}`);
+  await ph.close();
+}
 await browser.close();
 check(errors.length === 0, `no console errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
 if (fails.length) {

@@ -50,7 +50,7 @@ const STATE_WORDS = STATES.flatMap((s) => s.words.map((w) => ({ w, s }))).sort((
 /** Words around a state word that do not change what is asked: "available space", "show me the subleases". */
 const FILLER = new Set(['space', 'spaces', 'suite', 'suites', 'sf', 'rsf', 'area', 'areas', 'the', 'a', 'an', 'all', 'any', 'show', 'me', 'list', 'find', 'on', 'in', 'at', 'of', 'what', 'which', 'where', 'is', 'are', 'now', 'today', 'unit', 'units', 'block', 'blocks', 'lease', 'leases', 'tenant', 'tenants', 'with', 'that', 'and', 'only', 'office']);
 
-const FLOOR_REF = /(?<![\w-])(?:floor|fl|level)\s*(\d{1,3})(?![\w-])/;
+const FLOOR_REF = /(?<![\w-])(?:(?:floor|fl|level)\s*(\d{1,3})|(\d{1,3})(?:st|nd|rd|th)\s*(?:floor|fl|level))(?![\w-])/;
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const lastDay = (y: number, m: number) => new Date(Date.UTC(y, m, 0)).getUTCDate();
@@ -78,7 +78,7 @@ function dayBefore(by: ISODate): ISODate {
 function beforeBy(date: string, by: ISODate): ISODate {
   if (/^\d{4}$/.test(date)) return `${Number(date) - 1}-12-31`;
   const d = new Date(`${by}T00:00:00Z`);
-  const dayNamed = /^\d{4}-\d{2}-\d{2}$|^\d{1,2}\/\d{1,2}\/|^\d{1,2}(?:st|nd|rd|th)?\s+[a-z]|^[a-z]+\.?\s+\d{1,2}(?:st|nd|rd|th)?\b/.test(date.replace(/,/g, ' ').replace(/\s+/g, ' '));
+  const dayNamed = /^\d{4}-\d{2}-\d{2}$|^\d{1,2}\/\d{1,2}(?:\/|$)|^\d{1,2}(?:st|nd|rd|th)?\s+[a-z]|^[a-z]+\.?\s+\d{1,2}(?:st|nd|rd|th)?\b/.test(date.replace(/,/g, ' ').replace(/\s+/g, ' '));
   if (dayNamed) {
     d.setUTCDate(d.getUTCDate() - 1);
     return d.toISOString().slice(0, 10) as ISODate;
@@ -128,8 +128,12 @@ export function readBy(words: string, asOf: ISODate): ISODate | null {
     const asD = Number(asOf.slice(8, 10));
     const y = named[3] ? Number(named[3]) : named[2] ? (m > asM || (m === asM && Number(named[2]) >= asD) ? asY : asY + 1) : m >= asM ? asY : asY + 1;
     if (named[2]) {
-      const day = `${y}-${String(m).padStart(2, '0')}-${named[2].padStart(2, '0')}`;
-      return realDay(day) ? (day as ISODate) : null;
+      // With no year given, a day the calendar lacks that year ("Feb 29") is the next year that has it.
+      for (let yy = y; yy <= (named[3] ? y : y + 4); yy += 1) {
+        const day = `${yy}-${String(m).padStart(2, '0')}-${named[2].padStart(2, '0')}`;
+        if (realDay(day)) return day as ISODate;
+      }
+      return null;
     }
     return endOfMonth(y, m);
   }
@@ -149,7 +153,7 @@ export function cutDate(text: string, asOf: ISODate): { by: ISODate | null; rest
     let by = readBy(date, asOf);
     // A date shaped like one that the calendar has not ("by 2027-02-30") is cut and named, never dropped quietly
     // (round 26: the search offered "Feb 30, 2027", then ran with no needed-by date at all).
-    if (!by && (/^\d{4}-\d{2}-\d{2}$/.test(date) || /^\d{1,2}\/\d{1,2}\/(?:\d{4}|\d{2})$/.test(date) || /^\d{1,2}(?:st|nd|rd|th)?\s+[a-z]/.test(date) || /^[a-z]+\.?\s+\d{1,2}(?:st|nd|rd|th)?\b/.test(date.replace(/,/g, ' ')))) {
+    if (!by && (/^\d{4}-\d{2}-\d{2}$/.test(date) || /^\d{1,2}\/\d{1,2}(?:\/(?:\d{4}|\d{2}))?$/.test(date) || /^\d{1,2}(?:st|nd|rd|th)?\s+[a-z]/.test(date) || /^[a-z]+\.?\s+\d{1,2}(?:st|nd|rd|th)?\b/.test(date.replace(/,/g, ' ')))) {
       const at = m.index ?? 0;
       return { by: null, bad: date.replace(/\b[a-z]/g, (c) => c.toUpperCase()), rest: `${text.slice(0, at)} ${text.slice(at + m[0].length)}`.replace(/\s+/g, ' ').trim() };
     }
@@ -166,7 +170,7 @@ export function cutDate(text: string, asOf: ISODate): { by: ISODate | null; rest
 }
 
 /** Words in a requirement that mean something already read, or nothing at all ("need 12k SF of contiguous space"). */
-const SIZE_WORDS = new Set(['sf', 'rsf', 'sq', 'ft', 'sq.', 'ft.', 'square', 'feet', 'k', 'direct', 'sublease', 'subleases', 'sublet', 'sublets', 'contiguous', 'space', 'spaces', 'block', 'blocks', 'suite', 'suites', 'office', 'need', 'needs', 'needed', 'find', 'looking', 'for', 'a', 'an', 'the', 'of', 'to', 'by', 'in', 'before', 'at', 'with', 'and', 'or', 'about', 'around', 'on', 'approx', 'approximately', 'sf.', 'rsf.']);
+const SIZE_WORDS = new Set(['sf', 'rsf', 'sq', 'ft', 'sq.', 'ft.', 'square', 'feet', 'k', 'direct', 'sublease', 'subleases', 'sublet', 'sublets', 'contiguous', 'space', 'spaces', 'block', 'blocks', 'suite', 'suites', 'office', 'need', 'needs', 'needed', 'find', 'looking', 'for', 'a', 'an', 'the', 'of', 'to', 'by', 'in', 'before', 'at', 'with', 'and', 'or', 'about', 'around', 'on', 'least', 'min', 'minimum', 'more', 'approx', 'approximately', 'sf.', 'rsf.']);
 
 /**
  * What a requirement says that the search does not use (round 31: "15k nnn under $35" ran as "15k" with the rest
@@ -207,6 +211,8 @@ function readSize(text: string): { size: number; max: number | null } | null {
     const hi = sfOf(n2, !!k2);
     const [a, b] = lo <= hi ? [lo, hi] : [hi, lo];
     if (a >= 100 && (k1 || k2 || unit || /,/.test(n1 + n2) || b >= 10000)) return { size: a, max: b === a ? null : b };
+    // "0-15k" is up to 15k: the smallest space the finder takes (100 SF) to the high end, not a minimum of 15k.
+    if (a < 100 && b >= 100 && (k2 || unit || /,/.test(n2) || b >= 10000)) return { size: 100, max: b };
   }
   for (const one of text.matchAll(SINGLE)) {
     const [, n, k, unit] = one;
@@ -235,7 +241,7 @@ function readState(text: string): Extract<QueryIntent, { kind: 'state' }> | null
   const own = new Set(s.words);
   const rest = t.split(' ').filter(Boolean);
   if (rest.some((w) => !FILLER.has(w) && !own.has(w))) return null;
-  return { kind: 'state', label: s.label, kinds: new Set(s.kinds), tenantRisk: !!s.tenantRisk, floor: floorRef ? String(Number(floorRef[1])) : null, now: !!s.now };
+  return { kind: 'state', label: s.label, kinds: new Set(s.kinds), tenantRisk: !!s.tenantRisk, floor: floorRef ? String(Number(floorRef[1] ?? floorRef[2])) : null, now: !!s.now };
 }
 
 /**
@@ -254,12 +260,23 @@ export function readQuery(q: string, asOf: ISODate): QueryIntent | null {
   // A needed-by date before the as-of date is named and left out, as Find space does (round 33: the bar offered "by Nov 8").
   const past = cut.by !== null && cut.by < asOf ? cut.by : null;
   const by = past ? null : cut.by;
-  const size = readSize(rest);
+  let size = readSize(rest);
   if (size) {
     let fit: FitType = 'any';
-    if (/\bdirect\b/.test(rest)) fit = 'direct';
+    // Both words ask for either.
+    if (/\bdirect\b/.test(rest) && !/\bsub(?:lease|let)s?\b/.test(rest)) fit = 'direct';
+    else if (/\bdirect\b/.test(rest)) fit = 'any';
     else if (/\bsub(?:lease|let)s?\b/.test(rest)) fit = 'sublease';
-    const unread = unreadWords(rest, size.size, size.max);
+    // "under 15k", "max 15k", "up to 15k", "15k or less": a ceiling, so the range is the smallest space to 15k (round 33: it ran as a minimum).
+    let said = rest;
+    if (size.max === null) {
+      const ceiling = /\b(?:under|below|max|maximum|up\s+to|at\s+most|no\s+more\s+than|less\s+than)\b(?!\s*\$)|\bor\s+(?:less|smaller|under)\b/;
+      if (ceiling.test(rest)) {
+        size = { size: 100, max: size.size };
+        said = rest.replace(ceiling, ' ');
+      }
+    }
+    const unread = unreadWords(said, size.size, size.max);
     return { kind: 'size', size: size.size, max: size.max, fit, by, ...(bad ? { badBy: bad } : {}), ...(past ? { pastBy: past } : {}), ...(unread.length ? { unread } : {}) };
   }
   return readState(text);

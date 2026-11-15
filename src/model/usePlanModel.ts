@@ -163,7 +163,7 @@ export function search(floors: FloorView[], q: string, safe: boolean, intent: Qu
     return out;
   }
   // "Largest block" lights the biggest space a tenant could take now (round 31: it found nothing).
-  if (/^(?:the\s+)?(?:largest|biggest)(?:\s+(?:available|direct|vacant))?(?:\s+(?:block|space|suite|vacancy))?$/.test(needle)) {
+  if (/^(?:the\s+)?(?:largest|biggest)(?:\s+(?:available|direct|vacant|contiguous))*(?:\s+(?:block|space|suite|vacancy))?$/.test(needle)) {
     // The KPI's own rule (domain/kpis.ts `largestBlock`), so the search, the KPI and the plan's tag cannot disagree.
     const lb = largestBlock(floors);
     for (const k of lb.keys) out.set(k, `Largest block, ${lb.size.toLocaleString('en-US')} SF on ${lb.floorName}`);
@@ -296,7 +296,7 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
     const reasons = searchReasons ? [...searchReasons.entries()] : [];
     const onFloor = reasons.length === 1 ? (floors.find((f) => f.segments.some((s) => s.key === reasons[0][0]))?.floor.name ?? '') : '';
     // A reason that already names the floor says it once (round 31: "Floor 6 on Floor 6 Ste 600").
-    const detail = reasons.length === 1 ? `: ${reasons[0][1] === 'Tenant' ? 'tenant name' : reasons[0][1]}${reasons[0][1].includes(onFloor) ? '' : ` on ${onFloor}`}${segIndex.get(reasons[0][0])?.suite && !reasons[0][1].includes(segIndex.get(reasons[0][0])!.suite!) ? ` Ste ${segIndex.get(reasons[0][0])!.suite}` : ''}` : '';
+    const detail = reasons.length === 1 ? `: ${reasons[0][1] === 'Tenant' ? (segIndex.get(reasons[0][0])?.lease?.tenant ?? 'tenant name') : reasons[0][1]}${reasons[0][1].includes(onFloor) ? '' : ` on ${onFloor}`}${segIndex.get(reasons[0][0])?.suite && !reasons[0][1].includes(segIndex.get(reasons[0][0])!.suite!) ? ` Ste ${segIndex.get(reasons[0][0])!.suite}` : ''}` : '';
     filterLabel = `${safe ? 'Search' : `Search “${state.q}”`} · ${searchMatches.size} match${searchMatches.size === 1 ? '' : 'es'}${detail}`;
   } else if (activeWorklist && effectiveWindow) {
     highlight = new Set(activeWorklist.flatMap((r) => r.segKeys));
