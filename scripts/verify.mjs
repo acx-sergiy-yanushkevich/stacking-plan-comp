@@ -243,6 +243,31 @@ for (const [w, qs] of [320, 360, 390].flatMap((w) => ['', '&safe=1', '&safe=1&bu
   check(view === 'timeline' && lenAfter === len + 1, `phone: after two sheets closed with Close, one Back reaches the Timeline (${view}, ${len} → ${lenAfter} entries)`);
   await ph.close();
 }
+// Round 37: a search that finds nothing reads as a sentence, never as a filter in force ("Showing … Other space is
+// dimmed") and never with a way to the plan, in the Stack and on the Map, owner and Prospect-safe.
+{
+  const e = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+  const bad = [];
+  for (const [view, safe, q, want] of [
+    ['stack', '', 'available on floor 99', 'There is no Floor 99 here'],
+    ['stack', '', 'for sale on floor 5', 'Nothing for sale on Floor 5'],
+    ['stack', '', 'floor 99', 'There is no Floor 99 here'],
+    ['map', '', 'for sale on floor 5', 'Nothing for sale on Floor 5'],
+  ]) {
+    await e.goto(`${base}?view=${view}${safe}&q=${encodeURIComponent(q)}`, { waitUntil: 'networkidle' });
+    await e.waitForTimeout(200);
+    const text = ((await e.locator('.sp-filterbar').first().textContent().catch(() => '')) ?? '').replace(/\s+/g, ' ');
+    if (!text.includes(want) || /Showing|Show on the plan|\.\./.test(text)) bad.push(`${view} "${q}": ${text.slice(0, 90)}`);
+  }
+  // Prospect-safe drops a search on the way in, so it is typed there.
+  await e.goto(`${base}?view=stack&safe=1`, { waitUntil: 'networkidle' });
+  await e.locator('.sp-toolbar__search input').first().fill('available on floor 99');
+  await e.waitForTimeout(300);
+  const safeText = ((await e.locator('.sp-filterbar').first().textContent().catch(() => '')) ?? '').replace(/\s+/g, ' ');
+  if (!safeText.includes('There is no Floor 99 here') || /Showing|\.\./.test(safeText)) bad.push(`safe: ${safeText.slice(0, 90)}`);
+  check(bad.length === 0, `a search that finds nothing reads as a plain sentence${bad.length ? ` (${bad.join('; ')})` : ''}`);
+  await e.close();
+}
 await browser.close();
 check(errors.length === 0, `no console errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
 if (fails.length) {

@@ -49,7 +49,7 @@ export function PhoneStack({ model, state, patch, title, legendNote, textFor, hi
           <Legend items={model.legend} compact figures id="sp-legend" note={legendNote} />
         </details>
       </div>
-      {model.filterLabel && <FilterBar label={model.filterLabel} alternatives={!!model.partial && model.partial.size > 0} find={model.queryFind} patch={patch} />}
+      {model.filterLabel && <FilterBar label={model.filterLabel} empty={model.filterEmpty} alternatives={!!model.partial && model.partial.size > 0} find={model.queryFind} patch={patch} />}
       {/* Round 35: a phone's floor list runs several screens; the index stays at the top while it scrolls and takes the
           user to a floor's card, focused, in one tap (the desktop stack shows every floor at once). */}
       {floors.length > 3 && (

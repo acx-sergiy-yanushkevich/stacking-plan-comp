@@ -330,7 +330,7 @@ export default function BuildingView({ model, state, patch }: BuildingViewProps)
   return (
     <section className="sp-card sp-bview" aria-label="Building">
       {head}
-      {model.filterLabel && <FilterBar label={model.filterLabel} alternatives={!!model.partial && model.partial.size > 0} find={model.queryFind} patch={patch} />}
+      {model.filterLabel && <FilterBar label={model.filterLabel} empty={model.filterEmpty} alternatives={!!model.partial && model.partial.size > 0} find={model.queryFind} patch={patch} />}
       <div className={`sp-bview__grid ${docked ? 'is-docked' : 'is-alone'} ${!docked && under ? 'is-under' : ''} ${moving ? 'is-moving' : ''}`}>
         <div className="sp-bview__model">
           {/* Above the model while it stands alone, one quiet line of fixed height, so nothing moves under the

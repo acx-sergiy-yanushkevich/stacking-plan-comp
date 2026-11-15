@@ -23,3 +23,17 @@ describe('FilterBar: a contradictory requirement (round 36)', () => {
     expect(html).not.toContain('sp-filterbar__find');
   });
 });
+
+describe('FilterBar: nothing matched (round 36)', () => {
+  it('shows the sentence as it is, with no "Showing" and no way to the plan, whatever its first word', () => {
+    for (const label of ['There is no Floor 99 here (Floors 1–12).', 'Nothing for sale on Floor 5.', 'No available space on Floor 4 now.']) {
+      for (const planElsewhere of [false, true]) {
+        const html = renderToString(<FilterBar label={label} empty planElsewhere={planElsewhere} patch={() => undefined} />).replace(/<!-- -->/g, '');
+        expect(html, label).toContain(label);
+        expect(html, label).not.toContain('Showing');
+        expect(html, label).not.toContain('Show on the plan');
+        expect(html, label).not.toContain('..');
+      }
+    }
+  });
+});

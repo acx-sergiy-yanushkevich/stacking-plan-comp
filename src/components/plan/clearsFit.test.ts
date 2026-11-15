@@ -12,7 +12,7 @@ function sources(dir: string): string[] {
 }
 
 describe('closing a requirement resets its kind of space (round 36)', () => {
-  it('every patch that clears req also sets fit to any, except an inquiry pick, which is a new requirement', () => {
+  it('every patch that clears req also sets fit to any, an inquiry pick included (round 36: it kept a leftover fit)', () => {
     const root = join(__dirname, '..', '..');
     const files = [...sources(join(root, 'components')), join(root, 'App.tsx')];
     const missing: string[] = [];
@@ -20,7 +20,6 @@ describe('closing a requirement resets its kind of space (round 36)', () => {
       const text = readFileSync(f, 'utf8');
       for (const m of text.matchAll(/patch\(\{[^}]*\breq: null[^}]*\}/g)) {
         const call = m[0];
-        if (/inquiry: (?:e\.target|active|inquiry)/.test(call)) continue;
         if (!/fit: 'any'/.test(call)) missing.push(`${f.slice(root.length + 1)}: ${call.slice(0, 80)}`);
       }
     }

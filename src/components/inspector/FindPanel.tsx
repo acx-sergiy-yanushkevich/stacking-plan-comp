@@ -161,7 +161,7 @@ export function FindPanel({ model, state, patch }: FindPanelProps) {
           </div>
           {/* The open inquiries are other prospects' requirements: the list is the broker's, not a prospect's. */}
           {canShowInquiries(safe) && (
-            <SelectField label="Match an open inquiry" value={state.inquiry ?? ''} onChange={(e) => patch({ inquiry: e.target.value || null, req: null, max: null, by: null })}>
+            <SelectField label="Match an open inquiry" value={state.inquiry ?? ''} onChange={(e) => patch({ inquiry: e.target.value || null, req: null, max: null, by: null, fit: 'any' })}>
               <option value="">— None —</option>
               {property.inquiries.map((i) => (
                 <option key={i.id} value={i.id}>

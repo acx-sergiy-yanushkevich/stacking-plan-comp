@@ -22,13 +22,15 @@ export interface FilterBarProps {
    * Building tab (round 24: a search typed on the Map was answered nowhere on screen).
    */
   planElsewhere?: boolean;
+  /** Nothing matched: the label is a sentence to show as it is (`PlanModel.filterEmpty`). */
+  empty?: boolean;
   patch: (p: Partial<PlanState>) => void;
 }
 
 const TO_PLAN: Partial<PlanState> = { view: 'building' };
 
 /** Names the active filter above the plan and offers one Clear. */
-export function FilterBar({ label, alternatives, find, planElsewhere, patch }: FilterBarProps) {
+export function FilterBar({ label, empty = false, alternatives, find, planElsewhere, patch }: FilterBarProps) {
   // A requirement with a date the calendar has not: say so and offer nothing to run until it is corrected.
   if (find?.badBy)
     return (
@@ -75,7 +77,7 @@ export function FilterBar({ label, alternatives, find, planElsewhere, patch }: F
         </Button>
       </div>
     );
-  if (planElsewhere && !label.startsWith('No '))
+  if (planElsewhere && !empty)
     return (
       <div className="sp-filterbar" role="status">
         <Icon name="filter" size={14} />
@@ -97,7 +99,7 @@ export function FilterBar({ label, alternatives, find, planElsewhere, patch }: F
           window the sentence wraps: between facts, or inside a long one, never with a separator at the end
           of a line or the start of the next (DotJoin). */}
       <span>
-        {label.startsWith('No ') ? (
+        {empty ? (
           label
         ) : (
           <>
