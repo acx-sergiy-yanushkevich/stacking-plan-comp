@@ -7,7 +7,7 @@ export type IconName =
   | 'map' | 'layers' | 'list' | 'info' | 'check' | 'arrow-left' | 'stack' | 'timeline' | 'floor' | 'plus' | 'file'
   | 'image' | 'table' | 'link' | 'video' | 'sparkle' | 'shield' | 'clock' | 'user' | 'compass' | 'tilt' | 'minus'
   | 'dollar' | 'home' | 'people' | 'train' | 'coffee' | 'sun' | 'moon' | 'more' | 'expand' | 'collapse' | 'palette'
-  | 'contrast' | 'caret-down' | 'bus' | 'turn-left' | 'turn-right';
+  | 'contrast' | 'caret-down' | 'bus' | 'turn-left' | 'turn-right' | 'selector';
 
 /** Icons with a filled part, drawn under the stroke. */
 const FILLS: Partial<Record<IconName, string>> = {
@@ -43,6 +43,8 @@ const PATHS: Record<IconName, string> = {
   expand: 'M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7',
   collapse: 'M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7',
   'chevron-down': 'M6 9l6 6 6-6',
+  // Two chevrons, up and down: a control that switches between peers (the building switcher).
+  selector: 'M8 9.5l4-4 4 4M8 14.5l4 4 4-4',
   'chevron-left': 'M15 6l-6 6 6 6',
   'chevron-right': 'M9 6l6 6-6 6',
   play: 'M7 4v16l13-8z',

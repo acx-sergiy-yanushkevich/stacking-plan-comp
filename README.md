@@ -65,6 +65,7 @@ It works with a keyboard and a screen reader, and on a phone. It opens in the As
 - React 19, TypeScript and Vite
 - MapLibre GL with OpenFreeMap tiles for the map
 - Plain CSS on design tokens, with no UI framework
+- Inter (Google Fonts) for text, and Sora (SIL Open Font License, served by the app from `src/assets/fonts/`) for the Stax wordmark and the building's name
 
 **Quality**
 

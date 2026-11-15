@@ -217,7 +217,10 @@ export function Header({ model, state, patch, onExport, miniTimeline }: HeaderPr
               trigger={(p) => (
                 <button {...p} type="button" aria-label={`Switch building: ${property.name}`} title="Switch building" className="sp-switcher">
                   <span className="sp-switcher__name">{property.name}</span>
-                  <Icon name="caret-down" size={16} />
+                  {/* Two chevrons in a small box: the name reads as a control at rest, not only under the pointer. */}
+                  <span className="sp-switcher__chev">
+                    <Icon name="selector" size={14} />
+                  </span>
                 </button>
               )}
               items={switcherItems(property, (id) => patch(switchBuilding(state, id)))}
