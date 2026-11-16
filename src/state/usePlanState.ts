@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ISODate } from '../domain/types';
 import { SAFE_TITLE, TITLE } from '../domain/safe';
 import { historyBack, media, onPopState, readUrl, sheetEntry as onSheetEntry, setTitle, writeUrl } from '../lib/host';
-import { openSession, serializeState, stepSession, type PlanSession, type PlanState } from './planState';
+import { deriveMode, openSession, serializeState, stepSession, type PlanSession, type PlanState } from './planState';
 
 /** The fields whose change is a move to somewhere else, not an edit of where the user already is. */
 const navigates = (a: PlanState, b: PlanState): boolean =>
@@ -12,7 +12,7 @@ const navigates = (a: PlanState, b: PlanState): boolean =>
  * On a phone or a tablet (up to 1099 px, where the side panel gives way to a sheet: shell.css) a suite opens a sheet over the plan, and the system Back is how a phone closes it (round 35: Back left the
  * view instead). Opening one is a history entry there; on a desktop the suite opens in the side panel and is an edit.
  */
-const opensSheet = (a: PlanState, b: PlanState): boolean => !sheetOn(a) && sheetOn(b) && media('(max-width: 1099px)').matches();
+const opensSheet = (a: PlanState, b: PlanState): boolean => sheetLevel(b) > sheetLevel(a) && media('(max-width: 1099px)').matches();
 
 /**
  * A sheet is up on a phone or tablet: a suite's, or a tool's (Find space, Worklist, Data issues, Area). Round 38: only a
@@ -20,7 +20,17 @@ const opensSheet = (a: PlanState, b: PlanState): boolean => !sheetOn(a) && sheet
  * stands in the page under the map, not in a sheet (App.tsx `mapAreaInline`), so it is no entry of its own.
  */
 const TOOL_SHEETS: ReadonlySet<PlanState['mode']> = new Set(['find', 'worklist', 'issues', 'area', 'brief']);
-const sheetOn = (s: PlanState): boolean => s.select !== null || (TOOL_SHEETS.has(s.mode) && !(s.view === 'map' && s.mode === 'area'));
+/**
+ * How deep the sheets go: 0 none, 1 a tool's sheet, 2 a suite's (over a tool's, or alone). The tool is the panel shown
+ * (`deriveMode`), not the raw mode: a requirement, an inquiry or a worklist window shows its sheet with mode 'building'
+ * (round 39: Find space by a typed size was no entry, so Back from a result lost the requirement). A suite opened from a
+ * tool's list is an entry over it, so Back from the suite returns to the list.
+ */
+const sheetLevel = (s: PlanState): number => {
+  if (s.select !== null) return 2;
+  const tool = deriveMode({ ...s, select: null, floor: null });
+  return TOOL_SHEETS.has(tool) && !(s.view === 'map' && tool === 'area') ? 1 : 0;
+};
 
 /**
  * One state object for the whole plan, mirrored into the address (`lib/host`: in a browser,
@@ -62,18 +72,20 @@ export function usePlanState(today: ISODate): [PlanState, (patch: Partial<PlanSt
       popped.current = false;
       // Back or Forward onto a sheet's own entry (marked when it was added): Close still steps back over it (round 37:
       // Back, Forward, then Close left a Back press that did nothing).
-      sheetEntry.current = sheetOn(state) && onSheetEntry();
+      sheetEntry.current = sheetLevel(state) > 0 && onSheetEntry();
       writeUrl(serializeState(state, today), false);
       return;
     }
-    if (prev && sheetEntry.current && sheetOn(prev) && !sheetOn(state) && !navigates(prev, state)) {
+    if (prev && sheetEntry.current && sheetLevel(state) < sheetLevel(prev) && !navigates(prev, state)) {
       sheetEntry.current = false;
       closing.current = state;
       historyBack();
       return;
     }
     const push = prev !== null && navigates(prev, state);
-    if (push) sheetEntry.current = opensSheet(prev, state);
+    // A move to another view with a sheet still up keeps the mark, so closing the sheet there steps back too (round 39:
+    // the next Back reopened the closed sheet on the old view).
+    if (push) sheetEntry.current = opensSheet(prev, state) || (sheetEntry.current && sheetLevel(state) > 0);
     writeUrl(serializeState(state, today), push, push && sheetEntry.current);
   }, [state, today]);
 
@@ -89,6 +101,8 @@ export function usePlanState(today: ISODate): [PlanState, (patch: Partial<PlanSt
         if (kept) {
           closing.current = null;
           writeUrl(serializeState(kept, today), false);
+          // Back from a suite onto the tool's sheet under it: that entry is a sheet's too, and its Close steps back again.
+          sheetEntry.current = sheetLevel(kept) > 0 && onSheetEntry();
           return;
         }
         popped.current = true;

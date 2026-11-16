@@ -105,6 +105,13 @@ export function Popover({ open, onOpenChange, trigger, children, align = 'start'
       onOpenChange(false);
       return;
     }
+    // A menu is one stop: Tab leaves it from any item, closed (round 39, the APG menu button; it cycled inside).
+    if (e.key === 'Tab' && role === 'menu') {
+      tabbedOut.current = true;
+      triggerRef.current?.focus();
+      onOpenChange(false);
+      return;
+    }
     if (e.key === 'Tab' && panelRef.current) {
       const items = Array.from(panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE));
       const move = tabMove(items.length, items.indexOf(focused() as HTMLElement), e.shiftKey);

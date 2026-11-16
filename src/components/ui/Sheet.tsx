@@ -89,6 +89,9 @@ export function Sheet({ open, onClose, title, children, snap = 'half', hideHeade
   useEffect(() => {
     if (!open) return;
     const first = ref.current?.querySelector<HTMLElement>('.sp-sheet__body button, .sp-sheet__body [tabindex="0"], button.sp-sheet__handle');
+    // Focus given by the sheet itself (a link opened it, or a tap) shows no ring on the handle until a key is pressed
+    // (round 39: a shared suite link opened with the keyboard ring on the handle). The handle's keydown clears the mark.
+    if (first?.classList.contains('sp-sheet__handle')) first.dataset.pointer = '';
     first?.focus({ preventScroll: true });
   }, [open]);
   useEffect(() => {

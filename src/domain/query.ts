@@ -237,6 +237,7 @@ function readSize(text: string): { size: number; max: number | null; used: strin
   // whichever it stood beside, so "12k no more than 15k" read as up to 12,000). A size under a ceiling is the
   // range's top; any other is its floor.
   let from = 0;
+  let bareFloor = false;
   for (const one of text.matchAll(SINGLE)) {
     const [whole, n, k, unit] = one;
     const digits = n.replace(/[,.]/g, '').length;
@@ -284,7 +285,14 @@ function readSize(text: string): { size: number; max: number | null; used: strin
       read.push(lo, hi);
       continue;
     }
-    // Two floors keep the higher ("at least 12k min 15k").
+    // A second size with no word of its own ("12k and 15k") is not a floor: it is left unread, so the bar lists it,
+    // rather than quietly raising the minimum (round 39: "12k and 15k" ran as 15,000 SF). With a word, two floors keep
+    // the higher ("at least 12k min 15k").
+    if (!minBefore && !minAfter && bareFloor) {
+      read.pop();
+      continue;
+    }
+    if (!minBefore && !minAfter) bareFloor = true;
     floor = floor === null ? size : Math.max(floor, size);
   }
   if (floor === null && ceil === null) return null;
@@ -365,18 +373,25 @@ const fmt = (n: number) => `${n.toLocaleString('en-US')} sf`;
  */
 export function sizeWords(text: string): string {
   const S = `(?:${SIZE_ITEM})`;
+  const ABOUT = String.raw`(?:about|around|approx(?:imately)?\.?|roughly|~)`;
   return text
     .replace(/[—–−]/g, '-')
+    // "12 000 sf": a space between digit groups, before a unit (round 39: a failed name search).
+    .replace(/\b(\d{1,3}) (\d{3})(?=\s*(?:sf|rsf|sq\.?\s*ft|square)\b)/g, '$1,$2')
     .replace(/(\d)\s*thousand\b/g, '$1k')
+    // "10k thru 12k", "10k through 12k", "10k..12k" are ranges (round 39: the 10k was dropped).
+    .replace(/(\d[\d,.]*?\s*k?)\s*(?:\bthru\b|\bthrough\b|\.\.)\s*(?=\d)/g, '$1-')
     .replace(/\bnot\s+greater\s+than\s+or\s+equal(?:\s+to)?\b/g, 'under')
     .replace(/\bnot\s+less\s+than\s+or\s+equal(?:\s+to)?\b/g, 'over')
     .replace(/\b(?:(?:with\s+)?(?:a|the)\s+)?(?:maximum|max)\.?\s+of\b|\bmax\.(?=\s)|\b(?:not\s+to|shall\s+not|should\s+not|must\s+not|do\s+not|does\s+not|will\s+not|won'?t|cannot|can\s*not|can'?t)\s+exceed\b/g, 'max')
     .replace(/\b(?:(?:with\s+)?(?:a|the)\s+)?(?:minimum|min)\.?\s+of\b|\bmin\.(?=\s)/g, 'min')
     // A tolerance: "12k ± 1k", "12,000 +/- 2,000", "12k plus or minus 1k". A bare tolerance takes the size's k ("12k ± 1").
-    .replace(new RegExp(String.raw`(${S})\s*(?:\+\s*\/\s*-|\+-|±|plus\s+or\s+minus|give\s+or\s+take)\s*(\d[\d,.]*\s*k?)`, 'g'), (_, a: string, b: string) => {
+    // A percentage is a share of the size: "12k ± 10%" is 10,800–13,200 (round 39: the 10 was read as 10k).
+    .replace(new RegExp(String.raw`(${S})\s*(?:\+\s*\/\s*-|\+-|±|plus\s+or\s+minus|give\s+or\s+take)\s*(\d[\d,.]*\s*(?:k|%|percent\b)?)`, 'g'), (_, a: string, b: string) => {
       const mid = sizeOf(a);
       let tol = sizeOf(b);
-      if (/k/.test(a) && !/k/.test(b) && tol < 100) tol *= 1000;
+      if (/%|percent/.test(b)) tol = Math.round((mid * Number(b.replace(/[^\d.]/g, ''))) / 100);
+      else if (/k/.test(a) && !/k/.test(b) && tol < 100) tol *= 1000;
       return `${fmt(Math.max(100, mid - tol)).replace(' sf', '')}-${fmt(mid + tol)}`;
     })
     // "between about 12,000 and 15,000": the range is the range; the "about" adds nothing.
@@ -384,11 +399,21 @@ export function sizeWords(text: string): string {
     .replace(/\b(and|to)\s+(?:about|around|approx(?:imately)?\.?|roughly|~)\s*(?=\d)/g, '$1 ')
     .replace(/\b(?:between|from)\s+([\d,.]+\s*k?)\s*(?:sf|rsf)?\s+(?:and|to|-|–)\s+([\d,.]+\s*k?)/g, '$1-$2')
     // Sizes joined by "or" or "/", a range among them: the span from the least to the most.
-    .replace(new RegExp(String.raw`(?:${S})(?:\s*(?:-|to)\s*(?:${S}|\d[\d,.]*))?(?:\s*(?:\bor\b|\/)\s*(?:${S})(?:\s*(?:-|to)\s*(?:${S}))?)+`, 'g'), (chain: string) => {
+    // "About" widens only the size it stands before ("12k or about 15k" is 12,000–16,500: round 39, the 12k was dropped).
+    .replace(new RegExp(String.raw`(?:${ABOUT}\s*)?(?:${S})(?:\s*(?:-|to)\s*(?:${S}|\d[\d,.]*))?(?:\s*(?:\bor\b|\/)\s*(?:${ABOUT}\s*)?(?:${S})(?:\s*(?:-|to)\s*(?:${S}))?)+`, 'g'), (chain: string) => {
       if (!/\bor\b|\//.test(chain)) return chain;
-      const sizes = chain.split(/\s*(?:\bor\b|\/|-|\bto\b)\s*/).filter(Boolean).map(sizeOf).filter((n) => n >= 100);
-      if (sizes.length < 2) return chain;
-      return `${fmt(Math.min(...sizes)).replace(' sf', '')}-${fmt(Math.max(...sizes))}`;
+      const items = chain.split(/\s*(?:\bor\b|\/|-|\bto\b)\s*/).filter(Boolean);
+      const lows: number[] = [];
+      const highs: number[] = [];
+      for (const item of items) {
+        const v = sizeOf(item);
+        if (v < 100) continue;
+        const about = new RegExp(`^${ABOUT}`).test(item.trim());
+        lows.push(about ? Math.round((v * 0.9) / 100) * 100 : v);
+        highs.push(about ? Math.round((v * 1.1) / 100) * 100 : v);
+      }
+      if (lows.length < 2) return chain;
+      return `${fmt(Math.min(...lows)).replace(' sf', '')}-${fmt(Math.max(...highs))}`;
     })
     // About a size, the word after it: "12k-ish", "12k approx", "12,000 sf or so".
     .replace(new RegExp(String.raw`(${S}|\d[\d,.]*\s*k?)\s*-?\s*ish\b`, 'g'), 'about $1')
@@ -493,10 +518,18 @@ export function readPlace(q: string): PlaceRef | null {
   // A date is not a list of suites ("31/12/27" lit Suites 1200, 1250 and 120: round 38).
   if (/^\d{1,2}\/\d{1,2}(?:\/\d{2,4})?$/.test(t)) return null;
   // A list of floors: "floors 8 and 9", "floors 3, 4 and 5", "8th and 9th floors" (round 38).
-  const listA = new RegExp(String.raw`^${FLOOR_WORD}\s*(\d{1,3}(?:\s*(?:,|&|and)\s*\d{1,3})+)$`).exec(t);
+  // A run inside a list counts too: "floors 8-9 and 11" (round 39).
+  const listA = new RegExp(String.raw`^${FLOOR_WORD}\s*(\d{1,3}(?:\s*-\s*\d{1,3})?(?:\s*(?:,|&|and)\s*\d{1,3}(?:\s*-\s*\d{1,3})?)+)$`).exec(t);
   const listB = /^(\d{1,3}(?:st|nd|rd|th)?(?:\s*(?:,|&|and)\s*\d{1,3}(?:st|nd|rd|th)?)+)\s*(?:floors?|fl|levels?)$/.exec(t);
   const list = listA?.[1] ?? listB?.[1];
-  if (list) return { kind: 'floors', floors: [...new Set((list.match(/\d{1,3}/g) ?? []).map(Number))].sort((a, b) => a - b) };
+  if (list) {
+    const out = new Set<number>();
+    for (const part of list.split(/\s*(?:,|&|and)\s*/)) {
+      const [a, b] = part.replace(/(?:st|nd|rd|th)\b/g, '').split(/\s*-\s*/).map(Number);
+      for (let n = Math.min(a, b ?? a); n <= Math.max(a, b ?? a) && n - a <= 200; n++) out.add(n);
+    }
+    return { kind: 'floors', floors: [...out].sort((x, y) => x - y) };
+  }
   // A floor alone, either way round: "floor 12", "fl 12", "12th floor", "12 floor"; or a run of them, "floors 3-5".
   const one = new RegExp(String.raw`^(?:(\d{1,3})(?:st|nd|rd|th)?\s*(?:floor|fl)|${FLOOR_WORD}\s*(\d{1,3}))$`).exec(t);
   if (one) return { kind: 'floors', floors: [Number(one[1] ?? one[2])] };

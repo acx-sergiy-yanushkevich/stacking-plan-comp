@@ -770,3 +770,25 @@ describe('round 38 (Sol): inquiry counts use the sizes a run can really be', () 
     expect(runSpans([seg(4000, 1000), seg(5000), seg(3000, 1000)])).toContainEqual([7000, 12000]);
   });
 });
+
+describe('round 39 (Sol): an option cut to the maximum is named, dated and counted from the suites it keeps', () => {
+  it('10,000 + 4,000 + 6,000 (divisible to 2,000) for 7,000–8,000 SF keeps only the last two, by name', () => {
+    const s = (key: string, suite: string, size: number, from: string | null, deals: number, minDivisible?: number) =>
+      ({
+        key,
+        suite,
+        size,
+        kind: 'available',
+        availableFrom: from,
+        availability: { divisible: !!minDivisible, minDivisible: minDivisible ?? null, deals: Array.from({ length: deals }, (_, i) => ({ id: `${key}${i}`, stage: 'Tour', prospect: 'X', broker: 'Y', lastActivity: '2026-11-01' })) },
+      }) as unknown as Segment;
+    const segs = [s('a', '100', 10000, '2027-06-01', 2), s('b', '110', 4000, null, 0), s('c', '120', 6000, null, 1, 2000)];
+    const floor = { floor: { id: 'F1', name: 'Floor 1', sequence: 1 }, segments: segs, maxContiguous: 20000, bestRun: segs.map((x) => x.key) } as unknown as import('./derive').FloorView;
+    const cut = findFits([floor], 7000, null, 8000, [], TODAY).options.find((o) => o.splitTo);
+    expect(cut?.keys).toEqual(['b', 'c']);
+    expect(cut?.suites).toBe(suitesLabel([floor], ['b', 'c']));
+    expect(cut?.suites).not.toContain('100');
+    expect(cut?.from).toBeNull();
+    expect(cut?.dealList?.every((d) => !d.id.startsWith('a'))).toBe(true);
+  });
+});

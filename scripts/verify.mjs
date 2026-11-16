@@ -380,6 +380,49 @@ for (const [w, qs] of [320, 360, 390].flatMap((w) => ['', '&safe=1'].map((q) => 
   check(new URL(ph.url()).searchParams.get('view') === 'timeline', `phone: a Worklist sheet opened and closed leaves no dead Back (${ph.url().replace(base, '')})`);
   await ph.close();
 }
+// Round 39: on a phone, Find space run from a typed size is a sheet's entry, and a result opened from it is one more:
+// Back from the result returns to the ranked list with the requirement; Close on Find, then Back, reaches the Timeline.
+{
+  const ph = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', hasTouch: true, isMobile: true });
+  await ph.goto(`${base}?view=timeline`, { waitUntil: 'networkidle' });
+  await ph.getByRole('radio', { name: /Stack/ }).click();
+  await ph.waitForTimeout(300);
+  const field = ph.locator('.sp-toolbar__search input').first();
+  await field.fill('12000 sf');
+  await field.press('Enter');
+  await ph.waitForTimeout(500);
+  const req = new URL(ph.url()).searchParams.get('req');
+  await ph.locator('.sp-sheet .sp-ins__row').first().click();
+  await ph.waitForTimeout(400);
+  const picked = new URL(ph.url()).searchParams.get('select');
+  await ph.goBack();
+  await ph.waitForTimeout(400);
+  const back1 = new URL(ph.url()).searchParams;
+  check(req === '12000' && !!picked && !back1.get('select') && back1.get('req') === '12000', `phone: Back from a Find space result returns to the list with its requirement (${req}, ${picked}, ${ph.url().replace(base, '')})`);
+  await ph.locator('.sp-sheet').getByRole('button', { name: /^Close/ }).first().click();
+  await ph.waitForTimeout(500);
+  await ph.goBack();
+  await ph.waitForTimeout(400);
+  check(new URL(ph.url()).searchParams.get('view') === 'timeline', `phone: closing Find space, then Back, reaches the Timeline (${ph.url().replace(base, '')})`);
+  await ph.close();
+}
+// Round 39: the More menu is one Tab stop with Home and End.
+{
+  const ph = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+  await ph.goto(`${base}?view=stack`, { waitUntil: 'networkidle' });
+  await ph.locator('.sp-toolbar__more').focus();
+  await ph.keyboard.press('Enter');
+  await ph.waitForTimeout(200);
+  await ph.keyboard.press('End');
+  const last = await ph.evaluate(() => document.activeElement?.textContent?.trim() ?? '');
+  await ph.keyboard.press('Home');
+  const first = await ph.evaluate(() => document.activeElement?.textContent?.trim() ?? '');
+  await ph.keyboard.press('Tab');
+  await ph.waitForTimeout(200);
+  const open = await ph.locator('[role="menu"]').count();
+  check(last.startsWith('Data issues') && first.startsWith('Area') && open === 0, `phone: More's menu takes Home and End, and Tab closes it (${first} / ${last} / ${open})`);
+  await ph.close();
+}
 await browser.close();
 check(errors.length === 0, `no console errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
 if (fails.length) {

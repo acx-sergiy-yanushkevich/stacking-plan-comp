@@ -223,8 +223,15 @@ export function findFits(
   const segs = segmentIndex(floors);
   const named: FitOption[] = options.map((o) => ({ ...o, suites: suitesLabel(floors, o.keys) }));
   // An option cut down to fit the maximum is a new set of suites: its inquiries are counted again (round 38, Sol).
-  const recount = (keys: string[], from: ISODate | null) => inqCount(0, false, null, from, runSpans(keys.map((k) => segs.get(k)).filter((x): x is Segment => !!x)));
-  return rankFits(named, segs, req, neededBy, maxSize, largestNow, recount);
+  // Round 39 (Sol): its suites' label, date and deals are made again too, from the suites it keeps.
+  const recut = (o: FitOption) => {
+    const kept = o.keys.map((k) => segs.get(k)).filter((x): x is Segment => !!x);
+    o.from = kept.map((x) => x.availableFrom ?? null).filter((d): d is ISODate => !!d).sort().at(-1) ?? null;
+    o.suites = suitesLabel(floors, o.keys);
+    o.deals = kept.reduce((t, x) => t + activeDeals(x.availability?.deals).length, 0);
+    o.inquiries = inqCount(0, false, null, o.from, runSpans(kept));
+  };
+  return rankFits(named, segs, req, neededBy, maxSize, largestNow, recut);
 }
 
 /** The most floors a stack of space is made of: beyond four, a requirement is a building, not a block. */
@@ -322,14 +329,8 @@ function rankFits(
   neededBy: ISODate | null | undefined,
   maxSize: number | null | undefined,
   largestNow: { size: number; floorName: string },
-  recount?: (keys: string[], from: ISODate | null) => number,
+  recut?: (o: FitOption) => void,
 ): { options: FitOption[]; keys: Set<string>; largestNow: { size: number; floorName: string } } {
-  for (const o of options)
-    o.dealList = o.keys.flatMap((k) => {
-      const sg = segs.get(k);
-      return activeDeals([...(sg?.availability?.deals ?? []), ...(sg?.marketed?.deals ?? [])]);
-    });
-  if (neededBy) for (const o of options) o.late = !!o.from && o.from > neededBy;
   if (maxSize) {
     // Too big: keep only if a divisible space in it can be split down to the maximum.
     for (let i = options.length - 1; i >= 0; i--) {
@@ -344,7 +345,7 @@ function rankFits(
           o.keys = fit.keys;
           o.size = fit.size;
           o.splitTo = Math.min(maxSize, fit.size);
-          if (recount) o.inquiries = recount(o.keys, o.from);
+          recut?.(o);
         } else options.splice(i, 1);
         continue;
       }
@@ -361,6 +362,13 @@ function rankFits(
       else options.splice(i, 1);
     }
   }
+  // Deals and lateness are read from each option's final suites (after any cut to the maximum).
+  for (const o of options)
+    o.dealList = o.keys.flatMap((k) => {
+      const sg = segs.get(k);
+      return activeDeals([...(sg?.availability?.deals ?? []), ...(sg?.marketed?.deals ?? [])]);
+    });
+  if (neededBy) for (const o of options) o.late = !!o.from && o.from > neededBy;
   // Best first: on time, available sooner, closest to the requirement.
   const miss = (o: FitOption) => (o.splitTo ? 0 : maxSize && o.size > maxSize ? o.size - maxSize : o.size - req);
   options.sort(

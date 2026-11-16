@@ -480,3 +480,34 @@ describe('round 38: readPlace reads more floor phrases and no dates', () => {
     expect(readPlace('6/1')).toBeNull();
   });
 });
+
+describe('round 39: percentages, thru, "and", about inside a chain, a spaced thousand, floor runs in lists', () => {
+  const q = (s: string) => readQuery(s, '2026-11-09');
+  it('a percentage tolerance is a share of the size', () => {
+    expect(q('12k ± 10%')).toMatchObject({ size: 10800, max: 13200 });
+    expect(q('12k +/- 10%')).toMatchObject({ size: 10800, max: 13200 });
+    expect(q('12k plus or minus 20 percent')).toMatchObject({ size: 9600, max: 14400 });
+    for (const s of ['12k ± 10%', '12k +/- 10%']) expect(q(s), s).not.toHaveProperty('unread');
+  });
+  it('"thru", "through" and ".." are ranges', () => {
+    for (const s of ['10k thru 12k', '10k through 12k', '10k..12k']) {
+      expect(q(s), s).toMatchObject({ size: 10000, max: 12000 });
+      expect(q(s), s).not.toHaveProperty('unread');
+    }
+  });
+  it('a second bare size is listed, not taken as a higher minimum', () => {
+    expect(q('12k and 15k')).toMatchObject({ size: 12000, max: null, unread: ['15k'] });
+    expect(q('between 12k and 15k')).toMatchObject({ size: 12000, max: 15000 });
+    expect(q('at least 12k min 15k')).toMatchObject({ size: 15000, max: null });
+  });
+  it('"about" widens only its own size in a chain', () => {
+    expect(q('12k or about 15k')).toMatchObject({ size: 12000, max: 16500 });
+    expect(q('about 12k or 15k')).toMatchObject({ size: 10800, max: 15000 });
+  });
+  it('"12 000 sf" is 12,000', () => {
+    expect(q('12 000 sf')).toMatchObject({ size: 12000, max: null });
+  });
+  it('a run inside a list of floors', () => {
+    expect(readPlace('floors 8-9 and 11')).toEqual({ kind: 'floors', floors: [8, 9, 11] });
+  });
+});
