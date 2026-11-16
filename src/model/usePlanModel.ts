@@ -337,6 +337,11 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
     const placeFloors = stateIntent && stateIntent.floors !== null && !named.length ? stateIntent.floors : place?.kind === 'floors' ? place.floors : null;
     const missingFloor = placeFloors ? floorWords(placeFloors) : null;
     // A suite asked for on the wrong floor says where it is (round 38: "860 on floor 9" got the name-search line).
+    const suitesOn = (n: number | null) => {
+      const f = n === null ? undefined : floors.find((x) => x.floor.sequence === n);
+      const list = f ? f.segments.map((x) => x.suite).filter((x): x is string => !!x) : [];
+      return list.length ? ` (${f!.floor.name} has Suite${list.length === 1 ? '' : 's'} ${list.length === 1 ? list[0] : `${list.slice(0, -1).join(', ')} and ${list.at(-1)}`})` : '';
+    };
     const elsewhere = place?.kind === 'suites' && place.floor !== null ? floors.find((f) => f.segments.some((x) => place.suites.includes(x.suite?.toLowerCase() ?? ''))) : undefined;
     const span = `${Math.min(...floors.map((f) => f.floor.sequence))}–${Math.max(...floors.map((f) => f.floor.sequence))}`;
     filterLabel = intent?.kind === 'badDate'
@@ -345,6 +350,9 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
       ? `${fmtDate(intent.by)} is a date: add a size to find space by then (“12,000 SF by ${fmtDate(intent.by)}”).`
       : elsewhere && place?.kind === 'suites'
       ? `Suite ${place.suites.join(', ')} is on ${elsewhere.floor.name}, not Floor ${place.floor}.`
+      : place?.kind === 'suites'
+      ? // A suite the building lacks is named, as it is beside a match (round 39: "suite 9999" got the name-search line).
+        `There is no Suite ${place.suites.join(', ')} here${suitesOn(place.floor)}.`
       : missingFloor !== null
       ? `${placeFloors && placeFloors.length > 1 ? `There are no ${missingFloor}` : `There is no ${missingFloor}`} here (Floors ${span}).`
       : stateIntent

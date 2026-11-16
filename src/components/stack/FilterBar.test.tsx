@@ -49,3 +49,14 @@ describe('FilterBar: round 37 (Opus)', () => {
     expect(filterSpeech(null, false, null)).toBe('');
   });
 });
+
+describe('filterSpeech says what the bar shows (round 39)', () => {
+  it('the unused words, the past date and the range\'s fix', () => {
+    const said = filterSpeech('Find 15,000 SF', false, { kind: 'size', size: 15000, max: null, fit: 'any', by: null, pastBy: '2026-11-08', unread: ['nnn', '$35'] });
+    expect(said).toContain('Not used: nnn, $35.');
+    expect(said).toContain('is before the as-of date, so it is not applied.');
+    const inv = filterSpeech('Find 20,000–15,000 SF', false, { kind: 'size', size: 20000, max: 15000, fit: 'any', by: null });
+    expect(inv).toContain('which no space can be.');
+    expect(inv.length).toBeGreaterThan('That asks for at least 20,000 SF and at most 15,000 SF, which no space can be.'.length);
+  });
+});

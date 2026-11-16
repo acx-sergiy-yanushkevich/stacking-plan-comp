@@ -11,8 +11,15 @@ type SizeQuery = Extract<QueryIntent, { kind: 'size' }>;
 /** What the app's live region says for the bar: the sentence a screen reader should hear, or nothing. */
 export function filterSpeech(label: string | null, empty: boolean, find: SizeQuery | null): string {
   if (!label) return '';
-  if (find?.badBy) return `${find.badBy} is not a date on the calendar.`;
-  if (find) return rangeProblem(find.size, find.max) ? `That asks for at least ${num(find.size)} SF and at most ${num(find.max ?? 0)} SF, which no space can be.` : `That reads as a space requirement: ${label.replace(/^Find /, '')}. Press Enter to find it.`;
+  // Everything the bar shows, in its words (round 39: "Not used", the past date and the range's fix were left out).
+  if (find?.badBy) return `${find.badBy} is not a date on the calendar. Correct it to find ${sizeText(find.size, find.max)} SF of space by then.`;
+  if (find) {
+    const inverted = rangeProblem(find.size, find.max);
+    if (inverted) return `That asks for at least ${num(find.size)} SF and at most ${num(find.max ?? 0)} SF, which no space can be. ${inverted}`;
+    const past = find.pastBy ? ` ${fmtDate(find.pastBy)} is before the as-of date, so it is not applied.` : '';
+    const unread = find.unread?.length ? ` Not used: ${find.unread.join(', ')}.` : '';
+    return `That reads as a space requirement: ${label.replace(/^Find /, '')}.${past}${unread} Press Enter to find it.`;
+  }
   return empty ? label : `Showing ${label.replace(/ · /g, ', ')}.`;
 }
 
