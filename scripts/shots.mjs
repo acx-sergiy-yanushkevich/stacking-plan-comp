@@ -44,6 +44,8 @@ export const STATES = [
   ['49-floor-area', '?view=floor&floor=F6&mode=area'],
   // Round 23: a size typed in search, the prospect-safe Rent legend, a refused finder range, the other buildings.
   ['57-search-size', '?view=stack&q=12k%20direct%20by%20jun%202027'],
+  ['77-search-range-bound', '?view=stack&q=12k-15k%20max%2014k'],
+  ['78-search-up-to', '?view=stack&q=not%20over%2014k'],
   ['58-safe-rent', '?view=stack&lens=rent&safe=1'],
   ['60-find-range', '?view=stack&mode=find&req=5000&max=3000'],
   ['61-legacy-west', '?view=building&building=P002'],
@@ -176,6 +178,12 @@ await mobile.waitForTimeout(350);
 await mobile.locator('.sp-pstack__legend summary').click();
 await mobile.waitForTimeout(250);
 await mobile.screenshot({ path: `${out}/56-mobile-legend.png` });
+// Round 38: the phone toolbar's More menu (Area, Worklist, Data issues).
+await mobile.goto(base + '?view=stack', { waitUntil: 'networkidle' });
+await mobile.waitForTimeout(350);
+await mobile.locator('.sp-toolbar__more').click();
+await mobile.waitForTimeout(250);
+await mobile.screenshot({ path: `${out}/76-mobile-more.png` });
 const print = await browser.newPage({ viewport: { width: 1400, height: 1000 }, locale: 'en-US', reducedMotion: 'reduce' });
 hook(print, 'print');
 await print.goto(base + '?view=stack&print=1', { waitUntil: 'networkidle' });

@@ -23,7 +23,8 @@ export function refocusTrigger(tool?: string) {
   requestFrame(() => {
     if (t && t.isConnected) return t.focus();
     const button = tool ? findAll('.sp-toolbar button').find((x) => x.textContent?.trim().startsWith(tool)) : undefined;
-    (button ?? find('#sp-plan'))?.focus();
+    // On a phone Area, Worklist and Data issues sit in the More menu (round 37): its button takes focus back.
+    (button ?? (tool ? find('.sp-toolbar__more') : null) ?? find('#sp-plan'))?.focus();
   });
 }
 /** Focus a plan block (stack cell, timeline bar or plate slice) by segment key. */

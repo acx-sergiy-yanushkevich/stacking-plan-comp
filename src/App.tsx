@@ -34,6 +34,7 @@ import { useIsNarrow, useIsPhone, usePrefersReducedMotion } from './lib/useMedia
 import { selectionSelector, useClearOfSheet } from './components/stack/aboveSheet';
 import { clearSelection, isToolPanel, TOOL_CLOSE } from './components/plan/actions';
 import { focusSegment, refocusTrigger } from './state/focusStore';
+import { filterSpeech } from './components/stack/FilterBar';
 import { Patterns } from './components/plan/Patterns';
 import { fmtDate } from './domain/dates';
 import { num, pct } from './domain/format';
@@ -169,6 +170,15 @@ function Shell() {
     setAnnounce(`Opened ${t.name}, ${floorName}${seg.suite ? `, suite ${seg.suite}` : ''}, ${num(seg.size)} SF. Details are in the side panel; Escape returns to the plan.`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.select]);
+  // The search bar's message, read from the live region that is always on the page (round 38: the bar's own region was
+  // created with its first message, which a screen reader can miss). A pause first, so typing is not read letter by letter.
+  const barSpeech = filterSpeech(model.filterLabel, model.filterEmpty, model.queryFind);
+  useEffect(() => {
+    if (!barSpeech) return;
+    const t = setTimeout(() => setAnnounce(barSpeech), 500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [barSpeech]);
   // Labels are fitted by measuring text: fit them again once the web font has loaded.
   const fontTick = useSyncExternalStore(subscribeFonts, getFontEpoch, () => 0);
 
