@@ -31,6 +31,20 @@ describe('StaxLockup', () => {
 describe('brand CSS', () => {
   const css = readFileSync(new URL('./shell.css', import.meta.url), 'utf8');
   const brand = css.slice(css.indexOf('/* ── Brand'));
+  it('sets the wordmark and the building\'s name in the display face, which the app serves itself', () => {
+    expect(brand).toMatch(/\.sp-lockup__name \{[^}]*font-family: var\(--sp-font-display\)/);
+    expect(css).toMatch(/\.sp-header:not\(\.sp-header--classic\) \.sp-switcher__name \{[^}]*font-family: var\(--sp-font-display\)/);
+    // The byline stays in the text face: it stands back from the name.
+    expect(brand).not.toMatch(/\.sp-lockup__by \{[^}]*font-family/);
+    const tokens = readFileSync(new URL('../../styles/tokens.css', import.meta.url), 'utf8');
+    expect(tokens).toMatch(/--sp-font-display: 'Sora', 'Inter'/);
+    // The checks and the screenshots block Google Fonts (scripts/loadPage.mjs): the face is a file of the app's own.
+    const base = readFileSync(new URL('../../styles/base.css', import.meta.url), 'utf8');
+    const src = /@font-face \{[^}]*font-family: 'Sora'[^}]*url\('([^']+)'\)/.exec(base)?.[1];
+    expect(src).toBe('../assets/fonts/sora-latin.woff2');
+    expect(readFileSync(new URL(`../../styles/${src}`, import.meta.url)).subarray(0, 4).toString()).toBe('wOF2');
+    expect(readFileSync(new URL('../../assets/fonts/SORA-OFL.txt', import.meta.url), 'utf8')).toContain('SIL Open Font License');
+  });
   it('uses the fixed hex colours and no palette token', () => {
     for (const hex of ['#00aff0', '#ff9c00']) expect(brand).toContain(hex);
     expect(brand).not.toMatch(/var\(--sp-color-brand/);
@@ -47,6 +61,11 @@ describe('brand CSS', () => {
       const sheet = readFileSync(new URL(f, import.meta.url), 'utf8');
       expect(sheet, f).not.toMatch(/\.sp-header[^{]*> \.sp-ministack \{[^}]*(width|height):/);
     }
+  });
+  it('the printed byline is dark on white paper whatever theme the report is printed from', () => {
+    // The dark theme's rule is (0,3,0); the report's must out-rank it, not rely on which sheet loads last.
+    const print = readFileSync(new URL('../print/print.css', import.meta.url), 'utf8');
+    expect(print).toMatch(/:root \.sp-print \.sp-print__head \.sp-lockup__by \{ color: #51606f;/);
   });
   it('follows the theme the way tokens.css does: an explicit data-theme, else the OS preference', () => {
     // Without data-theme (aurora, classic, print preview) the page is light unless the OS prefers dark, so the

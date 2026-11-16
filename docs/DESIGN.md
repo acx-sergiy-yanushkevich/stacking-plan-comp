@@ -37,6 +37,7 @@ Design principles, in order:
 
 ### 2.1 Header
 - Object icon tile (SLDS standard-object style, brand blue), title "Stacking plan", property name as the subtitle link, a one-line facts row.
+- In the product skins the header is two cards. The product bar holds the Stax lockup (the mark, "Stax" in Sora 800 and a quieter "by Ascendix") and the controls. The building card holds the building's icon, its name and the facts row. The name is the building switcher: two chevrons in a small bordered box after it say so at rest. Its menu lists the buildings that open first, each on two lines (the name, then city, class and floors) with the open one highlighted and ticked, then the sample entries under the heading "Sample entries · these do not open", one quiet line each.
 - **As of** button: shows the date; amber "Projected" treatment when not today. Opens a popover with a date field, presets (Today, +6 mo, +12 mo, +24 mo, +5 yr) and a miniature of the lease timeline as a scrubber. Esc closes, focus returns.
 - **Prospect-safe** switch: hides tenant names, contacts, rents and deal prospects everywhere, including the inspector, exports and the timeline. A persistent chip in the header says "Prospect-safe on".
 - **Issues** button with count: opens the inspector in Issues mode.
@@ -114,7 +115,7 @@ Light: page `#F3F3F3`, card `#FFFFFF`, border `#E5E5E5`, strong border `#C9C9C9`
 Radii 8 px cards, 4 px blocks and chips. Shadows only on popovers and the bottom sheet. Spacing on a 4 px grid: 4, 8, 12, 16, 24.
 
 ### 3.2 Type
-Inter (Google Fonts) in the prototype; the LWC port uses Salesforce Sans through SLDS. Base 13 px / 1.45. Scale: 11 (labels, uppercase, 0.04 em tracking), 12 (block meta), 13 (body), 15 (floor names, inspector titles), 18 (page title), 22 (KPI values). All numerals tabular (`font-variant-numeric: tabular-nums`). Tenant names weight 600, meta 400 in text-weak.
+Inter (Google Fonts) in the prototype; the LWC port uses Salesforce Sans through SLDS. One display face, Sora, weights 700 and 800, sets the Stax wordmark and the building's name in the product skins and nothing else (`--sp-font-display`); the app serves the font file itself (`src/assets/fonts/`), so the wordmark is the same in the screenshots, in the PDF and offline. Base 13 px / 1.45. Scale: 11 (labels, uppercase, 0.04 em tracking), 12 (block meta), 13 (body), 15 (floor names, inspector titles), 18 (page title), 22 (KPI values). All numerals tabular (`font-variant-numeric: tabular-nums`). Tenant names weight 600, meta 400 in text-weak.
 
 ### 3.3 Status lens tones
 | State | Fill | Text | Extra cue |

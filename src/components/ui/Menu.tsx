@@ -12,6 +12,8 @@ export type MenuItem =
       /** Decoration drawn where the icon would be (a colour swatch). */
       adornment?: ReactNode;
       hint?: string;
+      /** A second, quieter line under the label: the facts that tell this entry from its neighbours. */
+      detail?: string;
       /** Read after the label by assistive technology (`aria-description`): why an entry is disabled, say. */
       description?: string;
       disabled?: boolean;
@@ -85,7 +87,14 @@ export function Menu({ label, items, trigger, align = 'end' }: MenuProps) {
               >
                 {it.icon && <Icon name={it.icon} size={16} />}
                 {it.adornment}
-                <span>{it.label}</span>
+                {it.detail ? (
+                  <span className="sp-menu__text">
+                    <span className="sp-menu__label">{it.label}</span>
+                    <span className="sp-menu__detail">{it.detail}</span>
+                  </span>
+                ) : (
+                  <span>{it.label}</span>
+                )}
                 {/* The hint is read after a pause ("Data issues, 8"), not run into the label (round 38: "Data issues8"). */}
                 {it.hint && (
                   <span className="sp-menu__hint">
