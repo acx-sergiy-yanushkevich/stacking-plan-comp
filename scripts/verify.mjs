@@ -311,12 +311,14 @@ for (const [w, qs] of [320, 360, 390].flatMap((w) => ['', '&safe=1'].map((q) => 
   const row = await ph.evaluate(() => {
     const tabs = document.querySelector('.sp-toolbar .sp-segmented')?.getBoundingClientRect();
     const tools = [...document.querySelectorAll('.sp-toolbar__phone-tools .sp-btn')];
-    const sameRow = !!tabs && tools.length === 2 && tools.every((b) => Math.abs(b.getBoundingClientRect().top - tabs.top) < 8);
+    // At 340 px and under the tools take their own row (round 38); above it they sit beside the tabs.
+    const top0 = tools[0]?.getBoundingClientRect().top ?? 0;
+    const sameRow = !!tabs && tools.length === 2 && tools.every((b) => Math.abs(b.getBoundingClientRect().top - (window.innerWidth <= 340 ? top0 : tabs.top)) < 8);
     const spill = tools.filter((b) => b.scrollWidth > b.clientWidth + 0.5).map((b) => b.textContent.trim());
     const page = document.documentElement.scrollWidth > window.innerWidth;
     return { sameRow, spill, page };
   });
-  check(row.sameRow && !row.spill.length && !row.page, `${w} px${qs}: Find space and ${qs ? 'Area' : 'More'} sit beside the view tabs, whole${row.spill.length ? ` (${row.spill.join(', ')})` : ''}${row.page ? ' (the page scrolls sideways)' : ''}`);
+  check(row.sameRow && !row.spill.length && !row.page, `${w} px${qs}: Find space and ${qs ? 'Area' : 'More'} sit ${w <= 340 ? 'on one row' : 'beside the view tabs'}, whole${row.spill.length ? ` (${row.spill.join(', ')})` : ''}${row.page ? ' (the page scrolls sideways)' : ''}`);
   await ph.close();
 }
 {
@@ -330,6 +332,52 @@ for (const [w, qs] of [320, 360, 390].flatMap((w) => ['', '&safe=1'].map((q) => 
   await ph.waitForTimeout(400);
   const on = await ph.evaluate(() => document.activeElement?.classList.contains('sp-toolbar__more'));
   check(opened === 'issues' && on, `phone: More opens Data issues, and closing it returns focus to More (${opened}, ${on})`);
+  await ph.close();
+}
+// Round 38: a place search names what the building lacks; a suite on the wrong floor says where it is; a date alone says
+// to add a size.
+{
+  const e = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+  const bad = [];
+  for (const [q, want] of [
+    ['860, 870', 'no Suite 870 here'],
+    ['floors 11-14', 'no Floors 13–14 here'],
+    ['860 on floor 9', 'Suite 860 is on Floor 8, not Floor 9.'],
+    ['by 31/12/27', 'add a size to find space by then'],
+    ['sublease floors 7-8', 'Sublease on Floor 7'],
+  ]) {
+    await e.goto(`${base}?view=stack&q=${encodeURIComponent(q)}`, { waitUntil: 'networkidle' });
+    await e.waitForTimeout(200);
+    const text = ((await e.locator('.sp-filterbar').first().textContent().catch(() => '')) ?? '').replace(/\s+/g, ' ');
+    if (!text.includes(want)) bad.push(`${q}: ${text.slice(0, 100)}`);
+  }
+  check(bad.length === 0, `place searches name what is missing or where it is${bad.length ? ` (${bad.join('; ')})` : ''}`);
+  await e.close();
+}
+// Round 38: on a phone a tool's sheet is a history entry, as a suite's is: Timeline, Stack, Find space, then Back closes
+// the sheet and stays on the Stack; opened first and closed with Close, it leaves no dead Back.
+{
+  const ph = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', hasTouch: true, isMobile: true });
+  await ph.goto(`${base}?view=stack`, { waitUntil: 'networkidle' });
+  await ph.getByRole('radio', { name: /Timeline/ }).click();
+  await ph.waitForTimeout(300);
+  await ph.getByRole('radio', { name: /Stack/ }).click();
+  await ph.waitForTimeout(300);
+  await ph.locator('.sp-toolbar__phone-tools').getByRole('button', { name: /Find space/ }).click();
+  await ph.waitForTimeout(400);
+  const opened = new URL(ph.url()).searchParams.get('mode');
+  await ph.goBack();
+  await ph.waitForTimeout(400);
+  const after = new URL(ph.url()).searchParams;
+  check(opened === 'find' && after.get('mode') !== 'find' && after.get('view') === 'stack' && (await ph.locator('.sp-sheet').count()) === 0, `phone: Back closes the Find space sheet and stays on the Stack (${ph.url().replace(base, '')})`);
+  await ph.locator('.sp-toolbar__more').click();
+  await ph.getByRole('menuitemradio', { name: /Worklist/ }).click();
+  await ph.waitForTimeout(400);
+  await ph.locator('.sp-sheet').getByRole('button', { name: /^Close/ }).first().click();
+  await ph.waitForTimeout(500);
+  await ph.goBack();
+  await ph.waitForTimeout(400);
+  check(new URL(ph.url()).searchParams.get('view') === 'timeline', `phone: a Worklist sheet opened and closed leaves no dead Back (${ph.url().replace(base, '')})`);
   await ph.close();
 }
 await browser.close();

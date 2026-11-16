@@ -286,12 +286,13 @@
   .sp-header .sp-btn:has(.sp-header__export-label), .sp-topbar .sp-btn:has(.sp-header__export-label) { min-width: 40px; }
   .sp-header__export-label { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
-/* Touch: 40 px rows in the phone header and 36 px tabs (the toolbar's buttons keep 44), all well over the 24 px minimum. */
+/* Touch: 40 px rows in the phone header, and tabs as tall as the toolbar's 44 px buttons, all well over the 24 px minimum. */
 @media (max-width: 760px) and (pointer: coarse) {
   .sp-header .sp-btn, .sp-topbar .sp-btn { min-height: 40px; }
   .sp-header .sp-btn--icon, .sp-topbar .sp-btn--icon { min-width: 40px; }
   .sp-header .sp-switch, .sp-topbar .sp-switch { min-height: 40px; }
-  .sp-toolbar .sp-segmented__opt { min-height: 36px; }
+  /* 38 px inside the pill's 3 px padding and border: the tabs stand 44 px tall, as the tools beside them (round 38). */
+  .sp-toolbar .sp-segmented__opt { min-height: 38px; }
 }
 
 /* ── Brand ──────────────────────────────────────────────── */
@@ -322,4 +323,15 @@
   .sp-toolbar { padding-block: 4px; }
   .sp-stack__head { padding-block: 6px; }
   .sp-stack__body { padding-top: 6px; padding-bottom: 8px; }
+}
+
+/* Round 38: at 340 px and under the three tabs and the two tools do not fit one row with room to breathe (the Stack pill
+   touched its edge, Area had 4 px each side), so the tools take a row of their own there, and the tabs fill theirs. */
+@media (max-width: 340px) {
+  .sp-toolbar .sp-segmented { flex: 1 1 100%; }
+  .sp-toolbar .sp-segmented--lg .sp-segmented__opt { flex: 1; padding: 0 8px; }
+  .sp-toolbar__phone-tools { flex: 1 1 100%; }
+  .sp-toolbar__phone-tools > .sp-btn:first-child, .sp-toolbar__phone-tools > .sp-pop, .sp-toolbar__phone-tools > .sp-btn:last-child { flex: 1 1 0; }
+  .sp-toolbar__phone-tools .sp-btn, .sp-toolbar__phone-tools .sp-toolbar__more { width: 100%; padding: 0 10px; }
+  .sp-toolbar__more .sp-icon { display: inline-block; }
 }

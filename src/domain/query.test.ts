@@ -413,3 +413,70 @@ describe('sizeText and readPlace (round 37)', () => {
     expect(readPlace('floor 8 delta')).toBeNull();
   });
 });
+
+describe('round 38: ceilings in more words, tolerances, chains, trailing about, floors in a state search', () => {
+  const q = (s: string) => readQuery(s, '2026-11-09');
+  it('"maximum of", "max.", "not to exceed" and their kin are ceilings; "minimum of" is a floor', () => {
+    for (const s of ['maximum of 14k', 'max of 14k', 'with a maximum of 14,000 SF', 'max. 14k', 'not to exceed 14k', 'shall not exceed 14k', 'do not exceed 14,000 sf', 'cannot exceed 14k']) {
+      expect(q(s), s).toMatchObject({ kind: 'size', size: 100, max: 14000 });
+      expect(q(s), s).not.toHaveProperty('unread');
+    }
+    expect(q('minimum of 12k')).toMatchObject({ size: 12000, max: null });
+  });
+  it('"not greater than or equal to" is under, "not less than or equal to" over', () => {
+    expect(q('not greater than or equal to 15,000 SF')).toMatchObject({ size: 100, max: 15000 });
+    expect(q('not less than or equal to 12,000 sf')).toMatchObject({ size: 12000, max: null });
+    for (const s of ['not greater than or equal to 15,000 SF', 'not less than or equal to 12,000 sf']) expect(q(s), s).not.toHaveProperty('unread');
+  });
+  it('a tolerance is the range it spans', () => {
+    expect(q('12k +/- 2k')).toMatchObject({ size: 10000, max: 14000 });
+    expect(q('12k ± 1k')).toMatchObject({ size: 11000, max: 13000 });
+    expect(q('12,000 plus or minus 2,000')).toMatchObject({ size: 10000, max: 14000 });
+  });
+  it('sizes joined by "or" or "/" span from the least to the most; a bare number after "or" is not a size', () => {
+    expect(q('12k or 15k or 18k')).toMatchObject({ size: 12000, max: 18000 });
+    expect(q('10k or 12k or 15k')).toMatchObject({ size: 10000, max: 15000 });
+    expect(q('12k to 15k or 20k')).toMatchObject({ size: 12000, max: 20000 });
+    expect(q('12k/15k')).toMatchObject({ size: 12000, max: 15000 });
+    expect(q('12k/15k')).not.toHaveProperty('unread');
+    expect(q('12k or 15')).toMatchObject({ size: 12000, max: null, unread: ['15'] });
+  });
+  it('"about" after a size, and inside "between"', () => {
+    for (const s of ['12k approx', '12,000 sf or so', '12k approximately']) expect(q(s), s).toMatchObject({ size: 10800, max: 13200 });
+    expect(q('between about 12,000 and 15,000 sf')).toMatchObject({ size: 12000, max: 15000 });
+  });
+  it('a bare four-digit bound after a comparator counts', () => {
+    expect(q('5000-8000 max 6000')).toMatchObject({ size: 5000, max: 6000 });
+    expect(q('5000-8000 max 6000')).not.toHaveProperty('unread');
+  });
+  it('"sub-lease" and "sublease not ok"', () => {
+    expect(q('12k sub-lease')).toMatchObject({ fit: 'sublease' });
+    expect(q('12k sub-lease')).not.toHaveProperty('unread');
+    expect(q('12k sublease not ok')).toMatchObject({ fit: 'direct' });
+  });
+  it('a bad date with a kind word, and a good date alone', () => {
+    expect(q('by 2/30 direct')).toEqual({ kind: 'badDate', badBy: '2/30' });
+    expect(q('by 31/12/27')).toEqual({ kind: 'dateOnly', by: '2027-12-31' });
+  });
+  it('a state search reads a run or a list of floors', () => {
+    expect(q('sublease floors 7-8')).toMatchObject({ kind: 'state', label: 'Sublease', floors: [7, 8], floor: null });
+    expect(q('available on floors 3-5')).toMatchObject({ kind: 'state', floors: [3, 4, 5] });
+    expect(q('available on floor 4')).toMatchObject({ kind: 'state', floors: [4], floor: '4' });
+  });
+});
+
+describe('round 38: readPlace reads more floor phrases and no dates', () => {
+  it('"the 8th floor", lists, "fl."', () => {
+    expect(readPlace('the 8th floor')).toEqual({ kind: 'floors', floors: [8] });
+    expect(readPlace('floors 8 and 9')).toEqual({ kind: 'floors', floors: [8, 9] });
+    expect(readPlace('floors 3, 4 and 5')).toEqual({ kind: 'floors', floors: [3, 4, 5] });
+    expect(readPlace('8th and 9th floors')).toEqual({ kind: 'floors', floors: [8, 9] });
+    expect(readPlace('fl. 8')).toEqual({ kind: 'floors', floors: [8] });
+    expect(readPlace('ste 860 on the 8th floor')).toEqual({ kind: 'suites', suites: ['860'], floor: 8 });
+    expect(readPlace('fl 8 860')).toEqual({ kind: 'suites', suites: ['860'], floor: 8 });
+  });
+  it('a date is not a list of suites', () => {
+    expect(readPlace('31/12/27')).toBeNull();
+    expect(readPlace('6/1')).toBeNull();
+  });
+});

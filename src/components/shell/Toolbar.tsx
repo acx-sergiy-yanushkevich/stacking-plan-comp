@@ -107,7 +107,7 @@ export function Toolbar({ state, patch, issueCount, queryFind }: ToolbarProps) {
           label="More tools"
           items={moreItems}
           trigger={(p) => (
-            <Button {...p} className="sp-toolbar__more" iconRight="chevron-down" active={areaOn || state.mode === 'worklist' || state.mode === 'issues'} count={issueCount} title="Area, Worklist and Data issues">
+            <Button {...p} className="sp-toolbar__more" iconRight="chevron-down" active={areaOn || state.mode === 'worklist' || state.mode === 'issues'} count={issueCount} countLabel={issueCount ? `${issueCount} data issues` : undefined} title="Area, Worklist and Data issues">
               More
             </Button>
           )}

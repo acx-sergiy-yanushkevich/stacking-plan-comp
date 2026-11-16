@@ -81,7 +81,13 @@ export function Menu({ label, items, trigger, align = 'end' }: MenuProps) {
                 {it.icon && <Icon name={it.icon} size={16} />}
                 {it.adornment}
                 <span>{it.label}</span>
-                {it.hint && <span className="sp-menu__hint">{it.hint}</span>}
+                {/* The hint is read after a pause ("Data issues, 8"), not run into the label (round 38: "Data issues8"). */}
+                {it.hint && (
+                  <span className="sp-menu__hint">
+                    <span className="sp-sr-only">, </span>
+                    {it.hint}
+                  </span>
+                )}
                 {it.checked && <Icon name="check" size={16} className="sp-menu__check" />}
               </button>
             </li>

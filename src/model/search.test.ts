@@ -4,7 +4,7 @@ import { deriveFloors, type FloorView } from '../domain/derive';
 import { computeKpis } from '../domain/kpis';
 import { readQuery } from '../domain/query';
 import { publishedFloors, safeFloors, safeKpis } from '../domain/safe';
-import { search } from './usePlanModel';
+import { floorWords, search } from './usePlanModel';
 
 /** The floors and KPIs the plan draws, as `usePlanModel` derives them. */
 function plan(safe: boolean) {
@@ -111,5 +111,28 @@ describe('round 37 (Opus): unit, a trailing period, a list of suites, a run of f
     const { floors } = plan(false);
     const lit = new Set(run(floors, 'floors 3-5', false).values());
     expect([...lit].sort()).toEqual(['Floor 3', 'Floor 4', 'Floor 5']);
+  });
+});
+
+describe('round 38: floors in a state search, and what a place search could not find', () => {
+  it('"sublease floors 7-8" lights Floor 7\'s sublease', () => {
+    const { floors } = plan(false);
+    const hits = run(floors, 'sublease floors 7-8', false);
+    expect(hits.size).toBeGreaterThan(0);
+    expect([...hits.values()].every((r) => r === 'Sublease on Floor 7')).toBe(true);
+  });
+  it('"the 8th floor" and "floors 8 and 9" light those floors', () => {
+    const { floors } = plan(false);
+    expect([...new Set(run(floors, 'the 8th floor', false).values())]).toEqual(['Floor 8']);
+    expect([...new Set(run(floors, 'floors 8 and 9', false).values())].sort()).toEqual(['Floor 8', 'Floor 9']);
+  });
+  it('"31/12/27" lights no suite', () => {
+    const { floors } = plan(false);
+    expect(run(floors, '31/12/27', false).size).toBe(0);
+  });
+  it('floorWords', () => {
+    expect(floorWords([13])).toBe('Floor 13');
+    expect(floorWords([14, 13])).toBe('Floors 13–14');
+    expect(floorWords([3, 5, 9])).toBe('Floors 3, 5 and 9');
   });
 });

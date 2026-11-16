@@ -12,7 +12,15 @@ const navigates = (a: PlanState, b: PlanState): boolean =>
  * On a phone or a tablet (up to 1099 px, where the side panel gives way to a sheet: shell.css) a suite opens a sheet over the plan, and the system Back is how a phone closes it (round 35: Back left the
  * view instead). Opening one is a history entry there; on a desktop the suite opens in the side panel and is an edit.
  */
-const opensSheet = (a: PlanState, b: PlanState): boolean => b.select !== null && a.select !== b.select && a.select === null && media('(max-width: 1099px)').matches();
+const opensSheet = (a: PlanState, b: PlanState): boolean => !sheetOn(a) && sheetOn(b) && media('(max-width: 1099px)').matches();
+
+/**
+ * A sheet is up on a phone or tablet: a suite's, or a tool's (Find space, Worklist, Data issues, Area). Round 38: only a
+ * suite's sheet was a history entry, so Back from a tool's sheet also left the view, or the app. The Map's Area panel
+ * stands in the page under the map, not in a sheet (App.tsx `mapAreaInline`), so it is no entry of its own.
+ */
+const TOOL_SHEETS: ReadonlySet<PlanState['mode']> = new Set(['find', 'worklist', 'issues', 'area', 'brief']);
+const sheetOn = (s: PlanState): boolean => s.select !== null || (TOOL_SHEETS.has(s.mode) && !(s.view === 'map' && s.mode === 'area'));
 
 /**
  * One state object for the whole plan, mirrored into the address (`lib/host`: in a browser,
@@ -54,11 +62,11 @@ export function usePlanState(today: ISODate): [PlanState, (patch: Partial<PlanSt
       popped.current = false;
       // Back or Forward onto a sheet's own entry (marked when it was added): Close still steps back over it (round 37:
       // Back, Forward, then Close left a Back press that did nothing).
-      sheetEntry.current = state.select !== null && onSheetEntry();
+      sheetEntry.current = sheetOn(state) && onSheetEntry();
       writeUrl(serializeState(state, today), false);
       return;
     }
-    if (prev && sheetEntry.current && prev.select !== null && state.select === null && !navigates(prev, state)) {
+    if (prev && sheetEntry.current && sheetOn(prev) && !sheetOn(state) && !navigates(prev, state)) {
       sheetEntry.current = false;
       closing.current = state;
       historyBack();

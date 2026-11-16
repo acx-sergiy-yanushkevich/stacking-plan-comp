@@ -8,6 +8,14 @@ import { DotJoin } from '../hero/DotJoin';
 
 type SizeQuery = Extract<QueryIntent, { kind: 'size' }>;
 
+/** What the app's live region says for the bar: the sentence a screen reader should hear, or nothing. */
+export function filterSpeech(label: string | null, empty: boolean, find: SizeQuery | null): string {
+  if (!label) return '';
+  if (find?.badBy) return `${find.badBy} is not a date on the calendar.`;
+  if (find) return rangeProblem(find.size, find.max) ? `That asks for at least ${num(find.size)} SF and at most ${num(find.max ?? 0)} SF, which no space can be.` : `That reads as a space requirement: ${label.replace(/^Find /, '')}. Press Enter to find it.`;
+  return empty ? label : `Showing ${label.replace(/ · /g, ', ')}.`;
+}
+
 /** The search box's requirement, run in Find space: the query is cleared, the requirement is the finder's. */
 export const findFromQuery = (f: SizeQuery): Partial<PlanState> => ({ q: '', req: f.size, max: f.max, by: f.by, fit: f.fit, inquiry: null, window: null, bucket: null, mode: 'find' });
 
@@ -30,8 +38,9 @@ export interface FilterBarProps {
 const TO_PLAN: Partial<PlanState> = { view: 'building' };
 
 /**
- * Names the active filter above the plan and offers one Clear. Only the message is the live region, so a screen reader
- * reads the sentence and not the buttons' names with it (round 37).
+ * Names the active filter above the plan and offers one Clear. The bar is not a live region: its message is read from
+ * the app's own, which is always there (`filterSpeech`, App.tsx), so the first message is not lost with a region created
+ * together with it (round 38), and the buttons' names are never read with it (round 37).
  */
 export function FilterBar({ label, empty = false, alternatives, find, planElsewhere, patch }: FilterBarProps) {
   // A requirement with a date the calendar has not: say so and offer nothing to run until it is corrected.
@@ -39,7 +48,7 @@ export function FilterBar({ label, empty = false, alternatives, find, planElsewh
     return (
       <div className="sp-filterbar sp-filterbar--offer">
         <Icon name="warning" size={14} />
-        <span role="status">
+        <span>
           {find.badBy} is not a date on the calendar. Correct it to find {sizeText(find.size, find.max)} SF of space by then.
         </span>
         <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '', fit: 'any' })}>
@@ -53,7 +62,7 @@ export function FilterBar({ label, empty = false, alternatives, find, planElsewh
     return (
       <div className="sp-filterbar sp-filterbar--offer">
         <Icon name="warning" size={14} />
-        <span role="status">
+        <span>
           That asks for at least {num(find.size)} SF and at most {num(find.max ?? 0)} SF, which no space can be. {inverted}
         </span>
         <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '', fit: 'any' })}>
@@ -65,7 +74,7 @@ export function FilterBar({ label, empty = false, alternatives, find, planElsewh
     return (
       <div className="sp-filterbar sp-filterbar--offer">
         <Icon name="filter" size={14} />
-        <span role="status">
+        <span>
           That reads as a space requirement: <strong>{label.replace(/^Find /, '')}</strong>.
           {find.pastBy ? ` ${fmtDate(find.pastBy)} is before the as-of date, so it is not applied.` : ''}
           {find.unread?.length ? ` Not used: ${find.unread.join(', ')}.` : ''}
@@ -82,7 +91,7 @@ export function FilterBar({ label, empty = false, alternatives, find, planElsewh
     return (
       <div className="sp-filterbar">
         <Icon name="filter" size={14} />
-        <span role="status">
+        <span>
           On the plan: <strong><DotJoin parts={label.split(' · ')} /></strong>.
         </span>
         <Button size="sm" variant="brand" iconRight="chevron-right" className="sp-filterbar__find" onClick={() => patch(TO_PLAN)}>
@@ -99,7 +108,7 @@ export function FilterBar({ label, empty = false, alternatives, find, planElsewh
       {/* The label is facts with a "·" between them ("Space that fits 12,000+ SF · 1 option"). On a narrow
           window the sentence wraps: between facts, or inside a long one, never with a separator at the end
           of a line or the start of the next (DotJoin). */}
-      <span role="status">
+      <span>
         {empty ? (
           label
         ) : (

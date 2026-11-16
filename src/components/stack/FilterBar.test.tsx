@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import { renderToString } from 'react-dom/server';
-import { FilterBar } from './FilterBar';
+import { FilterBar, filterSpeech } from './FilterBar';
 
 describe('FilterBar: a requirement with a date the calendar has not (round 26)', () => {
   it('names the date and offers nothing to run until it is corrected', () => {
@@ -39,12 +39,13 @@ describe('FilterBar: nothing matched (round 36)', () => {
 });
 
 describe('FilterBar: round 37 (Opus)', () => {
-  it('a bare ceiling offers "up to", and only the message is the live region', () => {
+  it('a bare ceiling offers "up to", and the bar is no live region of its own (round 38: the app\'s always-present one reads it)', () => {
     const html = renderToString(<FilterBar label="Find up to 14,000 SF" find={{ kind: 'size', size: 100, max: 14000, fit: 'any', by: null }} patch={() => {}} />).replace(/<!-- -->/g, '');
     expect(html).toContain('Find up to 14,000 SF of space');
     expect(html).not.toContain('100–14,000');
-    expect(html).not.toMatch(/<div[^>]*role="status"/);
-    expect(html.match(/role="status"/g)).toHaveLength(1);
-    expect(html).toMatch(/<span role="status">[^<]*That reads as a space requirement/);
+    expect(html).not.toContain('role="status"');
+    expect(filterSpeech('Find up to 14,000 SF', false, { kind: 'size', size: 100, max: 14000, fit: 'any', by: null })).toBe('That reads as a space requirement: up to 14,000 SF. Press Enter to find it.');
+    expect(filterSpeech('There is no Floor 99 here (Floors 1–12).', true, null)).toBe('There is no Floor 99 here (Floors 1–12).');
+    expect(filterSpeech(null, false, null)).toBe('');
   });
 });
