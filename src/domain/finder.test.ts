@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { property, TODAY } from '../data/mock/property';
 import { deriveFloors } from './derive';
 import { buildingById } from '../data/mock/buildings';
-import { alternativesListed, alternativesNote, checkNeededBy, chosenOption, filterFits, findFits, floorWindows, matchingInquiries, nearMisses, neededByDate, noFit, optionSuites, rangeProblem, searchSpace, splitWindow, stackName, suitesLabel, type FitOption, type Requirement } from './finder';
+import { alternativesListed, alternativesNote, checkNeededBy, chosenOption, filterFits, findFits, floorWindows, matchingInquiries, nearMisses, neededByDate, noFit, optionSuites, rangeProblem, runSpans, searchSpace, splitWindow, stackName, suitesLabel, type FitOption, type Requirement } from './finder';
 import { legacyWest } from '../data/mock/buildings/legacyWest';
 import type { Availability, Floor, Lease, Property } from './types';
+import type { Segment } from './derive';
 
 const at = (asOf: string) => deriveFloors(property, asOf, TODAY);
 const withKeys = (options: FitOption[], keys: string[]) =>
@@ -126,7 +127,7 @@ describe('matchingInquiries', () => {
   it('uses whole-suite sizes when a run has no divisible suite', () => {
     const hits = matchingInquiries(
       property.inquiries,
-      { size: 7400, divisible: false, minDivisible: null, from: null, sizes: [4200, 7400, 3200] },
+      { size: 7400, divisible: false, minDivisible: null, from: null, spans: [[4200, 4200], [7400, 7400], [3200, 3200]] },
       TODAY,
     );
     expect(hits.map((i) => i.id)).toEqual(['I03', 'I04']); // Kestrel takes 3,200; Pinecrest takes both suites
@@ -702,7 +703,7 @@ describe('stacked floors beyond two (round 23: Legacy West, 60,000 SF, found "No
     expect(sizes).toEqual(expect.arrayContaining([['Floors 19–20', 52000], ['Floors 18–19', 52000]]));
     const block = r.options.find((o) => o.size === 78000)!;
     expect(block.inquiries).toBeGreaterThanOrEqual(1);
-    expect(matchingInquiries([granite], { size: 78000, divisible: false, minDivisible: null, from: null, sizes: [78000] }, TODAY)).toHaveLength(1);
+    expect(matchingInquiries([granite], { size: 78000, divisible: false, minDivisible: null, from: null, spans: [[78000, 78000]] }, TODAY)).toHaveLength(1);
   });
 
   it('a stack is never above four floors, and every floor in it is adjacent and has space', () => {
@@ -750,5 +751,22 @@ describe('a multi-floor stack is split only to a size it can be (round 38)', () 
   });
   it('Bluebonnet Floors 2-3 are not offered for 4,000–6,000 SF (their smallest is 6,900 SF)', () => {
     expect(fits('P007', 4000, 6000).some((o) => o.multiFloor && o.floorName.includes('2') && o.floorName.includes('3'))).toBe(false);
+  });
+});
+
+describe('round 38 (Sol): inquiry counts use the sizes a run can really be', () => {
+  const seg = (size: number, minDivisible?: number) => ({ size, availability: minDivisible ? ({ divisible: true, minDivisible } as Segment['availability']) : ({ divisible: false, minDivisible: null } as Segment['availability']) });
+  it('a whole suite beside a divisible one leaves a gap', () => {
+    const spans = runSpans([seg(10000), seg(6000, 2000)]);
+    expect(spans).toEqual([[10000, 10000], [12000, 16000], [2000, 6000]]);
+    const inq = (min: number, max: number) => ({ ...property.inquiries[0], minSize: min, maxSize: max, neededBy: '2030-12-31' as const });
+    const fits = (min: number, max: number) => matchingInquiries([inq(min, max)], { size: 16000, divisible: false, minDivisible: null, from: null, spans }, TODAY).length;
+    expect(fits(8000, 8000)).toBe(0);
+    expect(fits(7000, 9000)).toBe(0);
+    expect(fits(5000, 7000)).toBe(1);
+    expect(fits(13000, 14000)).toBe(1);
+  });
+  it('three suites: the middle one is whole, the ends may be split', () => {
+    expect(runSpans([seg(4000, 1000), seg(5000), seg(3000, 1000)])).toContainEqual([7000, 12000]);
   });
 });

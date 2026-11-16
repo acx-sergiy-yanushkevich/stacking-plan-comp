@@ -46,19 +46,42 @@ export function filterFits(options: FitOption[], type: FitType): FitOption[] {
  */
 export function matchingInquiries(
   inquiries: Inquiry[],
-  space: { size: number; divisible: boolean; minDivisible: number | null; from: ISODate | null; sizes?: number[] },
+  space: { size: number; divisible: boolean; minDivisible: number | null; from: ISODate | null; spans?: ReadonlyArray<Span> },
   asOf: ISODate,
 ): Inquiry[] {
   return inquiries.filter((i) => {
     // Same rule as the requirement finder: within the range, or divisible down to it.
-    // `sizes` = the exact sizes achievable from adjacent whole suites (no suite in the run is divisible).
-    const fitsRange = space.sizes
-      ? space.sizes.some((z) => z >= i.minSize && z <= i.maxSize)
+    // `spans` = the sizes a run of adjacent suites can really be (`runSpans`), when the space is more than one suite.
+    const fitsRange = space.spans
+      ? space.spans.some(([lo, hi]) => lo <= i.maxSize && hi >= i.minSize)
       : space.size >= i.minSize && space.size <= i.maxSize;
-    const canSplit = !space.sizes && space.divisible && space.size >= i.minSize && (space.minDivisible ?? 0) <= i.maxSize;
+    const canSplit = !space.spans && space.divisible && space.size >= i.minSize && (space.minDivisible ?? 0) <= i.maxSize;
     const when = space.from && space.from > asOf ? space.from : asOf;
     return (fitsRange || canSplit) && when <= i.neededBy;
   });
+}
+
+/** A range of sizes a space can be leased at, low to high; a single size is a range of one. */
+export type Span = readonly [number, number];
+
+/**
+ * The sizes a run of adjacent suites can really be leased at: any unbroken stretch of it, each suite inside the
+ * stretch whole, a divisible suite at either end anywhere from its smallest division to all of it. Round 38 (Sol): the
+ * inquiry count read a mixed run as every size from its smallest division up, so a 10,000 SF suite beside a 6,000 SF
+ * suite divisible to 2,000 SF "fit" an 8,000 SF inquiry that no stretch of it can be.
+ */
+export function runSpans(segs: ReadonlyArray<Pick<Segment, 'size' | 'availability'>>): Span[] {
+  const low = (x: Pick<Segment, 'size' | 'availability'>) => (x.availability?.divisible ? Math.min(x.size, x.availability.minDivisible ?? x.size) : x.size);
+  const out: Span[] = [];
+  for (let a = 0; a < segs.length; a++) {
+    out.push([low(segs[a]), segs[a].size]);
+    let inner = 0;
+    for (let b = a + 1; b < segs.length; b++) {
+      out.push([low(segs[a]) + inner + low(segs[b]), segs[a].size + inner + segs[b].size]);
+      inner += segs[b].size;
+    }
+  }
+  return out;
 }
 
 /**
@@ -76,18 +99,8 @@ export function findFits(
   asOf?: ISODate,
 ): { options: FitOption[]; keys: Set<string>; largestNow: { size: number; floorName: string } } {
   const at = asOf ?? '0000-01-01'; // deterministic: callers pass the as-of date
-  const inqCount = (size: number, divisible: boolean, minDivisible: number | null, from: ISODate | null, sizes?: number[]) =>
-    matchingInquiries(inquiries, { size, divisible, minDivisible, from, sizes }, at).length;
-  /** Sizes a tenant can take from adjacent whole suites: every contiguous sub-run's total. */
-  const runSizes = (segs: Segment[]) => {
-    const out = new Set<number>();
-    for (let a = 0; a < segs.length; a++) {
-      let t = 0;
-      for (let b = a; b < segs.length; b++) out.add((t += segs[b].size));
-    }
-    return [...out];
-  };
-  const anyDivisible = (segs: Segment[]) => segs.some((x) => x.availability?.divisible);
+  const inqCount = (size: number, divisible: boolean, minDivisible: number | null, from: ISODate | null, spans?: ReadonlyArray<Span>) =>
+    matchingInquiries(inquiries, { size, divisible, minDivisible, from, spans }, at).length;
   // Options are collected without their suite names; every one is named once, below.
   const options: Array<Omit<FitOption, 'suites'> & { suites?: string }> = [];
   let largestNow = { size: 0, floorName: '' };
@@ -122,9 +135,7 @@ export function findFits(
           keys: run.map((s) => s.key),
           from,
           type: 'Direct',
-          inquiries: anyDivisible(run)
-            ? inqCount(size, true, Math.min(...run.map((x) => (x.availability?.divisible ? (x.availability.minDivisible ?? x.size) : x.size))), from)
-            : inqCount(size, false, null, from, runSizes(run)),
+          inquiries: inqCount(size, false, null, from, runSpans(run)),
           deals: run.reduce((s, x) => s + activeDeals(x.availability?.deals).length, 0),
           divisible: run.length > 1 || !!run[0].availability?.divisible,
           contiguous: run.length > 1,
@@ -193,8 +204,9 @@ export function findFits(
     for (const w of floorWindows(runs.map((r) => r.reduce((t, s) => t + s.size, 0)), req, maxSize ?? null, 'grow')) {
       const stack = runs.slice(w.top, w.bottom + 1);
       const segs = stack.flat();
-      // Sizes a tenant can take: any floor's run as suites, or whole floors stacked together.
-      const sizes = [...new Set([...stack.flatMap(runSizes), ...stackSizes(stack.map((r) => r.reduce((t, s) => t + s.size, 0)))])];
+      // Sizes a tenant can take: any floor's run as its suites allow, or whole floors stacked together (a part floor at a
+      // stack's end is not counted: the inquiry badge claims only what is sure).
+      const spans: Span[] = [...stack.flatMap(runSpans), ...stackSizes(stack.map((r) => r.reduce((t, s) => t + s.size, 0))).map((z): Span => [z, z])];
       options.push({
         floorId: floors[w.top].floor.id,
         floorName: stackName(floors, w.top, w.bottom),
@@ -202,7 +214,7 @@ export function findFits(
         keys: segs.map((s) => s.key),
         from: null,
         type: 'Direct',
-        inquiries: anyDivisible(segs) ? inqCount(w.size, true, Math.min(...segs.map((s) => s.size)), null) : inqCount(w.size, false, null, null, sizes),
+        inquiries: inqCount(w.size, false, null, null, spans),
         deals: segs.reduce((t, s) => t + activeDeals(s.availability?.deals).length, 0),
         multiFloor: true,
       });
@@ -210,7 +222,9 @@ export function findFits(
   }
   const segs = segmentIndex(floors);
   const named: FitOption[] = options.map((o) => ({ ...o, suites: suitesLabel(floors, o.keys) }));
-  return rankFits(named, segs, req, neededBy, maxSize, largestNow);
+  // An option cut down to fit the maximum is a new set of suites: its inquiries are counted again (round 38, Sol).
+  const recount = (keys: string[], from: ISODate | null) => inqCount(0, false, null, from, runSpans(keys.map((k) => segs.get(k)).filter((x): x is Segment => !!x)));
+  return rankFits(named, segs, req, neededBy, maxSize, largestNow, recount);
 }
 
 /** The most floors a stack of space is made of: beyond four, a requirement is a building, not a block. */
@@ -308,6 +322,7 @@ function rankFits(
   neededBy: ISODate | null | undefined,
   maxSize: number | null | undefined,
   largestNow: { size: number; floorName: string },
+  recount?: (keys: string[], from: ISODate | null) => number,
 ): { options: FitOption[]; keys: Set<string>; largestNow: { size: number; floorName: string } } {
   for (const o of options)
     o.dealList = o.keys.flatMap((k) => {
@@ -329,6 +344,7 @@ function rankFits(
           o.keys = fit.keys;
           o.size = fit.size;
           o.splitTo = Math.min(maxSize, fit.size);
+          if (recount) o.inquiries = recount(o.keys, o.from);
         } else options.splice(i, 1);
         continue;
       }
