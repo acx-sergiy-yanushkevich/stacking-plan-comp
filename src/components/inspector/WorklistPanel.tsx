@@ -83,7 +83,7 @@ export function WorklistPanel({ model, state, patch }: WorklistPanelProps) {
           <ul className="sp-ins__list" aria-label={`${WINDOW_LABEL[window]} worklist`}>
             {rows.map((row) => {
               const lease = row.seg.lease!;
-              const rent = rentVisible(lease, safe) && lease.rate !== null ? rate(lease.rate, lease.rateUnit, lease.leaseType) : canShowInPlaceRent(safe) && lease.confidential ? 'Confidential' : 'Rent hidden';
+              const rent = rentVisible(lease, safe) && lease.rate !== null ? rate(lease.rate, lease.rateUnit, lease.leaseType) : canShowInPlaceRent(safe) && lease.confidential ? 'Confidential' : canShowInPlaceRent(safe) ? 'Not on record' : 'Rent hidden';
               const touch = row.lastTouch ? `${daysBetween(row.lastTouch.date, today)} d ago · ${row.lastTouch.type}` : 'No touch logged';
               const broker = brokerLabel(row.broker, safe);
               const marketed = marketedFor(row.seg, safe);

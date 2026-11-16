@@ -14,6 +14,11 @@
    by the height of a panel that began 270 px down the page and was a window tall. Beside a short view it
    keeps a workable height. */
 .sp-inspector { position: sticky; top: var(--sp-space-3); align-self: stretch; contain: size; min-height: min(520px, calc(100vh - 2 * var(--sp-space-3))); max-height: calc(100vh - 2 * var(--sp-space-3)); display: flex; flex-direction: column; overflow: hidden; }
+/* Entrance (DESIGN.md §3.5): the side panel slides in from the edge it stands on when it joins the plan (a
+   suite or a tool opened from the Building or Floor view). The plan takes its new width at once: it is
+   fitted by measuring, and is never laid out part-way. */
+.sp-main > .sp-inspector { animation: sp-panel-in var(--sp-ease-move) backwards; }
+@keyframes sp-panel-in { from { opacity: 0; translate: 16px 0; } }
 @media (max-width: 1099px) { .sp-main { grid-template-columns: minmax(0, 1fr); } .sp-inspector { display: none; } }
 @media (max-width: 760px) { .sp-app { padding: var(--sp-space-2); gap: var(--sp-space-2); } .sp-app:not([data-mode='building']) { padding-bottom: 50vh; } }
 
@@ -170,7 +175,7 @@
   .sp-header__title h1, .sp-header__title .sp-switcher__name, .sp-header:not(.sp-header--classic) .sp-header__title h1, .sp-header:not(.sp-header--classic) .sp-header__title .sp-switcher__name { font-size: var(--sp-text-15); }
   .sp-header__property { font-size: var(--sp-text-13); }
   .sp-header__actions { gap: 6px; }
-  .sp-header__actions .sp-btn { height: 28px; font-size: var(--sp-text-12); }
+  .sp-header__actions .sp-btn { height: 40px; font-size: var(--sp-text-12); }
   .sp-header, .sp-header--classic { flex-wrap: wrap; padding: var(--sp-space-3); }
   .sp-header__icon { width: 32px; height: 32px; }
   .sp-header__actions { width: 100%; justify-content: flex-start; }
@@ -185,6 +190,9 @@
 .sp-asof__note { font-size: var(--sp-text-12); color: var(--sp-color-text-weak); }
 .sp-asof__row { display: flex; gap: 8px; align-items: flex-end; }
 .sp-asof__row .sp-field { flex: 1; }
+/* Play through time: the button, then what it does, on one line. */
+.sp-asof__play { display: flex; align-items: center; gap: 10px; }
+.sp-asof__play .sp-btn { flex: none; }
 
 /* ── Toolbar ────────────────────────────────────────────── */
 .sp-toolbar { display: flex; align-items: center; gap: var(--sp-space-3); padding: 8px var(--sp-space-3); flex-wrap: wrap; }
@@ -207,13 +215,33 @@
 @media (max-width: 760px) {
   .sp-toolbar { gap: 6px; padding: 6px 8px; }
   .sp-toolbar .sp-segmented--lg .sp-segmented__opt { padding: 0 8px; }
-  /* Phone: the search on its own row, the tool buttons sharing the row under it. */
+  /* Phone: the search on its own row under the view tabs and the tools. */
   .sp-toolbar__find { flex: 1 1 100%; flex-wrap: wrap; gap: 6px; }
   .sp-toolbar__search { flex: 1 1 100%; }
-  .sp-toolbar__find .sp-toolbar__group { width: 100%; }
-  .sp-toolbar__find .sp-toolbar__group .sp-btn { flex: 1; height: 28px; padding: 0 8px; font-size: var(--sp-text-12); }
-  /* Four tools on one row (Find space, Area, Worklist, Issues): the words carry them, so the icons go at 420 px and under. */
-  .sp-toolbar__find .sp-toolbar__group .sp-btn { min-width: 0; }
+  /* Round 37 (Sol): Find space and More share the view tabs' row, so the tools take no row of their own. The words
+     carry them; Find space keeps its icon where there is room. */
+  .sp-toolbar__phone-tools { flex: 1 1 0; min-width: 0; gap: 6px; }
+  .sp-toolbar__phone-tools > .sp-btn, .sp-toolbar__phone-tools > .sp-pop { flex: 1 1 auto; min-width: 0; }
+  .sp-toolbar__phone-tools .sp-btn { width: 100%; height: 44px; padding: 0 8px; font-size: var(--sp-text-12); min-width: 0; justify-content: center; }
+  /* More is as wide as its word and count; Find space takes the rest of the row. */
+  .sp-toolbar__phone-tools > .sp-pop { flex: none; }
+  .sp-toolbar__phone-tools .sp-toolbar__more { width: auto; padding: 0 10px; }
+}
+@media (max-width: 420px) {
+  .sp-toolbar__phone-tools .sp-btn > .sp-icon:first-child { display: none; }
+  .sp-toolbar__phone-tools .sp-btn { padding: 0 6px; gap: 3px; }
+}
+@media (max-width: 360px) {
+  .sp-toolbar { gap: 4px; }
+  .sp-toolbar .sp-segmented--lg .sp-segmented__opt { padding: 0 4px; }
+  .sp-toolbar__phone-tools { gap: 4px; }
+  .sp-toolbar__phone-tools > .sp-pop, .sp-toolbar__phone-tools > .sp-btn:last-child { flex: none; }
+  .sp-toolbar__phone-tools .sp-btn { width: auto; }
+  .sp-toolbar__phone-tools .sp-toolbar__more { padding: 0 6px; }
+  .sp-toolbar__phone-tools > .sp-btn:first-child { flex: 1 1 auto; }
+  /* The word and the count say it is a menu (its role says so too); the arrow goes for room. */
+  .sp-toolbar__more .sp-icon { display: none; }
+  .sp-toolbar__phone-tools .sp-btn { padding: 0 4px; }
 }
 
 /* ── A tablet, 761–1099 px ──────────────────────────────── */
@@ -241,7 +269,10 @@
   .sp-header__title { gap: 2px 6px; }
   /* The controls flow as the header's own items, on the row under the title (two rows from 421 to 760 px). */
   .sp-header__actions { display: contents; }
-  .sp-header .sp-btn, .sp-topbar .sp-btn { height: 28px; font-size: var(--sp-text-12); padding: 0 9px; gap: 5px; }
+  /* Round 31: a finger's target is 44 px (round 30: 28 px). The header's buttons are 40 px tall with the touch area
+     reaching 2 px past each side (44 px in all; the gap between them is 6 px), so the two rows of them do not push the plan down the screen. */
+  .sp-header .sp-btn, .sp-topbar .sp-btn { height: 40px; font-size: var(--sp-text-12); padding: 0 9px; gap: 5px; position: relative; }
+  .sp-header .sp-btn::after, .sp-topbar .sp-btn::after { content: ''; position: absolute; inset: -2px; }
   .sp-header .sp-btn--icon, .sp-topbar .sp-btn--icon { padding: 0; }
   .sp-toolbar { padding: 5px 8px; gap: 5px 6px; }
   :root[data-skin] .sp-toolbar .sp-segmented { padding: 2px; }
@@ -261,6 +292,8 @@
 @media (max-width: 359px) {
   .sp-topbar { gap: 4px; padding-left: 8px; padding-right: 8px; }
   .sp-topbar .sp-btn { padding: 0 6px; }
+  /* The touch area stays 2 px short of its neighbour at a 4 px gap (round 32: 2 px overlap at 320 px). */
+  .sp-header .sp-btn::after, .sp-topbar .sp-btn::after { inset: -2px; }
 }
 @media (max-width: 420px) {
   .sp-header .sp-btn, .sp-topbar .sp-btn { padding: 0 8px; }
@@ -271,17 +304,18 @@
   .sp-header .sp-btn:has(.sp-header__export-label), .sp-topbar .sp-btn:has(.sp-header__export-label) { min-width: 40px; }
   .sp-header__export-label { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
-/* Touch: 40 px rows in the phone header and 36 px tabs (the toolbar's buttons keep 44), all well over the 24 px minimum. */
+/* Touch: 40 px rows in the phone header, and tabs as tall as the toolbar's 44 px buttons, all well over the 24 px minimum. */
 @media (max-width: 760px) and (pointer: coarse) {
   .sp-header .sp-btn, .sp-topbar .sp-btn { min-height: 40px; }
   .sp-header .sp-btn--icon, .sp-topbar .sp-btn--icon { min-width: 40px; }
   .sp-header .sp-switch, .sp-topbar .sp-switch { min-height: 40px; }
-  .sp-toolbar .sp-segmented__opt { min-height: 36px; }
+  /* 38 px inside the pill's 3 px padding and border: the tabs stand 44 px tall, as the tools beside them (round 38). */
+  .sp-toolbar .sp-segmented__opt { min-height: 38px; }
 }
 
 /* ── Brand ──────────────────────────────────────────────── */
 /* The Stax mark and lockup are drawn in the brand's own colours, as literal hex: the same under every
-   palette and both themes. The mark is its bars alone, on no tile and with no border (Clara, Nov 12), at the
+   palette and both themes. The mark is its bars alone, on no tile and with no border (review, Nov 12), at the
    size of the building card's icon; only the byline's colour follows the theme. */
 .sp-mark { display: inline-grid; place-items: center; flex: none; }
 .sp-mark svg { display: block; }
@@ -296,4 +330,28 @@
 :root[data-theme='dark'] .sp-lockup__by { color: #b9c6d4; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) .sp-lockup__by { color: #b9c6d4; }
+}
+
+/* ── A laptop, 1100 px and wider but 900 px tall or less ─────────────────────────────── */
+/* Round 31: a 12-floor building ran 130 px past a 13-inch window (830 px) even with its rows fitted, so the bands
+   above the plan give up air, not content: the gaps between them and the padding inside them. Nothing is hidden
+   and no control is smaller. The rows then fit (fitRows.ts) and the page does not scroll. */
+@media (min-width: 1100px) and (max-height: 900px) {
+  .sp-app { gap: 6px; padding-top: 6px; padding-bottom: var(--sp-space-3); }
+  :root[data-skin] .sp-header { padding: 6px 16px; }
+  :root[data-skin] .sp-topbar { padding-block: 4px; }
+  .sp-toolbar { padding-block: 4px; }
+  .sp-stack__head { padding-block: 6px; }
+  .sp-stack__body { padding-top: 6px; padding-bottom: 8px; }
+}
+
+/* Round 38: at 340 px and under the three tabs and the two tools do not fit one row with room to breathe (the Stack pill
+   touched its edge, Area had 4 px each side), so the tools take a row of their own there, and the tabs fill theirs. */
+@media (max-width: 340px) {
+  .sp-toolbar .sp-segmented { flex: 1 1 100%; }
+  .sp-toolbar .sp-segmented--lg .sp-segmented__opt { flex: 1; padding: 0 8px; }
+  .sp-toolbar__phone-tools { flex: 1 1 100%; }
+  .sp-toolbar__phone-tools > .sp-btn:first-child, .sp-toolbar__phone-tools > .sp-pop, .sp-toolbar__phone-tools > .sp-btn:last-child { flex: 1 1 0; }
+  .sp-toolbar__phone-tools .sp-btn, .sp-toolbar__phone-tools .sp-toolbar__more { width: 100%; padding: 0 10px; }
+  .sp-toolbar__more .sp-icon { display: inline-block; }
 }

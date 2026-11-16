@@ -9,6 +9,7 @@ import { Legend } from '../plan/Legend';
 import { spaceOf } from '../building/floorFact';
 import type { SegmentText } from '../plan/segmentText';
 import { Icon } from '../ui';
+import { find } from '../../lib/host';
 import { FilterBar } from './FilterBar';
 
 export interface PhoneStackProps {
@@ -48,7 +49,30 @@ export function PhoneStack({ model, state, patch, title, legendNote, textFor, hi
           <Legend items={model.legend} compact figures id="sp-legend" note={legendNote} />
         </details>
       </div>
-      {model.filterLabel && <FilterBar label={model.filterLabel} alternatives={!!model.partial && model.partial.size > 0} find={model.queryFind} patch={patch} />}
+      {model.filterLabel && <FilterBar label={model.filterLabel} empty={model.filterEmpty} alternatives={!!model.partial && model.partial.size > 0} find={model.queryFind} patch={patch} />}
+      {/* Round 35: a phone's floor list runs several screens; the index stays at the top while it scrolls and takes the
+          user to a floor's card, focused, in one tap (the desktop stack shows every floor at once). */}
+      {floors.length > 3 && (
+        <nav className={`sp-pstack__jump ${floors.length > 12 ? "sp-pstack__jump--long" : ""}`.trim()} aria-label="Jump to floor">
+          {floors.map((f) => {
+            const n = f.floor.name.replace(/^Floor\s+/i, '');
+            return (
+              <button
+                key={f.floor.id}
+                type="button"
+                aria-label={f.floor.name}
+                onClick={() => {
+                  const head = find(`.sp-pfloor__head[data-floor="${f.floor.id}"]`);
+                  head?.scrollIntoView({ block: 'start' });
+                  head?.focus({ preventScroll: true });
+                }}
+              >
+                {n}
+              </button>
+            );
+          })}
+        </nav>
+      )}
       <ol className="sp-pstack__floors" aria-label={`${floors.length} floors, top floor first`} style={{ '--n': floors.length } as CSSProperties}>
         {floors.map((f, fi) => {
           const leasedPct = f.leasable ? f.leased / f.leasable : 0;

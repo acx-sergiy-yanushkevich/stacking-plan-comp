@@ -278,7 +278,7 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
           <Legend items={model.legend} compact id="sp-legend" note={legendNote} infoElsewhere />
         </div>
       )}
-      {!bare && model.filterLabel && <FilterBar label={model.filterLabel} alternatives={!!model.partial && model.partial.size > 0} find={model.queryFind} patch={patch} />}
+      {!bare && model.filterLabel && <FilterBar label={model.filterLabel} empty={model.filterEmpty} alternatives={!!model.partial && model.partial.size > 0} find={model.queryFind} patch={patch} />}
       <div className="sp-stack__body" ref={ref}>
         <svg
           ref={svgRef}
@@ -290,6 +290,8 @@ export default function StackView({ model, state, patch, bare, rowHeight }: Stac
           aria-label={`Stacking plan, ${rows.length} floors, top floor first`}
           aria-describedby={bare ? undefined : 'sp-legend'}
           aria-rowcount={rows.length}
+          // Pointing at a KPI or a finder option lights its suites at once; a filter or a finder result sweeps up the floors (stack.css).
+          className={hoverKeys ? 'is-pointing' : undefined}
           // The entrance's stagger (stack.css): the floors count, and each row's place from the ground floor.
           style={{ '--n': rows.length } as CSSProperties}
         >

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { Button } from './Button';
-import { canExpandSheet, dragSheetHeight, expandedSheetHeight, isSheetDrag, snapSheet } from './sheetHeight';
+import { canExpandSheet, dragSheetHeight, expandedSheetHeight, isSheetDrag, SHEET_HALF, snapSheet } from './sheetHeight';
 import { computedStyle, findAll, focused, mutationObserver, on, sizeObserver, viewport as hostViewport } from '../../lib/host';
 
 export interface SheetProps {
@@ -89,6 +89,9 @@ export function Sheet({ open, onClose, title, children, snap = 'half', hideHeade
   useEffect(() => {
     if (!open) return;
     const first = ref.current?.querySelector<HTMLElement>('.sp-sheet__body button, .sp-sheet__body [tabindex="0"], button.sp-sheet__handle');
+    // Focus given by the sheet itself (a link opened it, or a tap) shows no ring on the handle until a key is pressed
+    // (round 39: a shared suite link opened with the keyboard ring on the handle). The handle's keydown clears the mark.
+    if (first?.classList.contains('sp-sheet__handle')) first.dataset.pointer = '';
     first?.focus({ preventScroll: true });
   }, [open]);
   useEffect(() => {
@@ -167,6 +170,8 @@ export function Sheet({ open, onClose, title, children, snap = 'half', hideHeade
   // time of the release that is kept: a click straight after it is dropped, and a later one (Enter) is not.
   const releasedAt = useRef(-Infinity);
   const onHandleDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    // A tap or a click marks the handle, so its focus ring shows for the keyboard only (round 37: it showed after a touch tap).
+    e.currentTarget.dataset.pointer = '';
     if (!ref.current || (e.pointerType === 'mouse' && e.button !== 0)) return;
     // The pointer is the handle's until it lets go, so the drag goes on outside the 40 px bar and never reaches the page.
     e.currentTarget.setPointerCapture?.(e.pointerId);
@@ -211,7 +216,9 @@ export function Sheet({ open, onClose, title, children, snap = 'half', hideHeade
       aria-labelledby={labelId ?? undefined}
       aria-label={labelId ? undefined : typeof title === 'string' ? title : 'Details'}
       className={`sp-sheet ${expanded ? 'sp-sheet--full' : ''} ${dragging ? 'sp-sheet--dragging' : ''}`}
-      style={dragging ? { height: dragHeight } : expanded ? { height: expandedSheetHeight(measured) } : undefined}
+      // Content shorter than the half snap gets a sheet its own height (round 36: a prospect's suite sheet was half a screen
+      // with one row in it); a sheet is never shorter than 160 px, its handle, heading and a row.
+      style={dragging ? { height: dragHeight } : expanded ? { height: expandedSheetHeight(measured) } : content !== null && viewport > 0 && content < SHEET_HALF * viewport ? { height: Math.max(160, Math.ceil(content)) } : undefined}
     >
       {canExpand ? (
         <button
@@ -227,6 +234,8 @@ export function Sheet({ open, onClose, title, children, snap = 'half', hideHeade
           onPointerMove={onHandleMove}
           onPointerUp={onHandleUp}
           onPointerCancel={onHandleCancel}
+          onKeyDown={(e) => delete e.currentTarget.dataset.pointer}
+          onBlur={(e) => delete e.currentTarget.dataset.pointer}
         >
           <span />
         </button>

@@ -293,7 +293,7 @@ export function BuildingHero({ model, state, patch, compact, size = 'panel', onP
 
   return (
     <div
-      className={`sp-hero ${compact ? 'sp-hero--compact' : ''} ${stage ? 'sp-hero--stage' : ''} ${stage && openId ? 'sp-hero--open' : ''} ${stage && turning ? 'is-turning' : ''}`}
+      className={`sp-hero ${compact ? 'sp-hero--compact' : ''} ${stage ? 'sp-hero--stage' : ''} ${stage && openId ? 'sp-hero--open' : ''} ${stage && turning ? 'is-turning' : ''} ${hoverKeys ? 'is-pointing' : ''}`.replace(/ +/g, ' ').trim()}
       style={{ '--sp-hero-ratio': (frame.w / frame.h).toFixed(4), '--sp-hero-room': `${tagRoom}px`, '--sp-hero-tags-above': rest.fit.ladder.above.toFixed(4), '--sp-hero-tags-band': rest.fit.ladder.run.toFixed(4), '--sp-hero-tags-below': rest.fit.ladder.below.toFixed(4), '--sp-hero-floors': floors.length } as CSSProperties}
     >
       {stage && beside && <div className="sp-hero__beside">{beside}</div>}

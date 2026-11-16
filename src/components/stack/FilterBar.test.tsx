@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import { renderToString } from 'react-dom/server';
-import { FilterBar } from './FilterBar';
+import { FilterBar, filterSpeech } from './FilterBar';
 
 describe('FilterBar: a requirement with a date the calendar has not (round 26)', () => {
   it('names the date and offers nothing to run until it is corrected', () => {
@@ -9,5 +9,54 @@ describe('FilterBar: a requirement with a date the calendar has not (round 26)',
     expect(html).toContain('2027-02-30 is not a date on the calendar');
     expect(html).not.toContain('SF of space</button>');
     expect(html).toContain('Clear');
+  });
+});
+
+describe('FilterBar: a contradictory requirement (round 36)', () => {
+  it('names it and offers nothing to run', async () => {
+    const { renderToString } = await import('react-dom/server');
+    const { FilterBar } = await import('./FilterBar');
+    const html = renderToString(<FilterBar label="Find 20,000–15,000 SF" find={{ kind: 'size', size: 20000, max: 15000, fit: 'any', by: null }} patch={() => undefined} />);
+    const text = html.replace(/<!-- -->/g, '');
+    expect(text).toContain('at least 20,000 SF and at most 15,000 SF, which no space can be');
+    expect(html).not.toContain('SF of space</button>');
+    expect(html).not.toContain('sp-filterbar__find');
+  });
+});
+
+describe('FilterBar: nothing matched (round 36)', () => {
+  it('shows the sentence as it is, with no "Showing" and no way to the plan, whatever its first word', () => {
+    for (const label of ['There is no Floor 99 here (Floors 1–12).', 'Nothing for sale on Floor 5.', 'No available space on Floor 4 now.']) {
+      for (const planElsewhere of [false, true]) {
+        const html = renderToString(<FilterBar label={label} empty planElsewhere={planElsewhere} patch={() => undefined} />).replace(/<!-- -->/g, '');
+        expect(html, label).toContain(label);
+        expect(html, label).not.toContain('Showing');
+        expect(html, label).not.toContain('Show on the plan');
+        expect(html, label).not.toContain('..');
+      }
+    }
+  });
+});
+
+describe('FilterBar: round 37 (Opus)', () => {
+  it('a bare ceiling offers "up to", and the bar is no live region of its own (round 38: the app\'s always-present one reads it)', () => {
+    const html = renderToString(<FilterBar label="Find up to 14,000 SF" find={{ kind: 'size', size: 100, max: 14000, fit: 'any', by: null }} patch={() => {}} />).replace(/<!-- -->/g, '');
+    expect(html).toContain('Find up to 14,000 SF of space');
+    expect(html).not.toContain('100–14,000');
+    expect(html).not.toContain('role="status"');
+    expect(filterSpeech('Find up to 14,000 SF', false, { kind: 'size', size: 100, max: 14000, fit: 'any', by: null })).toBe('That reads as a space requirement: up to 14,000 SF. Press Enter to find it.');
+    expect(filterSpeech('There is no Floor 99 here (Floors 1–12).', true, null)).toBe('There is no Floor 99 here (Floors 1–12).');
+    expect(filterSpeech(null, false, null)).toBe('');
+  });
+});
+
+describe('filterSpeech says what the bar shows (round 39)', () => {
+  it('the unused words, the past date and the range\'s fix', () => {
+    const said = filterSpeech('Find 15,000 SF', false, { kind: 'size', size: 15000, max: null, fit: 'any', by: null, pastBy: '2026-11-08', unread: ['nnn', '$35'] });
+    expect(said).toContain('Not used: nnn, $35.');
+    expect(said).toContain('is before the as-of date, so it is not applied.');
+    const inv = filterSpeech('Find 20,000–15,000 SF', false, { kind: 'size', size: 20000, max: 15000, fit: 'any', by: null });
+    expect(inv).toContain('which no space can be.');
+    expect(inv.length).toBeGreaterThan('That asks for at least 20,000 SF and at most 15,000 SF, which no space can be.'.length);
   });
 });

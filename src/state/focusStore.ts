@@ -9,13 +9,23 @@ export function rememberTrigger(el: Element | null = focused()) {
   trigger = el instanceof HTMLElement ? el : null;
   fromNowhere = el === null;
 }
-export function refocusTrigger() {
+/**
+ * `tool` is the toolbar button that opens the panel being closed ("Worklist"): when the control that opened it is gone
+ * (the Building panel's "Holdover" row opens the worklist and is unmounted with the panel), focus goes to that button
+ * and not to the page (round 32).
+ */
+export function refocusTrigger(tool?: string) {
   const t = trigger;
   const nowhere = fromNowhere;
   trigger = null;
   fromNowhere = false;
   if (nowhere) return;
-  requestFrame(() => (t && t.isConnected ? t.focus() : find('#sp-plan')?.focus()));
+  requestFrame(() => {
+    if (t && t.isConnected) return t.focus();
+    const button = tool ? findAll('.sp-toolbar button').find((x) => x.textContent?.trim().startsWith(tool)) : undefined;
+    // On a phone Area, Worklist and Data issues sit in the More menu (round 37): its button takes focus back.
+    (button ?? (tool ? find('.sp-toolbar__more') : null) ?? find('#sp-plan'))?.focus();
+  });
 }
 /** Focus a plan block (stack cell, timeline bar or plate slice) by segment key. */
 export function focusSegment(key: string) {

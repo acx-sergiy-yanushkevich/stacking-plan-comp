@@ -35,11 +35,11 @@ export function Menu({ label, items, trigger, align = 'end' }: MenuProps) {
   const [open, setOpen] = useState(false);
   const listRef = useRef<HTMLUListElement | null>(null);
 
-  const move = (dir: 1 | -1) => {
+  const move = (dir: 1 | -1 | 'first' | 'last') => {
     const els = Array.from(listRef.current?.querySelectorAll<HTMLButtonElement>(':is([role="menuitem"], [role="menuitemradio"]):not([aria-disabled="true"])') ?? []);
     if (!els.length) return;
     const i = els.indexOf(focused() as HTMLButtonElement);
-    const next = i === -1 ? (dir === 1 ? 0 : els.length - 1) : (i + dir + els.length) % els.length;
+    const next = dir === 'first' ? 0 : dir === 'last' ? els.length - 1 : i === -1 ? (dir === 1 ? 0 : els.length - 1) : (i + dir + els.length) % els.length;
     els[next].focus();
   };
   const onKeyDown = (e: KeyboardEvent<HTMLUListElement>) => {
@@ -49,6 +49,10 @@ export function Menu({ label, items, trigger, align = 'end' }: MenuProps) {
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       move(-1);
+    } else if (e.key === 'Home' || e.key === 'End') {
+      // Round 39: Home and End go to the first and last item, as the APG menu pattern has them.
+      e.preventDefault();
+      move(e.key === 'Home' ? 'first' : 'last');
     }
   };
 
@@ -73,7 +77,8 @@ export function Menu({ label, items, trigger, align = 'end' }: MenuProps) {
                 aria-disabled={it.disabled || undefined}
                 aria-description={it.description}
                 // A disabled entry is read in place, by the arrow keys' list, and takes no tab stop of its own.
-                tabIndex={it.disabled ? -1 : undefined}
+                // Items are reached with the arrow keys, Home and End; the menu is one Tab stop (Popover closes it on Tab).
+                tabIndex={-1}
                 onClick={() => {
                   if (it.disabled) return;
                   setOpen(false);
@@ -90,7 +95,13 @@ export function Menu({ label, items, trigger, align = 'end' }: MenuProps) {
                 ) : (
                   <span>{it.label}</span>
                 )}
-                {it.hint && <span className="sp-menu__hint">{it.hint}</span>}
+                {/* The hint is read after a pause ("Data issues, 8"), not run into the label (round 38: "Data issues8"). */}
+                {it.hint && (
+                  <span className="sp-menu__hint">
+                    <span className="sp-sr-only">, </span>
+                    {it.hint}
+                  </span>
+                )}
                 {it.checked && <Icon name="check" size={16} className="sp-menu__check" />}
               </button>
             </li>

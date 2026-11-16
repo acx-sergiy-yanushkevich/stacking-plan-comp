@@ -79,7 +79,7 @@
 .sp-hero--stage .sp-hero__tag.is-open { font-weight: 700; color: var(--sp-color-brand-strong); }
 .sp-hero--open .sp-hero__tag.is-hot:not(.is-open) { color: var(--sp-color-text); }
 /* The labels come back with a short fade after the model has moved (BuildingView hides them while it docks). */
-.sp-hero--stage .sp-hero__tags { transition: opacity 200ms ease; }
+.sp-hero--stage .sp-hero__tags { transition: opacity var(--sp-ease-slow); }
 .sp-hero--stage .sp-hero__face { stroke-width: 0.9; }
 .sp-hero--stage .sp-hero__floor.is-hot .sp-hero__face, .sp-hero--stage .sp-hero__floor.is-focus .sp-hero__face { stroke-width: 2.2; }
 .sp-hero--stage .sp-hero__floor.is-above { pointer-events: auto; }

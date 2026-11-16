@@ -188,7 +188,12 @@ export function toNearby(elements: OverpassElement[], center: { lat: number; lng
   const seen = new Set<string>();
   const dedup = transit
     .sort(nearestFirst)
-    .filter((t) => (seen.has(t.name) ? false : (seen.add(t.name), true)));
+    // Round 29: by name and position, not by name alone: stops named only by a number all read "Bus stop" and
+    // collapsed into one. The two platforms of one named station (a few metres apart) still count once.
+    .filter((t) => {
+      const key = `${t.name}|${t.type}|${named(t.name) === t.name && t.name !== 'Bus stop' && t.name !== 'Station' ? '' : `${(t.lat ?? 0).toFixed(4)},${(t.lng ?? 0).toFixed(4)}`}`;
+      return seen.has(key) ? false : (seen.add(key), true);
+    });
   const nearest = [...dedup.filter((t) => t.type === 'Bus').slice(0, BUS_STOPS), ...dedup.filter((t) => t.type === 'Rail').slice(0, RAIL_STOPS)].sort(nearestFirst);
   return { transit: nearest, amenities: [...counts].map(([category, count]) => ({ category, count })).sort((a, b) => b.count - a.count), places: places.sort((a, b) => a.distanceMi - b.distanceMi) };
 }

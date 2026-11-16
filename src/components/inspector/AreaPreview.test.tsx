@@ -58,6 +58,6 @@ describe('openArea', () => {
   it('opens the Area panel and closes what the other tool panels and a selection had open', () => {
     let next = {};
     openArea((p) => (next = p));
-    expect(next).toEqual({ mode: 'area', select: null, floor: null, req: null, max: null, by: null, inquiry: null, window: null });
+    expect(next).toEqual({ mode: 'area', select: null, floor: null, req: null, max: null, by: null, fit: 'any', inquiry: null, window: null });
   });
 });

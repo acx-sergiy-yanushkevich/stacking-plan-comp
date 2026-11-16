@@ -42,7 +42,7 @@ describe('Header sale listing', () => {
     // It is one of the facts, not part of the title.
     const facts = html.slice(html.indexOf('class="sp-header__facts"'));
     expect(facts).toContain('class="sp-header__sale"');
-    // Plain words like its neighbours: no $ icon in front of it (Clara, Nov 12).
+    // Plain words like its neighbours: no $ icon in front of it (review, Nov 12).
     expect(/<span class="sp-header__sale"[^>]*>(.*?)<span class="sp-header__verified/.exec(html)?.[1] ?? '').not.toContain('<svg');
     expect(html.slice(html.indexOf('class="sp-header__title"'), html.indexOf('class="sp-header__facts"'))).not.toContain(usd0(listing.price));
   });
@@ -246,7 +246,7 @@ describe('Header product bar and building card', () => {
     for (const [a, c] of [['sp-lockup', 'sp-header__actions'], ['sp-header__actions', 'sp-header__look']])
       expect(b.indexOf(a), `${a} before ${c}`).toBeLessThan(b.indexOf(c));
     expect(strip(b)).toMatch(/^Stax by Ascendix /);
-    // No switcher, no divider, no building name in the bar (Clara, Nov 12: the name twice and three icons in a corner).
+    // No switcher, no divider, no building name in the bar (review, Nov 12: the name twice and three icons in a corner).
     for (const s of ['Preston Park', 'Switch building', 'sp-switcher', 'sp-topbar__divider', 'sp-ministack']) expect(b, s).not.toContain(s);
     // The controls and the look are one group, so they wrap together.
     expect(b.indexOf('sp-topbar__controls')).toBeLessThan(b.indexOf('sp-header__actions'));
@@ -255,7 +255,7 @@ describe('Header product bar and building card', () => {
   it('standalone: the card is the building\'s mini stack, its name as the switcher, and the facts; the controls are not in it', () => {
     const { html } = render('');
     const card = html.slice(html.indexOf('<header'));
-    // The logo is a little bigger than the building's icon: 32 px against 28 (Clara, Nov 12: both were too big at 40).
+    // The logo is a little bigger than the building's icon: 32 px against 28 (review, Nov 12: both were too big at 40).
     expect(html).toMatch(/<span class="sp-mark" style="width:32px;height:32px"[^>]*><svg width="32" height="32"/);
     expect(card).toMatch(/<svg class="sp-ministack" width="28" height="28"/);
     // The building's own mini stack stands where the blue icon box was.

@@ -7,7 +7,8 @@ import { buildingById } from './data/mock/buildings';
 import { usePlanModel } from './model/usePlanModel';
 import { usePlanState, useDocumentTitle } from './state/usePlanState';
 import { useAnnouncement } from './state/useAnnouncement';
-import { canShowRollover, shownToProspect } from './domain/safe';
+import { canShowRollover, canTimeTravel, planDate, shownToProspect } from './domain/safe';
+import { usePlayback } from './state/usePlayback';
 import { copyText, find, focused, on, print, readUrl, setRootData, shareUrl } from './lib/host';
 import { deriveMode, paletteOf, shownView, type PlanState } from './state/planState';
 import { rentRollRows, toCsv } from './domain/exportCsv';
@@ -34,6 +35,7 @@ import { useIsNarrow, useIsPhone, usePrefersReducedMotion } from './lib/useMedia
 import { selectionSelector, useClearOfSheet } from './components/stack/aboveSheet';
 import { clearSelection, isToolPanel, TOOL_CLOSE } from './components/plan/actions';
 import { focusSegment, refocusTrigger } from './state/focusStore';
+import { filterSpeech } from './components/stack/FilterBar';
 import { Patterns } from './components/plan/Patterns';
 import { fmtDate } from './domain/dates';
 import { num, pct } from './domain/format';
@@ -50,6 +52,9 @@ interface FocusMark {
 }
 
 const nameOf = (el: Element) => el.getAttribute('aria-label') ?? el.textContent?.trim() ?? '';
+
+/** The toolbar button that opens each tool panel, where focus goes back when the control that opened it is gone. */
+const TOOL_LABEL: Record<string, string> = { worklist: 'Worklist', issues: 'Data issues', area: 'Area', find: 'Find space' };
 
 function focusMark(root: HTMLElement | null): FocusMark | null {
   const el = focused();
@@ -142,7 +147,12 @@ function Shell() {
   // The live region's text is dropped in the render in which prospect-safe changes, so a sentence written
   // for the broker ("Opened Cirrus Energy…") never outlives the moment the mode is turned on.
   const [announce, setAnnounce] = useAnnouncement(state.safe);
+  // Play through time: the date steps by itself, through `patch` like any control. Under reduced motion
+  // nothing moves by itself: the same button takes one step for each press.
+  const playback = usePlayback(planDate(state.asOf, TODAY, state.safe), TODAY, canTimeTravel(state.safe), reduceMotion, useCallback((asOf: string) => patch({ asOf }), [patch]));
   useEffect(() => {
+    // A play is not read out date by date: the date it stops on is announced, once.
+    if (playback.playing) return;
     const t = setTimeout(() => {
       const k = model.kpis;
       const d = model.deltas;
@@ -152,7 +162,7 @@ function Shell() {
     }, 400);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.asOf, property.id]);
+  }, [state.asOf, property.id, playback.playing]);
 
   // Selecting a block is announced: focus stays on the plan, so a screen-reader user would otherwise hear nothing.
   const announcedSelect = useRef(state.select);
@@ -166,6 +176,15 @@ function Shell() {
     setAnnounce(`Opened ${t.name}, ${floorName}${seg.suite ? `, suite ${seg.suite}` : ''}, ${num(seg.size)} SF. Details are in the side panel; Escape returns to the plan.`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.select]);
+  // The search bar's message, read from the live region that is always on the page (round 38: the bar's own region was
+  // created with its first message, which a screen reader can miss). A pause first, so typing is not read letter by letter.
+  const barSpeech = filterSpeech(model.filterLabel, model.filterEmpty, model.queryFind);
+  useEffect(() => {
+    if (!barSpeech) return;
+    const t = setTimeout(() => setAnnounce(barSpeech), 500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [barSpeech]);
   // Labels are fitted by measuring text: fit them again once the web font has loaded.
   const fontTick = useSyncExternalStore(subscribeFonts, getFontEpoch, () => 0);
 
@@ -265,13 +284,13 @@ function Shell() {
         if (mode === 'brief') patch({ mode: 'area' });
         else {
           patch(TOOL_CLOSE[mode as keyof typeof TOOL_CLOSE]);
-          refocusTrigger();
+          refocusTrigger(TOOL_LABEL[mode as string]);
         }
         return;
       }
       if (el && el.closest(`.sp-ins, .sp-pop__panel, .sp-sheet, ${stageOwnsEscape ? '.sp-stage, ' : ''}input, select, textarea`)) return;
       if (state.bucket !== null || state.q || state.window || state.req !== null || state.inquiry) {
-        patch({ bucket: null, q: '', window: null, req: null, max: null, by: null, inquiry: null, mode: 'building' });
+        patch({ bucket: null, q: '', window: null, req: null, max: null, by: null, inquiry: null, fit: 'any', mode: 'building' });
         refocusTrigger();
       }
     };
@@ -320,7 +339,7 @@ function Shell() {
       <div className="sp-sr-only" role="status" aria-live="polite">
         {announce}
       </div>
-      <Header model={model} state={state} patch={patch} onExport={onExport} miniTimeline={<MiniTimeline model={model} asOf={state.asOf} onChange={(asOf) => patch({ asOf })} width={312} height={64} />} />
+      <Header model={model} state={state} patch={patch} onExport={onExport} miniTimeline={<MiniTimeline model={model} asOf={state.asOf} onChange={(asOf) => patch({ asOf })} width={312} height={64} />} playback={playback} />
       {/* The KPI bar: always here, above the toolbar, in every view and every state. Nothing shows, hides or
           resizes it, so the toolbar and the plan under it never move when the view or the selection changes. */}
       <KpiStrip model={model} state={state} onAction={onKpi} />
@@ -358,7 +377,7 @@ function Shell() {
               if (key) focusSegment(key);
               else refocusTrigger();
             } else {
-              patch({ mode: 'building', req: null, inquiry: null, window: null });
+              patch({ mode: 'building', req: null, max: null, by: null, inquiry: null, fit: 'any', window: null });
               refocusTrigger();
             }
           }}

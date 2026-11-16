@@ -117,7 +117,7 @@ describe('Block badges', () => {
 
   it('gives a wide badge its own row on a narrow block, so the name stays on one line', () => {
     const { lines, badge } = draw(available(), 160, 72, seg('available'));
-    expect(lines.map((l) => l.t)).toEqual(['Available now', 'Ste 850 · 4,200 SF']);
+    expect(lines.map((l) => l.t)).toEqual(['Available now', '4,200 SF · $31–$33/SF/yr FSG']);
     expect(badge).toBe('translate(8 48)');
   });
 
@@ -332,5 +332,24 @@ describe('the deal count', () => {
     expect(pill(narrow.html)).toBe('2');
     expect(narrow.label).toContain('2 live deals');
     expect(pill(draw(text({ name: 'Cirrus Energy', aria: 'Floor 6, Cirrus Energy', badges: two }), 400, 48, seg(), true).html)).toBe('2');
+  });
+});
+
+describe('Block text, rows fitted to the window (round 29)', () => {
+  const deal: Badge = { kind: 'deal', text: '1', title: '1 live deal' };
+  it('keeps the café\'s name in a 43 px row beside its deal circle', () => {
+    const { lines } = draw(text({ name: 'Preston Park Café', sub: 'Ste 100 · 2,400 SF', sfShort: '2,400', badges: [deal] }), 131, 43);
+    expect(lines.map((l) => l.t)).toContain('Preston Park Café');
+  });
+
+  it('keeps the rate before the suite number when the line cannot hold both', () => {
+    const { lines } = draw(text({ name: 'First Plano Bank', sub: 'Ste 110 · 5,600 SF', sfShort: '5,600', meta: '$42/SF/yr NNN', lensShort: '$42/SF/yr NNN' }), 150, 43);
+    expect(lines.map((l) => l.t).join(' ')).toContain('$42/SF/yr NNN');
+  });
+
+  it('keeps the asking rate on a 50 px row, the height the window draws (round 30)', () => {
+    // 138 px: "3,200 SF · $31–$33/SF/yr FSG" cannot fit one line even at 10 px, so the rate takes the line.
+    const { lines } = draw(text({ name: 'Available now', sub: 'Ste 860 · 3,200 SF', sfShort: '3,200', meta: 'Asking $31–$33/SF/yr FSG', lensShort: '' }), 138, 50, seg('available'));
+    expect(lines.map((l) => l.t).join(' ')).toContain('$31–$33/SF/yr FSG');
   });
 });

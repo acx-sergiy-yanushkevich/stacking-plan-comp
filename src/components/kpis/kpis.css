@@ -115,7 +115,15 @@ button.sp-kpi:hover { background: var(--sp-color-card-2); }
   /* The two cards one above the other: the four switches two by two, then the three details in one row. */
   /* The bar stands closer to the header here: room for the first caption on the card's edge. */
   .sp-kpis { grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 4px; }
-  .sp-kpis__group--lens { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* Round 33: the four switches in one row, so the plan starts 43 px higher (round 32: 395 px of controls came
+     before the first floor). The sub-lines and the units are in each switch's name and the legend; the figure is the cue. */
+  .sp-kpis__group--lens { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  /* A prospect has two switches: two across, the full width (round 35: they sat in the left half of four tracks and the
+     asking range ran out of its switch). */
+  .sp-kpis--safe .sp-kpis__group--lens { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sp-kpis__group--lens .sp-kpi { padding: 4px 6px 5px; }
+  /* The units stay, in small type (round 33: a bare "35,300" and "9"); a 320 px phone has no room for them. */
+  .sp-kpis__group--lens .sp-kpi__unit { font-size: 9px; white-space: nowrap; }
   .sp-kpis__group--open { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   /* Prospect-safe has two details: two across, with no empty third column (review, Nov 12). */
   .sp-kpis--safe .sp-kpis__group--open { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -123,21 +131,36 @@ button.sp-kpi:hover { background: var(--sp-color-card-2); }
   .sp-kpi.is-active::after { left: 10px; right: 10px; }
   /* Hairlines between the columns, and one between the switches' two rows. */
   .sp-kpi + .sp-kpi::before { top: 6px; bottom: 6px; }
-  .sp-kpis__group--lens .sp-kpi:nth-child(2n + 1)::before { display: none; }
-  .sp-kpis__group--lens .sp-kpi:nth-child(n + 3) { border-top: 1px solid var(--sp-color-border); }
   .sp-kpi__label { font-size: 10px; letter-spacing: 0.02em; line-height: 14px; }
   .sp-kpi__figure { font-size: var(--sp-text-15); line-height: 19px; }
   .sp-kpi__unit { font-size: var(--sp-text-11); }
   .sp-kpi__delta { padding: 0 4px; line-height: 15px; }
 }
+/* Under 380 px the Rent switch's unit takes a line of its own under the figure: a rate always carries its unit
+   (round 36: a bare "$30.71" at 320 px). */
+@media (max-width: 379px) {
+  .sp-kpis:not(.sp-kpis--safe) .sp-kpis__group--lens .sp-kpi:nth-child(2) .sp-kpi__unit { display: block; line-height: 10px; }
+}
+/* A 320 px phone: "Expiration" stays inside its switch (round 33: it ran 7 px into Pipeline). */
+@media (max-width: 359px) {
+  .sp-kpis__group--lens .sp-kpi__label { font-size: 9px; letter-spacing: 0; }
+  /* The figure steps down so its unit stays (round 35: a bare "35,300" and "9" beside Details' "SF"). */
+  .sp-kpis__group--lens .sp-kpi__figure { font-size: 13px; }
+}
 /* Prospect-safe: the line that stands where the withheld figures would be. A phone only, where they took a
    row of their own; wider, the bar is one row whatever it holds. */
 .sp-kpis__withheld { display: none; }
 @media (max-width: 760px) {
-  .sp-kpis__withheld { display: flex; align-items: center; grid-column: 1 / -1; margin: 0; padding: 0 10px; min-height: 43px; font-size: var(--sp-text-12); color: var(--sp-color-text-weak); border-top: 1px solid var(--sp-color-border); }
+  /* Round 33: the line is gone from a phone: the owner's four switches are one row now, so a prospect's two stand in
+     the same height with nothing to fill (it stood where the second row of switches had been). The caption is on the
+     withheld cards' own tooltips. */
+  .sp-kpis--safe .sp-kpi__unit { display: inline; }
 }
 
 /* Entrance (DESIGN.md §3.5), on the first load only: "Color by", then "Details", rise into place. Whole groups,
    not cards: the lens cards are rebuilt as read-only cards on the Map, and would rise again there. */
 .sp-kpis .sp-kpis__wrap { animation: sp-enter-rise var(--sp-enter-ms) var(--sp-enter-curve) backwards; }
 .sp-kpis .sp-kpis__wrap--open { animation-delay: 80ms; }
+
+/* Round 29: on the Map the lens cards only read; a circle that cannot be pressed looks like a broken switch. */
+.sp-kpi--still .sp-kpi__dot { display: none; }

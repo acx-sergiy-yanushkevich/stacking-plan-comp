@@ -9,6 +9,7 @@ function fakePage(search = '?view=stack') {
     removeEventListener: (type: string, listener: (e: Event) => void) => void heard.get(`${where}:${type}`)?.delete(listener),
   });
   const replaced: Array<{ data: unknown; url: string }> = [];
+  const pushed: Array<{ data: unknown; url: string }> = [];
   const log: string[] = [];
   const vars: Record<string, string> = { '--sp-color-card': ' #fff ' };
   const media = { matches: true, changed: new Set<() => void>() };
@@ -28,6 +29,15 @@ function fakePage(search = '?view=stack') {
         replaced.push({ data, url });
         page.location.search = url.slice('/plan/'.length).replace(/#.*$/, '');
         page.location.href = `https://example.test${url}`;
+      },
+      pushState(data, _unused, url) {
+        pushed.push({ data, url });
+        page.history.state = data;
+        page.location.search = url.slice('/plan/'.length).replace(/#.*$/, '');
+        page.location.href = `https://example.test${url}`;
+      },
+      back() {
+        log.push('back');
       },
     },
     innerHeight: 800,
@@ -59,7 +69,7 @@ function fakePage(search = '?view=stack') {
     },
   };
   const fire = (key: string) => heard.get(key)?.forEach((l) => l({ type: key } as unknown as Event));
-  return { page, replaced, heard, log, vars, media, frames, body, fire, back: () => fire('window:popstate') };
+  return { page, replaced, pushed, heard, log, vars, media, frames, body, fire, back: () => fire('window:popstate') };
 }
 
 /** A host that is not a browser at all: state in a variable, the way a record page would keep it. */
@@ -108,6 +118,23 @@ describe('browser host', () => {
     // The default state is an empty query string: the address goes back to the bare path.
     host.writeUrl('');
     expect(replaced.at(-1)?.url).toBe('/plan/#top');
+  });
+
+  it('adds a history entry for a deliberate move, so Back returns to the view it left (round 30)', () => {
+    const { page, replaced, pushed } = fakePage('?view=stack');
+    const host = createBrowserHost(page);
+    host.writeUrl('?view=timeline', true);
+    expect(pushed).toEqual([{ data: { kept: true, staxSheet: false }, url: '/plan/?view=timeline#top' }]);
+    expect(replaced).toEqual([]);
+  });
+
+  it('marks an entry added by opening a sheet, so Back or Forward onto it still knows (round 37)', () => {
+    const { page } = fakePage('?view=stack');
+    const host = createBrowserHost(page);
+    host.writeUrl('?view=stack&select=A', true, true);
+    expect(host.sheetEntry()).toBe(true);
+    host.writeUrl('?view=timeline', true);
+    expect(host.sheetEntry()).toBe(false);
   });
 
   it('does not touch the address when the state already matches it', () => {

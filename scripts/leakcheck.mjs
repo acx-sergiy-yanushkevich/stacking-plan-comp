@@ -458,6 +458,16 @@ async function read(qs) {
   // Long enough for the live region's summary of the as-of date (it is written 400 ms after the load).
   await open(page, base + qs, qs.includes('map') ? 1500 : 600);
   let text = await grab();
+  // The Map draws its labels (the building's name, the place pins, the ring's walk time) when its tiles arrive, which the
+  // network times: read it again until two readings agree, so a slow load is not reported as drift (round 39).
+  if (qs.includes('view=map')) {
+    for (let i = 0; i < 12; i++) {
+      await page.waitForTimeout(500);
+      const again = await grab();
+      if (again === text && /10-min walk|mi ·/.test(again)) break;
+      text = again;
+    }
+  }
   const dom = await findDomLeaks();
   // Lists behind tabs render only once their tab is chosen: open every tab and check what it shows.
   const tabs = page.locator('.sp-flists__tabs [role="radio"]');
@@ -477,6 +487,29 @@ function firstDifference(a, b) {
   const at = i === -1 ? la.length : i;
   const cut = (t) => (t === undefined ? '(nothing)' : `"${t.length > 110 ? `${t.slice(0, 110)}…` : t}"`);
   return `today ${cut(la[at])} ≠ later ${cut(lb[at])}`;
+}
+
+/**
+ * Two readings of one page are the same page. On the Map the order of its lines follows when the map's tiles, labels and
+ * credit line arrive, which the network decides, not the as-of date (round 39: the building's name and the OpenFreeMap
+ * credit swapped places between two loads and were reported as drift). There the lines are compared as a set, the credit
+ * line aside; any line that one reading has and the other lacks is still drift.
+ */
+function samePage(qs, a, b) {
+  if (a === b) return true;
+  if (!qs.includes('view=map')) return false;
+  const lines = (t) => t.split('\n').filter((l) => l.trim() && !/OpenFreeMap|OpenMapTiles|Data from OpenStreetMap/.test(l)).sort().join('\n');
+  return lines(a) === lines(b);
+}
+
+/** The lines one reading has and the other lacks. */
+function setDifference(a, b) {
+  const count = (t) => t.split('\n').reduce((m, l) => m.set(l, (m.get(l) ?? 0) + 1), new Map());
+  const A = count(a);
+  const B = count(b);
+  const gone = [...A].filter(([l, n]) => (B.get(l) ?? 0) < n).map(([l]) => l.slice(0, 80));
+  const added = [...B].filter(([l, n]) => (A.get(l) ?? 0) < n).map(([l]) => l.slice(0, 80));
+  return `only today: ${JSON.stringify(gone.slice(0, 4))}; only later: ${JSON.stringify(added.slice(0, 4))}`;
 }
 
 /** The same link with its as-of date replaced. */
@@ -507,7 +540,7 @@ async function checkState(qs, travel = true, label = qs) {
     const date = addMonths(TODAY, months);
     const later = await read(withAsOf(qs, date));
     const drift = [...later.dom, ...findLeaks(later.text, { q: new URLSearchParams(qs).get('q') })];
-    if (later.text !== today) drift.push(`the page differs from today's: ${firstDifference(today, later.text)}`);
+    if (!samePage(qs, today, later.text)) drift.push(`the page differs from today's: ${qs.includes('view=map') ? setDifference(today, later.text) : firstDifference(today, later.text)}`);
     report(`${label} · as of +${months} mo (${date})`, drift);
   }
 }
@@ -718,6 +751,37 @@ for (const b of others) {
   // The switch turned on with a tenant's suite selected.
   const key = `${ctx.prefix}-${first[1]}-U1`;
   await checkTransition(`${b.name}: select ${first[2]} in the Stack`, `${at}view=stack`, async () => { await block(key).click(); }, first[2]);
+}
+
+// Round 31: Back never turns the mode off. A view opened, the mode turned on, then Back (and Back again): the plan stays
+// prospect-safe and no tenant name is drawn (round 30: Back returned to the owner plan with every name).
+{
+  const label = 'Back with the mode on';
+  if (wanted(label)) {
+    await open(page, `${base}?view=stack`, 250);
+    await page.getByRole('radio', { name: /Timeline/ }).click();
+    await page.waitForTimeout(200);
+    await safeSwitch().focus();
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+    const found = [];
+    const view = () => new URL(page.url()).searchParams.get('view');
+    const safeOn = () => page.evaluate(() => new URLSearchParams(location.search).get('safe') === '1');
+    const len = await page.evaluate(() => history.length);
+    // One Back leaves the Timeline for the Stack and stays prospect-safe; Forward returns to the Timeline, with the
+    // mode on and no entry added (round 31: the write after Back pushed a copy, so Back needed two presses).
+    await page.goBack();
+    await page.waitForTimeout(400);
+    if (view() !== 'stack') found.push(`one Back left ${view()}, not the Stack`);
+    if (!(await safeOn())) found.push('Back left the mode off');
+    found.push(...findLeaks(await grab()).map((f) => `${f} (after Back)`), ...(await findDomLeaks()));
+    await page.goForward();
+    await page.waitForTimeout(400);
+    if (view() !== 'timeline' || !(await safeOn())) found.push(`Forward did not return to the Timeline with the mode on (${page.url().replace(base, '')})`);
+    if ((await page.evaluate(() => history.length)) !== len) found.push('Back and Forward changed the number of history entries');
+    found.push(...findLeaks(await grab()).map((f) => `${f} (after Forward)`), ...(await findDomLeaks()));
+    report(label, found);
+  }
 }
 
 await browser.close();

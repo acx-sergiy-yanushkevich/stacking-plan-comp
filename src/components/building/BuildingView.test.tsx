@@ -50,6 +50,7 @@ function buildModel(state: PlanState): PlanModel {
     bucketKeys: null,
     highlight: null,
     filterLabel: null,
+    filterEmpty: false,
     timeline: timelineModel(property, floors, asOf, TODAY),
     selected: null,
     selectedFloor: floors.find((f) => f.floor.id === state.floor) ?? null,
