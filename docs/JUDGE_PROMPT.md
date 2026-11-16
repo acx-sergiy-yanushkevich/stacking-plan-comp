@@ -12,7 +12,15 @@ Prospect-safe by design: asking rents and asking prices on availabilities (inclu
 
 Also read `docs/CHALLENGE_RULES.md` and the two Best UX judge personas, `docs/personas/wes.md` and `docs/personas/todd.md`. Score with the rubric in BRIEF.md, but test the product the way they would: Wes demos it live to a broker and hands a screen to a prospective tenant; Todd checks that the facts add up and that finding space is fast and deterministic.
 
-New in round 37 (judge these as part of the product; everything from earlier rounds, listed after, is still in scope):
+New in round 38 (judge these as part of the product; everything from earlier rounds, listed after, is still in scope):
+- **Phone toolbar:** Find space and a More menu share the view tabs' row, so the tools take no row of their own above the first floor. More opens Area, Worklist and Data issues and carries the issue count; closing a panel opened from it returns focus to More. A prospect has Area alone, so there it stays a button and there is no menu. `verify` checks the row is whole at 320, 360 and 390 px, owner and Prospect-safe (screenshots 23, 76).
+- **Requirement words:** a bound after a range still counts ("12k-15k max 14k" is 12,000–14,000); a word between sizes goes to the size that owns it, down the line ("12k max 15k max 14k" is 12,000–14,000); "12k or 15k" is the range between; "about 12k", "around 12k", "~12k" and "12k-ish" are a tenth either way (10,800–13,200 SF), shown as that range; "12000sqft", "greater than or equal to" and "less than or equal to" are read; "not direct only" is either kind; "not greater than 15k" and "not above 15k" are ceilings; a bare ceiling reads "up to 14,000 SF", not "100–14,000".
+- **Floors and suites are read in the domain** (`readPlace` in `domain/query.ts`, one vocabulary instead of three copies in the model): "unit 860", "Suite 860.", "860, 870", "ste 850 and 860", "860 on floor 8", "1200−1250" (minus sign), "floors 3-5". "by 2/30" alone is named as a date the calendar lacks.
+- **Find space:** a stack over the maximum is kept only when its smallest real size fits (an indivisible suite counts whole; a divisible one at its smallest division).
+- **Accessibility:** only the search bar's message is a live region, so its button names are not read with it; the phone sheet's handle shows its focus ring for the keyboard only, not after a tap.
+- Known, by design: rows mix 10, 11 and 13 px names where a block is narrow; there is no separate comfortable density.
+
+Round 37 (still in scope, except where round 38 changed it):
 - **A search that finds nothing is a typed flag from the model** (`PlanModel.filterEmpty`), not a test of the words: "There is no Floor 99 here (Floors 1–12).", "Nothing for sale on Floor 5." and "No available space on Floor 4 now." show as plain sentences in every view (no "Showing", no "Other space is dimmed", no doubled period, no "Show on the plan" on the Map). "floor 99" alone gets the same line. A `FilterBar` test and a `verify` check (Stack and Map, owner and Prospect-safe) hold it.
 - **Find space finds adjacent suites that meet a range when an end suite is split** (a 4,000 SF suite beside a 6,000 SF suite divisible to 2,000 SF, for 7,000–8,000 SF).
 - **Clear resets the kind of space everywhere**, the offer bar's Clear and an inquiry pick included; the code-wide test now scans those too.
@@ -168,7 +176,7 @@ Round 18 (still in scope; everything from earlier rounds is too, including the A
    - 16–17: Timeline view (today; 2028 with the expiration lens)
    - 18, 20: the Map (the building's surroundings, the key above it, the Area panel beside it) · 63: Bluebonnet's Map · 59: a place row of the Area panel lighting its pins · 64: the building in 3D · 65: the ring switched to 5 miles in the key (the places folded into the half-mile label's count) · 68: a kind of place in the key lighting its pins · 69: a rail station's row bringing the station into view · 70: a Map link carrying a suite (the Area panel opens) · 71: five miles, folded, with Cafés lit from the key · 73: live mode, OpenStreetMap's real stops and places from the recorded copy · 75: phone (390 px), five miles, the half-mile label clear of the building's name
    - 21–22: Floor plate drill-in (Floor 6 full-floor tenant; Floor 1 podium with retail, for-sale condo and lobby)
-   - 23–25b: phone (390 px): stack, block sheet, timeline, map
+   - 23–25b: phone (390 px): stack, block sheet, timeline, map · 76: phone (390 px), the toolbar's More menu open
    - 26: night palette, expiration lens · 27: dark map · 28: print emulation · 29: multi-floor tenant selected · 30: floor summary · 31–32: prospect-safe with a block selected, prospect-safe timeline
    - 33: Building view, no floor open · 34: Floor 8 open · 35: find 12,000 SF · 38: a suite selected (inspector open) · 39: expiration lens, no floor open
    - 36–37: daytime theme (Building, Stack) · 40: daytime, Floor 3 open · 41: daytime map · 42–43: tablet (1024 px) Building view, alone and with Floor 8 open · 44–45: the Vice City palette (Building, Stack)
@@ -178,6 +186,7 @@ Round 18 (still in scope; everything from earlier rounds is too, including the A
    - 54: the expiration legend's first entry focused from the keyboard (its figures in a tooltip) · 55: the legend's ⓘ note opened · 56: phone (390 px), the expiration legend unfolded with figures
    - 57: "12k direct by jun 2027" typed in search (the bar offers Find space) · 58: prospect-safe, Rent lens · 60: Find space with a maximum below the minimum
    - 66: the Timeline searched for "vantage" (the bar says why bars are dimmed) · 67: the Map with "12k direct by jun 2027" typed (the bar offers Find space) · 72: the Available KPI reached from the keyboard, its suites lit · 74: "12k by 2027-02-30" typed (the bar names the impossible date and offers nothing to run)
+   - 77: "12k-15k max 14k" typed (the bar reads 12,000–14,000) · 78: "not over 14k" typed (the bar reads up to 14,000 SF)
    - 61: Legacy West Tower II, Building view (22 floors) · 62: Cedar Springs Exchange, Stack · 63: Bluebonnet Office Park, Map
    - `pdf/`: real Chrome PDFs, landscape Letter (owner report, owner report with the expiration lens, prospect-safe report), each ending with the location brief. This is the actual print output.
 5. Code: `src/domain/` (pure TypeScript, tests alongside), `src/model/usePlanModel.ts`, `src/components/**`, `src/styles/tokens.css`, `src/data/mock/property.ts` (the mock building; its edge cases are deliberate: holdover, MTM, committed, sublease, over-allocation, lease without units, lease without floor, confidential lease, for-sale condo, stale record).
