@@ -6,7 +6,7 @@
                                Secondary Blue 3 #1E2D3C
 
    Token overrides on top of glass.css, built the way vice.css is: the rules there only read tokens, so
-   layout and behaviour are unchanged. Dark by default (App sets data-theme when the URL names none).
+   layout and behaviour are unchanged. Light by default (App sets data-theme when the URL names none).
    Screen only: print and PDF keep the plain white report. Every tone is checked by ascendix.test.ts
    against the card colours measured in the browser. */
 @media screen {

@@ -46,7 +46,7 @@ One model of the building, shown four ways, with the answers to the questions ab
 - **Space for sale.** For-sale units appear on the plan as their own state, and a building sale listing shows as a banner.
 - **Present mode.** The 3D building orbits while the as-of date advances, and can be recorded as a video.
 
-It works with a keyboard and a screen reader, and on a phone. It opens in the Ascendix colors (Primary Blue and Primary Orange on the company navies, dark by default, with a daytime version behind the theme switch). The challenge's Vice City theme, neon on deep purple, is the second palette: the header's palette control or `?palette=vice` selects it.
+It works with a keyboard and a screen reader, and on a phone. It opens in the Ascendix colors (Primary Blue and Primary Orange on the company navies, light by default, with a dark version behind the theme switch). The challenge's Vice City theme, neon on deep purple, is the second palette: the header's palette control or `?palette=vice` selects it.
 
 ![Vice City palette](docs/shots/readme/44-vice-building.png)
 
@@ -171,7 +171,7 @@ All state lives in the URL, so every view can be linked to.
 | `mode` | `issues`, `area`, `brief`, … | Inspector panel, when not implied by the above (`brief`: the Area panel widened to the location brief) |
 | `ring` | `3`, `5` | The ring around the building in miles: drawn on the Map and compared with the US in the Area panel (1 when left out) |
 | `turn` | `1`–`3` | Quarter turns of the building model in the Building view, from its usual corner view (0 when left out) |
-| `theme` | `light`, `dark` | Theme (default `dark`) |
+| `theme` | `light`, `dark` | Theme (default `light`) |
 | `palette` | `vice` | The Vice City palette instead of the default Ascendix colors |
 | `skin` | `aurora`, `classic` | The original blue glass, or the flat Salesforce Lightning look, instead of either palette |
 | `print` | `1` | Print layout |
