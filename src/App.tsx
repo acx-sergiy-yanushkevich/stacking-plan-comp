@@ -188,9 +188,10 @@ function Shell() {
   // Labels are fitted by measuring text: fit them again once the web font has loaded.
   const fontTick = useSyncExternalStore(subscribeFonts, getFontEpoch, () => 0);
 
-  // Both palettes are dark unless the URL names a theme; the print preview keeps the white report.
+  // Both palettes are light unless the URL names a theme (the daytime theme is the default since the
+  // first public deploy); the print preview keeps the white report.
   const palette = paletteOf(state);
-  const theme = state.theme ?? (palette && !PRINT_PREVIEW ? 'dark' : null);
+  const theme = state.theme ?? (palette && !PRINT_PREVIEW ? 'light' : null);
   useEffect(() => {
     // The page's root attributes go through the host adapter, so an embedding host can supply its own root.
     const apply = (t: string | null) => setRootData('theme', t);

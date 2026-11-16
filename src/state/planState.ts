@@ -386,11 +386,11 @@ export function palettePatch(palette: Palette): Pick<PlanState, 'palette'> {
 }
 
 /**
- * Effective theme. An explicit `theme` wins; both palettes are dark unless told otherwise;
+ * Effective theme. An explicit `theme` wins; both palettes are light unless told otherwise;
  * the other skins follow the operating system.
  */
 export function isDark(s: Pick<PlanState, 'skin' | 'palette' | 'theme'>, prefersDark: boolean): boolean {
-  return s.theme ? s.theme === 'dark' : paletteOf(s) !== null || prefersDark;
+  return s.theme ? s.theme === 'dark' : paletteOf(s) === null && prefersDark;
 }
 
 /**
