@@ -1,4 +1,5 @@
 import { cloneElement, useId, useRef, useState, type ReactElement, type ReactNode } from 'react';
+import { useLeaving } from './useLeaving';
 
 export interface TooltipProps {
   content: ReactNode;
@@ -12,6 +13,8 @@ export function Tooltip({ content, children, placement = 'top', delay = 300 }: T
   const id = useId();
   const [show, setShow] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Hidden, it fades out; it describes its control only while it is shown.
+  const { shown, leaving } = useLeaving(show);
   const open = () => {
     clearTimeout(timer.current);
     timer.current = setTimeout(() => setShow(true), delay);
@@ -42,8 +45,8 @@ export function Tooltip({ content, children, placement = 'top', delay = 300 }: T
   return (
     <span className="sp-tip-wrap" onKeyDown={(e) => e.key === 'Escape' && close()}>
       {child}
-      {show && (
-        <span role="tooltip" id={id} className={`sp-tip ${placement === 'bottom' ? 'sp-tip--bottom' : ''}`}>
+      {shown && (
+        <span role="tooltip" id={id} aria-hidden={leaving || undefined} className={`sp-tip ${placement === 'bottom' ? 'sp-tip--bottom' : ''} ${leaving ? 'is-leaving' : ''}`}>
           {content}
         </span>
       )}

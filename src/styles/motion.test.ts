@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { EXIT_MS, MOVE_CURVE, MOVE_MS } from '../lib/motion';
 
 /**
  * The motion rules (docs/DESIGN.md §3.5), read from every stylesheet: motion stays short, a figure never
@@ -67,6 +68,22 @@ const resolve = (v: string): string => {
 const declarations = (body: string, props: RegExp) =>
   [...body.matchAll(/(?:^|;)\s*([a-z-]+)\s*:\s*([^;]+)/g)].filter((m) => props.test(m[1])).map((m) => ({ prop: m[1], value: m[2].trim() }));
 
+/** The comma-separated parts of a value, commas inside brackets (a curve, a `calc()` with a `min()`) left alone. */
+function parts(value: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let from = 0;
+  for (let i = 0; i < value.length; i++) {
+    if (value[i] === '(') depth++;
+    else if (value[i] === ')') depth--;
+    else if (value[i] === ',' && depth === 0) {
+      out.push(value.slice(from, i));
+      from = i + 1;
+    }
+  }
+  return [...out, value.slice(from)];
+}
+
 const ms = (t: string) => (t.endsWith('ms') ? parseFloat(t) : parseFloat(t) * 1000);
 const LOOPS = /sp-rec-pulse|sp-skel-shimmer/;
 
@@ -85,7 +102,7 @@ describe('motion', () => {
     for (const r of all) {
       for (const d of declarations(r.body, /^(animation|transition)(-duration)?$/)) {
         if (LOOPS.test(d.value)) continue;
-        for (const part of resolve(d.value).split(/,(?![^(]*\))/)) {
+        for (const part of parts(resolve(d.value))) {
           // The first time in a part is its duration; a later one is its delay.
           const first = part.match(/(?<![\w-])(\d*\.?\d+)(ms|s)(?![\w-])/);
           if (first && ms(first[0]) > 450) long.push(`${r.file} ${r.selector} → ${d.prop}: ${d.value}`);
@@ -109,6 +126,32 @@ describe('motion', () => {
       .filter((r) => declarations(r.body, /^animation(-name)?$/).some((d) => /(?<![\w-])sp-enter-/.test(d.value)))
       .flatMap((r) => r.selector.split(/,(?![^(]*\))/).map((s) => s.trim()).filter((s) => !LIVE.test(s)).map((s) => `${r.file} ${s}`));
     expect(loose).toEqual([]);
+  });
+
+  it('gives script the same durations and curve as the stylesheets', () => {
+    expect(vars.get('--sp-ease-move')).toBe(`${MOVE_MS}ms ${MOVE_CURVE}`);
+    expect(vars.get('--sp-enter-curve')).toBe(MOVE_CURVE);
+    expect(vars.get('--sp-exit-ms')).toBe(`${EXIT_MS}ms`);
+  });
+
+  it('times every transition with a token, and keeps the one curve in the tokens', () => {
+    // A transition is a change easing: hover, a crossfade, a slide. Each takes its duration from a token, so
+    // the page has one motion language. (An animation's choreography may name its own duration and delay.)
+    const literal = all.flatMap((r) =>
+      declarations(r.body, /^transition$/)
+        .filter((d) => !/^none\b/.test(d.value))
+        .flatMap((d) => parts(d.value).filter((part) => !/var\(--sp-ease(-slow|-move)?\)/.test(part)).map((part) => `${r.file} ${r.selector} → ${part.trim()}`)),
+    );
+    expect(literal).toEqual([]);
+    const curves = all.filter((r) => !r.file.endsWith('tokens.css') && /cubic-bezier\(/.test(r.body)).map((r) => `${r.file} ${r.selector}`);
+    expect(curves).toEqual([]);
+  });
+
+  it('lets what is dismissed leave faster than anything arrives', () => {
+    const exits = all.filter((r) => /\.is-leaving/.test(r.selector)).flatMap((r) => declarations(r.body, /^animation$/));
+    expect(exits.length).toBeGreaterThanOrEqual(3);
+    for (const d of exits) expect(d.value).toContain('var(--sp-exit-ms)');
+    expect(EXIT_MS).toBeLessThan(120);
   });
 
   it('turns every animation and transition off under reduced motion', () => {
