@@ -139,7 +139,7 @@ The requirements say what the product must do, whatever it runs on: they hold fo
 |---|---|---|---|
 | FR-11 | Find space takes a size or a size range, a needed-by date and direct, sublease or either, and lists what fits: single suites, runs of adjacent suites and stacks of adjacent floors. Options are ranked on time first, single floors before stacks of floors, then by the sooner availability, then by the closest size, and their suites light up on the plan. When few options fit, near misses are listed. A maximum below the minimum runs no search, and a needed-by date before the as-of date is not applied; the panel says why. | 4 | `domain/finder.test.ts`, `components/inspector/Inspector.test.tsx` |
 | FR-12 | An open inquiry can be matched to space: its size range and date become the requirement. While Find space is open, each space that fits shows how many open inquiries it fits. | 4, 10 | `domain/finder.test.ts` |
-| FR-13 | One search box finds tenants, suites, floors, contacts, brokers and prospects, and says why each suite matched. A size typed into it ("12k direct by Jun 2027", "12-15k") is read as a requirement and offered to Find space; a state word ("sublease", "signed", "holdover") lights that state. | 4, 5 | `domain/query.test.ts` |
+| FR-13 | One search box finds tenants, suites, floors, contacts, brokers and prospects, and says why each suite matched. A size typed into it ("12k direct by Jun 2027", "12-15k", "about 12k", "12k or 15k") is read as a requirement and offered to Find space, a bare ceiling said as "up to"; a state word ("sublease", "signed", "holdover") lights that state; floors and suites ("floors 3-5", "unit 860", "860, 870") are read in the domain (`readPlace`). | 4, 5 | `domain/query.test.ts`, `model/search.test.ts` |
 
 **Leases, deals and records**
 
@@ -153,7 +153,7 @@ The requirements say what the product must do, whatever it runs on: they hold fo
 
 | ID | Requirement | Jobs | Checked by |
 |---|---|---|---|
-| FR-17 | Data issues are listed by severity, each with a link that finds it on the plan: a lease with no units or no floor, an availability with no floor, an over-allocated floor, area with no lease or listing, a sublease with no lease to sublet from, a suite marked vacant or for sale while a lease still holds it, holdover and month-to-month leases, deals not updated in 30 days, and records not verified in 120 days. The toolbar's Issues button carries the count. | 3, 9 | `domain/issues.test.ts` |
+| FR-17 | Data issues are listed by severity, each with a link that finds it on the plan: a lease with no units or no floor, an availability with no floor, an over-allocated floor, area with no lease or listing, a sublease with no lease to sublet from, a suite marked vacant or for sale while a lease still holds it, holdover and month-to-month leases, deals not updated in 30 days, and records not verified in 120 days. The toolbar's Data issues button carries the count; on a phone it is in the More menu, whose button carries it. | 3, 9 | `domain/issues.test.ts` |
 | FR-18 | The Building panel lists the last 30 days of changes from record history, and the header says when the plan's records last changed and how many have gone unverified. | 3 | `domain/issues.test.ts`, `components/shell/Header.test.tsx` |
 
 **Showing it to a prospect**

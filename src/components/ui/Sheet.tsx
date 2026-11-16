@@ -167,6 +167,8 @@ export function Sheet({ open, onClose, title, children, snap = 'half', hideHeade
   // time of the release that is kept: a click straight after it is dropped, and a later one (Enter) is not.
   const releasedAt = useRef(-Infinity);
   const onHandleDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    // A tap or a click marks the handle, so its focus ring shows for the keyboard only (round 37: it showed after a touch tap).
+    e.currentTarget.dataset.pointer = '';
     if (!ref.current || (e.pointerType === 'mouse' && e.button !== 0)) return;
     // The pointer is the handle's until it lets go, so the drag goes on outside the 40 px bar and never reaches the page.
     e.currentTarget.setPointerCapture?.(e.pointerId);
@@ -229,6 +231,8 @@ export function Sheet({ open, onClose, title, children, snap = 'half', hideHeade
           onPointerMove={onHandleMove}
           onPointerUp={onHandleUp}
           onPointerCancel={onHandleCancel}
+          onKeyDown={(e) => delete e.currentTarget.dataset.pointer}
+          onBlur={(e) => delete e.currentTarget.dataset.pointer}
         >
           <span />
         </button>

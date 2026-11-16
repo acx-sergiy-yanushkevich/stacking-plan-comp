@@ -204,5 +204,5 @@
   }
   /* Phone sheet: the focus ring sits on the grab bar, not across the whole top edge. */
   :root[data-skin='glass'] .sp-sheet__handle:focus-visible { outline: none; }
-  :root[data-skin='glass'] .sp-sheet__handle:focus-visible span { outline: 2px solid var(--sp-color-focus); outline-offset: 3px; }
+  :root[data-skin='glass'] .sp-sheet__handle:not([data-pointer]):focus-visible span { outline: 2px solid var(--sp-color-focus); outline-offset: 3px; }
 }

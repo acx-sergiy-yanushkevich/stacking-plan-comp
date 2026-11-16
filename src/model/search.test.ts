@@ -99,3 +99,17 @@ describe('round 38: suite spellings', () => {
     expect([...run(floors, '1200−1250', false).values()].sort()).toEqual(['Suite 1200', 'Suite 1250']);
   });
 });
+
+describe('round 37 (Opus): unit, a trailing period, a list of suites, a run of floors', () => {
+  it('"unit 860", "Suite 860." and "860, 870"', () => {
+    const { floors } = plan(false);
+    for (const q of ['unit 860', 'Suite 860.', 'units 860']) expect([...run(floors, q, false).values()], q).toEqual(['Suite 860']);
+    expect([...run(floors, '850, 860', false).values()].sort()).toEqual(['Suite 850', 'Suite 860']);
+    expect([...run(floors, 'ste 850 and 860', false).values()].sort()).toEqual(['Suite 850', 'Suite 860']);
+  });
+  it('"floors 3-5" lights the three floors', () => {
+    const { floors } = plan(false);
+    const lit = new Set(run(floors, 'floors 3-5', false).values());
+    expect([...lit].sort()).toEqual(['Floor 3', 'Floor 4', 'Floor 5']);
+  });
+});

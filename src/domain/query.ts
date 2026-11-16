@@ -171,7 +171,7 @@ export function cutDate(text: string, asOf: ISODate): { by: ISODate | null; rest
 }
 
 /** Words in a requirement that mean something already read, or nothing at all ("need 12k SF of contiguous space"). */
-const SIZE_WORDS = new Set(['sf', 'rsf', 'sq', 'ft', 'sq.', 'ft.', 'square', 'feet', 'k', 'direct', 'sublease', 'subleases', 'sublet', 'sublets', 'contiguous', 'space', 'spaces', 'block', 'blocks', 'suite', 'suites', 'office', 'need', 'needs', 'needed', 'find', 'looking', 'for', 'a', 'an', 'the', 'of', 'to', 'by', 'in', 'before', 'at', 'with', 'and', 'or', 'about', 'around', 'on', 'but', 'approx', 'approximately', 'sf.', 'rsf.']);
+const SIZE_WORDS = new Set(['sf', 'rsf', 'sq', 'ft', 'sq.', 'ft.', 'square', 'feet', 'k', 'direct', 'sublease', 'subleases', 'sublet', 'sublets', 'contiguous', 'space', 'spaces', 'block', 'blocks', 'suite', 'suites', 'office', 'need', 'needs', 'needed', 'find', 'looking', 'for', 'a', 'an', 'the', 'of', 'to', 'by', 'in', 'before', 'at', 'with', 'and', 'or', 'about', 'around', 'on', 'but', 'approx', 'approximately', 'roughly', 'circa', 'sqft', 'sf.', 'rsf.']);
 
 /**
  * What a requirement says that the search does not use (round 31: "15k nnn under $35" ran as "15k" with the rest
@@ -183,7 +183,7 @@ function unreadWords(rest: string, size: number, max: number | null, read: numbe
     const t = raw.replace(/^[^\w$]+|[^\w$]+$/g, '');
     if (!t || SIZE_WORDS.has(t) || /^[\d,.]+k?(?:-|–|to)[\d,.]+k?$/.test(t)) continue;
     // A number is read when it is the size ("12k", "12,000", "1200" before "sf"); any other ("5" in "for 5 years") is listed.
-    const num = /^([\d,.]+)(k?)(?:sf|rsf)?$/.exec(t);
+    const num = /^([\d,.]+)(k?)(?:sf|rsf|sqft)?$/.exec(t);
     if (num) {
       const v = Number(num[1].replace(/,/g, '')) * (num[2] ? 1000 : 1);
       if (v === size || v === max || v * 1000 === size || v * 1000 === max || read.includes(v)) continue;
@@ -205,25 +205,35 @@ function sfOf(n: string, k: boolean): number {
  * too). A range given high to low is read low to high ("15k-12k").
  */
 function readSize(text: string): { size: number; max: number | null; used: string[]; read?: number[] } | null {
+  let floor: number | null = null;
+  let ceil: number | null = null;
+  const used: string[] = [];
+  const read: number[] = [];
+  // A range sets both bounds, and any other bound in the words still counts (round 37: "12k-15k max 14k" ran as
+  // 12,000–15,000 and listed the 14k as unused). The range's own words are blanked so the sizes below do not read them again.
   for (const r of text.matchAll(RANGE)) {
-    const [, n1, k1, n2, k2, unit] = r;
+    const [whole, n1, k1, n2, k2, unit] = r;
     const v1 = Number(n1.replace(/,/g, ''));
     const lo = sfOf(n1, !!k1 || (!!k2 && !n1.includes(',') && v1 < 1000));
     const hi = sfOf(n2, !!k2);
     const [a, b] = lo <= hi ? [lo, hi] : [hi, lo];
     // A bare range of two 4-digit sizes far enough apart ("5000-8000") is a size; "1200-1250" stays two suites.
     const bareSizes = a >= 1000 && b >= a * 1.2 && !/\./.test(n1 + n2);
-    if (a >= 100 && (k1 || k2 || unit || /,/.test(n1 + n2) || b >= 10000 || bareSizes)) return { size: a, max: b === a ? null : b, used: [] };
+    let range: [number | null, number] | null = null;
+    if (a >= 100 && (k1 || k2 || unit || /,/.test(n1 + n2) || b >= 10000 || bareSizes)) range = [a, b];
     // "0-15k" is up to 15k: the smallest space the finder takes (100 SF) to the high end, not a minimum of 15k.
-    if (a < 100 && b >= 100 && (k2 || unit || /,/.test(n2) || b >= 10000)) return { size: 100, max: b, used: [] };
+    else if (a < 100 && b >= 100 && (k2 || unit || /,/.test(n2) || b >= 10000)) range = [null, b];
+    if (!range) continue;
+    floor = range[0];
+    ceil = range[1] === range[0] ? null : range[1];
+    read.push(a, b);
+    const at = r.index ?? 0;
+    text = `${text.slice(0, at)}${' '.repeat(whole.length)}${text.slice(at + whole.length)}`;
+    break;
   }
   // Each size with the comparator beside it (round 35: a ceiling word was applied to the first size in the query,
   // whichever it stood beside, so "12k no more than 15k" read as up to 12,000). A size under a ceiling is the
   // range's top; any other is its floor.
-  let floor: number | null = null;
-  let ceil: number | null = null;
-  const used: string[] = [];
-  const read: number[] = [];
   let from = 0;
   for (const one of text.matchAll(SINGLE)) {
     const [whole, n, k, unit] = one;
@@ -244,16 +254,7 @@ function readSize(text: string): { size: number; max: number | null; used: strin
     // The word in front of a size wins; a word after it counts only when no size follows it, since a word between two
     // sizes belongs to the later one (round 36: "min 12k max 15k" and "12k max 15k" ran as up to 12,000).
     const floorFirst = negFloor ?? FLOOR_BEFORE.exec(head);
-    // ...unless that later size has a word of its own after it ("15k max 12k min": "max" is 15k's).
-    const afterWord = (re: RegExp) => {
-      const m = re.exec(tail);
-      if (!m) return null;
-      const next = /^\s*[<>≤≥]?=?\s*[\d,.]+\s*k?\s*(?:sf|rsf|sq\.?\s*ft)?/.exec(tail.slice(m[0].length));
-      if (!next || !/^\s*[\d<>≤≥]/.test(next[0])) return m;
-      const beyond = tail.slice(m[0].length + next[0].length);
-      return CEIL_AFTER.test(beyond) || FLOOR_AFTER.test(beyond) ? m : null;
-    };
-    const after = before || floorFirst ? null : afterWord(CEIL_AFTER);
+    const after = before || floorFirst ? null : trailing(tail, CEIL_AFTER);
     if (before || after) {
       // Two ceilings keep the tighter (round 37: "under 20k max 15k" kept 20k).
       ceil = ceil === null ? size : Math.min(ceil, size);
@@ -262,9 +263,21 @@ function readSize(text: string): { size: number; max: number | null; used: strin
       continue;
     }
     const minBefore = floorFirst;
-    const minAfter = minBefore ? null : afterWord(FLOOR_AFTER);
+    const minAfter = minBefore ? null : trailing(tail, FLOOR_AFTER);
     if (minBefore ?? minAfter) used.push((minBefore ?? minAfter)![0]);
     from = minAfter ? end + minAfter[0].length : end;
+    // "About 12k", "~12k", "12k-ish": within a tenth either way, said in the bar as a range (round 37: the "about" was
+    // dropped without a word and ran as a 12,000 SF minimum).
+    const about = minBefore || minAfter ? null : ABOUT_BEFORE.exec(head);
+    if (about) {
+      used.push(about[0]);
+      const lo = Math.round((size * 0.9) / 100) * 100;
+      const hi = Math.round((size * 1.1) / 100) * 100;
+      floor = floor === null ? lo : Math.max(floor, lo);
+      ceil = ceil === null ? hi : Math.min(ceil, hi);
+      read.push(lo, hi);
+      continue;
+    }
     // Two floors keep the higher ("at least 12k min 15k").
     floor = floor === null ? size : Math.max(floor, size);
   }
@@ -272,18 +285,36 @@ function readSize(text: string): { size: number; max: number | null; used: strin
   if (floor === null) return { size: 100, max: ceil, used, read };
   // A ceiling under the floor is kept as typed, so the bar can name the contradiction rather than run something else
   // (round 35: "20k under 15k" dropped the ceiling and ran a 20,000 SF minimum). Equal bounds are that exact size.
-  if (ceil === null) return { size: floor, max: null, used, read };
   return { size: floor, max: ceil, used, read };
 }
 
+/** A size, its unit included, at the start of the words, with any comparator sign before it. */
+const NEXT_SIZE = /^\s*[<>≤≥]?=?\s*\d[\d,.]*\s*k?\s*(?:sf|rsf|sq\.?\s*ft)?/;
+
+/**
+ * The comparator word right after a size ("15k max"), or null when it belongs to the next size: a word between two
+ * sizes is the later one's, unless that later size has a trailing word of its own ("15k max 12k min"), and so on down
+ * the line (round 37: "12k max 15k max 14k" gave the first "max" to 12k and read an impossible request).
+ */
+function trailing(tail: string, re: RegExp): RegExpExecArray | null {
+  const m = re.exec(tail);
+  if (!m) return null;
+  const next = NEXT_SIZE.exec(tail.slice(m[0].length));
+  if (!next) return m;
+  const beyond = tail.slice(m[0].length + next[0].length);
+  return trailing(beyond, CEIL_AFTER) || trailing(beyond, FLOOR_AFTER) ? m : null;
+}
+
 /** Words that make the size after them a ceiling ("under 15k", "no more than 15k", "<15k"), never a price ("under $35"). */
-const CEIL_BEFORE = /(?:\b(?:under|below|max|maximum|up\s+to|at\s+most|(?:no|not)\s+(?:more|bigger|larger|greater|over|above)(?:\s+than)?|(?:less|smaller|fewer)\s+than|not\s+exceeding)|<=?|≤)\s*$/;
+const CEIL_BEFORE = /(?:\b(?:under|below|max|maximum|up\s+to|at\s+most|(?:no|not)\s+(?:more|bigger|larger|greater|over|above)(?:\s+than)?|(?:less|smaller|fewer)\s+than(?:\s+or\s+equal(?:\s+to)?)?|not\s+exceeding)|<=?|≤)\s*$/;
 /** And after it ("15k or less", "15k max"). */
 const CEIL_AFTER = /^\s*(?:or\s+(?:less|smaller|under|below|fewer)|max(?:imum)?\b|at\s+most\b|tops\b)/;
 /** A ceiling word with "no" or "not" before it is a floor ("no less than 12k", "not under 12k"). */
 const NEG_FLOOR_BEFORE = /\b(?:no|not)\s+(?:less|smaller|fewer|under|below)(?:\s+than)?\s*$/;
 /** A floor said in words ("at least 12k", "over 12k", "12k+"): read, not listed as unused. */
-const FLOOR_BEFORE = /(?:\b(?<!\b(?:no|not)\s)(?:over|above|at\s+least|(?:more|bigger|larger|greater)\s+than|min(?:imum)?)|>=?|≥)\s*$/;
+const FLOOR_BEFORE = /(?:\b(?<!\b(?:no|not)\s)(?:over|above|at\s+least|(?:more|bigger|larger|greater)\s+than(?:\s+or\s+equal(?:\s+to)?)?|min(?:imum)?)|>=?|≥)\s*$/;
+/** "About 12k", "around 12k", "~12k" ("12k-ish" is read as "about 12k"). */
+const ABOUT_BEFORE = /(?:\b(?:about|around|approx(?:imately)?|roughly|circa)\.?|~)\s*$/;
 const FLOOR_AFTER = /^\s*(?:\+|or\s+(?:more|larger|bigger)|min(?:imum)?\b|plus\b)/;
 
 /**
@@ -326,6 +357,9 @@ export function readQuery(q: string, asOf: ISODate): QueryIntent | null {
   const norm = rest
     .replace(/[—–−]/g, '-')
     .replace(/(\d)\s*thousand\b/g, '$1k')
+    // "12k-ish" is about 12k; "12k or 15k" is either, so the range between (round 37: it ran as a 15,000 SF minimum).
+    .replace(/(\d[\d,.]*\s*k?)\s*-?\s*ish\b/g, 'about $1')
+    .replace(/(\d[\d,.]*\s*k?)\s*(?:sf|rsf)?\s+or\s+(?=\d[\d,.]*\s*k?\b)/g, '$1-')
     .replace(/\b(?:between|from)\s+([\d,.]+\s*k?)\s*(?:sf|rsf)?\s+(?:and|to|-|–)\s+([\d,.]+\s*k?)/g, '$1-$2');
   const size = readSize(norm);
   if (size) {
@@ -336,8 +370,11 @@ export function readQuery(q: string, asOf: ISODate): QueryIntent | null {
     const notDirect = /\b(?:no|not|without|non-?|exclud(?:e|ing)|except|minus)\s*(?:(?:a|an|any|the)\s+)?direct\b|\bsub(?:lease|let)s?[- ]only\b|\bonly\s+sub(?:lease|let)s?\b/;
     let said = norm;
     let fit: FitType = 'any';
-    const neg = notSub.exec(norm) ?? notDirect.exec(norm);
-    if (neg) {
+    // "Not direct only" and "not only sublease" lift the limit: either kind (round 37: "12k not direct only" ran as direct).
+    const notOnly = new RegExp(String.raw`\b(?:no|not)\s+(?:only\s+(?:direct|${SUB})|(?:direct|${SUB})\s+only)\b`).exec(norm);
+    const neg = notOnly ? null : notSub.exec(norm) ?? notDirect.exec(norm);
+    if (notOnly) said = said.replace(notOnly[0], ' ');
+    else if (neg) {
       fit = notSub.test(norm) ? 'direct' : 'sublease';
       said = said.replace(neg[0], ' ');
     } else if (new RegExp(String.raw`\b${SUB}\s+(?:ok|okay|fine|is\s+fine|too|also)\b`).test(norm)) {
@@ -353,4 +390,62 @@ export function readQuery(q: string, asOf: ISODate): QueryIntent | null {
   // it fell through to the name search, "No tenant, suite or prospect matches").
   if (bad && !rest.replace(/\b(?:needed|need|by|before|in|for|space|available|the|a)\b/g, ' ').trim()) return { kind: 'badDate', badBy: bad };
   return readState(text);
+}
+
+/**
+ * A size as the bar says it: "12,000–15,000", "12,000", and a bare ceiling as "up to 14,000" (round 37: "not over 14k"
+ * read "100–14,000 SF", the 100 being the finder's own smallest space, which nobody typed).
+ */
+export function sizeText(size: number, max: number | null): string {
+  const n = (v: number) => v.toLocaleString('en-US');
+  if (max !== null && size <= 100 && max > size) return `up to ${n(max)}`;
+  return `${n(size)}${max !== null && max !== size ? `–${n(max)}` : ''}`;
+}
+
+/** Where a search names a place on the plan: floors ("floor 8", "floors 3-5"), or suites, on one floor or any. */
+export type PlaceRef = { kind: 'floors'; floors: number[] } | { kind: 'suites'; suites: string[]; floor: number | null };
+
+/** A broker's spellings of a suite, read as the plan writes it: "Ste. 860", "#860", "Suite 860." (round 37). */
+export function suiteNeedle(q: string): string {
+  return q
+    .trim()
+    .toLowerCase()
+    .replace(/\b(ste|suite)\.\s*/g, '$1 ')
+    .replace(/#\s*(?=\d)/g, '')
+    .replace(/[.,;:!?]+$/, '')
+    .trim();
+}
+
+const FLOOR_WORD = String.raw`(?:floors?|fl|levels?)`;
+const SUITE_WORD = /\b(?:ste|suites?|units?|on|at|of|and)\b|[,·&/]/g;
+const SUITE_TOKEN = /^[a-z]?\d{2,5}[a-z]?$/;
+
+/**
+ * The floors or suites a search names, the vocabulary in one place (round 37: the floor pattern was copied three
+ * times in the model, and "unit 860", "860, 870" and "floors 3-5" were not read). Null when the words are not a
+ * place, or are one bare number ("86" still finds 860 as part of a name or number).
+ */
+export function readPlace(q: string): PlaceRef | null {
+  const t = suiteNeedle(q);
+  // A floor alone, either way round: "floor 12", "fl 12", "12th floor", "12 floor"; or a run of them, "floors 3-5".
+  const one = new RegExp(String.raw`^(?:(\d{1,3})(?:st|nd|rd|th)?\s*(?:floor|fl)|${FLOOR_WORD}\s*(\d{1,3}))$`).exec(t);
+  if (one) return { kind: 'floors', floors: [Number(one[1] ?? one[2])] };
+  const run = new RegExp(String.raw`^${FLOOR_WORD}\s*(\d{1,3})\s*(?:-|–|—|−|to|through|thru)\s*(\d{1,3})$`).exec(t);
+  if (run) {
+    const [a, b] = [Number(run[1]), Number(run[2])].sort((x, y) => x - y);
+    if (b - a <= 200) return { kind: 'floors', floors: Array.from({ length: b - a + 1 }, (_, i) => a + i) };
+  }
+  // A floor and a suite in either order ("Floor 8 Ste 860", "ste 860 floor 8", "860 on floor 8"): the floor is taken
+  // out wherever it stands, and what is left is the suite. "floor 8" is looked for first: in "ste 860 floor 8" the
+  // "860 floor" is not a floor.
+  const floorPart = new RegExp(String.raw`(?:^|[\s,·])${FLOOR_WORD}\s*(\d{1,3})(?=$|[\s,·])`).exec(t) ?? /(?:^|[\s,·])(\d{1,3})(?:st|nd|rd|th)\s*(?:floor|fl)(?=$|[\s,·])/.exec(t);
+  const rest = floorPart ? t.replace(floorPart[0], ' ') : t;
+  // Two suite numbers with a dash ("1200-1250", "ste 850−860"), which the search box does not read as a size: both suites.
+  const pair = /^(?:(?:ste|suites?|units?)\s*)?(\d{3,5})\s*[-–—−]\s*(\d{3,5})$/.exec(rest.trim());
+  const tokens = pair ? [pair[1], pair[2]] : rest.replace(SUITE_WORD, ' ').trim().split(/\s+/).filter(Boolean);
+  if (!tokens.length || !tokens.every((w) => SUITE_TOKEN.test(w))) return null;
+  // One bare number with no floor and no suite word stays a text search.
+  const named = /\b(?:ste|suites?|units?)\b/.test(rest);
+  if (tokens.length === 1 && !floorPart && !named) return null;
+  return { kind: 'suites', suites: [...new Set(tokens)], floor: floorPart ? Number(floorPart[1]) : null };
 }

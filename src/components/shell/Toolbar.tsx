@@ -2,13 +2,14 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import type { QueryIntent } from '../../domain/query';
 import { rangeProblem } from '../../domain/finder';
 import { findFromQuery } from '../stack/FilterBar';
-import { computedStyle, sizeObserver } from '../../lib/host';
+import { computedStyle, find, sizeObserver } from '../../lib/host';
 import { canShowIssues, canShowLeaseTerm } from '../../domain/safe';
 import { shownView, type PlanState, type View } from '../../state/planState';
-import { Button, Segmented, TextField } from '../ui';
+import { Button, Menu, Segmented, TextField } from '../ui';
+import type { MenuItem } from '../ui/Menu';
 import { rememberTrigger } from '../../state/focusStore';
 import { floorKept, openArea } from '../plan/actions';
-import { useIsPhone, useMedia } from '../../lib/useMedia';
+import { useIsPhone } from '../../lib/useMedia';
 import { measure } from '../../lib/textFit';
 import { SEARCH_HINTS, hintThatFits } from './toolbarRules';
 
@@ -63,16 +64,15 @@ function useHintRoom(): [React.RefObject<HTMLDivElement | null>, { room: number;
 
 export function Toolbar({ state, patch, issueCount, queryFind }: ToolbarProps) {
   const phone = useIsPhone();
-  // A phone of 420 px or less shares one row between the four tool buttons: there "Data issues" is drawn
-  // as "Issues" (its accessible name stays "Data issues"), so the word and its count fit the button.
-  const narrow = useMedia('(max-width: 420px)');
   const view: View = state.view === 'floor' ? 'stack' : shownView(state.view, phone);
   // A phone has no room for the model, and its tabs are words alone, so they fit beside the search.
   const views = phone ? VIEWS.filter((v) => v.id !== 'building').map(({ id, label }) => ({ id, label })) : VIEWS;
-  const toggleMode = (mode: 'find' | 'worklist' | 'issues') => {
+  // `from` is the control that should take focus back when the panel closes: a menu item is gone by then, so the
+  // phone's More button stands in for it.
+  const toggleMode = (mode: 'find' | 'worklist' | 'issues', from?: Element | null) => {
     if (state.mode === mode) patch({ mode: 'building', req: null, max: null, by: null, inquiry: null, fit: 'any', window: null });
     else {
-      rememberTrigger();
+      rememberTrigger(from === undefined ? undefined : from);
       patch({ mode, select: null, floor: floorKept(state.view, state.floor), window: mode === 'worklist' ? state.window ?? '12' : null });
     }
   };
@@ -80,11 +80,51 @@ export function Toolbar({ state, patch, issueCount, queryFind }: ToolbarProps) {
   // back to the Area panel, so the change is seen (round 18: the tabs changed the URL and nothing else).
   // The lens is chosen in the KPI strip above (its Color-by switches), not here (team review, Nov 12).
   const toPlan = (p: Partial<PlanState>) => patch(state.mode === 'brief' ? { ...p, mode: 'area' } : p);
+  const areaOn = state.mode === 'area' || state.mode === 'brief';
+  const toggleArea = (from?: Element | null) => {
+    if (areaOn) patch({ mode: 'building' });
+    else {
+      rememberTrigger(from === undefined ? undefined : from);
+      openArea(patch, floorKept(state.view, state.floor));
+    }
+  };
+  // Round 37 (Sol): on a phone the tools took a row of their own under the search, so the first floor started lower.
+  // There Find space stays a button beside the view tabs, and the others (Area, Worklist, Data issues) are one More
+  // menu that carries the issue count. A prospect has Area alone, so it stays a button and there is no menu.
+  const more = () => find('.sp-toolbar__more');
+  const moreItems: MenuItem[] = [
+    { id: 'area', label: 'Area', icon: 'people', checked: areaOn, onSelect: () => toggleArea(more()) },
+    ...(canShowLeaseTerm(state.safe) ? [{ id: 'worklist', label: WORKLIST_LABEL, icon: 'clock' as const, checked: state.mode === 'worklist', onSelect: () => toggleMode('worklist', more()) }] : []),
+    ...(canShowIssues(state.safe) ? [{ id: 'issues', label: ISSUES_LABEL, icon: 'warning' as const, hint: issueCount ? String(issueCount) : undefined, checked: state.mode === 'issues', onSelect: () => toggleMode('issues', more()) }] : []),
+  ];
+  const phoneTools = phone ? (
+    <div className="sp-toolbar__group sp-toolbar__phone-tools">
+      <Button icon="filter" active={state.mode === 'find'} onClick={() => toggleMode('find')} title="Find contiguous space by size and date">
+        Find space
+      </Button>
+      {moreItems.length > 1 ? (
+        <Menu
+          label="More tools"
+          items={moreItems}
+          trigger={(p) => (
+            <Button {...p} className="sp-toolbar__more" iconRight="chevron-down" active={areaOn || state.mode === 'worklist' || state.mode === 'issues'} count={issueCount} title="Area, Worklist and Data issues">
+              More
+            </Button>
+          )}
+        />
+      ) : (
+        <Button icon="people" active={areaOn} onClick={() => toggleArea()} title="Demographics, transit and amenities around the property">
+          Area
+        </Button>
+      )}
+    </div>
+  ) : null;
   const [searchRef, hintFit] = useHintRoom();
   const hint = hintThatFits(state.safe ? SEARCH_HINTS.safe : SEARCH_HINTS.owner, hintFit ? hintFit.room : null, (text) => measure(text, hintFit?.font ?? ''));
   return (
     <section className="sp-card sp-toolbar sp-no-print" aria-label="Views and filters">
       <Segmented aria-label="View" size="lg" options={views} value={view} onChange={(v) => toPlan({ view: v, floor: v === 'stack' ? null : state.floor })} />
+      {phoneTools}
       {/* Search and its tool buttons travel together: on one row they sit at the right; when the toolbar
           wraps they take the second row whole, the search filling it from the left edge. */}
       <div className="sp-toolbar__find">
@@ -94,20 +134,14 @@ export function Toolbar({ state, patch, issueCount, queryFind }: ToolbarProps) {
         </div>
         {/* Every view has Find space and Area (the area around the building was too hidden as a Map-only
             button); the ones prospect-safe withholds (Worklist, Data issues) come last, so taking them away moves nothing. */}
-        <div className="sp-toolbar__group">
+        {!phone && <div className="sp-toolbar__group">
           <Button icon="filter" active={state.mode === 'find'} onClick={() => toggleMode('find')} title="Find contiguous space by size and date">
             Find space
           </Button>
           <Button
             icon="people"
-            active={state.mode === 'area' || state.mode === 'brief'}
-            onClick={() => {
-              if (state.mode === 'area' || state.mode === 'brief') patch({ mode: 'building' });
-              else {
-                rememberTrigger();
-                openArea(patch, floorKept(state.view, state.floor));
-              }
-            }}
+            active={areaOn}
+            onClick={() => toggleArea()}
             title="Demographics, transit and amenities around the property"
           >
             Area
@@ -132,10 +166,10 @@ export function Toolbar({ state, patch, issueCount, queryFind }: ToolbarProps) {
               // No aria-label: the name is the words on the button ("Issues 8", WCAG 2.5.3), and the title says
               // what they are ("Data issues: records to fix or verify").
             >
-              {narrow ? 'Issues' : ISSUES_LABEL}
+              {ISSUES_LABEL}
             </Button>
           )}
-        </div>
+        </div>}
       </div>
     </section>
   );

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readBy, readQuery } from './query';
+import { readBy, readPlace, readQuery, sizeText } from './query';
 
 const AS_OF = '2026-11-09';
 
@@ -342,5 +342,74 @@ describe('round 38: negated greater/above, a bad date alone', () => {
   it('a bad date with no size is named', () => {
     expect(q('by 2/30')).toEqual({ kind: 'badDate', badBy: '2/30' });
     expect(q('available by 31 feb 2027')).toEqual({ kind: 'badDate', badBy: '31 Feb 2027' });
+  });
+});
+
+describe('round 37 (Opus): bounds after a range, trailing words, "or", "about", sqft, "not direct only"', () => {
+  const q = (s: string) => readQuery(s, '2026-11-09');
+  it('a trailing word between sizes goes to the size that owns it', () => {
+    expect(q('12k max 15k max 14k')).toMatchObject({ size: 12000, max: 14000 });
+    expect(q('15k max 12k min')).toMatchObject({ size: 12000, max: 15000 });
+    expect(q('12k max 15k')).toMatchObject({ size: 12000, max: 15000 });
+  });
+  it('a bound after a range still counts', () => {
+    expect(q('12k-15k max 14k')).toMatchObject({ size: 12000, max: 14000 });
+    expect(q('12k-15k max 14k')).not.toHaveProperty('unread');
+    expect(q('12k to 15k min 13k')).toMatchObject({ size: 13000, max: 15000 });
+    expect(q('12k to 15k min 13k')).not.toHaveProperty('unread');
+    expect(q('12-15k')).toMatchObject({ size: 12000, max: 15000 });
+  });
+  it('"12k or 15k" is the range between', () => {
+    expect(q('12k or 15k')).toMatchObject({ size: 12000, max: 15000 });
+    expect(q('12k or 15k')).not.toHaveProperty('unread');
+    expect(q('12k or less')).toMatchObject({ size: 100, max: 12000 });
+  });
+  it('"about", "around", "~" and "-ish" read as a tenth either way', () => {
+    for (const s of ['about 12k', 'around 12k', '~12k', '12k-ish', 'approx 12,000 sf', 'roughly 12k']) {
+      expect(q(s), s).toMatchObject({ size: 10800, max: 13200 });
+      expect(q(s), s).not.toHaveProperty('unread');
+    }
+  });
+  it('"12000sqft" is read whole', () => {
+    expect(q('12000sqft')).toMatchObject({ size: 12000, max: null });
+    expect(q('12000sqft')).not.toHaveProperty('unread');
+  });
+  it('"or equal to" is part of the comparator', () => {
+    expect(q('greater than or equal to 12k')).toMatchObject({ size: 12000, max: null });
+    expect(q('greater than or equal to 12k')).not.toHaveProperty('unread');
+    expect(q('less than or equal to 15k')).toMatchObject({ size: 100, max: 15000 });
+    expect(q('less than or equal to 15k')).not.toHaveProperty('unread');
+  });
+  it('"not direct only" lifts the limit', () => {
+    for (const s of ['12k not direct only', '12k not only direct', '12k not sublease only']) {
+      expect(q(s), s).toMatchObject({ fit: 'any' });
+      expect(q(s), s).not.toHaveProperty('unread');
+    }
+    expect(q('12k direct only')).toMatchObject({ fit: 'direct' });
+    expect(q('12k no direct')).toMatchObject({ fit: 'sublease' });
+  });
+});
+
+describe('sizeText and readPlace (round 37)', () => {
+  it('a bare ceiling is "up to"', () => {
+    expect(sizeText(100, 14000)).toBe('up to 14,000');
+    expect(sizeText(12000, 15000)).toBe('12,000–15,000');
+    expect(sizeText(12000, null)).toBe('12,000');
+  });
+  it('reads floors, runs of floors and suites', () => {
+    expect(readPlace('floor 8')).toEqual({ kind: 'floors', floors: [8] });
+    expect(readPlace('12th floor')).toEqual({ kind: 'floors', floors: [12] });
+    expect(readPlace('floors 3-5')).toEqual({ kind: 'floors', floors: [3, 4, 5] });
+    expect(readPlace('floors 5 to 3')).toEqual({ kind: 'floors', floors: [3, 4, 5] });
+    expect(readPlace('unit 860')).toEqual({ kind: 'suites', suites: ['860'], floor: null });
+    expect(readPlace('Suite 860.')).toEqual({ kind: 'suites', suites: ['860'], floor: null });
+    expect(readPlace('860, 870')).toEqual({ kind: 'suites', suites: ['860', '870'], floor: null });
+    expect(readPlace('Floor 8 Ste 860')).toEqual({ kind: 'suites', suites: ['860'], floor: 8 });
+    expect(readPlace('1200-1250')).toEqual({ kind: 'suites', suites: ['1200', '1250'], floor: null });
+  });
+  it('a bare number or a name is not a place', () => {
+    expect(readPlace('860')).toBeNull();
+    expect(readPlace('Kinetic')).toBeNull();
+    expect(readPlace('floor 8 delta')).toBeNull();
   });
 });

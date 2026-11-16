@@ -197,13 +197,29 @@
 @media (max-width: 760px) {
   .sp-toolbar { gap: 6px; padding: 6px 8px; }
   .sp-toolbar .sp-segmented--lg .sp-segmented__opt { padding: 0 8px; }
-  /* Phone: the search on its own row, the tool buttons sharing the row under it. */
+  /* Phone: the search on its own row under the view tabs and the tools. */
   .sp-toolbar__find { flex: 1 1 100%; flex-wrap: wrap; gap: 6px; }
   .sp-toolbar__search { flex: 1 1 100%; }
-  .sp-toolbar__find .sp-toolbar__group { width: 100%; }
-  .sp-toolbar__find .sp-toolbar__group .sp-btn { flex: 1; height: 44px; padding: 0 8px; font-size: var(--sp-text-12); }
-  /* Four tools on one row (Find space, Area, Worklist, Issues): the words carry them, so the icons go at 420 px and under. */
-  .sp-toolbar__find .sp-toolbar__group .sp-btn { min-width: 0; }
+  /* Round 37 (Sol): Find space and More share the view tabs' row, so the tools take no row of their own. The words
+     carry them; Find space keeps its icon where there is room. */
+  .sp-toolbar__phone-tools { flex: 1 1 0; min-width: 0; gap: 6px; }
+  .sp-toolbar__phone-tools > .sp-btn, .sp-toolbar__phone-tools > .sp-pop { flex: 1 1 auto; min-width: 0; }
+  .sp-toolbar__phone-tools .sp-btn { width: 100%; height: 44px; padding: 0 8px; font-size: var(--sp-text-12); min-width: 0; justify-content: center; }
+}
+@media (max-width: 420px) {
+  .sp-toolbar__phone-tools .sp-btn > .sp-icon:first-child { display: none; }
+  .sp-toolbar__phone-tools .sp-btn { padding: 0 6px; gap: 3px; }
+}
+@media (max-width: 360px) {
+  .sp-toolbar { gap: 4px; }
+  .sp-toolbar .sp-segmented--lg .sp-segmented__opt { padding: 0 4px; }
+  .sp-toolbar__phone-tools { gap: 4px; }
+  .sp-toolbar__phone-tools > .sp-pop, .sp-toolbar__phone-tools > .sp-btn:last-child { flex: none; }
+  .sp-toolbar__phone-tools .sp-btn { width: auto; }
+  .sp-toolbar__phone-tools > .sp-btn:first-child { flex: 1 1 auto; }
+  /* The word and the count say it is a menu (its role says so too); the arrow goes for room. */
+  .sp-toolbar__more .sp-icon { display: none; }
+  .sp-toolbar__phone-tools .sp-btn { padding: 0 4px; }
 }
 
 /* ── A tablet, 761–1099 px ──────────────────────────────── */

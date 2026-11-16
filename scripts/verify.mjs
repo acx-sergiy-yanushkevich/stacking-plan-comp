@@ -303,6 +303,35 @@ for (const w of [320, 360]) {
   check(bad.length === 0, `a search that finds nothing reads as a plain sentence${bad.length ? ` (${bad.join('; ')})` : ''}`);
   await e.close();
 }
+// Round 37 (Sol): on a phone Find space and More share the view tabs' row, no word runs out of its button, and More opens
+// Data issues, whose Close returns focus to More.
+for (const [w, qs] of [320, 360, 390].flatMap((w) => ['', '&safe=1'].map((q) => [w, q]))) {
+  const ph = await browser.newPage({ viewport: { width: w, height: 800 }, reducedMotion: 'reduce' });
+  await ph.goto(`${base}?view=stack${qs}`, { waitUntil: 'networkidle' });
+  const row = await ph.evaluate(() => {
+    const tabs = document.querySelector('.sp-toolbar .sp-segmented')?.getBoundingClientRect();
+    const tools = [...document.querySelectorAll('.sp-toolbar__phone-tools .sp-btn')];
+    const sameRow = !!tabs && tools.length === 2 && tools.every((b) => Math.abs(b.getBoundingClientRect().top - tabs.top) < 8);
+    const spill = tools.filter((b) => b.scrollWidth > b.clientWidth + 0.5).map((b) => b.textContent.trim());
+    const page = document.documentElement.scrollWidth > window.innerWidth;
+    return { sameRow, spill, page };
+  });
+  check(row.sameRow && !row.spill.length && !row.page, `${w} px${qs}: Find space and ${qs ? 'Area' : 'More'} sit beside the view tabs, whole${row.spill.length ? ` (${row.spill.join(', ')})` : ''}${row.page ? ' (the page scrolls sideways)' : ''}`);
+  await ph.close();
+}
+{
+  const ph = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', hasTouch: true, isMobile: true });
+  await ph.goto(`${base}?view=stack`, { waitUntil: 'networkidle' });
+  await ph.locator('.sp-toolbar__more').click();
+  await ph.getByRole('menuitemradio', { name: /Data issues/ }).click();
+  await ph.waitForTimeout(400);
+  const opened = new URL(ph.url()).searchParams.get('mode');
+  await ph.locator('.sp-sheet').getByRole('button', { name: /^Close/ }).first().click();
+  await ph.waitForTimeout(400);
+  const on = await ph.evaluate(() => document.activeElement?.classList.contains('sp-toolbar__more'));
+  check(opened === 'issues' && on, `phone: More opens Data issues, and closing it returns focus to More (${opened}, ${on})`);
+  await ph.close();
+}
 await browser.close();
 check(errors.length === 0, `no console errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
 if (fails.length) {

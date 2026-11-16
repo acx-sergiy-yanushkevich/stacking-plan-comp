@@ -1,5 +1,5 @@
 import type { PlanState } from '../../state/planState';
-import type { QueryIntent } from '../../domain/query';
+import { sizeText, type QueryIntent } from '../../domain/query';
 import { num } from '../../domain/format';
 import { fmtDate } from '../../domain/dates';
 import { rangeProblem } from '../../domain/finder';
@@ -29,16 +29,18 @@ export interface FilterBarProps {
 
 const TO_PLAN: Partial<PlanState> = { view: 'building' };
 
-/** Names the active filter above the plan and offers one Clear. */
+/**
+ * Names the active filter above the plan and offers one Clear. Only the message is the live region, so a screen reader
+ * reads the sentence and not the buttons' names with it (round 37).
+ */
 export function FilterBar({ label, empty = false, alternatives, find, planElsewhere, patch }: FilterBarProps) {
   // A requirement with a date the calendar has not: say so and offer nothing to run until it is corrected.
   if (find?.badBy)
     return (
-      <div className="sp-filterbar sp-filterbar--offer" role="status">
+      <div className="sp-filterbar sp-filterbar--offer">
         <Icon name="warning" size={14} />
-        <span>
-          {find.badBy} is not a date on the calendar. Correct it to find {num(find.size)}
-          {find.max && find.max !== find.size ? `–${num(find.max)}` : ''} SF of space by then.
+        <span role="status">
+          {find.badBy} is not a date on the calendar. Correct it to find {sizeText(find.size, find.max)} SF of space by then.
         </span>
         <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '', fit: 'any' })}>
           Clear
@@ -49,9 +51,9 @@ export function FilterBar({ label, empty = false, alternatives, find, planElsewh
   const inverted = find ? rangeProblem(find.size, find.max) : null;
   if (find && inverted)
     return (
-      <div className="sp-filterbar sp-filterbar--offer" role="status">
+      <div className="sp-filterbar sp-filterbar--offer">
         <Icon name="warning" size={14} />
-        <span>
+        <span role="status">
           That asks for at least {num(find.size)} SF and at most {num(find.max ?? 0)} SF, which no space can be. {inverted}
         </span>
         <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '', fit: 'any' })}>
@@ -61,16 +63,15 @@ export function FilterBar({ label, empty = false, alternatives, find, planElsewh
     );
   if (find)
     return (
-      <div className="sp-filterbar sp-filterbar--offer" role="status">
+      <div className="sp-filterbar sp-filterbar--offer">
         <Icon name="filter" size={14} />
-        <span>
+        <span role="status">
           That reads as a space requirement: <strong>{label.replace(/^Find /, '')}</strong>.
           {find.pastBy ? ` ${fmtDate(find.pastBy)} is before the as-of date, so it is not applied.` : ''}
           {find.unread?.length ? ` Not used: ${find.unread.join(', ')}.` : ''}
         </span>
         <Button size="sm" variant="brand" iconRight="chevron-right" className="sp-filterbar__find" onClick={() => patch({ ...findFromQuery(find), ...(planElsewhere ? TO_PLAN : {}) })}>
-          Find {num(find.size)}
-          {find.max && find.max !== find.size ? `–${num(find.max)}` : ''} SF of space
+          Find {sizeText(find.size, find.max)} SF of space
         </Button>
         <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '', fit: 'any' })}>
           Clear
@@ -79,9 +80,9 @@ export function FilterBar({ label, empty = false, alternatives, find, planElsewh
     );
   if (planElsewhere && !empty)
     return (
-      <div className="sp-filterbar" role="status">
+      <div className="sp-filterbar">
         <Icon name="filter" size={14} />
-        <span>
+        <span role="status">
           On the plan: <strong><DotJoin parts={label.split(' · ')} /></strong>.
         </span>
         <Button size="sm" variant="brand" iconRight="chevron-right" className="sp-filterbar__find" onClick={() => patch(TO_PLAN)}>
@@ -93,12 +94,12 @@ export function FilterBar({ label, empty = false, alternatives, find, planElsewh
       </div>
     );
   return (
-    <div className="sp-filterbar" role="status">
+    <div className="sp-filterbar">
       <Icon name="filter" size={14} />
       {/* The label is facts with a "·" between them ("Space that fits 12,000+ SF · 1 option"). On a narrow
           window the sentence wraps: between facts, or inside a long one, never with a separator at the end
           of a line or the start of the next (DotJoin). */}
-      <span>
+      <span role="status">
         {empty ? (
           label
         ) : (

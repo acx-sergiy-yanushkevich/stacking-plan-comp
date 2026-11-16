@@ -37,3 +37,14 @@ describe('FilterBar: nothing matched (round 36)', () => {
     }
   });
 });
+
+describe('FilterBar: round 37 (Opus)', () => {
+  it('a bare ceiling offers "up to", and only the message is the live region', () => {
+    const html = renderToString(<FilterBar label="Find up to 14,000 SF" find={{ kind: 'size', size: 100, max: 14000, fit: 'any', by: null }} patch={() => {}} />).replace(/<!-- -->/g, '');
+    expect(html).toContain('Find up to 14,000 SF of space');
+    expect(html).not.toContain('100–14,000');
+    expect(html).not.toMatch(/<div[^>]*role="status"/);
+    expect(html.match(/role="status"/g)).toHaveLength(1);
+    expect(html).toMatch(/<span role="status">[^<]*That reads as a space requirement/);
+  });
+});

@@ -164,6 +164,7 @@ button.sp-chip[aria-pressed='true'] { background: var(--sp-color-brand-strong); 
    it a 26 px target across the sheet's width. */
 button.sp-sheet__handle { touch-action: none; cursor: grab; }
 button.sp-sheet__handle:active { cursor: grabbing; }
+button.sp-sheet__handle[data-pointer]:focus-visible, button.sp-sheet__handle[data-pointer]:focus-visible span { outline: none; }
 .sp-sheet--dragging { transition: none; }
 .sp-sheet__handle span { width: 40px; height: 4px; border-radius: 2px; background: var(--sp-color-border-strong); display: block; }
 .sp-sheet__head { display: flex; align-items: center; justify-content: space-between; padding: 4px 12px 8px 16px; border-bottom: 1px solid var(--sp-color-border); }
