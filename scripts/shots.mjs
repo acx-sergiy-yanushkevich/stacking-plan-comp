@@ -46,6 +46,8 @@ export const STATES = [
   ['57-search-size', '?view=stack&q=12k%20direct%20by%20jun%202027'],
   ['77-search-range-bound', '?view=stack&q=12k-15k%20max%2014k'],
   ['78-search-up-to', '?view=stack&q=not%20over%2014k'],
+  ['80-search-missing-suite', '?view=stack&q=860%2C%20870'],
+  ['81-search-maximum-of', '?view=stack&q=maximum%20of%2014k'],
   ['58-safe-rent', '?view=stack&lens=rent&safe=1'],
   ['60-find-range', '?view=stack&mode=find&req=5000&max=3000'],
   ['61-legacy-west', '?view=building&building=P002'],
@@ -184,6 +186,14 @@ await mobile.waitForTimeout(350);
 await mobile.locator('.sp-toolbar__more').click();
 await mobile.waitForTimeout(250);
 await mobile.screenshot({ path: `${out}/76-mobile-more.png` });
+// Round 39: at 320 px Find space and More take a row of their own.
+{
+  const narrow = await browser.newPage({ viewport: { width: 320, height: 700 }, deviceScaleFactor: 2, colorScheme: 'dark', locale: 'en-US', reducedMotion: 'reduce' });
+  await narrow.goto(base + '?view=stack', { waitUntil: 'networkidle' });
+  await narrow.waitForTimeout(350);
+  await narrow.screenshot({ path: `${out}/79-mobile-320-toolbar.png` });
+  await narrow.close();
+}
 const print = await browser.newPage({ viewport: { width: 1400, height: 1000 }, locale: 'en-US', reducedMotion: 'reduce' });
 hook(print, 'print');
 await print.goto(base + '?view=stack&print=1', { waitUntil: 'networkidle' });
