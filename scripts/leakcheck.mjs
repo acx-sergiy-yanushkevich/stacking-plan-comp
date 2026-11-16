@@ -458,6 +458,16 @@ async function read(qs) {
   // Long enough for the live region's summary of the as-of date (it is written 400 ms after the load).
   await open(page, base + qs, qs.includes('map') ? 1500 : 600);
   let text = await grab();
+  // The Map draws its labels (the building's name, the place pins, the ring's walk time) when its tiles arrive, which the
+  // network times: read it again until two readings agree, so a slow load is not reported as drift (round 39).
+  if (qs.includes('view=map')) {
+    for (let i = 0; i < 12; i++) {
+      await page.waitForTimeout(500);
+      const again = await grab();
+      if (again === text && /10-min walk|mi ·/.test(again)) break;
+      text = again;
+    }
+  }
   const dom = await findDomLeaks();
   // Lists behind tabs render only once their tab is chosen: open every tab and check what it shows.
   const tabs = page.locator('.sp-flists__tabs [role="radio"]');
@@ -477,6 +487,29 @@ function firstDifference(a, b) {
   const at = i === -1 ? la.length : i;
   const cut = (t) => (t === undefined ? '(nothing)' : `"${t.length > 110 ? `${t.slice(0, 110)}…` : t}"`);
   return `today ${cut(la[at])} ≠ later ${cut(lb[at])}`;
+}
+
+/**
+ * Two readings of one page are the same page. On the Map the order of its lines follows when the map's tiles, labels and
+ * credit line arrive, which the network decides, not the as-of date (round 39: the building's name and the OpenFreeMap
+ * credit swapped places between two loads and were reported as drift). There the lines are compared as a set, the credit
+ * line aside; any line that one reading has and the other lacks is still drift.
+ */
+function samePage(qs, a, b) {
+  if (a === b) return true;
+  if (!qs.includes('view=map')) return false;
+  const lines = (t) => t.split('\n').filter((l) => l.trim() && !/OpenFreeMap|OpenMapTiles|Data from OpenStreetMap/.test(l)).sort().join('\n');
+  return lines(a) === lines(b);
+}
+
+/** The lines one reading has and the other lacks. */
+function setDifference(a, b) {
+  const count = (t) => t.split('\n').reduce((m, l) => m.set(l, (m.get(l) ?? 0) + 1), new Map());
+  const A = count(a);
+  const B = count(b);
+  const gone = [...A].filter(([l, n]) => (B.get(l) ?? 0) < n).map(([l]) => l.slice(0, 80));
+  const added = [...B].filter(([l, n]) => (A.get(l) ?? 0) < n).map(([l]) => l.slice(0, 80));
+  return `only today: ${JSON.stringify(gone.slice(0, 4))}; only later: ${JSON.stringify(added.slice(0, 4))}`;
 }
 
 /** The same link with its as-of date replaced. */
@@ -507,7 +540,7 @@ async function checkState(qs, travel = true, label = qs) {
     const date = addMonths(TODAY, months);
     const later = await read(withAsOf(qs, date));
     const drift = [...later.dom, ...findLeaks(later.text, { q: new URLSearchParams(qs).get('q') })];
-    if (later.text !== today) drift.push(`the page differs from today's: ${firstDifference(today, later.text)}`);
+    if (!samePage(qs, today, later.text)) drift.push(`the page differs from today's: ${qs.includes('view=map') ? setDifference(today, later.text) : firstDifference(today, later.text)}`);
     report(`${label} · as of +${months} mo (${date})`, drift);
   }
 }
