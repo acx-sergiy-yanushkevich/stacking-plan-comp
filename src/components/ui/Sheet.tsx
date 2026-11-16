@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { Button } from './Button';
-import { canExpandSheet, dragSheetHeight, expandedSheetHeight, isSheetDrag, snapSheet } from './sheetHeight';
+import { canExpandSheet, dragSheetHeight, expandedSheetHeight, isSheetDrag, SHEET_HALF, snapSheet } from './sheetHeight';
 import { computedStyle, findAll, focused, mutationObserver, on, sizeObserver, viewport as hostViewport } from '../../lib/host';
 
 export interface SheetProps {
@@ -211,7 +211,9 @@ export function Sheet({ open, onClose, title, children, snap = 'half', hideHeade
       aria-labelledby={labelId ?? undefined}
       aria-label={labelId ? undefined : typeof title === 'string' ? title : 'Details'}
       className={`sp-sheet ${expanded ? 'sp-sheet--full' : ''} ${dragging ? 'sp-sheet--dragging' : ''}`}
-      style={dragging ? { height: dragHeight } : expanded ? { height: expandedSheetHeight(measured) } : undefined}
+      // Content shorter than the half snap gets a sheet its own height (round 36: a prospect's suite sheet was half a screen
+      // with one row in it); a sheet is never shorter than 160 px, its handle, heading and a row.
+      style={dragging ? { height: dragHeight } : expanded ? { height: expandedSheetHeight(measured) } : content !== null && viewport > 0 && content < SHEET_HALF * viewport ? { height: Math.max(160, Math.ceil(content)) } : undefined}
     >
       {canExpand ? (
         <button

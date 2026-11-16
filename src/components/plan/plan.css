@@ -24,7 +24,9 @@
 .sp-seg.is-dim text, .sp-seg.is-dim .sp-badge, .sp-seg.is-dim .sp-seg__backing { display: none; }
 .sp-seg:focus-visible { outline: none; }
 .sp-seg:focus-visible .sp-seg__rect { stroke: var(--sp-color-focus); stroke-width: 2; }
-.sp-seg:focus-visible .sp-seg__ring { stroke: var(--sp-color-focus); stroke-opacity: 0.35; stroke-width: 6; fill: none; }
+/* Round 35: the keyboard ring is a solid 2.5 px line 3 px outside the block, as strong as the HTML controls' ring
+   (it was a 35% wash that read as a thin stroke). */
+.sp-seg:focus-visible .sp-seg__ring { stroke: var(--sp-color-focus); stroke-opacity: 1; stroke-width: 2.5; fill: none; }
 .sp-seg--dashed .sp-seg__rect { stroke-dasharray: 4 3; }
 .sp-seg text { pointer-events: none; font-family: var(--sp-font); font-variant-numeric: tabular-nums; }
 .sp-seg__name { font-size: 13px; font-weight: 600; }

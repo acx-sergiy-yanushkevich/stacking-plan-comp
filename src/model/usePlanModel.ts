@@ -83,6 +83,12 @@ export interface PlanModel {
    */
   option?: ChosenOption | null;
   filterLabel: string | null;
+  /**
+   * The label says nothing matched: the bar shows it as a sentence, not as a filter in force ("Showing … Other space is
+   * dimmed"), and offers no way to the plan. A flag, not a test of the words (round 36: labels starting "There is" and
+   * "Nothing" were read as filters because the bar looked for "No ").
+   */
+  filterEmpty: boolean;
   timeline: ReturnType<typeof timelineModel>;
   selected: Segment | null;
   selectedFloor: FloorView | null;
@@ -147,11 +153,23 @@ export function buildWorklist(floors: FloorView[], window: WindowKey, asOf: ISOD
   });
 }
 
+/** What a state search says when it finds nothing, in plain words (round 36: "No for sale space", "No signed, not yet in space"). */
+const NONE_OF: Record<string, string> = {
+  Available: 'No available space',
+  Sublease: 'No sublease space',
+  Holdover: 'No holdover',
+  'Month-to-month': 'No month-to-month lease',
+  'Holdover / month-to-month': 'No holdover or month-to-month lease',
+  'For sale': 'Nothing for sale',
+  'Signed, not yet in': 'No lease signed and not yet in',
+};
+
 /** Search hits with the reason each block matched ("Prospect: Vantage Robotics (LOI)"). */
 export function search(floors: FloorView[], q: string, safe: boolean, intent: QueryIntent | null): Map<string, string> {
-  const needle = q.trim().toLowerCase();
+  // A broker's spellings of a suite read as the plan writes it: "Ste. 860" and "#860" are "ste 860" and "860" (round 37).
+  const needle = q.trim().toLowerCase().replace(/\b(ste|suite)\.\s*/g, '$1 ').replace(/#\s*(?=\d)/g, '');
   const out = new Map<string, string>();
-  if (!needle || intent?.kind === 'size') return out;
+  if (!needle || intent?.kind === 'size' || intent?.kind === 'badDate') return out;
   // A state word lights that state ("sublease", "signed"), on one floor when the query names it ("subleases on
   // floor 7"); tenant risk ("holdover") says nothing to a prospect.
   if (intent?.kind === 'state') {
@@ -171,6 +189,14 @@ export function search(floors: FloorView[], q: string, safe: boolean, intent: Qu
   }
   // "12 floor", "12th floor", "floor 12" and "fl 12" are the floor, whichever way round (round 31: "12 floor" found nothing).
   const floorNo = /^(?:(\d{1,3})(?:st|nd|rd|th)?\s*(?:floor|fl)|(?:floor|fl|level)\s*(\d{1,3}))$/.exec(needle);
+  // A floor and a suite in either order ("Floor 8 Ste 860", "ste 860 floor 8", "860 fl 8"): the floor is taken out
+  // wherever it stands, and what is left is the suite (round 36: only the first order was read).
+  // "floor 8" is looked for first: in "ste 860 floor 8" the "860 floor" is not a floor.
+  const floorPart = floorNo ? null : /(?:^|[\s,·])(?:floor|fl|level)\s*(\d{1,3})(?=$|[\s,·])/.exec(needle) ?? /(?:^|[\s,·])(\d{1,3})(?:st|nd|rd|th)\s*(?:floor|fl)(?=$|[\s,·])/.exec(needle);
+  const suitePart = floorPart ? needle.replace(floorPart[0], ' ').replace(/\b(?:ste|suite|on|at|of)\b|[,·-]/g, ' ').trim() : null;
+  const floorSuiteOf = floorPart && suitePart && /^\w+$/.test(suitePart) ? { floor: String(Number(floorPart[1])), suite: suitePart } : null;
+  // Two suite numbers with a dash ("1200-1250"), which the search box does not read as a size: both suites.
+  const suitePair = /^(?:(?:ste|suite)s?\s*)?(\d{3,5})\s*[-–—−]\s*(\d{3,5})$/.exec(needle);
   const hit = (v: string | undefined) => !!v && v.toLowerCase().includes(needle);
   for (const f of floors) {
     if (floorNo) {
@@ -179,7 +205,13 @@ export function search(floors: FloorView[], q: string, safe: boolean, intent: Qu
     }
     for (const s of f.segments) {
       let reason: string | null = null;
-      if (s.suite && (hit(s.suite) || hit(`ste ${s.suite}`) || hit(`suite ${s.suite}`))) reason = `Suite ${s.suite}`;
+      // The plan's own label finds its suite too: "Floor 8 Ste 860", "fl 8 860" (round 36: it found nothing).
+      const floorSuite = !!s.suite && !!floorSuiteOf && floorSuiteOf.floor === String(f.floor.sequence) && floorSuiteOf.suite === s.suite.toLowerCase();
+      if (suitePair) {
+        if (s.suite && (s.suite === suitePair[1] || s.suite === suitePair[2])) out.set(s.key, `Suite ${s.suite}`);
+        continue;
+      }
+      if (s.suite && (floorSuite || hit(s.suite) || hit(`ste ${s.suite}`) || hit(`suite ${s.suite}`))) reason = `Suite ${s.suite}`;
       else if (hit(f.floor.name)) reason = f.floor.name;
       else if (!safe) {
         const deals = [...(s.availability?.deals ?? []), ...(s.marketed?.deals ?? []), ...(s.lease?.deals ?? [])];
@@ -255,7 +287,7 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
 
   const intent = useMemo(() => readQuery(state.q, asOf), [state.q, asOf]);
   const queryFind = intent?.kind === 'size' ? intent : null;
-  const searchReasons = useMemo(() => (state.q ? search(floors, state.q, safe, intent) : null), [floors, state.q, safe, intent]);
+  const searchReasons = useMemo(() => (state.q.trim() ? search(floors, state.q, safe, intent) : null), [floors, state.q, safe, intent]);
   const searchMatches = useMemo(() => (searchReasons ? new Set(searchReasons.keys()) : null), [searchReasons]);
 
   const bucketKeys = useMemo(() => {
@@ -277,6 +309,7 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
 
   let highlight: Set<string> | null = null;
   let filterLabel: string | null = null;
+  let filterEmpty = false;
   if (fits && req) {
     // Every suite of the chosen option is lit, whether it is an exact match or an alternative.
     highlight = option ? new Set([...fits.keys, ...option.keys]) : fits.keys;
@@ -284,11 +317,27 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
   } else if (queryFind) {
     // A size is a requirement, not a name: the bar offers Find space with it (FilterBar).
     highlight = null;
-    filterLabel = `Find ${num(queryFind.size)}${queryFind.max ? `–${num(queryFind.max)}` : ''} SF${queryFind.fit === 'any' ? '' : ` ${queryFind.fit}`}${queryFind.by ? ` by ${fmtDate(queryFind.by)}` : ''}`;
+    filterLabel = `Find ${num(queryFind.size)}${queryFind.max && queryFind.max !== queryFind.size ? `–${num(queryFind.max)}` : ''} SF${queryFind.fit === 'any' ? '' : ` ${queryFind.fit}`}${queryFind.by ? ` by ${fmtDate(queryFind.by)}` : ''}`;
   } else if (searchMatches && searchMatches.size === 0) {
     highlight = null;
     // Prospect-safe search skips tenants and prospects, and never repeats the query: it may be a tenant name.
-    filterLabel = safe
+    // A state it understood says so in its own words (round 35: "available on floor 4" read as an unknown name). It
+    // repeats only the state and the floor, never the query, so it is as safe for a prospect as the generic line.
+    // A tenant-risk word in Prospect-safe keeps the generic line: "No holdover space" would tell a prospect something false.
+    filterEmpty = true;
+    const stateIntent = intent?.kind === 'state' && !(intent.tenantRisk && safe) ? intent : null;
+    const named = stateIntent && stateIntent.floor !== null ? floors.find((f) => String(f.floor.sequence) === stateIntent.floor) : undefined;
+    // A floor the building does not have is said plainly (round 36: "No available space on Floor 99 now").
+    // "floor 99" with no state word: the same plain line (round 36: it got the name-search message).
+    const bare = /^(?:(\d{1,3})(?:st|nd|rd|th)?\s*(?:floor|fl)|(?:floor|fl|level)\s*(\d{1,3}))$/.exec(state.q.trim().toLowerCase());
+    const missingFloor = stateIntent && stateIntent.floor !== null && !named ? stateIntent.floor : bare && !floors.some((f) => String(f.floor.sequence) === String(Number(bare[1] ?? bare[2]))) ? String(Number(bare[1] ?? bare[2])) : null;
+    filterLabel = intent?.kind === 'badDate'
+      ? `${intent.badBy} is not a date on the calendar.`
+      : missingFloor !== null
+      ? `There is no Floor ${missingFloor} here (Floors ${Math.min(...floors.map((f) => f.floor.sequence))}–${Math.max(...floors.map((f) => f.floor.sequence))}).`
+      : stateIntent
+      ? `${NONE_OF[stateIntent.label] ?? `No ${stateIntent.label.toLowerCase()} space`}${stateIntent.floor !== null ? ` on ${floors.find((f) => String(f.floor.sequence) === stateIntent.floor)?.floor.name ?? `Floor ${stateIntent.floor}`}` : ''}${stateIntent.now ? ' now' : ''}.`
+      : safe
       ? 'No suite or floor matches. Try a suite number (“350”), a floor (“Floor 8”) or a size (“12,000 SF”).'
       : `No tenant, suite or prospect matches “${state.q}”. Try a suite number (“350”), a floor (“Floor 8”) or a size (“12,000 SF”).`;
   } else if (searchMatches) {
@@ -341,6 +390,7 @@ export function usePlanModel(property: Property, state: PlanState, today: ISODat
     partial: fits && req ? fits.partial : null,
     option,
     filterLabel,
+    filterEmpty,
     timeline,
     selected,
     selectedFloor,

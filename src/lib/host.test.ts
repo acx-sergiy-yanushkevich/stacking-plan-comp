@@ -32,8 +32,12 @@ function fakePage(search = '?view=stack') {
       },
       pushState(data, _unused, url) {
         pushed.push({ data, url });
+        page.history.state = data;
         page.location.search = url.slice('/plan/'.length).replace(/#.*$/, '');
         page.location.href = `https://example.test${url}`;
+      },
+      back() {
+        log.push('back');
       },
     },
     innerHeight: 800,
@@ -120,8 +124,17 @@ describe('browser host', () => {
     const { page, replaced, pushed } = fakePage('?view=stack');
     const host = createBrowserHost(page);
     host.writeUrl('?view=timeline', true);
-    expect(pushed).toEqual([{ data: { kept: true }, url: '/plan/?view=timeline#top' }]);
+    expect(pushed).toEqual([{ data: { kept: true, staxSheet: false }, url: '/plan/?view=timeline#top' }]);
     expect(replaced).toEqual([]);
+  });
+
+  it('marks an entry added by opening a sheet, so Back or Forward onto it still knows (round 37)', () => {
+    const { page } = fakePage('?view=stack');
+    const host = createBrowserHost(page);
+    host.writeUrl('?view=stack&select=A', true, true);
+    expect(host.sheetEntry()).toBe(true);
+    host.writeUrl('?view=timeline', true);
+    expect(host.sheetEntry()).toBe(false);
   });
 
   it('does not touch the address when the state already matches it', () => {

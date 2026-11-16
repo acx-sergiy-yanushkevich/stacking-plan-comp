@@ -33,13 +33,17 @@ export interface Host {
   readUrl(): string;
   /** Put the plan's state in the address (`''` or `?view=stack&…`) without adding a step to Back. */
   /** `push` adds a history entry (a deliberate move: another view, building or floor); otherwise the entry is replaced. */
-  writeUrl(search: string, push?: boolean): void;
+  writeUrl(search: string, push?: boolean, sheet?: boolean): void;
+  /** Whether the history entry now in view was added by opening a phone or tablet sheet (`writeUrl(…, true, true)`). */
+  sheetEntry(): boolean;
   /** The whole address of this view, for "Copy link". */
   shareUrl(): string;
   /** Name the tab. */
   setTitle(title: string): void;
   /** Call `listener` when the user goes back or forward to another address. Returns the way to stop. */
   onPopState(listener: () => void): () => void;
+  /** Step back one history entry, as the Back button does (round 36: closing a phone sheet undoes the entry opening it added). */
+  historyBack(): void;
 
   // ── The element the plan is drawn in ───────────────────────────────────────────────────────────
   /** Set a `data-<name>` flag on the element the styles hang from; `null` removes it. */
@@ -137,7 +141,7 @@ interface Listens {
 /** The parts of `window` and `document` a browser host uses: small enough to fake in a test. */
 export interface BrowserPage extends Listens {
   location: { pathname: string; search: string; hash: string; href: string };
-  history: { state: unknown; replaceState(data: unknown, unused: string, url: string): void; pushState(data: unknown, unused: string, url: string): void };
+  history: { state: unknown; replaceState(data: unknown, unused: string, url: string): void; pushState(data: unknown, unused: string, url: string): void; back(): void };
   innerHeight: number;
   navigator: { clipboard?: { writeText(text: string): Promise<void> } };
   scrollBy(options: { top: number; behavior: 'smooth' | 'auto' }): void;
@@ -181,19 +185,23 @@ export function createBrowserHost(page: BrowserPage): Host {
   const doc = page.document;
   return {
     readUrl: () => page.location.search,
-    writeUrl: (search, push = false) => {
+    writeUrl: (search, push = false, sheet = false) => {
       const { pathname, hash } = page.location;
       // Only a real change is written: the address is not touched when the state already matches it.
       if (search === page.location.search) return;
       // Round 30: a deliberate move is a history entry, so Back returns to the view it left; typing and
-      // normalizing replace the entry they are on.
-      if (push) page.history.pushState(page.history.state, '', `${pathname}${search}${hash}`);
+      // normalizing replace the entry they are on. Round 37: an entry added by opening a sheet is marked, so Back or
+      // Forward back onto it still knows that closing the sheet should step back over it.
+      const base = page.history.state && typeof page.history.state === 'object' ? (page.history.state as Record<string, unknown>) : {};
+      if (push) page.history.pushState({ ...base, staxSheet: sheet }, '', `${pathname}${search}${hash}`);
       else page.history.replaceState(page.history.state, '', `${pathname}${search}${hash}`);
     },
+    sheetEntry: () => !!(page.history.state as { staxSheet?: boolean } | null)?.staxSheet,
     shareUrl: () => page.location.href,
     setTitle: (title) => {
       doc.title = title;
     },
+    historyBack: () => page.history.back(),
     onPopState: (listener) => {
       page.addEventListener('popstate', listener);
       return () => page.removeEventListener('popstate', listener);
@@ -298,6 +306,8 @@ export const NO_HOST: Host = {
   shareUrl: () => '',
   setTitle: () => {},
   onPopState: () => () => {},
+  historyBack: () => {},
+  sheetEntry: () => false,
   setRootData: () => {},
   setRootStyle: () => {},
   readRootStyle: () => '',
@@ -346,10 +356,12 @@ export function setHost(next: Host | null): Host | null {
 export const hasPage = (): boolean => current() !== NO_HOST;
 
 export const readUrl = (): string => current().readUrl();
-export const writeUrl = (search: string, push = false): void => current().writeUrl(search, push);
+export const writeUrl = (search: string, push = false, sheet = false): void => current().writeUrl(search, push, sheet);
+export const sheetEntry = (): boolean => current().sheetEntry();
 export const shareUrl = (): string => current().shareUrl();
 export const setTitle = (title: string): void => current().setTitle(title);
 export const onPopState = (listener: () => void): (() => void) => current().onPopState(listener);
+export const historyBack = (): void => current().historyBack();
 
 export const setRootData = (name: string, value: string | null): void => current().setRootData(name, value);
 export const setRootStyle = (name: string, value: string | null): void => current().setRootStyle(name, value);

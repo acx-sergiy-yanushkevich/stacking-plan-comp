@@ -62,6 +62,7 @@ function buildModel(asOf: string, safe: boolean): PlanModel {
     bucketKeys: null,
     highlight: null,
     filterLabel: null,
+    filterEmpty: false,
     timeline: timelineModel(property, floors, asOf, today),
     selected: null,
     selectedFloor: null,

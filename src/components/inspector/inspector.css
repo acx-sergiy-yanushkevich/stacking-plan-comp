@@ -114,7 +114,7 @@
 .sp-roll__bar { cursor: pointer; outline: none; }
 .sp-roll__bar[role='button']:hover .sp-roll__mark { opacity: 0.9; }
 .sp-roll__hit { fill: transparent; }
-.sp-roll__bar:focus-visible .sp-roll__hit { stroke: var(--sp-color-focus); stroke-width: 2; rx: 3; }
+.sp-roll__bar:focus-visible .sp-roll__hit { stroke: var(--sp-color-focus); stroke-width: 2.5; rx: 3; }
 .sp-roll__mark { fill: var(--sp-color-brand); opacity: 0.7; transition: opacity var(--sp-ease); }
 .sp-roll__bar.is-active .sp-roll__mark { opacity: 1; }
 .sp-roll__bar.is-dim .sp-roll__mark { opacity: 0.3; }

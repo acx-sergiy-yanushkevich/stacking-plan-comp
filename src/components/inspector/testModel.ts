@@ -62,6 +62,7 @@ export function buildModel(state: PlanState, property: Property = prestonPark): 
     bucketKeys: null,
     highlight: fits?.keys ?? null,
     filterLabel: null,
+    filterEmpty: false,
     timeline: timelineModel(property, floors, asOf, TODAY, state.safe),
     selected,
     selectedFloor,

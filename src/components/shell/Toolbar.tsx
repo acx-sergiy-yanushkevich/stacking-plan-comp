@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { QueryIntent } from '../../domain/query';
+import { rangeProblem } from '../../domain/finder';
 import { findFromQuery } from '../stack/FilterBar';
 import { computedStyle, sizeObserver } from '../../lib/host';
 import { canShowIssues, canShowLeaseTerm } from '../../domain/safe';
@@ -69,7 +70,7 @@ export function Toolbar({ state, patch, issueCount, queryFind }: ToolbarProps) {
   // A phone has no room for the model, and its tabs are words alone, so they fit beside the search.
   const views = phone ? VIEWS.filter((v) => v.id !== 'building').map(({ id, label }) => ({ id, label })) : VIEWS;
   const toggleMode = (mode: 'find' | 'worklist' | 'issues') => {
-    if (state.mode === mode) patch({ mode: 'building', req: null, max: null, by: null, inquiry: null, window: null });
+    if (state.mode === mode) patch({ mode: 'building', req: null, max: null, by: null, inquiry: null, fit: 'any', window: null });
     else {
       rememberTrigger();
       patch({ mode, select: null, floor: floorKept(state.view, state.floor), window: mode === 'worklist' ? state.window ?? '12' : null });
@@ -89,7 +90,7 @@ export function Toolbar({ state, patch, issueCount, queryFind }: ToolbarProps) {
       <div className="sp-toolbar__find">
         <div className="sp-toolbar__search" ref={searchRef}>
           {/* The field is named for the search it does: a prospect-safe search finds no tenant or prospect. */}
-          <TextField label={state.safe ? SEARCH_HINTS.safe[0] : SEARCH_HINTS.owner[0]} hideLabel kind="search" placeholder={hint} value={state.q} onChange={(e) => toPlan({ q: e.target.value })} onClear={() => toPlan({ q: '' })} onKeyDown={(e) => e.key === 'Enter' && queryFind && !queryFind.badBy && toPlan({ ...findFromQuery(queryFind), ...(view === 'map' ? { view: 'building' as const } : {}) })} />
+          <TextField label={state.safe ? SEARCH_HINTS.safe[0] : SEARCH_HINTS.owner[0]} hideLabel kind="search" placeholder={hint} value={state.q} onChange={(e) => toPlan({ q: e.target.value })} onClear={() => toPlan({ q: '' })} onKeyDown={(e) => e.key === 'Enter' && queryFind && !queryFind.badBy && !rangeProblem(queryFind.size, queryFind.max) && toPlan({ ...findFromQuery(queryFind), ...(view === 'map' ? { view: 'building' as const } : {}) })} />
         </div>
         {/* Every view has Find space and Area (the area around the building was too hidden as a Map-only
             button); the ones prospect-safe withholds (Worklist, Data issues) come last, so taking them away moves nothing. */}

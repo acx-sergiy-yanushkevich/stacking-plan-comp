@@ -62,3 +62,40 @@ describe('floor and largest-block phrases (round 31)', () => {
     for (const q of ['largest block', 'biggest block', 'largest available space']) expect(run(floors, q, false).size, q).toBe(1);
   });
 });
+
+describe('the plan\'s own label, and a blank query (round 36)', () => {
+  it('"Floor 8 Ste 860" and "fl 8 860" find that suite', () => {
+    const { floors } = plan(false);
+    for (const q of ['Floor 8 Ste 860', 'fl 8 860', 'floor 8, suite 860']) {
+      const hits = [...run(floors, q, false).values()];
+      expect(hits, q).toEqual(['Suite 860']);
+    }
+  });
+});
+
+describe('a floor and a suite in either order, and a suite pair (round 36)', () => {
+  it('"ste 860 floor 8" and "860 fl 8" find the suite as "Floor 8 Ste 860" does', () => {
+    const { floors } = plan(false);
+    for (const q of ['ste 860 floor 8', '860 fl 8', 'suite 860, floor 8']) expect([...run(floors, q, false).values()], q).toEqual(['Suite 860']);
+  });
+  it('"1200-1250" lights both suites', () => {
+    const { floors } = plan(false);
+    expect([...run(floors, '1200-1250', false).values()].sort()).toEqual(['Suite 1200', 'Suite 1250']);
+  });
+});
+
+describe('round 37: a broker\'s suite spellings', () => {
+  it('"Ste. 860", "#860" and "8th floor ste 860" find Suite 860; "ste 850-860" lights both', () => {
+    const { floors } = plan(false);
+    for (const q of ['Ste. 860', '#860', 'suite #860', 'Floor 8 Ste. 860', '8th floor ste 860']) expect([...run(floors, q, false).values()], q).toEqual(['Suite 860']);
+    expect([...run(floors, 'ste 850-860', false).values()].sort()).toEqual(['Suite 850', 'Suite 860']);
+  });
+});
+
+describe('round 38: suite spellings', () => {
+  it('"860 on floor 8" and "1200−1250" (minus sign)', () => {
+    const { floors } = plan(false);
+    expect([...run(floors, '860 on floor 8', false).values()]).toEqual(['Suite 860']);
+    expect([...run(floors, '1200−1250', false).values()].sort()).toEqual(['Suite 1200', 'Suite 1250']);
+  });
+});

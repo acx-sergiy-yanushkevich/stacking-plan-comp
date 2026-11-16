@@ -274,7 +274,7 @@ function Shell() {
       }
       if (el && el.closest(`.sp-ins, .sp-pop__panel, .sp-sheet, ${stageOwnsEscape ? '.sp-stage, ' : ''}input, select, textarea`)) return;
       if (state.bucket !== null || state.q || state.window || state.req !== null || state.inquiry) {
-        patch({ bucket: null, q: '', window: null, req: null, max: null, by: null, inquiry: null, mode: 'building' });
+        patch({ bucket: null, q: '', window: null, req: null, max: null, by: null, inquiry: null, fit: 'any', mode: 'building' });
         refocusTrigger();
       }
     };
@@ -361,7 +361,7 @@ function Shell() {
               if (key) focusSegment(key);
               else refocusTrigger();
             } else {
-              patch({ mode: 'building', req: null, inquiry: null, window: null });
+              patch({ mode: 'building', req: null, max: null, by: null, inquiry: null, fit: 'any', window: null });
               refocusTrigger();
             }
           }}

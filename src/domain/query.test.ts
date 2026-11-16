@@ -227,3 +227,120 @@ describe('ceilings, ranges from zero, both kinds, ordinals (round 33)', () => {
     expect(q('12k by 2/30')).toMatchObject({ by: null, badBy: '2/30' });
   });
 });
+
+describe('comparators beside their own size, negation and "between" (round 35)', () => {
+  const q = (s: string) => readQuery(s, '2026-11-09');
+  it('a ceiling applies to the size it stands beside, in any word order', () => {
+    for (const s of ['12k no more than 15k', '12k but under 15k', '12k under 15k by q3 direct', 'under 15k 12k', 'between 12k and 15k', 'from 12k to 15k', '12 to 15 thousand sf'])
+      expect(q(s), s).toMatchObject({ kind: 'size', size: 12000, max: 15000 });
+    for (const s of ['12k no more than 15k', '12k but under 15k', 'between 12k and 15k']) expect(q(s), s).not.toHaveProperty('unread');
+  });
+  it('reads "not more than", "smaller than" and the symbols as ceilings', () => {
+    for (const s of ['not more than 15k', 'smaller than 15k', 'less than 15k', '<15k', '≤15k', '<= 15k', 'no bigger than 15k', '15k max'])
+      expect(q(s), s).toMatchObject({ kind: 'size', size: 100, max: 15000 });
+  });
+  it('reads floors in words and symbols without listing them', () => {
+    for (const s of ['over 12k', 'more than 12k', 'at least 12k', '>12k', '≥ 12k', '12k+', '12k or more']) {
+      expect(q(s), s).toMatchObject({ kind: 'size', size: 12000, max: null });
+      expect(q(s), s).not.toHaveProperty('unread');
+    }
+  });
+  it('rules a kind of space out as well as in', () => {
+    expect(q('12k no sublease')).toMatchObject({ fit: 'direct' });
+    expect(q('12k without sublease')).toMatchObject({ fit: 'direct' });
+    expect(q('12k direct only')).toMatchObject({ fit: 'direct' });
+    expect(q('12k no direct')).toMatchObject({ fit: 'sublease' });
+    for (const s of ['12k no sublease', '12k direct only']) expect(q(s), s).not.toHaveProperty('unread');
+  });
+  it('a price after "under" is still unused, never a size', () => {
+    expect(q('15k nnn under $35')).toMatchObject({ size: 15000, max: null, unread: ['nnn', 'under', '$35'] });
+  });
+});
+
+describe('a ceiling at or under the floor (round 36)', () => {
+  const q = (s: string) => readQuery(s, '2026-11-09');
+  it('keeps a contradiction as typed, for the bar to name', () => {
+    expect(q('20k under 15k')).toMatchObject({ kind: 'size', size: 20000, max: 15000 });
+  });
+  it('keeps equal bounds as that exact size', () => {
+    expect(q('15k no more than 15k')).toMatchObject({ kind: 'size', size: 15000, max: 15000 });
+  });
+});
+
+describe('negated comparators, one word per size, more kinds (round 36)', () => {
+  const q = (s: string) => readQuery(s, '2026-11-09');
+  it('a negated ceiling is a floor', () => {
+    for (const s of ['no less than 12k', 'not less than 12k', 'not under 12k', 'no fewer than 12k']) {
+      expect(q(s), s).toMatchObject({ kind: 'size', size: 12000, max: null });
+      expect(q(s), s).not.toHaveProperty('unread');
+    }
+  });
+  it('binds each comparator to one size', () => {
+    expect(q('15k max 12k min')).toMatchObject({ size: 12000, max: 15000 });
+    expect(q('15k max 12k min')).not.toHaveProperty('unread');
+    expect(q('12k at most')).toMatchObject({ size: 100, max: 12000 });
+  });
+  it('reads "12 to 15 thousand sf" without listing the 12', () => {
+    expect(q('12 to 15 thousand sf')).toMatchObject({ size: 12000, max: 15000 });
+    expect(q('12 to 15 thousand sf')).not.toHaveProperty('unread');
+  });
+  it('rules sublease out with "exclude", and in with "sublease ok"', () => {
+    expect(q('12k exclude sublease')).toMatchObject({ fit: 'direct' });
+    expect(q('12k excluding sublease')).toMatchObject({ fit: 'direct' });
+    expect(q('12k sublease ok')).toMatchObject({ fit: 'any' });
+  });
+});
+
+describe('a word between two sizes, articles, dashes (round 36, part 2)', () => {
+  const q = (s: string) => readQuery(s, '2026-11-09');
+  it('a word between two sizes belongs to the later one unless the later has its own', () => {
+    for (const s of ['min 12k max 15k', 'at least 12k max 15k', 'minimum 12k maximum 15k', '12k sf max 15k sf', '12k max 15k', '15k max 12k min']) {
+      expect(q(s), s).toMatchObject({ kind: 'size', size: 12000, max: 15000 });
+      expect(q(s), s).not.toHaveProperty('unread');
+    }
+  });
+  it('reads a kind of space with an article after the negation', () => {
+    expect(q('12k without a sublease')).toMatchObject({ fit: 'direct' });
+    expect(q('12k not a sublease')).toMatchObject({ fit: 'direct' });
+  });
+  it('reads an em dash and a bare 4-digit range; two close suite numbers stay suites', () => {
+    expect(q('12k—15k')).toMatchObject({ size: 12000, max: 15000 });
+    expect(q('5000-8000')).toMatchObject({ size: 5000, max: 8000 });
+    expect(q('1200-1250')).toBeNull();
+  });
+});
+
+describe('round 37: two of a bound, more words', () => {
+  const q = (s: string) => readQuery(s, '2026-11-09');
+  it('two ceilings keep the tighter, two floors the higher, and neither is listed', () => {
+    expect(q('under 20k max 15k')).toMatchObject({ size: 100, max: 15000 });
+    expect(q('at least 12k min 15k')).toMatchObject({ size: 15000, max: null });
+    for (const s of ['under 20k max 15k', 'at least 12k min 15k']) expect(q(s), s).not.toHaveProperty('unread');
+  });
+  it('rules direct out with the words that rule sublease out', () => {
+    for (const s of ['12k excluding direct', '12k except direct', 'sublease-only 12k', '12k only sublease']) {
+      expect(q(s), s).toMatchObject({ fit: 'sublease' });
+      expect(q(s), s).not.toHaveProperty('unread');
+    }
+  });
+  it('reads "bigger than" as a floor and a minus sign as a range', () => {
+    expect(q('bigger than 12k')).toMatchObject({ size: 12000, max: null });
+    expect(q('bigger than 12k')).not.toHaveProperty('unread');
+    expect(q('12k−15k')).toMatchObject({ size: 12000, max: 15000 });
+  });
+});
+
+describe('round 38: negated greater/above, a bad date alone', () => {
+  const q = (s: string) => readQuery(s, '2026-11-09');
+  it('"not greater than 15k" and "not above 15k" are ceilings', () => {
+    for (const s of ['not greater than 15k', 'no greater than 15k', 'not above 15k']) {
+      expect(q(s), s).toMatchObject({ kind: 'size', size: 100, max: 15000 });
+      expect(q(s), s).not.toHaveProperty('unread');
+    }
+    expect(q('greater than 15k')).toMatchObject({ size: 15000, max: null });
+  });
+  it('a bad date with no size is named', () => {
+    expect(q('by 2/30')).toEqual({ kind: 'badDate', badBy: '2/30' });
+    expect(q('available by 31 feb 2027')).toEqual({ kind: 'badDate', badBy: '31 Feb 2027' });
+  });
+});

@@ -178,7 +178,7 @@ export default function TimelineView({ model, state, patch }: TimelineViewProps)
         )}
       </div>
     {/* A search, a requirement or a worklist dims bars here as it dims blocks on the plan: the same sentence says why (round 24). */}
-    {model.filterLabel && <FilterBar label={model.filterLabel} alternatives={!!model.partial && model.partial.size > 0} find={model.queryFind} patch={patch} />}
+    {model.filterLabel && <FilterBar label={model.filterLabel} empty={model.filterEmpty} alternatives={!!model.partial && model.partial.size > 0} find={model.queryFind} patch={patch} />}
     <div className={`sp-timeline ${stackedMode ? 'sp-timeline--stacked' : ''}`} ref={hostRef}>
       {stackedMode && showRollover && <RolloverChips buckets={model.roll.buckets} atRisk={model.roll.atRisk} asOf={model.asOf} activeBucket={state.bucket} onBucket={onBucket} />}
       <svg ref={svgRef} className="sp-timeline__svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="group" aria-label={`Lease timeline, ${rows.length} floors`}>

@@ -83,3 +83,12 @@ describe('PhoneStack', () => {
     for (const h of heads) expect(h).not.toContain('aria-label');
   });
 });
+
+describe('PhoneStack floor index (round 35)', () => {
+  it('names a button for every floor, top floor first', () => {
+    const { html, floors } = render(false);
+    expect(html).toContain('aria-label="Jump to floor"');
+    const names = [...html.matchAll(/<button type="button" aria-label="(Floor [^"]+)">/g)].map((m) => m[1]);
+    expect(names).toEqual(floors.map((f) => f.floor.name));
+  });
+});

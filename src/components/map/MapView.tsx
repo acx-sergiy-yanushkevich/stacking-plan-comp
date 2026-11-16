@@ -441,7 +441,7 @@ export default function MapView({ model, state, patch, dataSource, area }: MapVi
   return (
     <div className={`sp-map ${status === 'failed' ? 'is-fallback' : ''} ${lit ? 'has-lit' : ''} ${folded ? 'is-folded' : ''}`.replace(/ +/g, ' ').trim()} data-status={status}>
       {/* A search, a requirement or a worklist is answered in suites: the bar says so and takes the user to the plan. */}
-      {model.filterLabel && <FilterBar label={model.filterLabel} find={model.queryFind} planElsewhere patch={patch} />}
+      {model.filterLabel && <FilterBar label={model.filterLabel} empty={model.filterEmpty} find={model.queryFind} planElsewhere patch={patch} />}
       {/* The map's key, above it and never over it: what each mark means, and the ring to draw. Pointing at an item
           lights its pins, as the Area panel's rows do (round 25: the marks had no key on the map itself). */}
       <div className="sp-map-key" role="group" aria-label="Map key">

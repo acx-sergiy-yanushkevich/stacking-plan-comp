@@ -192,17 +192,116 @@ for (const [w, h] of [[1470, 830], [1440, 1000], [1366, 768], [1280, 720], [1366
 }
 // Round 34: on a phone the four Color-by switches stand in one row, and no label runs out of its switch (round 33:
 // "Expiration" ran 7 px into Pipeline at 320 px).
-for (const w of [320, 360, 390]) {
+// Round 35: Prospect-safe too, in all four buildings (its two switches sat in half the row and the asking range spilled).
+for (const [w, qs] of [320, 360, 390].flatMap((w) => ['', '&safe=1', '&safe=1&building=P002', '&safe=1&building=P005', '&safe=1&building=P007'].map((q) => [w, q]))) {
   const ph = await browser.newPage({ viewport: { width: w, height: 800 }, reducedMotion: 'reduce' });
-  await ph.goto(`${base}?view=stack`, { waitUntil: 'networkidle' });
+  await ph.goto(`${base}?view=stack${qs}`, { waitUntil: 'networkidle' });
+  const half = await ph.$$eval('.sp-kpis__group--lens', (gs) => gs.some((g) => { const r = g.getBoundingClientRect(); const cells = [...g.querySelectorAll('.sp-kpi')].map((c) => c.getBoundingClientRect()); return cells.length > 0 && Math.max(...cells.map((c) => c.right)) < r.right - r.width / 3; }));
+  check(!half, `${w} px${qs}: the Color-by switches fill their row`);
   const spill = await ph.$$eval('.sp-kpis__group--lens .sp-kpi', (els) =>
     els.flatMap((e) => {
       const box = e.getBoundingClientRect();
       return [...e.querySelectorAll('.sp-kpi__label, .sp-kpi__figure')].filter((t) => { const r = document.createRange(); r.selectNodeContents(t); return r.getBoundingClientRect().right > box.right + 0.5; }).map((t) => t.textContent.trim());
     }),
   );
-  check(spill.length === 0, `${w} px: every Color-by label and figure stays inside its switch${spill.length ? ` (${spill.join(', ')})` : ''}`);
+  check(spill.length === 0, `${w} px${qs}: every Color-by label and figure stays inside its switch${spill.length ? ` (${spill.join(', ')})` : ''}`);
   await ph.close();
+}
+// Round 35: on a phone the system Back closes a suite's sheet and stays on the plan (it left the view).
+{
+  const ph = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', hasTouch: true, isMobile: true });
+  await ph.goto(`${base}?view=stack`, { waitUntil: 'networkidle' });
+  await ph.getByRole('button', { name: /Kinetic Ventures/ }).first().click();
+  await ph.waitForTimeout(400);
+  const opened = new URL(ph.url()).searchParams.get('select');
+  await ph.goBack();
+  await ph.waitForTimeout(400);
+  const after = new URL(ph.url()).searchParams;
+  check(!!opened && !after.get('select') && after.get('view') === 'stack', `phone: Back closes the suite's sheet and stays on the Stack (${opened} → ${ph.url().replace(base, '')})`);
+  await ph.close();
+}
+// Round 36: a sheet closed with its own Close button leaves no Back press that does nothing. Stack, Timeline, Stack, then a
+// sheet opened and closed twice: one Back lands on the Timeline, with no history entries added.
+{
+  const ph = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', hasTouch: true, isMobile: true });
+  await ph.goto(`${base}?view=stack`, { waitUntil: 'networkidle' });
+  await ph.getByRole('radio', { name: /Timeline/ }).click();
+  await ph.waitForTimeout(300);
+  await ph.getByRole('radio', { name: /Stack/ }).click();
+  await ph.waitForTimeout(300);
+  const len = await ph.evaluate(() => history.length);
+  for (let i = 0; i < 2; i++) {
+    await ph.getByRole('button', { name: /Kinetic Ventures/ }).first().click();
+    await ph.waitForTimeout(400);
+    await ph.locator('.sp-sheet').getByRole('button', { name: /^Close/ }).first().click();
+    await ph.waitForTimeout(500);
+  }
+  const lenAfter = await ph.evaluate(() => history.length);
+  await ph.goBack();
+  await ph.waitForTimeout(400);
+  const view = new URL(ph.url()).searchParams.get('view');
+  check(view === 'timeline' && lenAfter === len + 1, `phone: after two sheets closed with Close, one Back reaches the Timeline (${view}, ${len} → ${lenAfter} entries)`);
+  await ph.close();
+}
+// Round 37: and after Back and Forward over a sheet: open it, Back (it closes), Forward (it opens), Close, then one Back
+// reaches the Timeline.
+{
+  const ph = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', hasTouch: true, isMobile: true });
+  await ph.goto(`${base}?view=stack`, { waitUntil: 'networkidle' });
+  await ph.getByRole('radio', { name: /Timeline/ }).click();
+  await ph.waitForTimeout(300);
+  await ph.getByRole('radio', { name: /Stack/ }).click();
+  await ph.waitForTimeout(300);
+  await ph.getByRole('button', { name: /Kinetic Ventures/ }).first().click();
+  await ph.waitForTimeout(400);
+  await ph.goBack();
+  await ph.waitForTimeout(400);
+  await ph.goForward();
+  await ph.waitForTimeout(400);
+  await ph.locator('.sp-sheet').getByRole('button', { name: /^Close/ }).first().click();
+  await ph.waitForTimeout(500);
+  await ph.goBack();
+  await ph.waitForTimeout(400);
+  const view = new URL(ph.url()).searchParams.get('view');
+  check(view === 'timeline', `phone: Back, Forward, then Close over a sheet leaves no Back that does nothing (${ph.url().replace(base, '')})`);
+  await ph.close();
+}
+// Round 37: no floor card's facts run past the card on a phone (Legacy West's Floor 16 cut "6,000 subleas…" at 320 px).
+for (const w of [320, 360]) {
+  const ph = await browser.newPage({ viewport: { width: w, height: 800 } });
+  const cut = [];
+  for (const bd of ['', '&building=P002', '&building=P005', '&building=P007']) {
+    await ph.goto(`${base}?view=stack${bd}`, { waitUntil: 'networkidle' });
+    cut.push(...(await ph.$$eval('.sp-pfloor', (cards) => cards.flatMap((c) => { const r = c.getBoundingClientRect(); return [...c.querySelectorAll('.sp-pfloor__facts > span')].filter((s) => s.getBoundingClientRect().right > r.right + 0.5).map((s) => s.textContent.trim().slice(0, 40)); }))).map((t) => `${bd || 'P001'}: ${t}`));
+  }
+  check(cut.length === 0, `${w} px: every phone floor card's facts stay inside the card${cut.length ? ` (${cut.slice(0, 3).join('; ')})` : ''}`);
+  await ph.close();
+}
+// Round 37: a search that finds nothing reads as a sentence, never as a filter in force ("Showing … Other space is
+// dimmed") and never with a way to the plan, in the Stack and on the Map, owner and Prospect-safe.
+{
+  const e = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+  const bad = [];
+  for (const [view, safe, q, want] of [
+    ['stack', '', 'available on floor 99', 'There is no Floor 99 here'],
+    ['stack', '', 'for sale on floor 5', 'Nothing for sale on Floor 5'],
+    ['stack', '', 'floor 99', 'There is no Floor 99 here'],
+    ['map', '', 'for sale on floor 5', 'Nothing for sale on Floor 5'],
+    ['stack', '', 'by 2/30', '2/30 is not a date on the calendar'],
+  ]) {
+    await e.goto(`${base}?view=${view}${safe}&q=${encodeURIComponent(q)}`, { waitUntil: 'networkidle' });
+    await e.waitForTimeout(200);
+    const text = ((await e.locator('.sp-filterbar').first().textContent().catch(() => '')) ?? '').replace(/\s+/g, ' ');
+    if (!text.includes(want) || /Showing|Show on the plan|\.\./.test(text)) bad.push(`${view} "${q}": ${text.slice(0, 90)}`);
+  }
+  // Prospect-safe drops a search on the way in, so it is typed there.
+  await e.goto(`${base}?view=stack&safe=1`, { waitUntil: 'networkidle' });
+  await e.locator('.sp-toolbar__search input').first().fill('available on floor 99');
+  await e.waitForTimeout(300);
+  const safeText = ((await e.locator('.sp-filterbar').first().textContent().catch(() => '')) ?? '').replace(/\s+/g, ' ');
+  if (!safeText.includes('There is no Floor 99 here') || /Showing|\.\./.test(safeText)) bad.push(`safe: ${safeText.slice(0, 90)}`);
+  check(bad.length === 0, `a search that finds nothing reads as a plain sentence${bad.length ? ` (${bad.join('; ')})` : ''}`);
+  await e.close();
 }
 await browser.close();
 check(errors.length === 0, `no console errors${errors.length ? ': ' + errors.join(' | ') : ''}`);

@@ -137,7 +137,7 @@ export function InquiryRows({ inquiries, floorName, activeId, patch }: { inquiri
               className={`sp-flist__row ${active ? 'is-selected' : ''}`}
               aria-pressed={active}
               title="Highlight the space this inquiry fits"
-              onClick={() => patch({ inquiry: active ? null : inquiry.id, req: null, max: null, by: null, select: null })}
+              onClick={() => patch({ inquiry: active ? null : inquiry.id, req: null, max: null, by: null, fit: 'any', select: null })}
             >
               <Icon name="inquiry" size={16} className="sp-flist__icon" />
               <span className="sp-flist__body">

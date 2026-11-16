@@ -278,6 +278,28 @@ export function floorWindows(perFloor: number[], req: number, maxSize: number | 
   return out;
 }
 
+/**
+ * The adjacent suites of a contiguous run (two or more, in plan order) that can make a size within req..max: the
+ * suites inside the window are taken whole, and a divisible suite at either end may be cut down to its smallest
+ * division. Null when no window can. The smallest window that fits is returned.
+ */
+export function splitWindow(run: Segment[], req: number, max: number): { keys: string[]; size: number } | null {
+  const least = (x: Segment) => {
+    const a = x.availability ?? x.marketed;
+    return a?.divisible ? Math.min(x.size, a.minDivisible ?? x.size) : x.size;
+  };
+  let best: { keys: string[]; size: number } | null = null;
+  for (let i = 0; i < run.length; i++)
+    for (let j = i + 1; j < run.length; j++) {
+      const win = run.slice(i, j + 1);
+      const most = win.reduce((t, x) => t + x.size, 0);
+      const inner = win.slice(1, -1).reduce((t, x) => t + x.size, 0);
+      const fewest = inner + least(win[0]) + (win.length > 1 ? least(win[win.length - 1]) : 0);
+      if (most >= req && fewest <= max && (!best || most < best.size)) best = { keys: win.map((x) => x.key), size: most };
+    }
+  return best;
+}
+
 /** The second half of `findFits`: deals, lateness, the maximum, and the order the options are listed in. */
 function rankFits(
   options: FitOption[],
@@ -299,15 +321,27 @@ function rankFits(
       const o = options[i];
       if (o.size <= maxSize) continue;
       if (o.contiguous) {
-        options.splice(i, 1); // its single suites are already offered
+        // Its single suites are already offered, but two or more adjacent suites can also meet the range when one at
+        // either end is divisible and gives up part of its space (round 36: a 4,000 SF suite beside a 6,000 SF suite
+        // divisible to 2,000 SF meets 7,000-8,000 SF, though neither suite does alone, and the pair was dropped).
+        const fit = splitWindow(o.keys.map((k) => segs.get(k)).filter((x): x is Segment => !!x), req, maxSize);
+        if (fit) {
+          o.keys = fit.keys;
+          o.size = fit.size;
+          o.splitTo = Math.min(maxSize, fit.size);
+        } else options.splice(i, 1);
         continue;
       }
-      const canSplit = o.keys.some((k) => {
+      // The smallest size the option can really be: each indivisible suite whole, each divisible one at its smallest
+      // division. Kept only when that is within the maximum (round 37: one divisible suite kept a whole stack, so
+      // Floors 18-19 of Legacy West, with an indivisible 26,000 SF suite, read "52,000 SF split to 12,000").
+      const smallest = o.keys.reduce((t, k) => {
         const seg = segs.get(k);
         const a = seg?.availability ?? seg?.marketed;
-        return !!a?.divisible && (a.minDivisible ?? 0) <= maxSize;
-      });
-      if (canSplit) o.splitTo = maxSize;
+        const size = seg?.size ?? 0;
+        return t + (a?.divisible ? Math.min(size, a.minDivisible ?? size) : size);
+      }, 0);
+      if (smallest <= maxSize) o.splitTo = maxSize;
       else options.splice(i, 1);
     }
   }

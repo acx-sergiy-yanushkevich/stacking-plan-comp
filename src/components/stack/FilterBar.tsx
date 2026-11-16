@@ -2,6 +2,7 @@ import type { PlanState } from '../../state/planState';
 import type { QueryIntent } from '../../domain/query';
 import { num } from '../../domain/format';
 import { fmtDate } from '../../domain/dates';
+import { rangeProblem } from '../../domain/finder';
 import { Button, Icon } from '../ui';
 import { DotJoin } from '../hero/DotJoin';
 
@@ -21,13 +22,15 @@ export interface FilterBarProps {
    * Building tab (round 24: a search typed on the Map was answered nowhere on screen).
    */
   planElsewhere?: boolean;
+  /** Nothing matched: the label is a sentence to show as it is (`PlanModel.filterEmpty`). */
+  empty?: boolean;
   patch: (p: Partial<PlanState>) => void;
 }
 
 const TO_PLAN: Partial<PlanState> = { view: 'building' };
 
 /** Names the active filter above the plan and offers one Clear. */
-export function FilterBar({ label, alternatives, find, planElsewhere, patch }: FilterBarProps) {
+export function FilterBar({ label, empty = false, alternatives, find, planElsewhere, patch }: FilterBarProps) {
   // A requirement with a date the calendar has not: say so and offer nothing to run until it is corrected.
   if (find?.badBy)
     return (
@@ -35,9 +38,23 @@ export function FilterBar({ label, alternatives, find, planElsewhere, patch }: F
         <Icon name="warning" size={14} />
         <span>
           {find.badBy} is not a date on the calendar. Correct it to find {num(find.size)}
-          {find.max ? `–${num(find.max)}` : ''} SF of space by then.
+          {find.max && find.max !== find.size ? `–${num(find.max)}` : ''} SF of space by then.
         </span>
-        <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '' })}>
+        <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '', fit: 'any' })}>
+          Clear
+        </Button>
+      </div>
+    );
+  // A ceiling under the floor ("20k under 15k"): name it, as Find space does, and offer nothing to run (round 35).
+  const inverted = find ? rangeProblem(find.size, find.max) : null;
+  if (find && inverted)
+    return (
+      <div className="sp-filterbar sp-filterbar--offer" role="status">
+        <Icon name="warning" size={14} />
+        <span>
+          That asks for at least {num(find.size)} SF and at most {num(find.max ?? 0)} SF, which no space can be. {inverted}
+        </span>
+        <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '', fit: 'any' })}>
           Clear
         </Button>
       </div>
@@ -53,14 +70,14 @@ export function FilterBar({ label, alternatives, find, planElsewhere, patch }: F
         </span>
         <Button size="sm" variant="brand" iconRight="chevron-right" className="sp-filterbar__find" onClick={() => patch({ ...findFromQuery(find), ...(planElsewhere ? TO_PLAN : {}) })}>
           Find {num(find.size)}
-          {find.max ? `–${num(find.max)}` : ''} SF of space
+          {find.max && find.max !== find.size ? `–${num(find.max)}` : ''} SF of space
         </Button>
-        <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '' })}>
+        <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '', fit: 'any' })}>
           Clear
         </Button>
       </div>
     );
-  if (planElsewhere && !label.startsWith('No '))
+  if (planElsewhere && !empty)
     return (
       <div className="sp-filterbar" role="status">
         <Icon name="filter" size={14} />
@@ -70,7 +87,7 @@ export function FilterBar({ label, alternatives, find, planElsewhere, patch }: F
         <Button size="sm" variant="brand" iconRight="chevron-right" className="sp-filterbar__find" onClick={() => patch(TO_PLAN)}>
           Show on the plan
         </Button>
-        <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '', req: null, max: null, by: null, inquiry: null, window: null, bucket: null })}>
+        <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '', req: null, max: null, by: null, fit: 'any', inquiry: null, window: null, bucket: null })}>
           Clear
         </Button>
       </div>
@@ -82,7 +99,7 @@ export function FilterBar({ label, alternatives, find, planElsewhere, patch }: F
           window the sentence wraps: between facts, or inside a long one, never with a separator at the end
           of a line or the start of the next (DotJoin). */}
       <span>
-        {label.startsWith('No ') ? (
+        {empty ? (
           label
         ) : (
           <>
@@ -94,7 +111,7 @@ export function FilterBar({ label, alternatives, find, planElsewhere, patch }: F
           </>
         )}
       </span>
-      <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '', req: null, max: null, by: null, inquiry: null, window: null, bucket: null, mode: 'building' })}>
+      <Button size="sm" variant="ghost" icon="close" onClick={() => patch({ q: '', req: null, max: null, by: null, fit: 'any', inquiry: null, window: null, bucket: null, mode: 'building' })}>
         Clear
       </Button>
     </div>
