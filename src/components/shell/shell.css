@@ -205,6 +205,9 @@
   .sp-toolbar__phone-tools { flex: 1 1 0; min-width: 0; gap: 6px; }
   .sp-toolbar__phone-tools > .sp-btn, .sp-toolbar__phone-tools > .sp-pop { flex: 1 1 auto; min-width: 0; }
   .sp-toolbar__phone-tools .sp-btn { width: 100%; height: 44px; padding: 0 8px; font-size: var(--sp-text-12); min-width: 0; justify-content: center; }
+  /* More is as wide as its word and count; Find space takes the rest of the row. */
+  .sp-toolbar__phone-tools > .sp-pop { flex: none; }
+  .sp-toolbar__phone-tools .sp-toolbar__more { width: auto; padding: 0 10px; }
 }
 @media (max-width: 420px) {
   .sp-toolbar__phone-tools .sp-btn > .sp-icon:first-child { display: none; }
@@ -216,6 +219,7 @@
   .sp-toolbar__phone-tools { gap: 4px; }
   .sp-toolbar__phone-tools > .sp-pop, .sp-toolbar__phone-tools > .sp-btn:last-child { flex: none; }
   .sp-toolbar__phone-tools .sp-btn { width: auto; }
+  .sp-toolbar__phone-tools .sp-toolbar__more { padding: 0 6px; }
   .sp-toolbar__phone-tools > .sp-btn:first-child { flex: 1 1 auto; }
   /* The word and the count say it is a menu (its role says so too); the arrow goes for room. */
   .sp-toolbar__more .sp-icon { display: none; }
